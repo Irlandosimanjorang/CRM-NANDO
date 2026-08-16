@@ -31,6 +31,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const [fCat, setFCat] = useState("");
   const [fStage, setFStage] = useState("");
   const [fType, setFType] = useState("");
+  const [fSales, setFSales] = useState("");
   const [edit, setEdit] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,9 +39,12 @@ export default function Leads({ leads, stages, settings, onChanged }) {
     if (fCat && c.category !== fCat) return false;
     if (fStage && c.stage_key !== fStage) return false;
     if (fType && (c.company_type || "") !== fType) return false;
+    if (fSales && (c.sales_owner || "") !== fSales) return false;
     if (q) { const s = q.toLowerCase(); const hay = [c.name, c.city, c.province, c.key_person, c.product, c.sales_owner].map((x) => (x || "").toLowerCase()); if (!hay.some((h) => h.includes(s))) return false; }
     return true;
-  }), [leads, q, fCat, fStage, fType]);
+  }), [leads, q, fCat, fStage, fType, fSales]);
+
+  const salesList = useMemo(() => [...new Set(leads.map((c) => c.sales_owner).filter(Boolean))].sort(), [leads]);
 
   const blank = () => ({ name: "", category: CATEGORIES[0], stage_key: stages[0]?.key, company_type: "", priority: "", verified: false });
 
@@ -85,6 +89,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
         <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
         <select value={fStage} onChange={(e) => setFStage(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua tahap</option>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
+        <select value={fSales} onChange={(e) => setFSales(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua sales</option>{salesList.map((s) => <option key={s} value={s}>{s}</option>)}</select>
         <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-amber-600/20"><Plus size={15} /> Lead</button>
       </div>
 
