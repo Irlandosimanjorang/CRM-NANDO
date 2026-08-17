@@ -3,7 +3,7 @@ import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Cal
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 
-const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10";
+const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
 export default function Settings({ settings, stages, onChanged }) {
   const [names, setNames] = useState((settings.sales_names || []).join(", "));
@@ -89,7 +89,7 @@ export default function Settings({ settings, stages, onChanged }) {
       </div>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-2"><h3 className="font-semibold text-sm">Tahap pipeline</h3><button onClick={addStage} className="text-xs text-amber-600 flex items-center gap-1"><Plus size={13} /> tambah tahap</button></div>
+        <div className="flex items-center justify-between mb-2"><h3 className="font-semibold text-sm">Tahap pipeline</h3><button onClick={addStage} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={13} /> tambah tahap</button></div>
         <p className="text-xs text-slate-400 mb-3">Tipe nentuin hitungan dashboard: <b>Deal</b> = menang, <b>Lost</b> = gugur, <b>Normal</b> = masih jalan.</p>
         <div className="space-y-2">
           {st.map((s, i) => (
@@ -106,7 +106,7 @@ export default function Settings({ settings, stages, onChanged }) {
       </div>
 
       {msg && <div className={`text-sm rounded-xl p-3 ${msg.startsWith("Gagal") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{msg}</div>}
-      <button onClick={save} disabled={busy} className="bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-amber-600/20"><Save size={15} /> Simpan pengaturan</button>
+      <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan pengaturan</button>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Send size={15} className="text-sky-500" /> Telegram Bot</h3>
