@@ -202,3 +202,37 @@ export async function unlinkTelegram() {
   const { error } = await supabase.from("telegram_links").delete().eq("user_id", uid);
   if (error) throw error;
 }
+
+// ---- GOOGLE CALENDAR LINK ----
+const GOOGLE_CLIENT_ID = "351973989384-gss200qb94ofeg27dnig8uof3rufikqo.apps.googleusercontent.com";
+const GOOGLE_REDIRECT_URI = "https://cewggulyfshnbebcpyui.supabase.co/functions/v1/google-oauth-callback";
+
+export async function getGoogleCalendarLink() {
+  const { data } = await supabase.from("google_calendar_links").select("*").maybeSingle();
+  return data || null;
+}
+
+export async function connectGoogleCalendar() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const state = crypto.randomUUID();
+  const expires = new Date(Date.now() + 10 * 60000).toISOString();
+  const { error } = await supabase.from("google_oauth_states").insert({ state, user_id: uid, expires_at: expires });
+  if (error) throw error;
+
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_REDIRECT_URI,
+    response_type: "code",
+    scope: "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email",
+    access_type: "offline",
+    prompt: "consent",
+    state,
+  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+export async function disconnectGoogleCalendar() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("google_calendar_links").delete().eq("user_id", uid);
+  if (error) throw error;
+}
