@@ -59,7 +59,6 @@ export default function App() {
   const [settings, setSettings] = useState({ sales_names: [] });
   const [leads, setLeads] = useState([]);
   const [competitors, setCompetitors] = useState([]);
-  const [advisor, setAdvisor] = useState({ ran_at: "", recs: [] });
   const [editLead, setEditLead] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,8 +72,8 @@ export default function App() {
   const reload = async () => {
     setLoading(true);
     try {
-      const [st, se, ls, comp, adv] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getAdvisor()]);
-      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setAdvisor(adv);
+      const [st, se, ls, comp] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors()]);
+      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -121,7 +120,7 @@ export default function App() {
               {tab === "visit" && <Visit leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
               {tab === "followup" && <Followup leads={leads} onEdit={setEditLead} onChanged={reload} />}
-              {tab === "advisor" && <Advisor leads={leads} stages={stageList} saved={advisor} onApplied={reload} onOpen={setEditLead} />}
+              {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
               {tab === "settings" && <SettingsTab settings={settings} stages={stageList} onChanged={reload} />}
             </>
           )}
