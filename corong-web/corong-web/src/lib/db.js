@@ -7,7 +7,6 @@ export async function getStages() {
   return data;
 }
 export async function saveStages(stages) {
-  // hapus semua lalu insert ulang (simpel utk prototype-migrasi)
   const { data: rows } = await supabase.from("stages").select("id");
   if (rows?.length) await supabase.from("stages").delete().in("id", rows.map((r) => r.id));
   const uid = (await supabase.auth.getUser()).data.user.id;
@@ -87,7 +86,7 @@ export async function deleteProgress(id) {
   await supabase.from("progress_notes").delete().eq("id", id);
 }
 
-// ---- BULK IMPORT (dipakai importer Excel & migrasi dari prototype) ----
+// ---- BULK IMPORT ----
 export async function bulkInsertLeads(leads) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const rows = leads.map((l) => ({ user_id: uid, ...l }));
@@ -124,14 +123,14 @@ export async function deleteCompetitor(id) {
   if (error) throw error;
 }
 
-// ---- ADVISOR (histori rekomendasi harian, tersimpan 7 hari) ----
+// ---- ADVISOR ----
 export async function getAdvisorHistory() {
   const { data, error } = await supabase.from("advisor_runs").select("*").order("run_date", { ascending: false }).limit(7);
   if (error) throw error;
   return data || [];
 }
 
-// ---- BACKUP / EXPORT SEMUA DATA ----
+// ---- BACKUP / EXPORT ----
 export async function exportAllData() {
   const [leadsRes, compRes, stagesRes, settingsRes, advisorRes] = await Promise.all([
     supabase.from("leads").select("*, progress_notes(id, note_date, text)"),
@@ -152,4 +151,32 @@ export async function exportAllData() {
     settings: settingsRes.data || null,
     advisor_history: advisorRes.data || [],
   };
+}
+
+// ---- MERGE LEADS (fitur deteksi duplikat) ----
+const MERGE_FILLABLE_FIELDS = [
+  "category", "company_type", "email", "phone", "key_person", "key_person_title",
+  "product", "city", "province", "website", "sales_owner", "background", "chemical",
+  "priority", "next_action", "visit_date", "visit_meet", "visit_agenda",
+  "deal_date", "deal_value", "tonnage", "last_contact", "verified", "source",
+];
+export function computeMergeFill(keepLead, mergeLead) {
+  const fill = {};
+  for (const f of MERGE_FILLABLE_FIELDS) {
+    const kv = keepLead[f]; const mv = mergeLead[f];
+    const kEmpty = kv === null || kv === undefined || kv === "" || kv === 0 || kv === false;
+    const mHas = mv !== null && mv !== undefined && mv !== "" && mv !== 0 && mv !== false;
+    if (kEmpty && mHas) fill[f] = mv;
+  }
+  return fill;
+}
+export async function mergeLeads(keepId, mergeId, fillFields) {
+  if (fillFields && Object.keys(fillFields).length) {
+    const { error } = await supabase.from("leads").update(fillFields).eq("id", keepId);
+    if (error) throw error;
+  }
+  const { error: moveErr } = await supabase.from("progress_notes").update({ lead_id: keepId }).eq("lead_id", mergeId);
+  if (moveErr) throw moveErr;
+  const { error: delErr } = await supabase.from("leads").delete().eq("id", mergeId);
+  if (delErr) throw delErr;
 }
