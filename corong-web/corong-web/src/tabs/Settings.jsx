@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 
@@ -15,9 +15,13 @@ export default function Settings({ settings, stages, onChanged }) {
   const [tgCode, setTgCode] = useState("");
   const [tgBusy, setTgBusy] = useState(false);
   const [tgLoading, setTgLoading] = useState(true);
+  const [gcalLink, setGcalLink] = useState(null);
+  const [gcalBusy, setGcalBusy] = useState(false);
+  const [gcalLoading, setGcalLoading] = useState(true);
 
   useEffect(() => {
     db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); }).catch(() => setTgLoading(false));
+    db.getGoogleCalendarLink().then((l) => { setGcalLink(l); setGcalLoading(false); }).catch(() => setGcalLoading(false));
   }, []);
 
   const genCode = async () => {
@@ -32,6 +36,19 @@ export default function Settings({ settings, stages, onChanged }) {
     try { await db.unlinkTelegram(); setTgLink(null); setTgCode(""); }
     catch (e) { alert("Gagal: " + e.message); }
     finally { setTgBusy(false); }
+  };
+
+  const connectGcal = async () => {
+    setGcalBusy(true);
+    try { await db.connectGoogleCalendar(); }
+    catch (e) { alert("Gagal mulai koneksi: " + e.message); setGcalBusy(false); }
+  };
+  const disconnectGcal = async () => {
+    if (!window.confirm("Putuskan koneksi Google Calendar?")) return;
+    setGcalBusy(true);
+    try { await db.disconnectGoogleCalendar(); setGcalLink(null); }
+    catch (e) { alert("Gagal: " + e.message); }
+    finally { setGcalBusy(false); }
   };
 
   const setStage = (i, k, v) => setSt((p) => p.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)));
@@ -113,6 +130,23 @@ export default function Settings({ settings, stages, onChanged }) {
         ) : (
           <button onClick={genCode} disabled={tgBusy} className="text-sm bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
             {tgBusy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} Hubungkan Telegram
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
+        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar kamu biar jadwal visit & follow-up dari bot Telegram otomatis masuk ke calendar.</p>
+        {gcalLoading ? (
+          <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
+        ) : gcalLink ? (
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="text-sm text-emerald-700 flex items-center gap-1.5"><CheckCircle2 size={15} /> Terhubung {gcalLink.email ? `sebagai ${gcalLink.email}` : ""}</div>
+            <button onClick={disconnectGcal} disabled={gcalBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">Putuskan koneksi</button>
+          </div>
+        ) : (
+          <button onClick={connectGcal} disabled={gcalBusy} className="text-sm bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+            {gcalBusy ? <Loader2 size={15} className="animate-spin" /> : <Calendar size={15} />} Hubungkan Google Calendar
           </button>
         )}
       </div>
