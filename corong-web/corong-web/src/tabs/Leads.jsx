@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy } from "lucide-react";
 import * as db from "../lib/db";
 import { CATEGORIES, stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
+import DuplicateModal from "../components/DuplicateModal";
 
 // mapping import: cocokin header bilingual -> field
 const val = (row, keys) => {
@@ -34,6 +35,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const [fSales, setFSales] = useState("");
   const [edit, setEdit] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [showDup, setShowDup] = useState(false);
 
   const filtered = useMemo(() => leads.filter((c) => {
     if (fCat && c.category !== fCat) return false;
@@ -96,6 +98,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       <div className="flex flex-wrap gap-2 mb-3">
         <label className="text-xs flex items-center gap-1.5 border border-emerald-300 text-emerald-700 rounded-lg px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 cursor-pointer"><FileSpreadsheet size={13} /> {busy ? "Mengimpor…" : "Import Excel / CSV"}<input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { importFile(e.target.files[0]); e.target.value = ""; }} /></label>
         <button onClick={exportCSV} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-3 py-1.5 bg-white hover:bg-slate-50"><Download size={13} /> Export</button>
+        <button onClick={() => setShowDup(true)} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-3 py-1.5 bg-white hover:bg-slate-50"><Copy size={13} /> Cek Duplikat</button>
         <span className="text-xs text-slate-400 self-center ml-auto">{filtered.length} / {leads.length}</span>
       </div>
 
@@ -127,6 +130,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       </div>
 
       {edit && <LeadModal lead={edit} stages={stages} settings={settings} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
+      {showDup && <DuplicateModal leads={leads} onClose={() => setShowDup(false)} onChanged={onChanged} />}
     </div>
   );
 }
