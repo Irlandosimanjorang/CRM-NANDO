@@ -19,9 +19,8 @@ import {
 export function NextoBadge({ size = 36 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" className="shrink-0">
-      <rect width="100" height="100" rx="26" fill="#9a3412" />
-      <path d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z" fill="#ffffff" />
-      <path d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z" fill="#fed7aa" />
+      <path d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z" fill="#f97316" />
+      <path d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z" fill="#9a3412" />
     </svg>
   );
 }
