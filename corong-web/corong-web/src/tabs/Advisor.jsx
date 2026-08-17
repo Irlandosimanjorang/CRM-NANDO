@@ -37,7 +37,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-1"><Lightbulb size={20} className="text-amber-500" /><h1 className="text-2xl font-bold tracking-tight">AI Advisor</h1></div>
+      <div className="flex items-center gap-2 mb-1"><Lightbulb size={20} className="text-orange-500" /><h1 className="text-2xl font-bold tracking-tight">AI Advisor</h1></div>
       <p className="text-sm text-slate-500 mb-4">Rekomendasi lead paling potensial, dikirim otomatis tiap jam 8 pagi ke email kamu. Histori 7 hari terakhir bisa dilihat di sini.</p>
 
       {loading ? (
@@ -53,7 +53,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen }) {
         <>
           <div className="flex gap-2 overflow-x-auto pb-1 mb-4">
             {history.map((h) => (
-              <button key={h.run_date} onClick={() => setSelected(h.run_date)} className={`shrink-0 text-xs px-3 py-2 rounded-xl border font-medium ${selected === h.run_date ? "bg-amber-600 text-white border-amber-600 shadow-sm shadow-amber-600/20" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
+              <button key={h.run_date} onClick={() => setSelected(h.run_date)} className={`shrink-0 text-xs px-3 py-2 rounded-xl border font-medium ${selected === h.run_date ? "bg-orange-600 text-white border-orange-600 shadow-sm shadow-orange-600/20" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
                 {dayLabel(h.run_date)}
               </button>
             ))}
@@ -78,13 +78,13 @@ export default function Advisor({ leads, stages, onApplied, onOpen }) {
                         <div className="text-[11px] text-slate-400 mt-0.5">{ds === null ? "belum pernah dikontak" : ds === 0 ? "dikontak hari ini" : `${ds} hari sejak kontak terakhir`}</div>
                       </div>
                       <div className="flex gap-2 shrink-0">
-                        <button onClick={() => applyAction(c, r.action)} className="text-xs bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-3 py-1.5 font-medium flex items-center gap-1"><CheckCircle2 size={13} /> Jadikan next action</button>
+                        <button onClick={() => applyAction(c, r.action)} className="text-xs bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-3 py-1.5 font-medium flex items-center gap-1"><CheckCircle2 size={13} /> Jadikan next action</button>
                         <button onClick={() => onOpen(c)} className="text-xs border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-50">Buka</button>
                       </div>
                     </div>
                     <p className="text-sm text-slate-600 mt-2">{r.assessment}</p>
-                    <div className="text-sm mt-1.5 flex items-start gap-1.5 text-amber-800 bg-amber-50 rounded-xl px-3 py-2"><Lightbulb size={14} className="mt-0.5 shrink-0 text-amber-500" /> <span><b>Rekomendasi:</b> {r.action}</span></div>
-                    {Array.isArray(r.steps) && r.steps.length > 0 && <ul className="mt-2 space-y-1 pl-1">{r.steps.map((st, si) => <li key={si} className="text-xs text-slate-600 flex items-start gap-1.5"><span className="text-amber-500 mt-px">•</span><span>{st}</span></li>)}</ul>}
+                    <div className="text-sm mt-1.5 flex items-start gap-1.5 text-orange-800 bg-orange-50 rounded-xl px-3 py-2"><Lightbulb size={14} className="mt-0.5 shrink-0 text-orange-500" /> <span><b>Rekomendasi:</b> {r.action}</span></div>
+                    {Array.isArray(r.steps) && r.steps.length > 0 && <ul className="mt-2 space-y-1 pl-1">{r.steps.map((st, si) => <li key={si} className="text-xs text-slate-600 flex items-start gap-1.5"><span className="text-orange-500 mt-px">•</span><span>{st}</span></li>)}</ul>}
 
                     {(r.contact_name_guess || r.contact_role) && (
                       <div className="mt-2.5 flex items-start gap-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
@@ -92,7 +92,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen }) {
                         {r.contact_name_guess ? (
                           <span className="text-slate-700">
                             <b>{r.contact_name_guess}</b>{r.contact_title_guess ? ` — ${r.contact_title_guess}` : ""}
-                            <span className="text-amber-600 ml-1">(belum terverifikasi, cek ulang)</span>
+                            <span className="text-orange-600 ml-1">(belum terverifikasi, cek ulang)</span>
                             {r.contact_source && <a href={r.contact_source} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1 inline-flex items-center gap-0.5">sumber <ExternalLink size={10} /></a>}
                           </span>
                         ) : (
