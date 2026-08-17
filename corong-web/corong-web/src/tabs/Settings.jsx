@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Save, Plus, X, Trash2 } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 
@@ -10,6 +10,7 @@ export default function Settings({ settings, stages, onChanged }) {
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const setStage = (i, k, v) => setSt((p) => p.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)));
   const addStage = () => setSt((p) => [...p, { key: `tahap_${Date.now()}`, label: "Tahap Baru", hex: "#94a3b8", type: "normal" }]);
@@ -24,6 +25,20 @@ export default function Settings({ settings, stages, onChanged }) {
       onChanged();
     } catch (e) { setMsg("Gagal simpan: " + e.message); }
     finally { setBusy(false); }
+  };
+
+  const exportBackup = async () => {
+    setExporting(true);
+    try {
+      const data = await db.exportAllData();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `corong-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+    } catch (e) { alert("Gagal export: " + e.message); }
+    finally { setExporting(false); }
   };
 
   return (
@@ -53,6 +68,14 @@ export default function Settings({ settings, stages, onChanged }) {
 
       {msg && <div className={`text-sm rounded-xl p-3 ${msg.startsWith("Gagal") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{msg}</div>}
       <button onClick={save} disabled={busy} className="bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-amber-600/20"><Save size={15} /> Simpan pengaturan</button>
+
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+        <h3 className="font-semibold text-sm mb-1">Backup data</h3>
+        <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori AI Advisor) jadi 1 file — simpen di komputer/HP kamu sesekali biar aman.</p>
+        <button onClick={exportBackup} disabled={exporting} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
+          {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export semua data"}
+        </button>
+      </div>
 
       <div className="bg-white border border-rose-200 rounded-2xl shadow-sm p-4">
         <h3 className="font-semibold text-sm mb-1 text-rose-600">Zona bahaya</h3>
