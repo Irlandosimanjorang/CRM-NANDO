@@ -58,7 +58,7 @@ export default function DuplicateModal({ leads, onClose, onChanged }) {
   return (
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-1"><h2 className="font-bold text-lg flex items-center gap-2"><Copy size={18} className="text-amber-500" /> Cek Duplikat</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
+        <div className="flex items-center justify-between mb-1"><h2 className="font-bold text-lg flex items-center gap-2"><Copy size={18} className="text-orange-500" /> Cek Duplikat</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
         <p className="text-sm text-slate-500 mb-4">Ditemukan {visible.length} pasangan nama company yang mirip. Klik kartu buat pilih mana yang mau dipertahankan, lalu Gabungkan.</p>
 
         {visible.length === 0 ? (
@@ -82,7 +82,7 @@ export default function DuplicateModal({ leads, onClose, onChanged }) {
                     })}
                   </div>
                   <div className="flex items-center gap-2 mt-2.5">
-                    <button onClick={() => merge(p)} disabled={busyId === p.key} className="text-xs bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white rounded-lg px-3 py-1.5 font-medium flex items-center gap-1.5">
+                    <button onClick={() => merge(p)} disabled={busyId === p.key} className="text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-lg px-3 py-1.5 font-medium flex items-center gap-1.5">
                       {busyId === p.key ? <Loader2 size={13} className="animate-spin" /> : <Merge size={13} />} Gabungkan (simpan yang ditandai ✓)
                     </button>
                     <button onClick={() => setDismissed((s) => new Set([...s, p.key]))} className="text-xs text-slate-500 hover:text-slate-700 px-2">Abaikan, bukan duplikat</button>
