@@ -50,6 +50,7 @@ export default function App() {
   const [settings, setSettings] = useState({ sales_names: [] });
   const [leads, setLeads] = useState([]);
   const [competitors, setCompetitors] = useState([]);
+  const [advisor, setAdvisor] = useState({ ran_at: "", recs: [] });
   const [editLead, setEditLead] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -63,8 +64,8 @@ export default function App() {
   const reload = async () => {
     setLoading(true);
     try {
-      const [st, se, ls, comp] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors()]);
-      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp);
+      const [st, se, ls, comp, adv] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getAdvisor()]);
+      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setAdvisor(adv);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -82,7 +83,7 @@ export default function App() {
       <aside className="hidden md:flex flex-col w-60 bg-slate-900 text-white sticky top-0 h-screen shrink-0">
         <div className="px-5 py-5 flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-2xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/25"><Filter size={18} className="text-slate-900" /></div>
-          <div className="leading-tight"><div className="font-bold tracking-tight text-[15px]">Corong</div><div className="text-[10px] uppercase tracking-widest text-slate-400">PVC Sales CRM</div></div>
+          <div className="leading-tight"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
         </div>
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
           {NAV.map((n) => { const I = n.icon; const active = tab === n.key; return (
@@ -97,7 +98,7 @@ export default function App() {
         <header className="md:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-slate-200/70">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center"><Filter size={16} className="text-slate-900" /></div>
-            <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Corong · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === tab)?.label}</span></div></div>
+            <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === tab)?.label}</span></div></div>
             <button onClick={() => supabase.auth.signOut()} className="text-slate-400"><LogOut size={16} /></button>
           </div>
         </header>
@@ -111,7 +112,7 @@ export default function App() {
               {tab === "visit" && <Visit leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
               {tab === "followup" && <Followup leads={leads} onEdit={setEditLead} onChanged={reload} />}
-              {tab === "advisor" && <Advisor leads={leads} stages={stageList} onApplied={reload} onOpen={setEditLead} />}
+              {tab === "advisor" && <Advisor leads={leads} stages={stageList} saved={advisor} onApplied={reload} onOpen={setEditLead} />}
               {tab === "settings" && <SettingsTab settings={settings} stages={stageList} onChanged={reload} />}
             </>
           )}
