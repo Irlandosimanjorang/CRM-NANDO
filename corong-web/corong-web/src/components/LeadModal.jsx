@@ -3,7 +3,7 @@ import { X, Save, Trash2, Plus, ClipboardList } from "lucide-react";
 import * as db from "../lib/db";
 import { CATEGORIES, COMPANY_TYPES, PRIORITIES, fmtDate, todayISO } from "../lib/helpers";
 
-const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10";
+const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
 
 export default function LeadModal({ lead, stages, settings, onClose, onSaved }) {
@@ -47,14 +47,14 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
           <div className="grid grid-cols-2 gap-3"><Field label="Key person"><input className={inp} value={f.key_person || ""} onChange={(e) => set("key_person", e.target.value)} /></Field><Field label="Jabatan"><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field></div>
           <div className="grid grid-cols-2 gap-3"><Field label="Kota"><input className={inp} value={f.city || ""} onChange={(e) => set("city", e.target.value)} /></Field><Field label="Provinsi"><input className={inp} value={f.province || ""} onChange={(e) => set("province", e.target.value)} /></Field></div>
           <div className="grid grid-cols-2 gap-3"><Field label="Website"><input className={inp} value={f.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" /></Field><Field label="Sales owner"><input className={inp} value={f.sales_owner || ""} onChange={(e) => set("sales_owner", e.target.value)} /></Field></div>
-          <div className="border border-amber-200 bg-amber-50/60 rounded-2xl p-3"><Field label="Next action"><input className={inp} value={f.next_action || ""} onChange={(e) => set("next_action", e.target.value)} placeholder="langkah berikutnya" /></Field></div>
+          <div className="border border-orange-200 bg-orange-50/60 rounded-2xl p-3"><Field label="Next action"><input className={inp} value={f.next_action || ""} onChange={(e) => set("next_action", e.target.value)} placeholder="langkah berikutnya" /></Field></div>
           <div className="grid grid-cols-2 gap-3"><Field label="Visit date"><input type="date" className={inp} value={f.visit_date || ""} onChange={(e) => set("visit_date", e.target.value)} /></Field><Field label="Chemical"><input className={inp} value={f.chemical || ""} onChange={(e) => set("chemical", e.target.value)} /></Field></div>
           <div className="grid grid-cols-3 gap-3"><Field label="Tgl deal"><input type="date" className={inp} value={f.deal_date || ""} onChange={(e) => set("deal_date", e.target.value)} /></Field><Field label="Tonase"><input type="number" step="any" className={inp} value={f.tonnage || ""} onChange={(e) => set("tonnage", Number(e.target.value))} /></Field><Field label="Nilai (Rp)"><input type="number" className={inp} value={f.deal_value || ""} onChange={(e) => set("deal_value", Number(e.target.value))} /></Field></div>
 
           <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50">
             <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><ClipboardList size={14} /> Progress harian</div>
             <div className="flex gap-2 mb-2">
-              <input className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-amber-500" value={newProg} onChange={(e) => setNewProg(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProg()} placeholder={lead.id ? "Update hari ini… (Enter)" : "Simpan lead dulu"} />
+              <input className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-orange-500" value={newProg} onChange={(e) => setNewProg(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProg()} placeholder={lead.id ? "Update hari ini… (Enter)" : "Simpan lead dulu"} />
               <button onClick={addProg} className="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 rounded-lg flex items-center gap-1"><Plus size={13} /> Catat</button>
             </div>
             {log.length === 0 ? <p className="text-xs text-slate-400">Belum ada progress.</p> : (
@@ -67,7 +67,7 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
           <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={!!f.verified} onChange={(e) => set("verified", e.target.checked)} className="w-4 h-4 accent-emerald-600" /><span className="text-slate-500">Kontak terverifikasi</span></label>
         </div>
         <div className="flex items-center gap-2 mt-5">
-          <button onClick={save} disabled={busy} className="bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-amber-600/20"><Save size={15} /> Simpan</button>
+          <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan</button>
           <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
           {lead.id && <button onClick={del} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
         </div>
