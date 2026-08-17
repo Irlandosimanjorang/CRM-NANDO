@@ -109,4 +109,96 @@ export async function upsertCompetitor(comp) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const row = { user_id: uid, name: comp.name, background: comp.background || "", product: comp.product || "", notes: comp.notes || "" };
   let compId = comp.id;
-  if (compId) { const { error } = await supabase.from("competitors").update(row)
+  if (compId) { const { error } = await supabase.from("competitors").update(row).eq("id", compId); if (error) throw error; }
+  else { const { data, error } = await supabase.from("competitors").insert(row).select("id").single(); if (error) throw error; compId = data.id; }
+  // sync usages: hapus semua lalu insert ulang
+  await supabase.from("competitor_usages").delete().eq("competitor_id", compId);
+  const usages = (comp.usages || []).filter((u) => u.company || u.product || u.price || u.quantity);
+  if (usages.length) {
+    const rows = usages.map((u) => ({ user_id: uid, competitor_id: compId, company: u.company || "", product: u.product || "", price: u.price || "", quantity: u.quantity || "" }));
+    const { error } = await supabase.from("competitor_usages").insert(rows); if (error) throw error;
+  }
+  return compId;
+}
+export async function deleteCompetitor(id) {
+  const { error } = await supabase.from("competitors").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---- ADVISOR (histori rekomendasi harian, tersimpan 7 hari) ----
+export async function getAdvisorHistory() {
+  const { data, error } = await supabase.from("advisor_runs").select("*").order("run_date", { ascending: false }).limit(7);
+  if (error) throw error;
+  return data || [];
+}
+
+// ---- BACKUP / EXPORT SEMUA DATA ----
+export async function exportAllData() {
+  const [leadsRes, compRes, stagesRes, settingsRes, advisorRes] = await Promise.all([
+    supabase.from("leads").select("*, progress_notes(id, note_date, text)"),
+    supabase.from("competitors").select("*, competitor_usages(id, company, product, price, quantity)"),
+    supabase.from("stages").select("*").order("position"),
+    supabase.from("settings").select("*").maybeSingle(),
+    supabase.from("advisor_runs").select("*").order("run_date", { ascending: false }),
+  ]);
+  if (leadsRes.error) throw leadsRes.error;
+  if (compRes.error) throw compRes.error;
+  if (stagesRes.error) throw stagesRes.error;
+  return {
+    exported_at: new Date().toISOString(),
+    app: "Corong CRM",
+    leads: leadsRes.data || [],
+    competitors: compRes.data || [],
+    stages: stagesRes.data || [],
+    settings: settingsRes.data || null,
+    advisor_history: advisorRes.data || [],
+  };
+}
+
+// ---- MERGE LEADS (buat fitur deteksi duplikat) ----
+const MERGE_FILLABLE_FIELDS = [
+  "category", "company_type", "email", "phone", "key_person", "key_person_title",
+  "product", "city", "province", "website", "sales_owner", "background", "chemical",
+  "priority", "next_action", "visit_date", "visit_meet", "visit_agenda",
+  "deal_date", "deal_value", "tonnage", "last_contact", "verified", "source",
+];
+export function computeMergeFill(keepLead, mergeLead) {
+  const fill = {};
+  for (const f of MERGE_FILLABLE_FIELDS) {
+    const kv = keepLead[f]; const mv = mergeLead[f];
+    const kEmpty = kv === null || kv === undefined || kv === "" || kv === 0 || kv === false;
+    const mHas = mv !== null && mv !== undefined && mv !== "" && mv !== 0 && mv !== false;
+    if (kEmpty && mHas) fill[f] = mv;
+  }
+  return fill;
+}
+export async function mergeLeads(keepId, mergeId, fillFields) {
+  if (fillFields && Object.keys(fillFields).length) {
+    const { error } = await supabase.from("leads").update(fillFields).eq("id", keepId);
+    if (error) throw error;
+  }
+  // pindahin progress notes dari lead yang di-merge ke lead yang dipertahankan
+  const { error: moveErr } = await supabase.from("progress_notes").update({ lead_id: keepId }).eq("lead_id", mergeId);
+  if (moveErr) throw moveErr;
+  const { error: delErr } = await supabase.from("leads").delete().eq("id", mergeId);
+  if (delErr) throw delErr;
+}
+
+// ---- TELEGRAM LINK ----
+export async function generateTelegramCode() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 10 * 60000).toISOString();
+  const { error } = await supabase.from("link_codes").insert({ code, user_id: uid, expires_at: expires });
+  if (error) throw error;
+  return code;
+}
+export async function getTelegramLink() {
+  const { data } = await supabase.from("telegram_links").select("*").maybeSingle();
+  return data || null;
+}
+export async function unlinkTelegram() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("telegram_links").delete().eq("user_id", uid);
+  if (error) throw error;
+}
