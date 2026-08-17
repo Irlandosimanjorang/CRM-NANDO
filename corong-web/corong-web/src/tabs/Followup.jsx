@@ -21,7 +21,7 @@ export default function Followup({ leads, onEdit, onChanged }) {
             <div key={c.id} className="bg-white border border-slate-200/80 border-l-4 border-l-rose-400 rounded-2xl shadow-sm p-3 flex items-start gap-3">
               <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(c)}>
                 <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-sm">{c.name}</span>{pm && <span className="text-[10px] border rounded-full px-1.5 py-0.5" style={chipStyle(pm.hex)}>{pm.label}</span>}</div>
-                <div className="text-xs text-amber-700 mt-0.5">→ {c.next_action}</div>
+                <div className="text-xs text-orange-700 mt-0.5">→ {c.next_action}</div>
               </div>
               <button onClick={() => done(c.id)} title="Tandai selesai" className="text-slate-300 hover:text-emerald-500 p-1"><CheckCircle2 size={16} /></button>
             </div> ); })}
