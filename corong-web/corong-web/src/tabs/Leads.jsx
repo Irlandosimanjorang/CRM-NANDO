@@ -74,7 +74,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const exportCSV = () => {
     const rows = filtered.map((c) => ({ Nama: c.name, Kategori: c.category, Tipe: c.company_type, Produk: c.product, Tahap: stageMeta(stages, c.stage_key).label, Prioritas: c.priority, Email: c.email, Telepon_WA: c.phone, Key_Person: c.key_person, Kota: c.city, Website: c.website }));
     const csv = Papa.unparse(rows); const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `corong-leads-${todayISO()}.csv`; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `nexto-leads-${todayISO()}.csv`; a.click();
   };
 
   const del = async (id) => { if (!window.confirm("Hapus lead ini?")) return; await db.deleteLead(id); onChanged(); };
@@ -86,12 +86,12 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       </div>
 
       <div className="flex flex-wrap gap-2 items-center mb-3">
-        <div className="relative flex-1 min-w-40"><Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk…" className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10" /></div>
+        <div className="relative flex-1 min-w-40"><Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk…" className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
         <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
         <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
         <select value={fStage} onChange={(e) => setFStage(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua tahap</option>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
         <select value={fSales} onChange={(e) => setFSales(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua sales</option>{salesList.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-        <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-amber-600/20"><Plus size={15} /> Lead</button>
+        <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Lead</button>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
@@ -108,7 +108,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
           </tr></thead>
           <tbody>
             {filtered.map((c) => { const sm = stageMeta(stages, c.stage_key); const wa = waLink(c.phone); const web = normUrl(c.website); const pm = prioMeta(c.priority); return (
-              <tr key={c.id} className="border-t border-slate-100 hover:bg-amber-50/40 transition-colors align-top cursor-pointer" onClick={() => setEdit(c)}>
+              <tr key={c.id} className="border-t border-slate-100 hover:bg-orange-50/40 transition-colors align-top cursor-pointer" onClick={() => setEdit(c)}>
                 <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}{isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white">NEW</span>}{c.verified ? <ShieldCheck size={12} className="text-emerald-500" /> : <ShieldAlert size={12} className="text-slate-300" />}</div><div className="text-[10px] text-slate-400 mt-0.5">{c.sales_owner || "—"}</div></td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{c.email ? <a href={`mailto:${c.email}`} className="text-blue-600 hover:underline break-all">{c.email}</a> : <span className="text-slate-300">—</span>}</td>
