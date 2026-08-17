@@ -64,7 +64,6 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         for (const r of rows) { const m = mapRow(r, "Lainnya", firstStage); if (m && !existing.has(m.name.toLowerCase())) { existing.add(m.name.toLowerCase()); out.push(m); } }
       }
       if (out.length === 0) { alert("Ga ada baris kebaca. Pastikan ada kolom nama perusahaan."); return; }
-      // insert per 200 biar aman
       for (let i = 0; i < out.length; i += 200) await db.bulkInsertLeads(out.slice(i, i + 200));
       alert(`✅ Import selesai. Masuk: ${out.length} lead.`);
       onChanged();
