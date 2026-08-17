@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { supabase } from "./lib/supabaseClient";
-import { Filter, Loader2 } from "lucide-react";
+import { Loader2, Users, Trophy, CalendarCheck, Swords, CalendarClock, Lightbulb, Send, Calendar } from "lucide-react";
+import { NextoBadge } from "./App";
+
+const FEATURES = [
+  { icon: Users, title: "Kelola Leads", desc: "Semua prospek tersusun rapi dalam satu pipeline yang jelas." },
+  { icon: Trophy, title: "Tracking Deal", desc: "Pantau progres tiap kesepakatan dari awal sampai closing." },
+  { icon: CalendarCheck, title: "Jadwal Visit", desc: "Atur dan catat kunjungan ke klien tanpa ada yang kelewat." },
+  { icon: Swords, title: "Analisa Kompetitor", desc: "Simpan data pesaing biar strategi sales makin tajam." },
+  { icon: CalendarClock, title: "Follow-up Otomatis", desc: "Pengingat follow-up biar ga ada lead yang keabaian." },
+  { icon: Lightbulb, title: "AI Advisor", desc: "Rekomendasi lead paling potensial, dikirim tiap pagi." },
+  { icon: Send, title: "Bot Telegram", desc: "Tambah lead & catat progress langsung dari chat." },
+  { icon: Calendar, title: "Google Calendar", desc: "Jadwal visit & follow-up otomatis masuk ke calendar kamu." },
+];
+
 export default function Auth() {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
@@ -22,22 +35,49 @@ export default function Auth() {
     finally { setLoading(false); }
   };
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
-        <div className="flex items-center gap-2.5 mb-5">
-          <div className="w-10 h-10 rounded-2xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/25"><Filter size={20} className="text-slate-900" /></div>
-          <div className="leading-tight"><div className="font-bold tracking-tight">Nexto</div></div>
+    <div className="min-h-screen bg-slate-50 flex">
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white flex-col justify-center px-12 xl:px-16 py-12 relative overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 -left-16 w-80 h-80 bg-orange-600/10 rounded-full blur-3xl" />
+        <div className="relative">
+          <div className="flex items-center gap-2.5 mb-8">
+            <NextoBadge size={40} />
+            <div className="font-bold tracking-tight text-lg">Nexto</div>
+          </div>
+          <h2 className="text-2xl xl:text-3xl font-bold tracking-tight mb-2">Satu tempat buat semua urusan sales kamu.</h2>
+          <p className="text-sm text-slate-400 mb-10">Dari lead pertama masuk sampai deal closing, semua kepantau di sini.</p>
+          <div className="grid grid-cols-2 gap-4">
+            {FEATURES.map((f, i) => {
+              const I = f.icon;
+              return (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                  <div className="w-9 h-9 rounded-xl bg-orange-600/15 text-orange-400 flex items-center justify-center mb-2.5"><I size={17} /></div>
+                  <div className="font-semibold text-sm mb-1">{f.title}</div>
+                  <div className="text-xs text-slate-400 leading-relaxed">{f.desc}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <h1 className="text-lg font-bold mb-1">{mode === "signin" ? "Masuk" : "Daftar akun"}</h1>
-        <p className="text-xs text-slate-400 mb-4">{mode === "signin" ? "Masuk buat akses pipeline-mu." : "Bikin akun buat mulai."}</p>
-        <div className="space-y-3">
-          <input className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input type="password" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
-          {msg && <div className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-2">{msg}</div>}
-          <button onClick={submit} disabled={loading} className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-sm py-2.5 rounded-xl font-medium flex items-center justify-center gap-2">{loading ? <Loader2 size={15} className="animate-spin" /> : null} {mode === "signin" ? "Masuk" : "Daftar"}</button>
-          <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMsg(""); }} className="w-full text-xs text-slate-500 hover:text-slate-800">
-            {mode === "signin" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}
-          </button>
+      </div>
+
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
+          <div className="flex items-center gap-2.5 mb-5 lg:hidden">
+            <NextoBadge size={40} />
+            <div className="leading-tight"><div className="font-bold tracking-tight">Nexto</div></div>
+          </div>
+          <h1 className="text-lg font-bold mb-1">{mode === "signin" ? "Masuk" : "Daftar akun"}</h1>
+          <p className="text-xs text-slate-400 mb-4">{mode === "signin" ? "Masuk buat akses pipeline-mu." : "Bikin akun buat mulai."}</p>
+          <div className="space-y-3">
+            <input className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="password" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
+            {msg && <div className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-2">{msg}</div>}
+            <button onClick={submit} disabled={loading} className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm py-2.5 rounded-xl font-medium flex items-center justify-center gap-2">{loading ? <Loader2 size={15} className="animate-spin" /> : null} {mode === "signin" ? "Masuk" : "Daftar"}</button>
+            <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMsg(""); }} className="w-full text-xs text-slate-500 hover:text-slate-800">
+              {mode === "signin" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
