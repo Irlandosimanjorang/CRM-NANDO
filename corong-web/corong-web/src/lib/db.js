@@ -7,7 +7,6 @@ export async function getStages() {
   return data;
 }
 export async function saveStages(stages) {
-  // hapus semua lalu insert ulang (simpel utk prototype-migrasi)
   const { data: rows } = await supabase.from("stages").select("id");
   if (rows?.length) await supabase.from("stages").delete().in("id", rows.map((r) => r.id));
   const uid = (await supabase.auth.getUser()).data.user.id;
@@ -87,7 +86,7 @@ export async function deleteProgress(id) {
   await supabase.from("progress_notes").delete().eq("id", id);
 }
 
-// ---- BULK IMPORT (dipakai importer Excel & migrasi dari prototype) ----
+// ---- BULK IMPORT ----
 export async function bulkInsertLeads(leads) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const rows = leads.map((l) => ({ user_id: uid, ...l }));
@@ -111,7 +110,6 @@ export async function upsertCompetitor(comp) {
   let compId = comp.id;
   if (compId) { const { error } = await supabase.from("competitors").update(row).eq("id", compId); if (error) throw error; }
   else { const { data, error } = await supabase.from("competitors").insert(row).select("id").single(); if (error) throw error; compId = data.id; }
-  // sync usages: hapus semua lalu insert ulang
   await supabase.from("competitor_usages").delete().eq("competitor_id", compId);
   const usages = (comp.usages || []).filter((u) => u.company || u.product || u.price || u.quantity);
   if (usages.length) {
@@ -125,7 +123,7 @@ export async function deleteCompetitor(id) {
   if (error) throw error;
 }
 
-// ---- ADVISOR (histori rekomendasi harian, tersimpan 7 hari) ----
+// ---- ADVISOR ----
 export async function getAdvisorHistory() {
   const { data, error } = await supabase.from("advisor_runs").select("*").order("run_date", { ascending: false }).limit(7);
   if (error) throw error;
@@ -146,7 +144,7 @@ export async function exportAllData() {
   if (stagesRes.error) throw stagesRes.error;
   return {
     exported_at: new Date().toISOString(),
-    app: "Corong CRM",
+    app: "Nexto",
     leads: leadsRes.data || [],
     competitors: compRes.data || [],
     stages: stagesRes.data || [],
@@ -155,7 +153,7 @@ export async function exportAllData() {
   };
 }
 
-// ---- MERGE LEADS (buat fitur deteksi duplikat) ----
+// ---- MERGE LEADS ----
 const MERGE_FILLABLE_FIELDS = [
   "category", "company_type", "email", "phone", "key_person", "key_person_title",
   "product", "city", "province", "website", "sales_owner", "background", "chemical",
@@ -177,7 +175,6 @@ export async function mergeLeads(keepId, mergeId, fillFields) {
     const { error } = await supabase.from("leads").update(fillFields).eq("id", keepId);
     if (error) throw error;
   }
-  // pindahin progress notes dari lead yang di-merge ke lead yang dipertahankan
   const { error: moveErr } = await supabase.from("progress_notes").update({ lead_id: keepId }).eq("lead_id", mergeId);
   if (moveErr) throw moveErr;
   const { error: delErr } = await supabase.from("leads").delete().eq("id", mergeId);
