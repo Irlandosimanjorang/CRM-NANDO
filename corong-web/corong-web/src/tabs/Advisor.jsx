@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lightbulb, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Lightbulb, Loader2, AlertCircle, CheckCircle2, User, MessageCircle, ExternalLink } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, daysSince } from "../lib/helpers";
@@ -24,7 +24,7 @@ export default function Advisor({ leads, stages, saved, onApplied, onOpen }) {
       if (!resp.ok) throw new Error(dat.error || `HTTP ${resp.status}`);
       setRecs(dat.recs || []); setRanAt(dat.ranAt || "");
     } catch (e) {
-      setError(`Analisis gagal: ${e.message}. Pastikan Edge Function "ai-advisor" sudah di-deploy dan ANTHROPIC_API_KEY sudah diset (lihat README).`);
+      setError(`Analisis gagal: ${e.message}. Pastikan Edge Function "ai-advisor" sudah di-deploy dan ANTHROPIC_API_KEY sudah diset.`);
     } finally { setLoading(false); }
   };
 
@@ -33,10 +33,10 @@ export default function Advisor({ leads, stages, saved, onApplied, onOpen }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-1"><Lightbulb size={20} className="text-amber-500" /><h1 className="text-2xl font-bold tracking-tight">AI Advisor</h1></div>
-      <p className="text-sm text-slate-500 mb-4">Nge-scan lead paling potensial (prioritas tinggi + tahap maju), kasih rekomendasi langkah berikutnya.</p>
+      <p className="text-sm text-slate-500 mb-4">Nge-scan lead paling potensial, kasih rekomendasi + coba cariin calon key person via web search kalau belum ada di data.</p>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
-        <div className="text-xs text-slate-500">{loading ? "Menganalisis…" : ranAt ? `Terakhir dijalankan ${ranAt} · ${recs.length} rekomendasi` : "Belum dijalankan."}</div>
+        <div className="text-xs text-slate-500">{loading ? "Menganalisis… (bisa 1-2 menit karena ada pencarian web)" : ranAt ? `Terakhir dijalankan ${ranAt} · ${recs.length} rekomendasi` : "Belum dijalankan."}</div>
         <button onClick={run} disabled={loading} className="bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm">{loading ? <><Loader2 size={15} className="animate-spin" /> Menganalisis…</> : <><Lightbulb size={15} /> {ranAt ? "Jalankan ulang" : "Jalankan analisis"}</>}</button>
       </div>
 
@@ -64,6 +64,26 @@ export default function Advisor({ leads, stages, saved, onApplied, onOpen }) {
                 <p className="text-sm text-slate-600 mt-2">{r.assessment}</p>
                 <div className="text-sm mt-1.5 flex items-start gap-1.5 text-amber-800 bg-amber-50 rounded-xl px-3 py-2"><Lightbulb size={14} className="mt-0.5 shrink-0 text-amber-500" /> <span><b>Rekomendasi:</b> {r.action}</span></div>
                 {Array.isArray(r.steps) && r.steps.length > 0 && <ul className="mt-2 space-y-1 pl-1">{r.steps.map((st, si) => <li key={si} className="text-xs text-slate-600 flex items-start gap-1.5"><span className="text-amber-500 mt-px">•</span><span>{st}</span></li>)}</ul>}
+
+                {(r.contact_name_guess || r.contact_role) && (
+                  <div className="mt-2.5 flex items-start gap-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <User size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                    {r.contact_name_guess ? (
+                      <span className="text-slate-700">
+                        <b>{r.contact_name_guess}</b>{r.contact_title_guess ? ` — ${r.contact_title_guess}` : ""}
+                        <span className="text-amber-600 ml-1">(belum terverifikasi, cek ulang)</span>
+                        {r.contact_source && <a href={r.contact_source} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1 inline-flex items-center gap-0.5">sumber <ExternalLink size={10} /></a>}
+                      </span>
+                    ) : (
+                      <span className="text-slate-600">Cari kontak: <b>{r.contact_role}</b></span>
+                    )}
+                  </div>
+                )}
+                {r.talking_point && (
+                  <div className="mt-2 flex items-start gap-1.5 text-xs bg-sky-50 border border-sky-100 rounded-xl px-3 py-2 text-sky-800">
+                    <MessageCircle size={13} className="mt-0.5 shrink-0 text-sky-500" /> "{r.talking_point}"
+                  </div>
+                )}
               </div>
             );
           })}
