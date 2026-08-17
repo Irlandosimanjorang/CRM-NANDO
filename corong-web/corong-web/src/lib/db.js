@@ -1,151 +1,235 @@
-import { useEffect, useState, useMemo } from "react";
-import { supabase, isConfigured } from "./lib/supabaseClient";
-import * as db from "./lib/db";
-import Auth from "./Auth";
-import Dashboard from "./tabs/Dashboard";
-import Leads from "./tabs/Leads";
-import Deal from "./tabs/Deal";
-import Visit from "./tabs/Visit";
-import Kompetitor from "./tabs/Kompetitor";
-import Followup from "./tabs/Followup";
-import Advisor from "./tabs/Advisor";
-import SettingsTab from "./tabs/Settings";
-import LeadModal from "./components/LeadModal";
-import {
-  LayoutDashboard, Users, Trophy, CalendarCheck, Swords, CalendarClock,
-  Lightbulb, Settings as SettingsIcon, Loader2, LogOut,
-} from "lucide-react";
+import { supabase } from "./supabaseClient";
 
-export function NextoBadge({ size = 36 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" className="shrink-0">
-      <path d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z" fill="#f97316" />
-      <path d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z" fill="#9a3412" />
-    </svg>
-  );
+// ---- STAGES ----
+export async function getStages() {
+  const { data, error } = await supabase.from("stages").select("*").order("position");
+  if (error) throw error;
+  return data;
+}
+export async function saveStages(stages) {
+  const { data: rows } = await supabase.from("stages").select("id");
+  if (rows?.length) await supabase.from("stages").delete().in("id", rows.map((r) => r.id));
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const payload = stages.map((s, i) => ({ user_id: uid, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
+  const { error } = await supabase.from("stages").insert(payload);
+  if (error) throw error;
 }
 
-const NAV = [
-  { key: "dashboard", label: "Dashboard", short: "Beranda", icon: LayoutDashboard },
-  { key: "leads", label: "Leads", short: "Leads", icon: Users },
-  { key: "deal", label: "Deal", short: "Deal", icon: Trophy },
-  { key: "visit", label: "Visit", short: "Visit", icon: CalendarCheck },
-  { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
-  { key: "followup", label: "Follow-up", short: "Follow", icon: CalendarClock },
-  { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
-  { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
-];
-
-function ConfigScreen() {
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
-        <div className="mb-4"><NextoBadge size={48} /></div>
-        <h1 className="text-lg font-bold mb-2">Sambungin ke Supabase dulu</h1>
-        <p className="text-sm text-slate-500 mb-3">Buat file <code className="bg-slate-100 px-1 rounded">.env</code> di root project (salin dari <code className="bg-slate-100 px-1 rounded">.env.example</code>), isi:</p>
-        <pre className="text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto">VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...</pre>
-        <p className="text-xs text-slate-400 mt-3">Ambil dari Supabase → Project Settings → API. Terus restart <code className="bg-slate-100 px-1 rounded">npm run dev</code>.</p>
-      </div>
-    </div>
-  );
+// ---- SETTINGS ----
+export async function getSettings() {
+  const { data } = await supabase.from("settings").select("*").maybeSingle();
+  return data || { sales_names: [] };
+}
+export async function saveSalesNames(names) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("settings").upsert({ user_id: uid, sales_names: names, updated_at: new Date().toISOString() });
+  if (error) throw error;
 }
 
-export default function App() {
-  const [session, setSession] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [tab, setTab] = useState("dashboard");
-  const [stages, setStages] = useState([]);
-  const [settings, setSettings] = useState({ sales_names: [] });
-  const [leads, setLeads] = useState([]);
-  const [competitors, setCompetitors] = useState([]);
-  const [editLead, setEditLead] = useState(null);
-  const [loading, setLoading] = useState(true);
+// ---- LEADS ----
+export async function getLeads() {
+  const { data, error } = await supabase
+    .from("leads")
+    .select("*, progress_notes(id, note_date, text)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((l) => ({
+    ...l,
+    progressLog: (l.progress_notes || [])
+      .sort((a, b) => (a.note_date < b.note_date ? 1 : -1))
+      .map((p) => ({ id: p.id, date: p.note_date, text: p.text })),
+  }));
+}
 
-  useEffect(() => {
-    if (!isConfigured) { setAuthReady(true); return; }
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  const reload = async () => {
-    setLoading(true);
-    try {
-      const [st, se, ls, comp] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors()]);
-      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+export async function upsertLead(lead) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const row = {
+    user_id: uid,
+    name: lead.name, category: lead.category, stage_key: lead.stage_key,
+    company_type: lead.company_type || "", email: lead.email || "", phone: lead.phone || "",
+    key_person: lead.key_person || "", key_person_title: lead.key_person_title || "",
+    product: lead.product || "", city: lead.city || "", province: lead.province || "",
+    website: lead.website || "", sales_owner: lead.sales_owner || "", background: lead.background || "",
+    chemical: lead.chemical || "", priority: lead.priority || "", next_action: lead.next_action || "",
+    visit_date: lead.visit_date || null, visit_meet: lead.visit_meet || "", visit_agenda: lead.visit_agenda || "",
+    deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
+    last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
   };
-
-  useEffect(() => { if (session) reload(); }, [session]);
-
-  if (!isConfigured) return <ConfigScreen />;
-  if (!authReady) return <Splash />;
-  if (!session) return <Auth />;
-
-  const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
-      <aside className="hidden md:flex flex-col w-60 bg-slate-900 text-white sticky top-0 h-screen shrink-0">
-        <div className="px-5 py-5 flex items-center gap-2.5">
-          <NextoBadge size={36} />
-          <div className="leading-tight"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
-        </div>
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-          {NAV.map((n) => { const I = n.icon; const active = tab === n.key; return (
-            <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm transition-all ${active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/25" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
-              <I size={17} strokeWidth={active ? 2.5 : 2} /> {n.label}
-            </button> ); })}
-        </nav>
-        <button onClick={() => supabase.auth.signOut()} className="m-3 px-3 py-2.5 rounded-2xl bg-white/5 text-xs text-slate-300 hover:bg-white/10 flex items-center gap-2"><LogOut size={14} /> Keluar</button>
-      </aside>
-
-      <div className="flex-1 min-w-0 flex flex-col">
-        <header className="md:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-slate-200/70">
-          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2.5">
-            <NextoBadge size={32} />
-            <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === tab)?.label}</span></div></div>
-            <button onClick={() => supabase.auth.signOut()} className="text-slate-400"><LogOut size={16} /></button>
-          </div>
-        </header>
-
-        <main className="flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-28">
-          {loading ? <Splash inline /> : (
-            <>
-              {tab === "dashboard" && <Dashboard leads={leads} stages={stageList} onGo={setTab} />}
-              {tab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
-              {tab === "deal" && <Deal leads={leads} stages={stageList} onEdit={setEditLead} onChanged={reload} />}
-              {tab === "visit" && <Visit leads={leads} onEdit={setEditLead} onChanged={reload} />}
-              {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
-              {tab === "followup" && <Followup leads={leads} onEdit={setEditLead} onChanged={reload} />}
-              {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
-              {tab === "settings" && <SettingsTab settings={settings} stages={stageList} onChanged={reload} />}
-            </>
-          )}
-        </main>
-
-        <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/90 backdrop-blur-lg border-t border-slate-200">
-          <div className="max-w-lg mx-auto flex justify-around px-1 pt-1.5 pb-2">
-            {NAV.map((n) => { const I = n.icon; const active = tab === n.key; return (
-              <button key={n.key} onClick={() => setTab(n.key)} className={`flex flex-col items-center gap-0.5 flex-1 py-1 rounded-xl ${active ? "text-orange-600" : "text-slate-400"}`}>
-                <I size={20} strokeWidth={active ? 2.5 : 2} /><span className="text-[9px] font-medium leading-none truncate max-w-full">{n.short}</span>
-              </button> ); })}
-          </div>
-        </nav>
-      </div>
-
-      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} />}
-    </div>
-  );
+  if (lead.id) {
+    const { data, error } = await supabase.from("leads").update(row).eq("id", lead.id).select().single();
+    if (error) throw error; return data;
+  }
+  const { data, error } = await supabase.from("leads").insert(row).select().single();
+  if (error) throw error; return data;
 }
 
-function Splash({ inline }) {
-  return (
-    <div className={`${inline ? "py-20" : "min-h-screen"} bg-slate-50 flex flex-col items-center justify-center gap-3`}>
-      <div className="animate-pulse"><NextoBadge size={48} /></div>
-      <div className="text-slate-400 text-sm flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
-    </div>
-  );
+export async function deleteLead(id) {
+  const { error } = await supabase.from("leads").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function setLeadStage(id, stage_key) {
+  const { error } = await supabase.from("leads").update({ stage_key }).eq("id", id);
+  if (error) throw error;
+}
+
+// ---- PROGRESS ----
+export async function addProgress(lead_id, text) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const date = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase.from("progress_notes").insert({ user_id: uid, lead_id, note_date: date, text }).select().single();
+  if (error) throw error;
+  await supabase.from("leads").update({ last_contact: date }).eq("id", lead_id);
+  return { id: data.id, date, text };
+}
+export async function deleteProgress(id) {
+  await supabase.from("progress_notes").delete().eq("id", id);
+}
+
+// ---- BULK IMPORT ----
+export async function bulkInsertLeads(leads) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const rows = leads.map((l) => ({ user_id: uid, ...l }));
+  const { data, error } = await supabase.from("leads").insert(rows).select("id, name");
+  if (error) throw error;
+  return data;
+}
+
+// ---- COMPETITORS ----
+export async function getCompetitors() {
+  const { data, error } = await supabase
+    .from("competitors")
+    .select("*, competitor_usages(id, company, product, price, quantity)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((c) => ({ ...c, usages: c.competitor_usages || [] }));
+}
+export async function upsertCompetitor(comp) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const row = { user_id: uid, name: comp.name, background: comp.background || "", product: comp.product || "", notes: comp.notes || "" };
+  let compId = comp.id;
+  if (compId) { const { error } = await supabase.from("competitors").update(row).eq("id", compId); if (error) throw error; }
+  else { const { data, error } = await supabase.from("competitors").insert(row).select("id").single(); if (error) throw error; compId = data.id; }
+  await supabase.from("competitor_usages").delete().eq("competitor_id", compId);
+  const usages = (comp.usages || []).filter((u) => u.company || u.product || u.price || u.quantity);
+  if (usages.length) {
+    const rows = usages.map((u) => ({ user_id: uid, competitor_id: compId, company: u.company || "", product: u.product || "", price: u.price || "", quantity: u.quantity || "" }));
+    const { error } = await supabase.from("competitor_usages").insert(rows); if (error) throw error;
+  }
+  return compId;
+}
+export async function deleteCompetitor(id) {
+  const { error } = await supabase.from("competitors").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---- ADVISOR ----
+export async function getAdvisorHistory() {
+  const { data, error } = await supabase.from("advisor_runs").select("*").order("run_date", { ascending: false }).limit(7);
+  if (error) throw error;
+  return data || [];
+}
+
+// ---- BACKUP / EXPORT SEMUA DATA ----
+export async function exportAllData() {
+  const [leadsRes, compRes, stagesRes, settingsRes, advisorRes] = await Promise.all([
+    supabase.from("leads").select("*, progress_notes(id, note_date, text)"),
+    supabase.from("competitors").select("*, competitor_usages(id, company, product, price, quantity)"),
+    supabase.from("stages").select("*").order("position"),
+    supabase.from("settings").select("*").maybeSingle(),
+    supabase.from("advisor_runs").select("*").order("run_date", { ascending: false }),
+  ]);
+  if (leadsRes.error) throw leadsRes.error;
+  if (compRes.error) throw compRes.error;
+  if (stagesRes.error) throw stagesRes.error;
+  return {
+    exported_at: new Date().toISOString(),
+    app: "Nexto",
+    leads: leadsRes.data || [],
+    competitors: compRes.data || [],
+    stages: stagesRes.data || [],
+    settings: settingsRes.data || null,
+    advisor_history: advisorRes.data || [],
+  };
+}
+
+// ---- MERGE LEADS ----
+const MERGE_FILLABLE_FIELDS = [
+  "category", "company_type", "email", "phone", "key_person", "key_person_title",
+  "product", "city", "province", "website", "sales_owner", "background", "chemical",
+  "priority", "next_action", "visit_date", "visit_meet", "visit_agenda",
+  "deal_date", "deal_value", "tonnage", "last_contact", "verified", "source",
+];
+export function computeMergeFill(keepLead, mergeLead) {
+  const fill = {};
+  for (const f of MERGE_FILLABLE_FIELDS) {
+    const kv = keepLead[f]; const mv = mergeLead[f];
+    const kEmpty = kv === null || kv === undefined || kv === "" || kv === 0 || kv === false;
+    const mHas = mv !== null && mv !== undefined && mv !== "" && mv !== 0 && mv !== false;
+    if (kEmpty && mHas) fill[f] = mv;
+  }
+  return fill;
+}
+export async function mergeLeads(keepId, mergeId, fillFields) {
+  if (fillFields && Object.keys(fillFields).length) {
+    const { error } = await supabase.from("leads").update(fillFields).eq("id", keepId);
+    if (error) throw error;
+  }
+  const { error: moveErr } = await supabase.from("progress_notes").update({ lead_id: keepId }).eq("lead_id", mergeId);
+  if (moveErr) throw moveErr;
+  const { error: delErr } = await supabase.from("leads").delete().eq("id", mergeId);
+  if (delErr) throw delErr;
+}
+
+// ---- TELEGRAM LINK ----
+export async function generateTelegramCode() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 10 * 60000).toISOString();
+  const { error } = await supabase.from("link_codes").insert({ code, user_id: uid, expires_at: expires });
+  if (error) throw error;
+  return code;
+}
+export async function getTelegramLink() {
+  const { data } = await supabase.from("telegram_links").select("*").maybeSingle();
+  return data || null;
+}
+export async function unlinkTelegram() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("telegram_links").delete().eq("user_id", uid);
+  if (error) throw error;
+}
+
+// ---- GOOGLE CALENDAR LINK ----
+const GOOGLE_CLIENT_ID = "351973989384-gss200qb94ofeg27dnig8uof3rufikqo.apps.googleusercontent.com";
+const GOOGLE_REDIRECT_URI = "https://cewggulyfshnbebcpyui.supabase.co/functions/v1/google-oauth-callback";
+
+export async function getGoogleCalendarLink() {
+  const { data } = await supabase.from("google_calendar_links").select("*").maybeSingle();
+  return data || null;
+}
+
+export async function connectGoogleCalendar() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const state = crypto.randomUUID();
+  const expires = new Date(Date.now() + 10 * 60000).toISOString();
+  const { error } = await supabase.from("google_oauth_states").insert({ state, user_id: uid, expires_at: expires });
+  if (error) throw error;
+
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_REDIRECT_URI,
+    response_type: "code",
+    scope: "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email",
+    access_type: "offline",
+    prompt: "consent",
+    state,
+  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+export async function disconnectGoogleCalendar() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("google_calendar_links").delete().eq("user_id", uid);
+  if (error) throw error;
 }
