@@ -8,7 +8,7 @@ export default function Kompetitor({ competitors, onChanged }) {
     <div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Kompetitor</h1>
-        <button onClick={() => setEdit({ name: "", background: "", product: "", notes: "", usages: [] })} className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-amber-600/20"><Plus size={15} /> Kompetitor</button>
+        <button onClick={() => setEdit({ name: "", background: "", product: "", notes: "", usages: [] })} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Kompetitor</button>
       </div>
       {competitors.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Swords size={32} className="mx-auto text-slate-300 mb-3" />Belum ada data. Catat company/trading: produk, dan tiap company pemakai + harganya.</div>
