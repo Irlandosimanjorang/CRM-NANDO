@@ -2,7 +2,7 @@ import { useState } from "react";
 import { X, Save, Trash2, Plus, Building2 } from "lucide-react";
 import * as db from "../lib/db";
 
-const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10";
+const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
 
 export default function CompetitorModal({ comp, onClose, onSaved }) {
@@ -31,7 +31,7 @@ export default function CompetitorModal({ comp, onClose, onSaved }) {
           <Field label="Background"><textarea className={inp} rows={2} value={f.background || ""} onChange={(e) => set("background", e.target.value)} /></Field>
 
           <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50">
-            <div className="flex items-center justify-between mb-2"><span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5"><Building2 size={14} /> Company pemakai ({f.usages.length})</span><button onClick={addUse} className="text-xs text-amber-600 flex items-center gap-1"><Plus size={12} /> tambah company</button></div>
+            <div className="flex items-center justify-between mb-2"><span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5"><Building2 size={14} /> Company pemakai ({f.usages.length})</span><button onClick={addUse} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={12} /> tambah company</button></div>
             {f.usages.length === 0 && <p className="text-xs text-slate-400 mb-2">Tambah company pemakai produk ini.</p>}
             {f.usages.map((u, i) => (
               <div key={i} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
@@ -47,7 +47,7 @@ export default function CompetitorModal({ comp, onClose, onSaved }) {
           <Field label="Catatan umum"><textarea className={inp} rows={2} value={f.notes || ""} onChange={(e) => set("notes", e.target.value)} /></Field>
         </div>
         <div className="flex items-center gap-2 mt-5">
-          <button onClick={save} disabled={busy} className="bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-amber-600/20"><Save size={15} /> Simpan</button>
+          <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan</button>
           <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
           {comp.id && <button onClick={del} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
         </div>
