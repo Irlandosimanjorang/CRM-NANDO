@@ -74,7 +74,7 @@ export default function Settings({ settings, stages, onChanged }) {
       const blob = new Blob([json], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `corong-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `nexto-backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
     } catch (e) { alert("Gagal export: " + e.message); }
     finally { setExporting(false); }
