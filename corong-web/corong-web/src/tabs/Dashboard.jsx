@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet } from "lucide-react";
 import { todayISO, fmtRp } from "../lib/helpers";
 
@@ -13,15 +13,27 @@ function StatCard({ icon: I, label, value, accent, small }) {
   );
 }
 
-const REVENUE_KEY = "corong_show_revenue";
+function RevenueCard({ label, value, dark }) {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <div className={dark ? "bg-slate-900 rounded-2xl shadow-sm p-4 text-white" : "bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4"}>
+      <div className={`flex items-center justify-between text-xs mb-2 ${dark ? "text-slate-300" : "text-slate-400"}`}>
+        <div className="flex items-center gap-2">
+          <span className={`w-7 h-7 rounded-xl flex items-center justify-center ${dark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-600"}`}><Wallet size={15} /></span>
+          {label}
+        </div>
+        <button onClick={() => setRevealed((v) => !v)} className={dark ? "text-slate-400 hover:text-white" : "text-slate-400 hover:text-slate-700"} title={revealed ? "Sembunyikan" : "Tampilkan"}>
+          {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      </div>
+      <div className={`font-mono font-bold text-xl ${dark ? "" : "text-slate-800"}`}>
+        {revealed ? fmtRp(value) : "Rp ••••••••"}
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard({ leads, stages, onGo }) {
-  const [showRevenue, setShowRevenue] = useState(() => {
-    const saved = localStorage.getItem(REVENUE_KEY);
-    return saved === null ? true : saved === "1";
-  });
-  useEffect(() => { localStorage.setItem(REVENUE_KEY, showRevenue ? "1" : "0"); }, [showRevenue]);
-
   const s = useMemo(() => {
     const won = stages.filter((x) => x.type === "won").map((x) => x.key);
     const activeKeys = stages.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
@@ -50,29 +62,16 @@ export default function Dashboard({ leads, stages, onGo }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between flex-wrap gap-2">
-        <div>
-          <div className="text-[11px] uppercase tracking-widest text-amber-600 font-semibold mb-0.5">Corong · Sales Funnel</div>
-          <h1 className="text-2xl font-bold tracking-tight">Halo, mari gerakin pipeline hari ini</h1>
-          <p className="text-xs text-slate-400 mt-0.5 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
-        </div>
-        <button onClick={() => setShowRevenue((v) => !v)} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-xl px-3 py-2 bg-white hover:bg-slate-50 text-slate-600">
-          {showRevenue ? <EyeOff size={13} /> : <Eye size={13} />} {showRevenue ? "Sembunyikan revenue" : "Tampilkan revenue"}
-        </button>
+      <div>
+        <div className="text-[11px] uppercase tracking-widest text-amber-600 font-semibold mb-0.5">Nexto · Sales Funnel</div>
+        <h1 className="text-2xl font-bold tracking-tight">Halo, mari gerakin pipeline hari ini</h1>
+        <p className="text-xs text-slate-400 mt-0.5 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
 
-      {showRevenue && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-900 rounded-2xl shadow-sm p-4 text-white">
-            <div className="flex items-center gap-2 text-xs text-slate-300 mb-2"><span className="w-7 h-7 rounded-xl flex items-center justify-center bg-amber-500/20 text-amber-400"><Wallet size={15} /></span> Revenue Tahun Ini</div>
-            <div className="font-mono font-bold text-xl">{fmtRp(s.revYear)}</div>
-          </div>
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
-            <div className="flex items-center gap-2 text-xs text-slate-400 mb-2"><span className="w-7 h-7 rounded-xl flex items-center justify-center bg-amber-100 text-amber-600"><Wallet size={15} /></span> Revenue Bulan Ini</div>
-            <div className="font-mono font-bold text-xl text-slate-800">{fmtRp(s.revMonth)}</div>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-3">
+        <RevenueCard label="Revenue Tahun Ini" value={s.revYear} dark />
+        <RevenueCard label="Revenue Bulan Ini" value={s.revMonth} />
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <StatCard icon={CalendarCheck} label="Visit Hari Ini" value={s.visitsToday} accent="amber" />
