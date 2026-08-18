@@ -5,6 +5,11 @@ import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../li
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
+function formatThousands(digitsStr) {
+  if (!digitsStr) return "";
+  return Number(digitsStr).toLocaleString("id-ID");
+}
+
 function AddDealModal({ leads, stages, onClose, onSaved }) {
   const wonStages = stages.filter((s) => s.type === "won");
   const [q, setQ] = useState("");
@@ -13,19 +18,25 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
   const [date, setDate] = useState(todayISO());
   const [chemical, setChemical] = useState("");
   const [tonnage, setTonnage] = useState("");
-  const [value, setValue] = useState("");
+  const [tonnageUnit, setTonnageUnit] = useState("ton");
+  const [valueDigits, setValueDigits] = useState(""); // raw digits, no formatting
   const [busy, setBusy] = useState(false);
   const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
   const pick = (c) => {
     setSel(c); setQ("");
-    setChemical(c.chemical || ""); setTonnage(c.tonnage || ""); setValue(c.deal_value || "");
+    setChemical(c.chemical || ""); setTonnage(c.tonnage || ""); setTonnageUnit(c.tonnage_unit || "ton");
+    setValueDigits(c.deal_value ? String(c.deal_value) : "");
     setDate(c.deal_date || todayISO());
+  };
+  const onValueChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, "");
+    setValueDigits(digits);
   };
   const save = async () => {
     if (!sel) { alert("Pilih company dulu."); return; }
     setBusy(true);
     try {
-      await db.upsertLead({ ...sel, stage_key: stageKey, deal_date: date, chemical, tonnage: Number(tonnage) || 0, deal_value: Number(value) || 0 });
+      await db.upsertLead({ ...sel, stage_key: stageKey, deal_date: date, chemical, tonnage: Number(tonnage) || 0, tonnage_unit: tonnageUnit, deal_value: Number(valueDigits) || 0 });
       onSaved();
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
@@ -55,10 +66,24 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
               <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal deal</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">Chemical</span><input className={inp} value={chemical} onChange={(e) => setChemical(e.target.value)} /></label>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block"><span className="text-xs font-medium text-slate-500">Tonase</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
-              <label className="block"><span className="text-xs font-medium text-slate-500">Revenue (Rp)</span><input type="number" className={inp} value={value} onChange={(e) => setValue(e.target.value)} /></label>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="block col-span-2"><span className="text-xs font-medium text-slate-500">Tonase</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
+              <label className="block"><span className="text-xs font-medium text-slate-500">Satuan</span>
+                <select className={inp} value={tonnageUnit} onChange={(e) => setTonnageUnit(e.target.value)}>
+                  <option value="ton">Ton</option>
+                  <option value="kg">Kg</option>
+                </select>
+              </label>
             </div>
+            <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Total Rp</span>
+              <input
+                className={inp}
+                inputMode="numeric"
+                placeholder="0"
+                value={formatThousands(valueDigits)}
+                onChange={onValueChange}
+              />
+            </label>
           </div>
         </div>
         <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan deal</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button></div>
@@ -72,7 +97,10 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
   const wonKeys = stages.filter((s) => s.type === "won").map((s) => s.key);
   const deals = useMemo(() => leads.filter((c) => wonKeys.includes(c.stage_key)), [leads, stages]);
   const totalValue = deals.reduce((a, c) => a + (Number(c.deal_value) || 0), 0);
-  const totalTon = deals.reduce((a, c) => a + (Number(c.tonnage) || 0), 0);
+  const totalTonInKg = deals.reduce((a, c) => {
+    const t = Number(c.tonnage) || 0;
+    return a + (c.tonnage_unit === "kg" ? t : t * 1000);
+  }, 0);
 
   return (
     <div>
@@ -86,13 +114,13 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
         <>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Deal</div><div className="font-mono font-bold text-2xl text-emerald-600">{deals.length}</div></div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Building2 size={13} /> Total Tonase</div><div className="font-mono font-bold text-2xl text-slate-800">{totalTon.toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></div></div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><TrendingUp size={13} /> Total Revenue</div><div className="font-mono font-bold text-base text-slate-800">{fmtRp(totalValue)}</div></div>
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Building2 size={13} /> Total Tonase</div><div className="font-mono font-bold text-2xl text-slate-800">{(totalTonInKg / 1000).toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></div></div>
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><TrendingUp size={13} /> Total Rp</div><div className="font-mono font-bold text-base text-slate-800">{fmtRp(totalValue)}</div></div>
           </div>
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium">Ton</th><th className="text-left px-3 py-2 font-medium">Revenue</th>
+                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium">Tonase</th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
               <tbody>
                 {deals.map((c) => { const sm = stageMeta(stages, c.stage_key); return (
@@ -103,7 +131,7 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
                     <td className="px-3 py-2 text-xs text-slate-600">{c.sales_owner || "—"}</td>
                     <td className="px-3 py-2 text-xs text-slate-600">{c.deal_date ? fmtDate(c.deal_date) : "—"}</td>
                     <td className="px-3 py-2 text-xs text-slate-600">{c.chemical || "—"}</td>
-                    <td className="px-3 py-2 text-xs font-mono text-slate-700">{c.tonnage ? `${Number(c.tonnage).toLocaleString("id-ID")} ton` : "—"}</td>
+                    <td className="px-3 py-2 text-xs font-mono text-slate-700">{c.tonnage ? `${Number(c.tonnage).toLocaleString("id-ID")} ${c.tonnage_unit === "kg" ? "kg" : "ton"}` : "—"}</td>
                     <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{c.deal_value ? fmtRp(c.deal_value) : "—"}</td>
                   </tr> ); })}
               </tbody>
