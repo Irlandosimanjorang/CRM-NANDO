@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
+import DataCleanupModal from "../components/DataCleanupModal";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
-export default function Settings({ settings, stages, onChanged }) {
+export default function Settings({ settings, stages, leads, onChanged }) {
   const [names, setNames] = useState((settings.sales_names || []).join(", "));
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
   const [busy, setBusy] = useState(false);
@@ -20,6 +21,7 @@ export default function Settings({ settings, stages, onChanged }) {
   const [gcalLoading, setGcalLoading] = useState(true);
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
+  const [showCleanup, setShowCleanup] = useState(false);
 
   useEffect(() => {
     db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); }).catch(() => setTgLoading(false));
@@ -123,6 +125,14 @@ export default function Settings({ settings, stages, onChanged }) {
       <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan pengaturan</button>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Sparkles size={15} className="text-orange-500" /> Rapihin Data</h3>
+        <p className="text-xs text-slate-500 mb-3">Cari saran kategori buat lead "Lainnya", lead yang udah lama ga aktif, dan data kontak yang kurang lengkap. Semua perubahan tetap kamu yang approve.</p>
+        <button onClick={() => setShowCleanup(true)} className="text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+          <Sparkles size={15} /> Buka Rapihin Data
+        </button>
+      </div>
+
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Send size={15} className="text-sky-500" /> Telegram Bot</h3>
         <p className="text-xs text-slate-500 mb-3">Sambungin akun Telegram kamu buat tambah lead, jadwalin visit, dan catat progress langsung dari chat.</p>
         {tgLoading ? (
@@ -187,6 +197,8 @@ export default function Settings({ settings, stages, onChanged }) {
         <p className="text-xs text-slate-500 mb-2">Keluar dari akun ini di perangkat ini.</p>
         <button onClick={() => supabase.auth.signOut()} className="text-sm border border-rose-300 text-rose-600 rounded-xl px-3 py-2 hover:bg-rose-50">Keluar</button>
       </div>
+
+      {showCleanup && <DataCleanupModal leads={leads} stages={stages} onClose={() => setShowCleanup(false)} onChanged={onChanged} />}
     </div>
   );
 }
