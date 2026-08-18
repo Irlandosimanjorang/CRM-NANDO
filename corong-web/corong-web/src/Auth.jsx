@@ -4,14 +4,14 @@ import { Loader2, Users, Trophy, CalendarCheck, Swords, CalendarClock, Lightbulb
 import { NextoBadge } from "./App";
 
 const FEATURES = [
-  { icon: Users, title: "Kelola Leads", desc: "Semua prospek tersusun rapi dalam satu pipeline yang jelas." },
-  { icon: Trophy, title: "Tracking Deal", desc: "Pantau progres tiap kesepakatan dari awal sampai closing." },
-  { icon: CalendarCheck, title: "Jadwal Visit", desc: "Atur dan catat kunjungan ke klien tanpa ada yang kelewat." },
-  { icon: Swords, title: "Analisa Kompetitor", desc: "Simpan data pesaing biar strategi sales makin tajam." },
-  { icon: CalendarClock, title: "Follow-up Otomatis", desc: "Pengingat follow-up biar ga ada lead yang keabaian." },
-  { icon: Lightbulb, title: "AI Advisor", desc: "Rekomendasi lead paling potensial, dikirim tiap pagi." },
-  { icon: Send, title: "Bot Telegram", desc: "Tambah lead & catat progress langsung dari chat." },
-  { icon: Calendar, title: "Google Calendar", desc: "Jadwal visit & follow-up otomatis masuk ke calendar kamu." },
+  { icon: Users, title: "Kelola Leads", desc: "Prospek tersusun rapi dalam satu pipeline." },
+  { icon: Trophy, title: "Tracking Deal", desc: "Pantau progres tiap kesepakatan." },
+  { icon: CalendarCheck, title: "Jadwal Visit", desc: "Catat kunjungan tanpa ada yang kelewat." },
+  { icon: Swords, title: "Analisa Kompetitor", desc: "Data pesaing buat strategi lebih tajam." },
+  { icon: CalendarClock, title: "Follow-up Otomatis", desc: "Pengingat biar ga ada lead terabaikan." },
+  { icon: Lightbulb, title: "AI Advisor", desc: "Rekomendasi lead potensial tiap pagi." },
+  { icon: Send, title: "Bot Telegram", desc: "Tambah lead & catat progress via chat." },
+  { icon: Calendar, title: "Google Calendar", desc: "Jadwal otomatis masuk ke calendar kamu." },
 ];
 
 export default function Auth() {
@@ -35,25 +35,25 @@ export default function Auth() {
     finally { setLoading(false); }
   };
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white flex-col justify-center px-12 xl:px-16 py-12 relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -left-16 w-80 h-80 bg-orange-600/10 rounded-full blur-3xl" />
+    <div className="h-screen overflow-hidden bg-slate-50 flex">
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white flex-col justify-center px-10 xl:px-14 relative overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-orange-600/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-28 -left-14 w-72 h-72 bg-orange-600/10 rounded-full blur-3xl" />
         <div className="relative">
-          <div className="flex items-center gap-2.5 mb-8">
-            <NextoBadge size={40} />
-            <div className="font-bold tracking-tight text-lg">Nexto</div>
+          <div className="flex items-center gap-2.5 mb-5">
+            <NextoBadge size={34} />
+            <div className="font-bold tracking-tight text-base">Nexto</div>
           </div>
-          <h2 className="text-2xl xl:text-3xl font-bold tracking-tight mb-2">Satu tempat buat semua urusan sales kamu.</h2>
-          <p className="text-sm text-slate-400 mb-10">Dari lead pertama masuk sampai deal closing, semua kepantau di sini.</p>
-          <div className="grid grid-cols-2 gap-4">
+          <h2 className="text-xl xl:text-2xl font-bold tracking-tight mb-1.5 leading-snug">Satu tempat buat semua urusan sales kamu.</h2>
+          <p className="text-xs text-slate-400 mb-6">Dari lead pertama masuk sampai deal closing, semua kepantau di sini.</p>
+          <div className="grid grid-cols-2 gap-3">
             {FEATURES.map((f, i) => {
               const I = f.icon;
               return (
-                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <div className="w-9 h-9 rounded-xl bg-orange-600/15 text-orange-400 flex items-center justify-center mb-2.5"><I size={17} /></div>
-                  <div className="font-semibold text-sm mb-1">{f.title}</div>
-                  <div className="text-xs text-slate-400 leading-relaxed">{f.desc}</div>
+                <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-3">
+                  <div className="w-7 h-7 rounded-lg bg-orange-500/15 text-orange-400 flex items-center justify-center mb-2"><I size={14} /></div>
+                  <div className="font-semibold text-xs mb-0.5">{f.title}</div>
+                  <div className="text-[11px] text-slate-400 leading-snug">{f.desc}</div>
                 </div>
               );
             })}
@@ -61,14 +61,15 @@ export default function Auth() {
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 overflow-y-auto">
         <div className="w-full max-w-sm bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
           <div className="flex items-center gap-2.5 mb-5 lg:hidden">
             <NextoBadge size={40} />
             <div className="leading-tight"><div className="font-bold tracking-tight">Nexto</div></div>
           </div>
-          <h1 className="text-lg font-bold mb-1">{mode === "signin" ? "Masuk" : "Daftar akun"}</h1>
-          <p className="text-xs text-slate-400 mb-4">{mode === "signin" ? "Masuk buat akses pipeline-mu." : "Bikin akun buat mulai."}</p>
+          <div className="text-[11px] font-semibold text-orange-600 uppercase tracking-widest mb-2">Nexto CRM</div>
+          <h1 className="text-xl font-bold mb-1">{mode === "signin" ? "Selamat datang kembali" : "Buat akun baru"}</h1>
+          <p className="text-xs text-slate-400 mb-5">{mode === "signin" ? "Masuk buat akses pipeline-mu." : "Bikin akun buat mulai."}</p>
           <div className="space-y-3">
             <input className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <input type="password" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
