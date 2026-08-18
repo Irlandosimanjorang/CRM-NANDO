@@ -101,7 +101,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       </div>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
-        <table className="text-sm" style={{ minWidth: "1600px", width: "100%" }}>
+        <table className="text-sm" style={{ minWidth: "1900px", width: "100%" }}>
           <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "220px" }}>Perusahaan</th>
@@ -110,6 +110,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "220px" }}>Telepon / WA</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "180px" }}>Website</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "180px" }}>Produk</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "300px" }}>Progress Harian</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "120px" }}>Kota</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "130px" }}>Tahap</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "110px" }}>Prioritas</th>
@@ -125,6 +126,18 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                 <td className="px-3 py-2 text-xs whitespace-pre-line" onClick={(e) => e.stopPropagation()}>{c.phone ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1"><MessageCircle size={11} className="shrink-0" />{c.phone}</a> : <span className="text-slate-600">{c.phone}</span>) : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{web ? <a href={web} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">{prettyDomain(c.website)}</a> : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
+                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>
+                  {c.progressLog && c.progressLog.length > 0 ? (
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                      {c.progressLog.map((p) => (
+                        <div key={p.id} className="border-l-2 border-orange-200 pl-2">
+                          <div className="text-[10px] text-slate-400 font-mono">{fmtDate(p.date)}</div>
+                          <div className="text-slate-700 leading-snug">{p.text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <span className="text-slate-300">—</span>}
+                </td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
                 <td className="px-3 py-2"><span className="text-[11px] border rounded-full px-2 py-0.5 whitespace-nowrap" style={chipStyle(sm.hex)}>{sm.label}</span></td>
                 <td className="px-3 py-2">{pm ? <span className="text-[10px] border rounded-full px-1.5 py-0.5 whitespace-nowrap" style={chipStyle(pm.hex)}>{pm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
