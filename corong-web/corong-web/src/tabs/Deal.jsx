@@ -1,26 +1,49 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Trophy, Building2, TrendingUp, Plus, Search, Save, X } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
+const DRAFT_KEY = "nexto_add_deal_draft";
+const DRAFT_MAX_AGE = 24 * 60 * 60 * 1000; // 24 jam
 
 function formatThousands(digitsStr) {
   if (!digitsStr) return "";
   return Number(digitsStr).toLocaleString("id-ID");
 }
 
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (Date.now() - d.savedAt > DRAFT_MAX_AGE) { localStorage.removeItem(DRAFT_KEY); return null; }
+    return d;
+  } catch { return null; }
+}
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
+}
+
 function AddDealModal({ leads, stages, onClose, onSaved }) {
   const wonStages = stages.filter((s) => s.type === "won");
+  const draft = loadDraft();
   const [q, setQ] = useState("");
-  const [sel, setSel] = useState(null);
-  const [stageKey, setStageKey] = useState(wonStages[0]?.key || stages[0]?.key);
-  const [date, setDate] = useState(todayISO());
-  const [chemical, setChemical] = useState("");
-  const [tonnage, setTonnage] = useState("");
-  const [tonnageUnit, setTonnageUnit] = useState("ton");
-  const [valueDigits, setValueDigits] = useState(""); // raw digits, no formatting
+  const [sel, setSel] = useState(draft?.sel || null);
+  const [stageKey, setStageKey] = useState(draft?.stageKey || wonStages[0]?.key || stages[0]?.key);
+  const [date, setDate] = useState(draft?.date || todayISO());
+  const [chemical, setChemical] = useState(draft?.chemical || "");
+  const [tonnage, setTonnage] = useState(draft?.tonnage || "");
+  const [tonnageUnit, setTonnageUnit] = useState(draft?.tonnageUnit || "ton");
+  const [valueDigits, setValueDigits] = useState(draft?.valueDigits || "");
   const [busy, setBusy] = useState(false);
+  const hadDraft = !!draft?.sel;
+
+  useEffect(() => {
+    const data = { sel, stageKey, date, chemical, tonnage, tonnageUnit, valueDigits, savedAt: Date.now() };
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch {}
+  }, [sel, stageKey, date, chemical, tonnage, tonnageUnit, valueDigits]);
+
   const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
   const pick = (c) => {
     setSel(c); setQ("");
@@ -37,6 +60,7 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
     setBusy(true);
     try {
       await db.upsertLead({ ...sel, stage_key: stageKey, deal_date: date, chemical, tonnage: Number(tonnage) || 0, tonnage_unit: tonnageUnit, deal_value: Number(valueDigits) || 0 });
+      clearDraft();
       onSaved();
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
@@ -44,6 +68,7 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><Trophy size={18} className="text-emerald-500" /> Tambah Deal</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
+        {hadDraft && <div className="mb-3 text-xs bg-orange-50 text-orange-700 border border-orange-200 rounded-xl px-3 py-2">Melanjutkan draft yang belum disimpan.</div>}
         <div className="space-y-3">
           <div>
             <span className="text-xs font-medium text-slate-500">Company *</span>
@@ -67,7 +92,7 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
               <label className="block"><span className="text-xs font-medium text-slate-500">Chemical</span><input className={inp} value={chemical} onChange={(e) => setChemical(e.target.value)} /></label>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <label className="block col-span-2"><span className="text-xs font-medium text-slate-500">Tonase</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
+              <label className="block col-span-2"><span className="text-xs font-medium text-slate-500">Quantity</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">Satuan</span>
                 <select className={inp} value={tonnageUnit} onChange={(e) => setTonnageUnit(e.target.value)}>
                   <option value="ton">Ton</option>
@@ -86,7 +111,7 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
             </label>
           </div>
         </div>
-        <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan deal</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button></div>
+        <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan deal</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Tutup</button></div>
       </div>
     </div>
   );
@@ -114,13 +139,13 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
         <>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Deal</div><div className="font-mono font-bold text-2xl text-emerald-600">{deals.length}</div></div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Building2 size={13} /> Total Tonase</div><div className="font-mono font-bold text-2xl text-slate-800">{(totalTonInKg / 1000).toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></div></div>
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Building2 size={13} /> Total Quantity</div><div className="font-mono font-bold text-2xl text-slate-800">{(totalTonInKg / 1000).toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></div></div>
             <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><TrendingUp size={13} /> Total Rp</div><div className="font-mono font-bold text-base text-slate-800">{fmtRp(totalValue)}</div></div>
           </div>
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium">Tonase</th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
+                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium">Quantity</th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
               <tbody>
                 {deals.map((c) => { const sm = stageMeta(stages, c.stage_key); return (
