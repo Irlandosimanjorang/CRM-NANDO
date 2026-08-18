@@ -29,23 +29,17 @@ function mapRow(row, category, firstStageKey) {
 export default function Leads({ leads, stages, settings, onChanged }) {
   const [q, setQ] = useState("");
   const [fCat, setFCat] = useState("");
-  const [fStage, setFStage] = useState("");
   const [fType, setFType] = useState("");
-  const [fSales, setFSales] = useState("");
   const [edit, setEdit] = useState(null);
   const [busy, setBusy] = useState(false);
   const [showDup, setShowDup] = useState(false);
 
   const filtered = useMemo(() => leads.filter((c) => {
     if (fCat && c.category !== fCat) return false;
-    if (fStage && c.stage_key !== fStage) return false;
     if (fType && (c.company_type || "") !== fType) return false;
-    if (fSales && (c.sales_owner || "") !== fSales) return false;
     if (q) { const s = q.toLowerCase(); const hay = [c.name, c.city, c.province, c.key_person, c.product, c.sales_owner].map((x) => (x || "").toLowerCase()); if (!hay.some((h) => h.includes(s))) return false; }
     return true;
-  }), [leads, q, fCat, fStage, fType, fSales]);
-
-  const salesList = useMemo(() => [...new Set(leads.map((c) => c.sales_owner).filter(Boolean))].sort(), [leads]);
+  }), [leads, q, fCat, fType]);
 
   const blank = () => ({ name: "", category: CATEGORIES[0], stage_key: stages[0]?.key, company_type: "", priority: "", verified: false });
 
@@ -71,7 +65,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   };
 
   const exportCSV = () => {
-    const rows = filtered.map((c) => ({ Nama: c.name, Kategori: c.category, Tipe: c.company_type, Produk: c.product, Tahap: stageMeta(stages, c.stage_key).label, Prioritas: c.priority, Email: c.email, Telepon_WA: c.phone, Key_Person: c.key_person, Kota: c.city, Website: c.website }));
+    const rows = filtered.map((c) => ({ Nama: c.name, Kategori: c.category, Tipe: c.company_type, Produk: c.product, Tahap: stageMeta(stages, c.stage_key).label, Email: c.email, Telepon_WA: c.phone, Key_Person: c.key_person, Kota: c.city, Website: c.website }));
     const csv = Papa.unparse(rows); const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `nexto-leads-${todayISO()}.csv`; a.click();
   };
@@ -88,8 +82,6 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         <div className="relative flex-1 min-w-40"><Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk…" className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
         <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
         <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
-        <select value={fStage} onChange={(e) => setFStage(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua tahap</option>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
-        <select value={fSales} onChange={(e) => setFSales(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua sales</option>{salesList.map((s) => <option key={s} value={s}>{s}</option>)}</select>
         <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Lead</button>
       </div>
 
@@ -125,7 +117,6 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                     {isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white">NEW</span>}
                     {c.verified ? <ShieldCheck size={12} className="text-emerald-500" /> : <ShieldAlert size={12} className="text-slate-300" />}
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">{c.sales_owner || "—"}</div>
                 </td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>
