@@ -233,3 +233,10 @@ export async function disconnectGoogleCalendar() {
   const { error } = await supabase.from("google_calendar_links").delete().eq("user_id", uid);
   if (error) throw error;
 }
+
+// ---- BULK SYNC CALENDAR (buat data lama yang belum ke-sync) ----
+export async function bulkSyncCalendar() {
+  const { data, error } = await supabase.functions.invoke("sync-calendar-bulk");
+  if (error) throw error;
+  return data;
+}
