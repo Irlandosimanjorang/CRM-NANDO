@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, Mic, MicOff, Volume2, VolumeX, Loader2, PhoneCall, PhoneOff } from "lucide-react";
+import { Bot, Send, Mic, MicOff, Volume2, VolumeX, Loader2, PhoneCall, PhoneOff, AlertCircle } from "lucide-react";
 import * as db from "../lib/db";
 
 function useSpeechRecognition() {
@@ -8,7 +8,7 @@ function useSpeechRecognition() {
 
   const listenOnce = () => {
     return new Promise((resolve, reject) => {
-      if (!supported) { reject(new Error("Browser ga dukung voice input")); return; }
+      if (!supported) { reject(new Error("browser-not-supported")); return; }
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       const rec = new SR();
       rec.lang = "id-ID";
@@ -16,10 +16,10 @@ function useSpeechRecognition() {
       rec.maxAlternatives = 1;
       let done = false;
       rec.onresult = (e) => { done = true; resolve(e.results[0][0].transcript); };
-      rec.onerror = (e) => { if (!done) reject(new Error(e.error || "voice error")); };
+      rec.onerror = (e) => { done = true; reject(new Error(e.error || "unknown-error")); };
       rec.onend = () => { if (!done) reject(new Error("no-speech")); };
       recRef.current = rec;
-      rec.start();
+      try { rec.start(); } catch (e) { reject(e); }
     });
   };
   const abort = () => { try { recRef.current?.abort(); } catch (_) {} };
@@ -43,10 +43,17 @@ function speakAsync(text) {
 }
 
 function renderText(text) {
-  // render sederhana: **bold** jadi <b>, baris baru tetap
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((p, i) => p.startsWith("**") && p.endsWith("**") ? <b key={i}>{p.slice(2, -2)}</b> : <span key={i}>{p}</span>);
 }
+
+const ERROR_LABELS = {
+  "not-allowed": "Akses microphone ditolak. Klik ikon kunci/mic di address bar browser, izinkan akses microphone, lalu coba lagi.",
+  "no-speech": "Ga kedengeran suara. Coba lagi dan langsung ngomong.",
+  "audio-capture": "Microphone ga ketemu. Cek microphone kamu tersambung.",
+  "network": "Koneksi internet bermasalah buat proses voice recognition.",
+  "browser-not-supported": "Browser ini ga dukung voice input. Coba pakai Chrome.",
+};
 
 export default function ChatAssistant() {
   const [messages, setMessages] = useState([]);
@@ -55,9 +62,11 @@ export default function ChatAssistant() {
   const [sending, setSending] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [callActive, setCallActive] = useState(false);
-  const [callStatus, setCallStatus] = useState(""); // "listening" | "thinking" | "speaking"
+  const [callStatus, setCallStatus] = useState("");
+  const [callError, setCallError] = useState("");
   const bottomRef = useRef(null);
   const callActiveRef = useRef(false);
+  const errorStreakRef = useRef(0);
 
   const { supported: micSupported, listenOnce, abort } = useSpeechRecognition();
 
@@ -89,12 +98,24 @@ export default function ChatAssistant() {
   const callLoop = useCallback(async () => {
     while (callActiveRef.current) {
       setCallStatus("listening");
+      setCallError("");
       let heard;
       try {
         heard = await listenOnce();
+        errorStreakRef.current = 0;
       } catch (e) {
         if (!callActiveRef.current) break;
-        continue; // ga kedengeran apa-apa, coba dengerin lagi
+        errorStreakRef.current++;
+        const key = e.message;
+        setCallError(ERROR_LABELS[key] || `Error: ${key}`);
+        // stop otomatis kalau errornya fatal (permission ditolak / browser ga support)
+        if (key === "not-allowed" || key === "browser-not-supported" || key === "audio-capture" || errorStreakRef.current >= 5) {
+          callActiveRef.current = false;
+          setCallActive(false);
+          setCallStatus("");
+          break;
+        }
+        continue;
       }
       if (!callActiveRef.current) break;
       if (!heard || !heard.trim()) continue;
@@ -109,8 +130,18 @@ export default function ChatAssistant() {
     setCallStatus("");
   }, [listenOnce]);
 
-  const startCall = () => {
-    if (!micSupported) { alert("Browser kamu ga dukung voice input. Coba pakai Chrome."); return; }
+  const startCall = async () => {
+    if (!micSupported) { setCallError(ERROR_LABELS["browser-not-supported"]); return; }
+    // minta izin microphone eksplisit dulu, biar errornya jelas kalau ditolak
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (e) {
+      setCallError(ERROR_LABELS["not-allowed"]);
+      return;
+    }
+    setCallError("");
+    errorStreakRef.current = 0;
     callActiveRef.current = true;
     setCallActive(true);
     callLoop();
@@ -119,6 +150,7 @@ export default function ChatAssistant() {
     callActiveRef.current = false;
     setCallActive(false);
     setCallStatus("");
+    setCallError("");
     abort();
     window.speechSynthesis.cancel();
   };
@@ -144,6 +176,12 @@ export default function ChatAssistant() {
           )}
         </div>
       </div>
+
+      {callError && (
+        <div className="mb-3 bg-rose-50 border border-rose-200 rounded-2xl p-3 flex items-start gap-2 text-sm text-rose-700">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" /> {callError}
+        </div>
+      )}
 
       {callActive && (
         <div className="mb-3 bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-center justify-center gap-3">
