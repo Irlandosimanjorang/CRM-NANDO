@@ -104,7 +104,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         <table className="text-sm" style={{ minWidth: "1550px", width: "100%" }}>
           <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "220px" }}>Perusahaan</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", left: 0, zIndex: 20, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "120px" }}>Kota</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "160px" }}>Key Person</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "200px" }}>Email</th>
@@ -117,8 +117,8 @@ export default function Leads({ leads, stages, settings, onChanged }) {
           </thead>
           <tbody>
             {filtered.map((c) => { const wa = waLink(c.phone); const web = normUrl(c.website); return (
-              <tr key={c.id} className="border-t border-slate-100 hover:bg-orange-50/40 transition-colors align-top cursor-pointer" onClick={() => setEdit(c)}>
-                <td className="px-3 py-2">
+              <tr key={c.id} className="border-t border-slate-100 hover:bg-orange-50/40 transition-colors align-top cursor-pointer group" onClick={() => setEdit(c)}>
+                <td className="px-3 py-2 bg-white group-hover:bg-orange-50/40" style={{ position: "sticky", left: 0, zIndex: 10, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
                   <div className="font-medium flex items-center gap-1.5 flex-wrap">
                     {c.name}
                     {typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}
