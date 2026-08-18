@@ -124,7 +124,7 @@ export default function App() {
               {tab === "followup" && <Followup leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
               {tab === "asisten" && <ChatAssistant />}
-              {tab === "settings" && <SettingsTab settings={settings} stages={stageList} onChanged={reload} />}
+              {tab === "settings" && <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />}
             </>
           )}
         </main>
