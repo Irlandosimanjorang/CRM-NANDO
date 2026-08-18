@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { supabase } from "./lib/supabaseClient";
-import { Loader2, Users, Trophy, CalendarCheck, Swords, CalendarClock, Lightbulb, Send, Calendar } from "lucide-react";
+import { Loader2, Users, CalendarCheck, Swords, CalendarClock, Lightbulb, Send, Calendar, Bot } from "lucide-react";
 import { NextoBadge } from "./App";
 
 const FEATURES = [
+  { icon: Lightbulb, title: "AI Advisor", desc: "Rekomendasi lead potensial tiap pagi." },
+  { icon: Bot, title: "AI Asisten", desc: "Ngobrol bebas soal pipeline kapan aja." },
+  { icon: Send, title: "Bot Telegram", desc: "Tambah lead & catat progress via chat." },
+  { icon: Calendar, title: "Google Calendar", desc: "Jadwal otomatis masuk ke calendar kamu." },
   { icon: Users, title: "Kelola Leads", desc: "Prospek tersusun rapi dalam satu pipeline." },
-  { icon: Trophy, title: "Tracking Deal", desc: "Pantau progres tiap kesepakatan." },
   { icon: CalendarCheck, title: "Jadwal Visit", desc: "Catat kunjungan tanpa ada yang kelewat." },
   { icon: Swords, title: "Analisa Kompetitor", desc: "Data pesaing buat strategi lebih tajam." },
   { icon: CalendarClock, title: "Follow-up Otomatis", desc: "Pengingat biar ga ada lead terabaikan." },
-  { icon: Lightbulb, title: "AI Advisor", desc: "Rekomendasi lead potensial tiap pagi." },
-  { icon: Send, title: "Bot Telegram", desc: "Tambah lead & catat progress via chat." },
-  { icon: Calendar, title: "Google Calendar", desc: "Jadwal otomatis masuk ke calendar kamu." },
 ];
 
 export default function Auth() {
