@@ -234,9 +234,22 @@ export async function disconnectGoogleCalendar() {
   if (error) throw error;
 }
 
-// ---- BULK SYNC CALENDAR (buat data lama yang belum ke-sync) ----
+// ---- BULK SYNC CALENDAR ----
 export async function bulkSyncCalendar() {
   const { data, error } = await supabase.functions.invoke("sync-calendar-bulk");
   if (error) throw error;
   return data;
+}
+
+// ---- CHAT ASISTEN ----
+export async function sendChatMessage(message) {
+  const { data, error } = await supabase.functions.invoke("ai-chat", { body: { message } });
+  if (error) throw error;
+  return data.reply;
+}
+
+export async function getChatHistory() {
+  const { data, error } = await supabase.from("chat_messages").select("role, content, created_at").order("created_at", { ascending: true }).limit(100);
+  if (error) throw error;
+  return data || [];
 }
