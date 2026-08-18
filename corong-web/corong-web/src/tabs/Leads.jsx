@@ -7,7 +7,6 @@ import { CATEGORIES, stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl,
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
 
-// mapping import: cocokin header bilingual -> field
 const val = (row, keys) => {
   const lk = Object.keys(row);
   for (const k of keys) { const hit = lk.find((h) => h.toLowerCase().includes(k.toLowerCase())); if (hit && row[hit] != null && String(row[hit]).trim()) return String(row[hit]).trim(); }
@@ -102,22 +101,33 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       </div>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
-            <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Key Person</th><th className="text-left px-3 py-2 font-medium">Email</th><th className="text-left px-3 py-2 font-medium">Telepon / WA</th><th className="text-left px-3 py-2 font-medium">Website</th><th className="text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Prioritas</th><th className="px-3 py-2"></th>
-          </tr></thead>
+        <table className="text-sm" style={{ minWidth: "1600px", width: "100%" }}>
+          <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider">
+            <tr>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "220px" }}>Perusahaan</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "160px" }}>Key Person</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "200px" }}>Email</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "220px" }}>Telepon / WA</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "180px" }}>Website</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "180px" }}>Produk</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "120px" }}>Kota</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "130px" }}>Tahap</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "110px" }}>Prioritas</th>
+              <th className="px-3 py-2" style={{ minWidth: "80px" }}></th>
+            </tr>
+          </thead>
           <tbody>
             {filtered.map((c) => { const sm = stageMeta(stages, c.stage_key); const wa = waLink(c.phone); const web = normUrl(c.website); const pm = prioMeta(c.priority); return (
               <tr key={c.id} className="border-t border-slate-100 hover:bg-orange-50/40 transition-colors align-top cursor-pointer" onClick={() => setEdit(c)}>
                 <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}{isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white">NEW</span>}{c.verified ? <ShieldCheck size={12} className="text-emerald-500" /> : <ShieldAlert size={12} className="text-slate-300" />}</div><div className="text-[10px] text-slate-400 mt-0.5">{c.sales_owner || "—"}</div></td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{c.email ? <a href={`mailto:${c.email}`} className="text-blue-600 hover:underline break-all">{c.email}</a> : <span className="text-slate-300">—</span>}</td>
-                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{c.phone ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1"><MessageCircle size={11} />{c.phone.slice(0, 18)}</a> : <span className="text-slate-600">{c.phone}</span>) : <span className="text-slate-300">—</span>}</td>
+                <td className="px-3 py-2 text-xs whitespace-pre-line" onClick={(e) => e.stopPropagation()}>{c.phone ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1"><MessageCircle size={11} className="shrink-0" />{c.phone}</a> : <span className="text-slate-600">{c.phone}</span>) : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{web ? <a href={web} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">{prettyDomain(c.website)}</a> : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
-                <td className="px-3 py-2"><span className="text-[11px] border rounded-full px-2 py-0.5" style={chipStyle(sm.hex)}>{sm.label}</span></td>
-                <td className="px-3 py-2">{pm ? <span className="text-[10px] border rounded-full px-1.5 py-0.5" style={chipStyle(pm.hex)}>{pm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
+                <td className="px-3 py-2"><span className="text-[11px] border rounded-full px-2 py-0.5 whitespace-nowrap" style={chipStyle(sm.hex)}>{sm.label}</span></td>
+                <td className="px-3 py-2">{pm ? <span className="text-[10px] border rounded-full px-1.5 py-0.5 whitespace-nowrap" style={chipStyle(pm.hex)}>{pm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
                 <td className="px-3 py-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => setEdit(c)} className="text-slate-400 hover:text-blue-600 p-1"><Pencil size={15} /></button>
                   <button onClick={() => del(c.id)} className="text-slate-400 hover:text-rose-600 p-1"><Trash2 size={15} /></button>
