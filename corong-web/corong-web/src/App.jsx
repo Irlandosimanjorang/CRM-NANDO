@@ -9,11 +9,12 @@ import Visit from "./tabs/Visit";
 import Kompetitor from "./tabs/Kompetitor";
 import Followup from "./tabs/Followup";
 import Advisor from "./tabs/Advisor";
+import ChatAssistant from "./tabs/ChatAssistant";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords, CalendarClock,
-  Lightbulb, Settings as SettingsIcon, Loader2, LogOut,
+  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -33,6 +34,7 @@ const NAV = [
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
   { key: "followup", label: "Follow-up", short: "Follow", icon: CalendarClock },
   { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
+  { key: "asisten", label: "Asisten", short: "Chat", icon: Bot },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
 ];
 
@@ -121,13 +123,14 @@ export default function App() {
               {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
               {tab === "followup" && <Followup leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
+              {tab === "asisten" && <ChatAssistant />}
               {tab === "settings" && <SettingsTab settings={settings} stages={stageList} onChanged={reload} />}
             </>
           )}
         </main>
 
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/90 backdrop-blur-lg border-t border-slate-200">
-          <div className="max-w-lg mx-auto flex justify-around px-1 pt-1.5 pb-2">
+          <div className="max-w-lg mx-auto flex justify-around px-1 pt-1.5 pb-2 overflow-x-auto">
             {NAV.map((n) => { const I = n.icon; const active = tab === n.key; return (
               <button key={n.key} onClick={() => setTab(n.key)} className={`flex flex-col items-center gap-0.5 flex-1 py-1 rounded-xl ${active ? "text-orange-600" : "text-slate-400"}`}>
                 <I size={20} strokeWidth={active ? 2.5 : 2} /><span className="text-[9px] font-medium leading-none truncate max-w-full">{n.short}</span>
