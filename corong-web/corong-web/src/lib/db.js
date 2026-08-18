@@ -253,3 +253,20 @@ export async function getChatHistory() {
   if (error) throw error;
   return data || [];
 }
+
+// ---- DATA CLEANUP ----
+export async function getSuggestedCategories() {
+  const { data, error } = await supabase.functions.invoke("suggest-categories");
+  if (error) throw error;
+  return data.suggestions || [];
+}
+
+export async function bulkUpdateCategory(updates) {
+  for (const u of updates) {
+    await supabase.from("leads").update({ category: u.suggested }).eq("id", u.id);
+  }
+}
+
+export async function bulkMarkLost(leadIds, lostStageKey) {
+  await supabase.from("leads").update({ stage_key: lostStageKey }).in("id", leadIds);
+}
