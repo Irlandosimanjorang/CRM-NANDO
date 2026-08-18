@@ -65,7 +65,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   };
 
   const exportCSV = () => {
-    const rows = filtered.map((c) => ({ Nama: c.name, Kategori: c.category, Tipe: c.company_type, Produk: c.product, Tahap: stageMeta(stages, c.stage_key).label, Email: c.email, Telepon_WA: c.phone, Key_Person: c.key_person, Kota: c.city, Website: c.website }));
+    const rows = filtered.map((c) => ({ Nama: c.name, Kategori: c.category, Tipe: c.company_type, Produk: c.product, Tahap: stageMeta(stages, c.stage_key).label, Email: c.email, Telepon_WA: c.phone, Key_Person: c.key_person, Jabatan: c.key_person_title, Kota: c.city, Website: c.website }));
     const csv = Papa.unparse(rows); const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `nexto-leads-${todayISO()}.csv`; a.click();
   };
@@ -93,12 +93,13 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       </div>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
-        <table className="text-sm" style={{ minWidth: "1550px", width: "100%" }}>
+        <table className="text-sm" style={{ minWidth: "1700px", width: "100%" }}>
           <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", left: 0, zIndex: 20, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "120px" }}>Kota</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "160px" }}>Key Person</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "150px" }}>Jabatan</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "200px" }}>Email</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "220px" }}>Telepon / WA</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap" style={{ minWidth: "180px" }}>Website</th>
@@ -120,6 +121,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                 </td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{c.key_person_title || "—"}</td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{c.email ? <a href={`mailto:${c.email}`} className="text-blue-600 hover:underline break-all">{c.email}</a> : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs whitespace-pre-line" onClick={(e) => e.stopPropagation()}>{c.phone ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1"><MessageCircle size={11} className="shrink-0" />{c.phone}</a> : <span className="text-slate-600">{c.phone}</span>) : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{web ? <a href={web} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">{prettyDomain(c.website)}</a> : <span className="text-slate-300">—</span>}</td>
