@@ -51,9 +51,6 @@ function RevenueTrendChart({ months }) {
           );
         })}
       </svg>
-      <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-1">
-        <span>Total 6 bulan: {fmtRp(months.reduce((a, m) => a + m.value, 0))}</span>
-      </div>
     </div>
   );
 }
@@ -129,7 +126,6 @@ export default function Dashboard({ leads, stages, onGo }) {
     <div className="space-y-5">
       <div>
         <div className="text-[11px] uppercase tracking-widest text-orange-600 font-semibold mb-0.5">Nexto · Sales Funnel</div>
-        <h1 className="text-2xl font-bold tracking-tight">Halo, mari gerakin pipeline hari ini</h1>
         <p className="text-xs text-slate-400 mt-0.5 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
 
