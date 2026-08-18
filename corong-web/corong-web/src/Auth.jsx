@@ -4,14 +4,14 @@ import { Loader2, Users, CalendarCheck, Swords, CalendarClock, Lightbulb, Send, 
 import { NextoBadge } from "./App";
 
 const FEATURES = [
-  { icon: Lightbulb, title: "AI Advisor" },
-  { icon: Bot, title: "AI Asisten" },
-  { icon: Send, title: "Bot Telegram" },
-  { icon: Calendar, title: "Google Calendar" },
-  { icon: Users, title: "Kelola Leads" },
-  { icon: CalendarCheck, title: "Jadwal Visit" },
-  { icon: Swords, title: "Analisa Kompetitor" },
-  { icon: CalendarClock, title: "Follow-up Otomatis" },
+  { icon: Lightbulb, title: "AI Advisor", desc: "Rekomendasi lead potensial tiap pagi." },
+  { icon: Bot, title: "AI Asisten", desc: "Ngobrol bebas soal pipeline kapan aja." },
+  { icon: Send, title: "Bot Telegram", desc: "Tambah lead & catat progress via chat." },
+  { icon: Calendar, title: "Google Calendar", desc: "Jadwal otomatis masuk ke calendar kamu." },
+  { icon: Users, title: "Kelola Leads", desc: "Prospek tersusun rapi dalam satu pipeline." },
+  { icon: CalendarCheck, title: "Jadwal Visit", desc: "Catat kunjungan tanpa ada yang kelewat." },
+  { icon: Swords, title: "Analisa Kompetitor", desc: "Data pesaing buat strategi lebih tajam." },
+  { icon: CalendarClock, title: "Follow-up Otomatis", desc: "Pengingat biar ga ada lead terabaikan." },
 ];
 
 export default function Auth() {
@@ -35,42 +35,45 @@ export default function Auth() {
     finally { setLoading(false); }
   };
   return (
-    <div className="h-screen overflow-hidden bg-white flex">
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-12 xl:px-16 bg-slate-50 border-r border-slate-200">
-        <div className="flex items-center gap-2.5 mb-10">
-          <NextoBadge size={32} />
-          <div className="font-bold tracking-tight text-lg text-slate-900">Nexto</div>
-        </div>
-        <h2 className="text-2xl xl:text-3xl font-bold tracking-tight mb-2 leading-snug text-slate-900">Satu tempat buat semua urusan sales kamu.</h2>
-        <p className="text-sm text-slate-500 mb-10">Dari lead pertama masuk sampai deal closing, semua kepantau di sini.</p>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {FEATURES.map((f, i) => {
-            const I = f.icon;
-            return (
-              <div key={i} className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0"><I size={16} /></div>
-                <span className="text-sm font-medium text-slate-700">{f.title}</span>
-              </div>
-            );
-          })}
+    <div className="h-screen overflow-hidden bg-slate-50 flex">
+      <div className="hidden lg:flex lg:w-1/2 text-white flex-col justify-center px-8 xl:px-12 relative overflow-hidden" style={{ background: "#1c1917" }}>
+        <div className="relative">
+          <div className="flex items-center gap-2.5 mb-4">
+            <NextoBadge size={32} />
+            <div className="font-bold tracking-tight text-base">Nexto</div>
+          </div>
+          <h2 className="text-lg xl:text-xl font-bold tracking-tight mb-1 leading-snug">Satu tempat buat semua urusan sales kamu.</h2>
+          <p className="text-xs text-stone-400 mb-5">Dari lead pertama masuk sampai deal closing, semua kepantau di sini.</p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {FEATURES.map((f, i) => {
+              const I = f.icon;
+              return (
+                <div key={i} className="rounded-xl p-3 bg-white/5 border border-white/10">
+                  <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center mb-2"><I size={16} /></div>
+                  <div className="font-semibold text-sm mb-0.5 text-stone-100">{f.title}</div>
+                  <div className="text-xs text-stone-400 leading-snug">{f.desc}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 overflow-y-auto">
-        <div className="w-full max-w-sm">
-          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+        <div className="w-full max-w-sm bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
+          <div className="flex items-center gap-2.5 mb-5 lg:hidden">
             <NextoBadge size={40} />
             <div className="leading-tight"><div className="font-bold tracking-tight">Nexto</div></div>
           </div>
           <div className="text-[11px] font-semibold text-orange-600 uppercase tracking-widest mb-2">Nexto CRM</div>
-          <h1 className="text-2xl font-bold mb-1.5 text-slate-900">{mode === "signin" ? "Selamat datang kembali" : "Buat akun baru"}</h1>
-          <p className="text-sm text-slate-400 mb-7">{mode === "signin" ? "Masuk buat akses pipeline-mu." : "Bikin akun buat mulai."}</p>
-          <div className="space-y-3.5">
-            <input className="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input type="password" className="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
-            {msg && <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg p-2.5">{msg}</div>}
-            <button onClick={submit} disabled={loading} className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors">{loading ? <Loader2 size={15} className="animate-spin" /> : null} {mode === "signin" ? "Masuk" : "Daftar"}</button>
-            <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMsg(""); }} className="w-full text-xs text-slate-400 hover:text-slate-700 transition-colors">
+          <h1 className="text-xl font-bold mb-1">{mode === "signin" ? "Selamat datang kembali" : "Buat akun baru"}</h1>
+          <p className="text-xs text-slate-400 mb-5">{mode === "signin" ? "Masuk buat akses pipeline-mu." : "Bikin akun buat mulai."}</p>
+          <div className="space-y-3">
+            <input className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="password" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
+            {msg && <div className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-2">{msg}</div>}
+            <button onClick={submit} disabled={loading} className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm py-2.5 rounded-xl font-medium flex items-center justify-center gap-2">{loading ? <Loader2 size={15} className="animate-spin" /> : null} {mode === "signin" ? "Masuk" : "Daftar"}</button>
+            <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMsg(""); }} className="w-full text-xs text-slate-500 hover:text-slate-800">
               {mode === "signin" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}
             </button>
           </div>
