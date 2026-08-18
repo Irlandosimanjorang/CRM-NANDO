@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 
@@ -18,6 +18,8 @@ export default function Settings({ settings, stages, onChanged }) {
   const [gcalLink, setGcalLink] = useState(null);
   const [gcalBusy, setGcalBusy] = useState(false);
   const [gcalLoading, setGcalLoading] = useState(true);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
 
   useEffect(() => {
     db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); }).catch(() => setTgLoading(false));
@@ -49,6 +51,18 @@ export default function Settings({ settings, stages, onChanged }) {
     try { await db.disconnectGoogleCalendar(); setGcalLink(null); }
     catch (e) { alert("Gagal: " + e.message); }
     finally { setGcalBusy(false); }
+  };
+
+  const syncOldData = async () => {
+    setSyncBusy(true); setSyncMsg("");
+    try {
+      const res = await db.bulkSyncCalendar();
+      setSyncMsg(`✅ ${res.visitSynced} jadwal visit berhasil di-sync ke Google Calendar.`);
+    } catch (e) {
+      setSyncMsg("Gagal sync: " + e.message);
+    } finally {
+      setSyncBusy(false);
+    }
   };
 
   const setStage = (i, k, v) => setSt((p) => p.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)));
@@ -140,9 +154,18 @@ export default function Settings({ settings, stages, onChanged }) {
         {gcalLoading ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : gcalLink ? (
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="text-sm text-emerald-700 flex items-center gap-1.5"><CheckCircle2 size={15} /> Terhubung {gcalLink.email ? `sebagai ${gcalLink.email}` : ""}</div>
-            <button onClick={disconnectGcal} disabled={gcalBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">Putuskan koneksi</button>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="text-sm text-emerald-700 flex items-center gap-1.5"><CheckCircle2 size={15} /> Terhubung {gcalLink.email ? `sebagai ${gcalLink.email}` : ""}</div>
+              <button onClick={disconnectGcal} disabled={gcalBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">Putuskan koneksi</button>
+            </div>
+            <div className="border-t border-slate-100 pt-3">
+              <p className="text-xs text-slate-500 mb-2">Punya jadwal visit lama yang dibuat sebelum Google Calendar terhubung? Klik ini buat sync-in semuanya sekaligus.</p>
+              <button onClick={syncOldData} disabled={syncBusy} className="text-xs bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+                {syncBusy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {syncBusy ? "Menyinkronkan…" : "Sync semua jadwal lama"}
+              </button>
+              {syncMsg && <p className={`text-xs mt-2 ${syncMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{syncMsg}</p>}
+            </div>
           </div>
         ) : (
           <button onClick={connectGcal} disabled={gcalBusy} className="text-sm bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
