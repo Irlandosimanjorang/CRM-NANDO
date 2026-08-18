@@ -36,24 +36,24 @@ export default function Auth() {
   };
   return (
     <div className="h-screen overflow-hidden bg-slate-50 flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-slate-900 text-white flex-col justify-center px-8 xl:px-12 relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-80 h-80 bg-orange-600/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-28 -left-14 w-72 h-72 bg-orange-600/10 rounded-full blur-3xl" />
+      <div className="hidden lg:flex lg:w-1/2 text-white flex-col justify-center px-8 xl:px-12 relative overflow-hidden" style={{ background: "#2b1710" }}>
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-28 -left-14 w-72 h-72 bg-orange-500/10 rounded-full blur-3xl" />
         <div className="relative">
           <div className="flex items-center gap-2.5 mb-4">
             <NextoBadge size={32} />
             <div className="font-bold tracking-tight text-base">Nexto</div>
           </div>
           <h2 className="text-lg xl:text-xl font-bold tracking-tight mb-1 leading-snug">Satu tempat buat semua urusan sales kamu.</h2>
-          <p className="text-xs text-slate-400 mb-5">Dari lead pertama masuk sampai deal closing, semua kepantau di sini.</p>
+          <p className="text-xs text-orange-100/60 mb-5">Dari lead pertama masuk sampai deal closing, semua kepantau di sini.</p>
           <div className="grid grid-cols-2 gap-2.5">
             {FEATURES.map((f, i) => {
               const I = f.icon;
               return (
-                <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-3">
-                  <div className="w-8 h-8 rounded-lg bg-orange-500/15 text-orange-400 flex items-center justify-center mb-2"><I size={16} /></div>
+                <div key={i} className="rounded-xl p-3" style={{ background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.18)" }}>
+                  <div className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-300 flex items-center justify-center mb-2"><I size={16} /></div>
                   <div className="font-semibold text-sm mb-0.5">{f.title}</div>
-                  <div className="text-xs text-slate-400 leading-snug">{f.desc}</div>
+                  <div className="text-xs text-orange-100/50 leading-snug">{f.desc}</div>
                 </div>
               );
             })}
