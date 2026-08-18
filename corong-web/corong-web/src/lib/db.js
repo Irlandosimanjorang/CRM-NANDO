@@ -51,6 +51,7 @@ export async function upsertLead(lead) {
     product: lead.product || "", city: lead.city || "", province: lead.province || "",
     website: lead.website || "", sales_owner: lead.sales_owner || "", background: lead.background || "",
     chemical: lead.chemical || "", priority: lead.priority || "", next_action: lead.next_action || "",
+    tonnage_unit: lead.tonnage_unit || "ton",
     visit_date: lead.visit_date || null, visit_meet: lead.visit_meet || "", visit_agenda: lead.visit_agenda || "",
     deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
     last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
@@ -158,7 +159,7 @@ const MERGE_FILLABLE_FIELDS = [
   "category", "company_type", "email", "phone", "key_person", "key_person_title",
   "product", "city", "province", "website", "sales_owner", "background", "chemical",
   "priority", "next_action", "visit_date", "visit_meet", "visit_agenda",
-  "deal_date", "deal_value", "tonnage", "last_contact", "verified", "source",
+  "deal_date", "deal_value", "tonnage", "tonnage_unit", "last_contact", "verified", "source",
 ];
 export function computeMergeFill(keepLead, mergeLead) {
   const fill = {};
