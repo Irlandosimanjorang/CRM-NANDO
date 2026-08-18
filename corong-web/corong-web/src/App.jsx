@@ -5,15 +5,14 @@ import Auth from "./Auth";
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
 import Deal from "./tabs/Deal";
-import Visit from "./tabs/Visit";
+import VisitFollowup from "./tabs/VisitFollowup";
 import Kompetitor from "./tabs/Kompetitor";
-import Followup from "./tabs/Followup";
 import Advisor from "./tabs/Advisor";
 import ChatAssistant from "./tabs/ChatAssistant";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
-  LayoutDashboard, Users, Trophy, CalendarCheck, Swords, CalendarClock,
+  LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut,
 } from "lucide-react";
 
@@ -30,9 +29,8 @@ const NAV = [
   { key: "dashboard", label: "Dashboard", short: "Beranda", icon: LayoutDashboard },
   { key: "leads", label: "Leads", short: "Leads", icon: Users },
   { key: "deal", label: "Deal", short: "Deal", icon: Trophy },
-  { key: "visit", label: "Visit", short: "Visit", icon: CalendarCheck },
+  { key: "visitfollowup", label: "Visit & Follow-up", short: "Visit", icon: CalendarCheck },
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
-  { key: "followup", label: "Follow-up", short: "Follow", icon: CalendarClock },
   { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
   { key: "asisten", label: "Asisten", short: "Chat", icon: Bot },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
@@ -119,9 +117,8 @@ export default function App() {
               {tab === "dashboard" && <Dashboard leads={leads} stages={stageList} onGo={setTab} />}
               {tab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
               {tab === "deal" && <Deal leads={leads} stages={stageList} onEdit={setEditLead} onChanged={reload} />}
-              {tab === "visit" && <Visit leads={leads} onEdit={setEditLead} onChanged={reload} />}
+              {tab === "visitfollowup" && <VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
-              {tab === "followup" && <Followup leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
               {tab === "asisten" && <ChatAssistant />}
               {tab === "settings" && <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />}
