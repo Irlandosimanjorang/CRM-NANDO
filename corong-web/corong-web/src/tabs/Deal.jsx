@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Trophy, Building2, TrendingUp, Plus, Search, Save, X } from "lucide-react";
+import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
 
@@ -119,6 +119,8 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
 
 export default function Deal({ leads, stages, onEdit, onChanged }) {
   const [add, setAdd] = useState(false);
+  const [qtyRevealed, setQtyRevealed] = useState(false);
+  const [rpRevealed, setRpRevealed] = useState(false);
   const wonKeys = stages.filter((s) => s.type === "won").map((s) => s.key);
   const deals = useMemo(() => leads.filter((c) => wonKeys.includes(c.stage_key)), [leads, stages]);
   const totalValue = deals.reduce((a, c) => a + (Number(c.deal_value) || 0), 0);
@@ -139,8 +141,28 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
         <>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Deal</div><div className="font-mono font-bold text-2xl text-emerald-600">{deals.length}</div></div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Building2 size={13} /> Total Quantity</div><div className="font-mono font-bold text-2xl text-slate-800">{(totalTonInKg / 1000).toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></div></div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><TrendingUp size={13} /> Total Rp</div><div className="font-mono font-bold text-base text-slate-800">{fmtRp(totalValue)}</div></div>
+
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3">
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-xs text-slate-400 flex items-center gap-1"><Building2 size={13} /> Total Quantity</div>
+                <button onClick={() => setQtyRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>
+                  {qtyRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <div className="font-mono font-bold text-2xl text-slate-800">
+                {qtyRevealed ? <>{(totalTonInKg / 1000).toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></> : "••••••"}
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3">
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-xs text-slate-400 flex items-center gap-1"><TrendingUp size={13} /> Total Rp</div>
+                <button onClick={() => setRpRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={rpRevealed ? "Sembunyikan" : "Tampilkan"}>
+                  {rpRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <div className="font-mono font-bold text-base text-slate-800">{rpRevealed ? fmtRp(totalValue) : "••••••"}</div>
+            </div>
           </div>
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
@@ -157,7 +179,7 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
                     <td className="px-3 py-2 text-xs text-slate-600">{c.deal_date ? fmtDate(c.deal_date) : "—"}</td>
                     <td className="px-3 py-2 text-xs text-slate-600">{c.chemical || "—"}</td>
                     <td className="px-3 py-2 text-xs font-mono text-slate-700">{c.tonnage ? `${Number(c.tonnage).toLocaleString("id-ID")} ${c.tonnage_unit === "kg" ? "kg" : "ton"}` : "—"}</td>
-                    <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{c.deal_value ? fmtRp(c.deal_value) : "—"}</td>
+                    <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{c.deal_value ? (rpRevealed ? fmtRp(c.deal_value) : "••••••") : "—"}</td>
                   </tr> ); })}
               </tbody>
             </table>
