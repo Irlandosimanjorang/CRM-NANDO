@@ -26,6 +26,13 @@ function mapRow(row, category, firstStageKey) {
   };
 }
 
+function findProgressMatch(c, q) {
+  if (!q.trim() || !c.progressLog?.length) return null;
+  const s = q.toLowerCase();
+  const hit = c.progressLog.find((p) => (p.text || "").toLowerCase().includes(s));
+  return hit || null;
+}
+
 export default function Leads({ leads, stages, settings, onChanged }) {
   const [q, setQ] = useState("");
   const [fCat, setFCat] = useState("");
@@ -37,7 +44,13 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const filtered = useMemo(() => leads.filter((c) => {
     if (fCat && c.category !== fCat) return false;
     if (fType && (c.company_type || "") !== fType) return false;
-    if (q) { const s = q.toLowerCase(); const hay = [c.name, c.city, c.province, c.key_person, c.product, c.sales_owner].map((x) => (x || "").toLowerCase()); if (!hay.some((h) => h.includes(s))) return false; }
+    if (q) {
+      const s = q.toLowerCase();
+      const fieldHay = [c.name, c.city, c.province, c.key_person, c.product, c.sales_owner].map((x) => (x || "").toLowerCase());
+      const progressHay = (c.progressLog || []).map((p) => (p.text || "").toLowerCase());
+      const allHay = [...fieldHay, ...progressHay];
+      if (!allHay.some((h) => h.includes(s))) return false;
+    }
     return true;
   }), [leads, q, fCat, fType]);
 
@@ -79,7 +92,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       </div>
 
       <div className="flex flex-wrap gap-2 items-center mb-3">
-        <div className="relative flex-1 min-w-40"><Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk…" className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
+        <div className="relative flex-1 min-w-40"><Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
         <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
         <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
         <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Lead</button>
@@ -109,7 +122,11 @@ export default function Leads({ leads, stages, settings, onChanged }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((c) => { const wa = waLink(c.phone); const web = normUrl(c.website); return (
+            {filtered.map((c) => {
+              const wa = waLink(c.phone);
+              const web = normUrl(c.website);
+              const progressMatch = findProgressMatch(c, q);
+              return (
               <tr key={c.id} className="border-t border-slate-100 hover:bg-orange-50/40 transition-colors align-top cursor-pointer group" onClick={() => setEdit(c)}>
                 <td className="px-3 py-2 bg-white group-hover:bg-orange-50/40" style={{ position: "sticky", left: 0, zIndex: 10, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
                   <div className="font-medium flex items-center gap-1.5 flex-wrap">
@@ -118,6 +135,11 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                     {isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white">NEW</span>}
                     {c.verified ? <ShieldCheck size={12} className="text-emerald-500" /> : <ShieldAlert size={12} className="text-slate-300" />}
                   </div>
+                  {progressMatch && (
+                    <div className="text-[10px] text-orange-600 mt-1 bg-orange-50 border border-orange-100 rounded-lg px-1.5 py-1 max-w-[200px]">
+                      <span className="font-semibold">{fmtDate(progressMatch.date)}:</span> {progressMatch.text.length > 60 ? progressMatch.text.slice(0, 60) + "…" : progressMatch.text}
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>
