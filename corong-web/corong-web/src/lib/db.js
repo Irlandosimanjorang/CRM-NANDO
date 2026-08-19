@@ -31,6 +31,7 @@ export async function getLeads() {
   const { data, error } = await supabase
     .from("leads")
     .select("*, progress_notes(id, note_date, text)")
+    .order("last_contact", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map((l) => ({
