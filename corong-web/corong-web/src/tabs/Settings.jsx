@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -22,6 +22,10 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
   const [showCleanup, setShowCleanup] = useState(false);
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState("");
 
   useEffect(() => {
     db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); }).catch(() => setTgLoading(false));
@@ -94,6 +98,23 @@ export default function Settings({ settings, stages, leads, onChanged }) {
       a.click();
     } catch (e) { alert("Gagal export: " + e.message); }
     finally { setExporting(false); }
+  };
+
+  const changePassword = async () => {
+    setPwMsg("");
+    if (pwNew.length < 6) { setPwMsg("Password minimal 6 karakter."); return; }
+    if (pwNew !== pwConfirm) { setPwMsg("Konfirmasi password gak cocok."); return; }
+    setPwBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pwNew });
+      if (error) throw error;
+      setPwMsg("✅ Password berhasil diganti.");
+      setPwNew(""); setPwConfirm("");
+    } catch (e) {
+      setPwMsg("Gagal ganti password: " + e.message);
+    } finally {
+      setPwBusy(false);
+    }
   };
 
   return (
@@ -182,6 +203,19 @@ export default function Settings({ settings, stages, leads, onChanged }) {
             {gcalBusy ? <Loader2 size={15} className="animate-spin" /> : <Calendar size={15} />} Hubungkan Google Calendar
           </button>
         )}
+      </div>
+
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><KeyRound size={15} className="text-slate-500" /> Ganti Password</h3>
+        <p className="text-xs text-slate-500 mb-3">Ganti password akun kamu kapan aja. Minimal 6 karakter.</p>
+        <div className="space-y-2 max-w-sm">
+          <input type="password" className={inp} placeholder="Password baru" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
+          <input type="password" className={inp} placeholder="Ulangi password baru" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && changePassword()} />
+          {pwMsg && <div className={`text-xs rounded-lg p-2 ${pwMsg.startsWith("Gagal") || pwMsg.includes("gak cocok") || pwMsg.includes("minimal") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{pwMsg}</div>}
+          <button onClick={changePassword} disabled={pwBusy} className="bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5">
+            {pwBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Ganti Password
+          </button>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
