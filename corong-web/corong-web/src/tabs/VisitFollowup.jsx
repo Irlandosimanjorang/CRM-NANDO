@@ -1,9 +1,14 @@
 import { useMemo, useState } from "react";
-import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2 } from "lucide-react";
+import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
+const DAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+
+function dateStr(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
 
 function AddVisitModal({ leads, onClose, onSaved }) {
   const [q, setQ] = useState("");
@@ -52,18 +57,89 @@ function AddVisitModal({ leads, onClose, onSaved }) {
   );
 }
 
+function MonthCalendar({ leads, onEdit, month, setMonth }) {
+  const year = month.getFullYear();
+  const monthIdx = month.getMonth();
+  const today = todayISO();
+
+  const visitsByDate = useMemo(() => {
+    const map = {};
+    leads.forEach((c) => { if (c.visit_date) { (map[c.visit_date] ||= []).push(c); } });
+    return map;
+  }, [leads]);
+
+  const firstWeekday = new Date(year, monthIdx, 1).getDay();
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const monthLabel = month.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  const prevMonth = () => setMonth(new Date(year, monthIdx - 1, 1));
+  const nextMonth = () => setMonth(new Date(year, monthIdx + 1, 1));
+  const goToday = () => setMonth(new Date());
+
+  return (
+    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1.5">
+          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronLeft size={16} /></button>
+          <span className="text-sm font-semibold text-slate-700 capitalize w-36 text-center">{monthLabel}</span>
+          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronRight size={16} /></button>
+        </div>
+        <button onClick={goToday} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 hover:bg-slate-50 text-slate-600">Hari ini</button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {DAY_LABELS.map((d) => <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1">{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d, i) => {
+          if (d === null) return <div key={i} className="min-h-[74px] rounded-lg" />;
+          const ds = dateStr(year, monthIdx, d);
+          const isToday = ds === today;
+          const dayVisits = visitsByDate[ds] || [];
+          return (
+            <div key={i} className={`min-h-[74px] rounded-lg border p-1 ${isToday ? "border-orange-400 bg-orange-50/50" : "border-slate-100"}`}>
+              <div className={`text-[10px] font-medium mb-1 ${isToday ? "text-orange-600" : "text-slate-400"}`}>{d}</div>
+              <div className="space-y-0.5">
+                {dayVisits.slice(0, 2).map((c) => (
+                  <button key={c.id} onClick={() => onEdit(c)} className="w-full text-left text-[9px] leading-tight bg-orange-100 text-orange-700 rounded px-1 py-0.5 truncate hover:bg-orange-200">
+                    {c.name}
+                  </button>
+                ))}
+                {dayVisits.length > 2 && <div className="text-[9px] text-slate-400 px-1">+{dayVisits.length - 2} lagi</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function VisitView({ leads, onEdit, onChanged }) {
   const [add, setAdd] = useState(false);
+  const [view, setView] = useState("table");
+  const [month, setMonth] = useState(new Date());
   const visits = useMemo(() => leads.filter((c) => c.visit_date).sort((a, b) => (a.visit_date < b.visit_date ? -1 : 1)), [leads]);
   const upcoming = visits.filter((c) => c.visit_date >= todayISO());
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex bg-slate-100 rounded-xl p-1">
+          <button onClick={() => setView("table")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "table" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Table2 size={13} /> Tabel</button>
+          <button onClick={() => setView("calendar")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "calendar" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Calendar size={13} /> Kalender</button>
+        </div>
         <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
       </div>
+
       {visits.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana aja.</div>
+      ) : view === "calendar" ? (
+        <MonthCalendar leads={leads} onEdit={onEdit} month={month} setMonth={setMonth} />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-4">
