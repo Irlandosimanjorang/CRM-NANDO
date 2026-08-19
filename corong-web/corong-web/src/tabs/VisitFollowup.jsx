@@ -1,219 +1,274 @@
-import { useMemo, useState } from "react";
-import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
-import * as db from "../lib/db";
-import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
+import { supabase } from "./supabaseClient";
 
-const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
-const DAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-
-function dateStr(y, m, d) {
-  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+// ---- STAGES ----
+export async function getStages() {
+  const { data, error } = await supabase.from("stages").select("*").order("position");
+  if (error) throw error;
+  return data;
+}
+export async function saveStages(stages) {
+  const { data: rows } = await supabase.from("stages").select("id");
+  if (rows?.length) await supabase.from("stages").delete().in("id", rows.map((r) => r.id));
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const payload = stages.map((s, i) => ({ user_id: uid, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
+  const { error } = await supabase.from("stages").insert(payload);
+  if (error) throw error;
 }
 
-function AddVisitModal({ leads, onClose, onSaved }) {
-  const [q, setQ] = useState("");
-  const [sel, setSel] = useState(null);
-  const [date, setDate] = useState(todayISO());
-  const [meet, setMeet] = useState("");
-  const [agenda, setAgenda] = useState("");
-  const [busy, setBusy] = useState(false);
-  const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
-  const pick = (c) => { setSel(c); setQ(""); setMeet(c.visit_meet || c.key_person || ""); setAgenda(c.visit_agenda || ""); if (c.visit_date) setDate(c.visit_date); };
-  const save = async () => {
-    if (!sel) { alert("Pilih company dulu."); return; }
-    setBusy(true);
-    try { await db.upsertLead({ ...sel, visit_date: date, visit_meet: meet, visit_agenda: agenda }); onSaved(); }
-    catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
+// ---- SETTINGS ----
+export async function getSettings() {
+  const { data } = await supabase.from("settings").select("*").maybeSingle();
+  return data || { sales_names: [] };
+}
+export async function saveSalesNames(names) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("settings").upsert({ user_id: uid, sales_names: names, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
+// ---- LEADS ----
+export async function getLeads() {
+  const { data, error } = await supabase
+    .from("leads")
+    .select("*, progress_notes(id, note_date, text)")
+    .order("last_contact", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((l) => ({
+    ...l,
+    progressLog: (l.progress_notes || [])
+      .sort((a, b) => (a.note_date < b.note_date ? 1 : -1))
+      .map((p) => ({ id: p.id, date: p.note_date, text: p.text })),
+  }));
+}
+
+export async function upsertLead(lead) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const row = {
+    user_id: uid,
+    name: lead.name, category: lead.category, stage_key: lead.stage_key,
+    company_type: lead.company_type || "", email: lead.email || "", phone: lead.phone || "",
+    key_person: lead.key_person || "", key_person_title: lead.key_person_title || "",
+    product: lead.product || "", city: lead.city || "", province: lead.province || "",
+    website: lead.website || "", sales_owner: lead.sales_owner || "", background: lead.background || "",
+    chemical: lead.chemical || "", priority: lead.priority || "", next_action: lead.next_action || "",
+    tonnage_unit: lead.tonnage_unit || "ton",
+    visit_date: lead.visit_date || null, visit_meet: lead.visit_meet || "", visit_agenda: lead.visit_agenda || "",
+    deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
+    last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
   };
-  return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><CalendarCheck size={18} className="text-orange-500" /> Tambah Visit</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
-        <div className="space-y-3">
-          <div>
-            <span className="text-xs font-medium text-slate-500">Company *</span>
-            {sel ? (
-              <div className="mt-1 flex items-center justify-between border border-orange-300 bg-orange-50 rounded-xl px-3 py-2"><span className="text-sm font-medium">{sel.name}</span><button onClick={() => setSel(null)} className="text-xs text-slate-500 hover:text-rose-500">ganti</button></div>
-            ) : (
-              <div className="relative">
-                <Search size={15} className="absolute left-2.5 top-3.5 text-slate-400" />
-                <input autoFocus className="w-full mt-1 pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
-                {matches.length > 0 && <div className="mt-1 border border-slate-200 rounded-xl bg-white shadow-sm max-h-52 overflow-y-auto">{matches.map((c) => <div key={c.id} onClick={() => pick(c)} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0"><div className="font-medium">{c.name}</div><div className="text-[11px] text-slate-400">{[c.city, c.category].filter(Boolean).join(" · ")}</div></div>)}</div>}
-                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Company ga ketemu. Tambahin di tab Leads dulu.</p>}
-              </div>
-            )}
-          </div>
-          <div className={sel ? "" : "opacity-40 pointer-events-none"}>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal visit</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
-              <label className="block"><span className="text-xs font-medium text-slate-500">Ketemu siapa</span><input className={inp} value={meet} onChange={(e) => setMeet(e.target.value)} placeholder="mis. Bu Rina (purchasing)" /></label>
-            </div>
-            <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Agenda</span><textarea className={inp} rows={2} value={agenda} onChange={(e) => setAgenda(e.target.value)} placeholder="mau bahas apa" /></label>
-          </div>
-        </div>
-        <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan visit</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button></div>
-      </div>
-    </div>
-  );
+  if (lead.id) {
+    const { data, error } = await supabase.from("leads").update(row).eq("id", lead.id).select().single();
+    if (error) throw error; return data;
+  }
+  const { data, error } = await supabase.from("leads").insert(row).select().single();
+  if (error) throw error; return data;
 }
 
-function MonthCalendar({ leads, onEdit, month, setMonth }) {
-  const year = month.getFullYear();
-  const monthIdx = month.getMonth();
-  const today = todayISO();
-
-  const visitsByDate = useMemo(() => {
-    const map = {};
-    leads.forEach((c) => { if (c.visit_date) { (map[c.visit_date] ||= []).push(c); } });
-    return map;
-  }, [leads]);
-
-  const firstWeekday = new Date(year, monthIdx, 1).getDay();
-  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < firstWeekday; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const monthLabel = month.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-  const prevMonth = () => setMonth(new Date(year, monthIdx - 1, 1));
-  const nextMonth = () => setMonth(new Date(year, monthIdx + 1, 1));
-  const goToday = () => setMonth(new Date());
-
-  return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-1.5">
-          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronLeft size={16} /></button>
-          <span className="text-sm font-semibold text-slate-700 capitalize w-36 text-center">{monthLabel}</span>
-          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronRight size={16} /></button>
-        </div>
-        <button onClick={goToday} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 hover:bg-slate-50 text-slate-600">Hari ini</button>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {DAY_LABELS.map((d) => <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1">{d}</div>)}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((d, i) => {
-          if (d === null) return <div key={i} className="min-h-[74px] rounded-lg" />;
-          const ds = dateStr(year, monthIdx, d);
-          const isToday = ds === today;
-          const dayVisits = visitsByDate[ds] || [];
-          return (
-            <div key={i} className={`min-h-[74px] rounded-lg border p-1 ${isToday ? "border-orange-400 bg-orange-50/50" : "border-slate-100"}`}>
-              <div className={`text-[10px] font-medium mb-1 ${isToday ? "text-orange-600" : "text-slate-400"}`}>{d}</div>
-              <div className="space-y-0.5">
-                {dayVisits.slice(0, 2).map((c) => (
-                  <button key={c.id} onClick={() => onEdit(c)} className="w-full text-left text-[9px] leading-tight bg-orange-100 text-orange-700 rounded px-1 py-0.5 truncate hover:bg-orange-200">
-                    {c.name}
-                  </button>
-                ))}
-                {dayVisits.length > 2 && <div className="text-[9px] text-slate-400 px-1">+{dayVisits.length - 2} lagi</div>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+export async function deleteLead(id) {
+  const { error } = await supabase.from("leads").delete().eq("id", id);
+  if (error) throw error;
 }
 
-function VisitView({ leads, onEdit, onChanged }) {
-  const [add, setAdd] = useState(false);
-  const [view, setView] = useState("table");
-  const [month, setMonth] = useState(new Date());
-  const visits = useMemo(() => leads.filter((c) => c.visit_date).sort((a, b) => (a.visit_date < b.visit_date ? -1 : 1)), [leads]);
-  const upcoming = visits.filter((c) => c.visit_date >= todayISO());
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="flex bg-slate-100 rounded-xl p-1">
-          <button onClick={() => setView("table")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "table" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Table2 size={13} /> Tabel</button>
-          <button onClick={() => setView("calendar")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "calendar" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Calendar size={13} /> Kalender</button>
-        </div>
-        <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
-      </div>
-
-      {visits.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana aja.</div>
-      ) : view === "calendar" ? (
-        <MonthCalendar leads={leads} onEdit={onEdit} month={month} setMonth={setMonth} />
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><CalendarCheck size={13} /> Akan datang</div><div className="font-mono font-bold text-2xl text-orange-600">{upcoming.length}</div></div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><CalendarCheck size={13} /> Total terjadwal</div><div className="font-mono font-bold text-2xl text-slate-800">{visits.length}</div></div>
-          </div>
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Lokasi</th><th className="text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Tanggal visit</th><th className="text-left px-3 py-2 font-medium">Ketemu</th><th className="text-left px-3 py-2 font-medium">Agenda</th>
-              </tr></thead>
-              <tbody>
-                {visits.map((c) => { const past = c.visit_date < todayISO(); const today = c.visit_date === todayISO(); const meet = c.visit_meet || c.key_person; return (
-                  <tr key={c.id} className={`border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer ${past ? "opacity-50" : ""}`} onClick={() => onEdit(c)}>
-                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
-                    <td className="px-3 py-2 text-xs"><span className={today ? "text-orange-600 font-medium" : "text-slate-600"}>{fmtDate(c.visit_date)}{today && " · hari ini"}</span></td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{meet || "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600 max-w-56">{c.visit_agenda ? <div className="line-clamp-2">{c.visit_agenda}</div> : <span className="text-slate-300">—</span>}</td>
-                  </tr> ); })}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-      {add && <AddVisitModal leads={leads} onClose={() => setAdd(false)} onSaved={() => { setAdd(false); onChanged(); }} />}
-    </div>
-  );
+export async function setLeadStage(id, stage_key) {
+  const { error } = await supabase.from("leads").update({ stage_key }).eq("id", id);
+  if (error) throw error;
 }
 
-function FollowupView({ leads, onEdit, onChanged }) {
-  const todo = useMemo(() => leads.filter((c) => c.next_action && c.next_action.trim()), [leads]);
-  const done = async (id) => { await db.upsertLead({ ...leads.find((l) => l.id === id), next_action: "" }); onChanged(); };
-
-  return (
-    <div>
-      <p className="text-sm text-slate-500 mb-3">Semua lead yang punya "Next action". Klik nama buat buka, ✓ buat tandai selesai.</p>
-      {todo.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarClock size={32} className="mx-auto text-slate-300 mb-3" />Belum ada next action. Buka lead → isi kolom "Next action".</div>
-      ) : (
-        <div className="space-y-2">
-          {todo.map((c) => { const pm = prioMeta(c.priority); return (
-            <div key={c.id} className="bg-white border border-slate-200/80 border-l-4 border-l-rose-400 rounded-2xl shadow-sm p-3 flex items-start gap-3">
-              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(c)}>
-                <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-sm">{c.name}</span>{pm && <span className="text-[10px] border rounded-full px-1.5 py-0.5" style={chipStyle(pm.hex)}>{pm.label}</span>}</div>
-                <div className="text-xs text-orange-700 mt-0.5">→ {c.next_action}</div>
-              </div>
-              <button onClick={() => done(c.id)} title="Tandai selesai" className="text-slate-300 hover:text-emerald-500 p-1"><CheckCircle2 size={16} /></button>
-            </div> ); })}
-        </div>
-      )}
-    </div>
-  );
+// ---- PROGRESS ----
+export async function addProgress(lead_id, text) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const date = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase.from("progress_notes").insert({ user_id: uid, lead_id, note_date: date, text }).select().single();
+  if (error) throw error;
+  await supabase.from("leads").update({ last_contact: date }).eq("id", lead_id);
+  return { id: data.id, date, text };
+}
+export async function deleteProgress(id) {
+  await supabase.from("progress_notes").delete().eq("id", id);
 }
 
-export default function VisitFollowup({ leads, onEdit, onChanged }) {
-  const [tab, setTab] = useState("visit");
-  const visitCount = leads.filter((c) => c.visit_date).length;
-  const followupCount = leads.filter((c) => c.next_action && c.next_action.trim()).length;
+// ---- BULK IMPORT ----
+export async function bulkInsertLeads(leads) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const rows = leads.map((l) => ({ user_id: uid, ...l }));
+  const { data, error } = await supabase.from("leads").insert(rows).select("id, name");
+  if (error) throw error;
+  return data;
+}
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-3">Visit & Follow-up</h1>
-      <div className="flex gap-2 mb-4 border-b border-slate-200">
-        <button onClick={() => setTab("visit")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 ${tab === "visit" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-          <CalendarCheck size={15} /> Visit <span className="text-xs text-slate-400">({visitCount})</span>
-        </button>
-        <button onClick={() => setTab("followup")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 ${tab === "followup" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-          <CalendarClock size={15} /> Follow-up <span className="text-xs text-slate-400">({followupCount})</span>
-        </button>
-      </div>
+// ---- COMPETITORS ----
+export async function getCompetitors() {
+  const { data, error } = await supabase
+    .from("competitors")
+    .select("*, competitor_usages(id, company, product, price, quantity)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((c) => ({ ...c, usages: c.competitor_usages || [] }));
+}
+export async function upsertCompetitor(comp) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const row = { user_id: uid, name: comp.name, background: comp.background || "", product: comp.product || "", notes: comp.notes || "" };
+  let compId = comp.id;
+  if (compId) { const { error } = await supabase.from("competitors").update(row).eq("id", compId); if (error) throw error; }
+  else { const { data, error } = await supabase.from("competitors").insert(row).select("id").single(); if (error) throw error; compId = data.id; }
+  await supabase.from("competitor_usages").delete().eq("competitor_id", compId);
+  const usages = (comp.usages || []).filter((u) => u.company || u.product || u.price || u.quantity);
+  if (usages.length) {
+    const rows = usages.map((u) => ({ user_id: uid, competitor_id: compId, company: u.company || "", product: u.product || "", price: u.price || "", quantity: u.quantity || "" }));
+    const { error } = await supabase.from("competitor_usages").insert(rows); if (error) throw error;
+  }
+  return compId;
+}
+export async function deleteCompetitor(id) {
+  const { error } = await supabase.from("competitors").delete().eq("id", id);
+  if (error) throw error;
+}
 
-      {tab === "visit" ? <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} /> : <FollowupView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
-    </div>
-  );
+// ---- ADVISOR ----
+export async function getAdvisorHistory() {
+  const { data, error } = await supabase.from("advisor_runs").select("*").order("run_date", { ascending: false }).limit(7);
+  if (error) throw error;
+  return data || [];
+}
+
+// ---- BACKUP / EXPORT SEMUA DATA ----
+export async function exportAllData() {
+  const [leadsRes, compRes, stagesRes, settingsRes, advisorRes] = await Promise.all([
+    supabase.from("leads").select("*, progress_notes(id, note_date, text)"),
+    supabase.from("competitors").select("*, competitor_usages(id, company, product, price, quantity)"),
+    supabase.from("stages").select("*").order("position"),
+    supabase.from("settings").select("*").maybeSingle(),
+    supabase.from("advisor_runs").select("*").order("run_date", { ascending: false }),
+  ]);
+  if (leadsRes.error) throw leadsRes.error;
+  if (compRes.error) throw compRes.error;
+  if (stagesRes.error) throw stagesRes.error;
+  return {
+    exported_at: new Date().toISOString(),
+    app: "Nexto",
+    leads: leadsRes.data || [],
+    competitors: compRes.data || [],
+    stages: stagesRes.data || [],
+    settings: settingsRes.data || null,
+    advisor_history: advisorRes.data || [],
+  };
+}
+
+// ---- MERGE LEADS ----
+const MERGE_FILLABLE_FIELDS = [
+  "category", "company_type", "email", "phone", "key_person", "key_person_title",
+  "product", "city", "province", "website", "sales_owner", "background", "chemical",
+  "priority", "next_action", "visit_date", "visit_meet", "visit_agenda",
+  "deal_date", "deal_value", "tonnage", "tonnage_unit", "last_contact", "verified", "source",
+];
+export function computeMergeFill(keepLead, mergeLead) {
+  const fill = {};
+  for (const f of MERGE_FILLABLE_FIELDS) {
+    const kv = keepLead[f]; const mv = mergeLead[f];
+    const kEmpty = kv === null || kv === undefined || kv === "" || kv === 0 || kv === false;
+    const mHas = mv !== null && mv !== undefined && mv !== "" && mv !== 0 && mv !== false;
+    if (kEmpty && mHas) fill[f] = mv;
+  }
+  return fill;
+}
+export async function mergeLeads(keepId, mergeId, fillFields) {
+  if (fillFields && Object.keys(fillFields).length) {
+    const { error } = await supabase.from("leads").update(fillFields).eq("id", keepId);
+    if (error) throw error;
+  }
+  const { error: moveErr } = await supabase.from("progress_notes").update({ lead_id: keepId }).eq("lead_id", mergeId);
+  if (moveErr) throw moveErr;
+  const { error: delErr } = await supabase.from("leads").delete().eq("id", mergeId);
+  if (delErr) throw delErr;
+}
+
+// ---- TELEGRAM LINK ----
+export async function generateTelegramCode() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 10 * 60000).toISOString();
+  const { error } = await supabase.from("link_codes").insert({ code, user_id: uid, expires_at: expires });
+  if (error) throw error;
+  return code;
+}
+export async function getTelegramLink() {
+  const { data } = await supabase.from("telegram_links").select("*").maybeSingle();
+  return data || null;
+}
+export async function unlinkTelegram() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("telegram_links").delete().eq("user_id", uid);
+  if (error) throw error;
+}
+
+// ---- GOOGLE CALENDAR LINK ----
+const GOOGLE_CLIENT_ID = "351973989384-gss200qb94ofeg27dnig8uof3rufikqo.apps.googleusercontent.com";
+const GOOGLE_REDIRECT_URI = "https://cewggulyfshnbebcpyui.supabase.co/functions/v1/google-oauth-callback";
+
+export async function getGoogleCalendarLink() {
+  const { data } = await supabase.from("google_calendar_links").select("*").maybeSingle();
+  return data || null;
+}
+
+export async function connectGoogleCalendar() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const state = crypto.randomUUID();
+  const expires = new Date(Date.now() + 10 * 60000).toISOString();
+  const { error } = await supabase.from("google_oauth_states").insert({ state, user_id: uid, expires_at: expires });
+  if (error) throw error;
+
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_REDIRECT_URI,
+    response_type: "code",
+    scope: "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email",
+    access_type: "offline",
+    prompt: "consent",
+    state,
+  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+export async function disconnectGoogleCalendar() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("google_calendar_links").delete().eq("user_id", uid);
+  if (error) throw error;
+}
+
+// ---- BULK SYNC CALENDAR ----
+export async function bulkSyncCalendar() {
+  const { data, error } = await supabase.functions.invoke("sync-calendar-bulk");
+  if (error) throw error;
+  return data;
+}
+
+// ---- CHAT ASISTEN ----
+export async function sendChatMessage(message) {
+  const { data, error } = await supabase.functions.invoke("ai-chat", { body: { message } });
+  if (error) throw error;
+  return data.reply;
+}
+
+export async function getChatHistory() {
+  const { data, error } = await supabase.from("chat_messages").select("role, content, created_at").order("created_at", { ascending: true }).limit(100);
+  if (error) throw error;
+  return data || [];
+}
+
+// ---- DATA CLEANUP ----
+export async function getSuggestedCategories() {
+  const { data, error } = await supabase.functions.invoke("suggest-categories");
+  if (error) throw error;
+  return data.suggestions || [];
+}
+
+export async function bulkUpdateCategory(updates) {
+  for (const u of updates) {
+    await supabase.from("leads").update({ category: u.suggested }).eq("id", u.id);
+  }
+}
+
+export async function bulkMarkLost(leadIds, lostStageKey) {
+  await supabase.from("leads").update({ stage_key: lostStageKey }).in("id", leadIds);
 }
