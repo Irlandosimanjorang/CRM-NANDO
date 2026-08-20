@@ -80,15 +80,16 @@ export default function Leads({ leads, stages, settings, onChanged }) {
           const nonEmptyAoa = aoa.filter((r) => r.some((v) => String(v).trim()));
           if (nonEmptyAoa.length > 0) {
             try {
-              const sample = nonEmptyAoa.slice(0, 6);
-              const { has_header, mapping } = await db.smartImportMap(sample);
+              const sample = nonEmptyAoa.slice(0, 8);
+              const { data_start_row, mapping } = await db.smartImportMap(sample);
               if (mapping && (mapping.name !== null && mapping.name !== undefined)) {
-                const dataRows = has_header ? nonEmptyAoa.slice(1) : nonEmptyAoa;
+                const startAt = Math.min(Math.max(data_start_row || 0, 0), nonEmptyAoa.length);
+                const dataRows = nonEmptyAoa.slice(startAt);
                 const aiOut = [];
                 for (const row of dataRows) {
                   const get = (idx) => (idx === null || idx === undefined ? "" : String(row[idx] ?? "").trim());
                   const name = get(mapping.name);
-                  if (!name) continue;
+                  if (!name || /^(xxx|yyyy-mm-dd|mr\/ms xxx)$/i.test(name.trim())) continue;
                   aiOut.push({
                     name, category: "Lainnya", stage_key: firstStage,
                     company_type: get(mapping.company_type), email: get(mapping.email), phone: get(mapping.phone),
