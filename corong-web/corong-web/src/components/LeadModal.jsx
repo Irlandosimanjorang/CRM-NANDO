@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Save, Trash2, Plus, ClipboardList } from "lucide-react";
+import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check } from "lucide-react";
 import * as db from "../lib/db";
 import { CATEGORIES, COMPANY_TYPES, fmtDate, todayISO } from "../lib/helpers";
 
@@ -10,6 +10,8 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
   const [f, setF] = useState({ ...lead });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
 
@@ -27,6 +29,14 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
     setLog([p, ...log]); setNewProg("");
   };
   const delProg = async (id) => { await db.deleteProgress(id); setLog(log.filter((x) => x.id !== id)); };
+  const startEditProg = (p) => { setEditingId(p.id); setEditText(p.text); };
+  const cancelEditProg = () => { setEditingId(null); setEditText(""); };
+  const saveEditProg = async (id) => {
+    if (!editText.trim()) return;
+    await db.updateProgress(id, editText.trim());
+    setLog(log.map((x) => (x.id === id ? { ...x, text: editText.trim() } : x)));
+    setEditingId(null); setEditText("");
+  };
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
@@ -54,7 +64,27 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
             </div>
             {log.length === 0 ? <p className="text-xs text-slate-400">Belum ada progress.</p> : (
               <div className="space-y-1.5 max-h-40 overflow-y-auto">{log.map((p) => (
-                <div key={p.id} className="flex items-start gap-2 text-xs bg-white border border-slate-200 rounded px-2 py-1.5"><span className="text-slate-400 font-mono shrink-0">{fmtDate(p.date)}</span><span className="flex-1 text-slate-700">{p.text}</span><button onClick={() => delProg(p.id)} className="text-slate-300 hover:text-rose-500"><X size={13} /></button></div>
+                editingId === p.id ? (
+                  <div key={p.id} className="flex items-start gap-2 text-xs bg-white border border-orange-300 rounded px-2 py-1.5">
+                    <span className="text-slate-400 font-mono shrink-0 pt-1">{fmtDate(p.date)}</span>
+                    <input
+                      className="flex-1 px-1.5 py-1 text-xs border border-slate-300 rounded bg-white focus:outline-none focus:border-orange-500"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveEditProg(p.id); if (e.key === "Escape") cancelEditProg(); }}
+                      autoFocus
+                    />
+                    <button onClick={() => saveEditProg(p.id)} className="text-emerald-600 hover:text-emerald-700 shrink-0"><Check size={14} /></button>
+                    <button onClick={cancelEditProg} className="text-slate-300 hover:text-slate-500 shrink-0"><X size={13} /></button>
+                  </div>
+                ) : (
+                  <div key={p.id} className="flex items-start gap-2 text-xs bg-white border border-slate-200 rounded px-2 py-1.5">
+                    <span className="text-slate-400 font-mono shrink-0">{fmtDate(p.date)}</span>
+                    <span className="flex-1 text-slate-700">{p.text}</span>
+                    <button onClick={() => startEditProg(p)} className="text-slate-300 hover:text-blue-500 shrink-0"><Pencil size={13} /></button>
+                    <button onClick={() => delProg(p.id)} className="text-slate-300 hover:text-rose-500 shrink-0"><X size={13} /></button>
+                  </div>
+                )
               ))}</div>
             )}
           </div>
