@@ -108,6 +108,10 @@ export async function addProgress(lead_id, text) {
 export async function deleteProgress(id) {
   await supabase.from("progress_notes").delete().eq("id", id);
 }
+export async function updateProgress(id, text) {
+  const { error } = await supabase.from("progress_notes").update({ text }).eq("id", id);
+  if (error) throw error;
+}
 
 // ---- SMART IMPORT (AI baca layout Excel yang formatnya ga standar) ----
 export async function smartImportMap(sampleRows) {
