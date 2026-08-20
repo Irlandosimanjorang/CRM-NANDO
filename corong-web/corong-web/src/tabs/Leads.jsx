@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy } from "lucide-react";
@@ -41,6 +41,17 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [showDup, setShowDup] = useState(false);
   const [progressPopup, setProgressPopup] = useState(null); // { lead, rect }
+  const popupCloseTimer = useRef(null);
+  const openProgressPopup = (lead, rect) => {
+    if (popupCloseTimer.current) { clearTimeout(popupCloseTimer.current); popupCloseTimer.current = null; }
+    setProgressPopup({ lead, rect });
+  };
+  const scheduleClosePopup = () => {
+    popupCloseTimer.current = setTimeout(() => setProgressPopup(null), 150);
+  };
+  const cancelClosePopup = () => {
+    if (popupCloseTimer.current) { clearTimeout(popupCloseTimer.current); popupCloseTimer.current = null; }
+  };
 
   const filtered = useMemo(() => leads.filter((c) => {
     if (fCat && c.category !== fCat) return false;
@@ -191,8 +202,8 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                 <td
                   className="px-3 py-2 text-xs rounded-lg transition-colors hover:bg-orange-50/60"
                   onClick={(e) => e.stopPropagation()}
-                  onMouseEnter={(e) => { if (c.progressLog && c.progressLog.length > 0) setProgressPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() }); }}
-                  onMouseLeave={() => setProgressPopup(null)}
+                  onMouseEnter={(e) => { if (c.progressLog && c.progressLog.length > 0) openProgressPopup(c, e.currentTarget.getBoundingClientRect()); }}
+                  onMouseLeave={scheduleClosePopup}
                 >
                   {c.progressLog && c.progressLog.length > 0 ? (
                     <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
@@ -217,11 +228,13 @@ export default function Leads({ leads, stages, settings, onChanged }) {
 
       {progressPopup && progressPopup.lead.progressLog && progressPopup.lead.progressLog.length > 0 && (
         <div
-          className="fixed z-50 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden pointer-events-none"
+          className="fixed z-50 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
           style={{
             left: Math.min(progressPopup.rect.right + 10, window.innerWidth - 336),
             top: Math.min(Math.max(progressPopup.rect.top - 10, 12), window.innerHeight - 340),
           }}
+          onMouseEnter={cancelClosePopup}
+          onMouseLeave={scheduleClosePopup}
         >
           <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-orange-50 to-white border-b border-slate-100">
             <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider">Progress Harian</div>
