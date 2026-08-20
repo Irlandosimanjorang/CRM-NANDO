@@ -7,13 +7,14 @@ import Leads from "./tabs/Leads";
 import Deal from "./tabs/Deal";
 import VisitFollowup from "./tabs/VisitFollowup";
 import Kompetitor from "./tabs/Kompetitor";
+import Community from "./tabs/Community";
 import Advisor from "./tabs/Advisor";
 import ChatAssistant from "./tabs/ChatAssistant";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut,
+  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -31,6 +32,7 @@ const NAV = [
   { key: "deal", label: "Deal", short: "Deal", icon: Trophy },
   { key: "visitfollowup", label: "Visit & Follow-up", short: "Visit", icon: CalendarCheck },
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
+  { key: "komunitas", label: "Komunitas", short: "Komunitas", icon: Users2 },
   { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
   { key: "asisten", label: "Asisten", short: "Chat", icon: Bot },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
@@ -158,6 +160,7 @@ export default function App() {
               {tab === "deal" && <Deal leads={leads} stages={stageList} onEdit={setEditLead} onChanged={reload} />}
               {tab === "visitfollowup" && <VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
+              {tab === "komunitas" && <Community />}
               {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
               {tab === "asisten" && <ChatAssistant />}
               {tab === "settings" && <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />}
