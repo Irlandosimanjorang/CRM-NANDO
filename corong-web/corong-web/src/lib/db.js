@@ -288,7 +288,7 @@ export async function getChatHistory() {
   return data || [];
 }
 
-// ---- COMMUNITY ----
+// ---- NEX (komunitas gaya sosmed) ----
 export async function getCommunityDisplayName() {
   const s = await getSettings();
   return s.community_display_name || "";
@@ -299,24 +299,59 @@ export async function saveCommunityDisplayName(name) {
   if (error) throw error;
 }
 
-export async function getCommunityPosts(category) {
-  let q = supabase.from("community_posts").select("*, community_replies(id)").order("created_at", { ascending: false });
-  if (category) q = q.eq("category", category);
-  const { data, error } = await q;
+export async function uploadCommunityImage(file) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from("community-images").upload(path, file);
   if (error) throw error;
-  return (data || []).map((p) => ({ ...p, replyCount: (p.community_replies || []).length }));
+  const { data } = supabase.storage.from("community-images").getPublicUrl(path);
+  return data.publicUrl;
 }
 
-export async function createCommunityPost({ category, title, body }) {
+export async function getCommunityPosts() {
+  const uid = (await supabase.auth.getUser()).data.user?.id;
+  const { data, error } = await supabase
+    .from("community_posts")
+    .select("*, community_replies(id), community_likes(user_id)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((p) => ({
+    ...p,
+    replyCount: (p.community_replies || []).length,
+    likeCount: (p.community_likes || []).length,
+    likedByMe: (p.community_likes || []).some((l) => l.user_id === uid),
+  }));
+}
+
+export async function createCommunityPost({ body, imageUrls }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const displayName = (await getCommunityDisplayName()) || "User Nexto";
-  const { data, error } = await supabase.from("community_posts").insert({ user_id: uid, author_name: displayName, category, title, body }).select().single();
+  const { data, error } = await supabase.from("community_posts").insert({
+    user_id: uid, author_name: displayName, body: body || "", image_urls: imageUrls || [],
+  }).select().single();
   if (error) throw error;
   return data;
 }
 
 export async function deleteCommunityPost(id) {
   const { error } = await supabase.from("community_posts").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function toggleCommunityLike(postId, liked) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  if (liked) {
+    const { error } = await supabase.from("community_likes").insert({ post_id: postId, user_id: uid });
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("community_likes").delete().eq("post_id", postId).eq("user_id", uid);
+    if (error) throw error;
+  }
+}
+
+export async function incrementCommunityShare(postId) {
+  const { error } = await supabase.rpc("increment_share_count", { p_post_id: postId });
   if (error) throw error;
 }
 
