@@ -1,102 +1,264 @@
-import { useState } from "react";
-import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check } from "lucide-react";
+import { useMemo, useState, useRef } from "react";
+import * as XLSX from "xlsx";
+import Papa from "papaparse";
+import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy } from "lucide-react";
 import * as db from "../lib/db";
-import { CATEGORIES, COMPANY_TYPES, fmtDate, todayISO } from "../lib/helpers";
+import { CATEGORIES, stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
+import LeadModal from "../components/LeadModal";
+import DuplicateModal from "../components/DuplicateModal";
 
-const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
-function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
+const val = (row, keys) => {
+  const lk = Object.keys(row);
+  for (const k of keys) { const hit = lk.find((h) => h.toLowerCase().includes(k.toLowerCase())); if (hit && row[hit] != null && String(row[hit]).trim()) return String(row[hit]).trim(); }
+  return "";
+};
+function mapRow(row, category, firstStageKey) {
+  const name = val(row, ["公司名称", "company name", "nama perusahaan", "company", "nama"]);
+  if (!name) return null;
+  return {
+    name, category, stage_key: firstStageKey,
+    company_type: (() => { const t = val(row, ["公司类型", "company type"]).toLowerCase(); if (t.includes("man") && t.includes("trad")) return "Both"; if (t.includes("man")) return "Manufacturer"; if (t.includes("trad")) return "Trader"; return ""; })(),
+    email: val(row, ["邮箱", "email"]), phone: val(row, ["电话", "phone", "telepon", "wa", "hp"]),
+    key_person: val(row, ["联系人", "key person", "contact", "pic", "nama kontak"]),
+    product: val(row, ["产品", "product", "produk"]), city: val(row, ["城市", "city", "kota"]),
+    province: val(row, ["省", "province", "provinsi"]), website: val(row, ["网站", "website", "web"]),
+    background: val(row, ["公司背景", "background", "海关"]), source: "import",
+  };
+}
 
-export default function LeadModal({ lead, stages, settings, onClose, onSaved }) {
-  const [f, setF] = useState({ ...lead });
-  const [log, setLog] = useState(lead.progressLog || []);
-  const [newProg, setNewProg] = useState("");
-  const [editingId, setEditingId] = useState(null);
-  const [editText, setEditText] = useState("");
+function findProgressMatch(c, q) {
+  if (!q.trim() || !c.progressLog?.length) return null;
+  const s = q.toLowerCase();
+  const hit = c.progressLog.find((p) => (p.text || "").toLowerCase().includes(s));
+  return hit || null;
+}
+
+export default function Leads({ leads, stages, settings, onChanged }) {
+  const [q, setQ] = useState("");
+  const [fCat, setFCat] = useState("");
+  const [fType, setFType] = useState("");
+  const [edit, setEdit] = useState(null);
   const [busy, setBusy] = useState(false);
-  const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const [showDup, setShowDup] = useState(false);
+  const [progressPopup, setProgressPopup] = useState(null); // { lead, rect }
+  const popupCloseTimer = useRef(null);
+  const openProgressPopup = (lead, rect) => {
+    if (popupCloseTimer.current) { clearTimeout(popupCloseTimer.current); popupCloseTimer.current = null; }
+    setProgressPopup({ lead, rect });
+  };
+  const scheduleClosePopup = () => {
+    popupCloseTimer.current = setTimeout(() => setProgressPopup(null), 150);
+  };
+  const cancelClosePopup = () => {
+    if (popupCloseTimer.current) { clearTimeout(popupCloseTimer.current); popupCloseTimer.current = null; }
+  };
 
-  const save = async () => {
-    if (!f.name?.trim()) { alert("Nama wajib diisi."); return; }
+  const filtered = useMemo(() => leads.filter((c) => {
+    if (fCat && c.category !== fCat) return false;
+    if (fType && (c.company_type || "") !== fType) return false;
+    if (q) {
+      const s = q.toLowerCase();
+      const fieldHay = [c.name, c.city, c.province, c.key_person, c.product, c.sales_owner].map((x) => (x || "").toLowerCase());
+      const progressHay = (c.progressLog || []).map((p) => (p.text || "").toLowerCase());
+      const allHay = [...fieldHay, ...progressHay];
+      if (!allHay.some((h) => h.includes(s))) return false;
+    }
+    return true;
+  }), [leads, q, fCat, fType]);
+
+  const blank = () => ({ name: "", category: CATEGORIES[0], stage_key: stages[0]?.key, company_type: "", priority: "", verified: false });
+
+  const importFile = async (file) => {
+    if (!file) return;
     setBusy(true);
-    try { await db.upsertLead(f); onSaved(); }
-    catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
-  };
-  const del = async () => { if (!window.confirm("Hapus lead ini?")) return; setBusy(true); await db.deleteLead(lead.id); onSaved(); };
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const firstStage = stages[0]?.key;
+      const existing = new Set(leads.map((l) => l.name.trim().toLowerCase()));
+      const out = [];
+      let usedAiFallback = false;
 
-  const addProg = async () => {
-    if (!newProg.trim() || !lead.id) { if (!lead.id) alert("Simpan lead-nya dulu sebelum catat progress."); return; }
-    const p = await db.addProgress(lead.id, newProg.trim());
-    setLog([p, ...log]); setNewProg("");
+      for (const sn of wb.SheetNames) {
+        const headerRows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: "" });
+        const nonEmptyRows = headerRows.filter((r) => Object.values(r).some((v) => String(v).trim()));
+        let sheetOut = [];
+        for (const r of headerRows) { const m = mapRow(r, "Lainnya", firstStage); if (m) sheetOut.push(m); }
+
+        // Kalau nebak dari judul kolom gagal buat sebagian besar baris (header aneh / ga ada header),
+        // coba cara AI: baca isi datanya langsung, bukan cuma nama kolomnya.
+        if (nonEmptyRows.length > 0 && sheetOut.length < nonEmptyRows.length * 0.5) {
+          const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: "" });
+          const nonEmptyAoa = aoa.filter((r) => r.some((v) => String(v).trim()));
+          if (nonEmptyAoa.length > 0) {
+            try {
+              const sample = nonEmptyAoa.slice(0, 8);
+              const { data_start_row, mapping } = await db.smartImportMap(sample);
+              if (mapping && (mapping.name !== null && mapping.name !== undefined)) {
+                const startAt = Math.min(Math.max(data_start_row || 0, 0), nonEmptyAoa.length);
+                const dataRows = nonEmptyAoa.slice(startAt);
+                const aiOut = [];
+                for (const row of dataRows) {
+                  const get = (idx) => (idx === null || idx === undefined ? "" : String(row[idx] ?? "").trim());
+                  const name = get(mapping.name);
+                  if (!name || /^(xxx|yyyy-mm-dd|mr\/ms xxx)$/i.test(name.trim())) continue;
+                  aiOut.push({
+                    name, category: "Lainnya", stage_key: firstStage,
+                    company_type: get(mapping.company_type), email: get(mapping.email), phone: get(mapping.phone),
+                    key_person: get(mapping.key_person), key_person_title: get(mapping.key_person_title),
+                    product: get(mapping.product), city: get(mapping.city), province: get(mapping.province),
+                    website: get(mapping.website), background: get(mapping.background), source: "import",
+                  });
+                }
+                if (aiOut.length > sheetOut.length) { sheetOut = aiOut; usedAiFallback = true; }
+              }
+            } catch (aiErr) { console.error("Smart import AI gagal:", aiErr); }
+          }
+        }
+
+        for (const m of sheetOut) {
+          const key = (m.name || "").trim().toLowerCase();
+          if (key && !existing.has(key)) { existing.add(key); out.push({ ...m, name: m.name.trim() }); }
+        }
+      }
+
+      if (out.length === 0) { alert("Ga ada baris kebaca. Pastikan ada data nama perusahaan."); return; }
+      for (let i = 0; i < out.length; i += 200) await db.bulkInsertLeads(out.slice(i, i + 200));
+      alert(`✅ Import selesai${usedAiFallback ? " (dibantu AI baca formatnya)" : ""}. Masuk: ${out.length} lead.`);
+      onChanged();
+    } catch (e) { alert("Gagal import: " + e.message); }
+    finally { setBusy(false); }
   };
-  const delProg = async (id) => { await db.deleteProgress(id); setLog(log.filter((x) => x.id !== id)); };
-  const startEditProg = (p) => { setEditingId(p.id); setEditText(p.text); };
-  const cancelEditProg = () => { setEditingId(null); setEditText(""); };
-  const saveEditProg = async (id) => {
-    if (!editText.trim()) return;
-    await db.updateProgress(id, editText.trim());
-    setLog(log.map((x) => (x.id === id ? { ...x, text: editText.trim() } : x)));
-    setEditingId(null); setEditText("");
+
+  const exportCSV = () => {
+    const rows = filtered.map((c) => ({ Nama: c.name, Kategori: c.category, Tipe: c.company_type, Produk: c.product, Tahap: stageMeta(stages, c.stage_key).label, Email: c.email, Telepon_WA: c.phone, Key_Person: c.key_person, Jabatan: c.key_person_title, Kota: c.city, Website: c.website }));
+    const csv = Papa.unparse(rows); const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `nexto-leads-${todayISO()}.csv`; a.click();
   };
+
+  const del = async (id) => { if (!window.confirm("Hapus lead ini?")) return; await db.deleteLead(id); onChanged(); };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg">{lead.id ? "Edit Lead" : "Tambah Lead"}</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
-        <div className="space-y-3">
-          <Field label="Nama perusahaan *"><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Kategori"><select className={inp} value={f.category || CATEGORIES[0]} onChange={(e) => set("category", e.target.value)}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
-            <Field label="Tipe perusahaan"><select className={inp} value={f.company_type || ""} onChange={(e) => set("company_type", e.target.value)}>{COMPANY_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
-          </div>
-          <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => set("stage_key", e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
-          <Field label="Produk"><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
-          <div className="grid grid-cols-2 gap-3"><Field label="Email"><input className={inp} value={f.email || ""} onChange={(e) => set("email", e.target.value)} /></Field><Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value)} /></Field></div>
-          <div className="grid grid-cols-2 gap-3"><Field label="Key person"><input className={inp} value={f.key_person || ""} onChange={(e) => set("key_person", e.target.value)} /></Field><Field label="Jabatan"><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field></div>
-          <Field label="Kota"><input className={inp} value={f.city || ""} onChange={(e) => set("city", e.target.value)} /></Field>
-          <Field label="Website"><input className={inp} value={f.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" /></Field>
-          <div className="border border-orange-200 bg-orange-50/60 rounded-2xl p-3"><Field label="Next action"><input className={inp} value={f.next_action || ""} onChange={(e) => set("next_action", e.target.value)} placeholder="langkah berikutnya" /></Field></div>
-
-          <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50">
-            <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><ClipboardList size={14} /> Progress harian</div>
-            <div className="flex gap-2 mb-2">
-              <input className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-orange-500" value={newProg} onChange={(e) => setNewProg(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProg()} placeholder={lead.id ? "Update hari ini… (Enter)" : "Simpan lead dulu"} />
-              <button onClick={addProg} className="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 rounded-lg flex items-center gap-1"><Plus size={13} /> Catat</button>
-            </div>
-            {log.length === 0 ? <p className="text-xs text-slate-400">Belum ada progress.</p> : (
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">{log.map((p) => (
-                editingId === p.id ? (
-                  <div key={p.id} className="flex items-start gap-2 text-xs bg-white border border-orange-300 rounded px-2 py-1.5">
-                    <span className="text-slate-400 font-mono shrink-0 pt-1">{fmtDate(p.date)}</span>
-                    <input
-                      className="flex-1 px-1.5 py-1 text-xs border border-slate-300 rounded bg-white focus:outline-none focus:border-orange-500"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") saveEditProg(p.id); if (e.key === "Escape") cancelEditProg(); }}
-                      autoFocus
-                    />
-                    <button onClick={() => saveEditProg(p.id)} className="text-emerald-600 hover:text-emerald-700 shrink-0"><Check size={14} /></button>
-                    <button onClick={cancelEditProg} className="text-slate-300 hover:text-slate-500 shrink-0"><X size={13} /></button>
-                  </div>
-                ) : (
-                  <div key={p.id} className="flex items-start gap-2 text-xs bg-white border border-slate-200 rounded px-2 py-1.5">
-                    <span className="text-slate-400 font-mono shrink-0">{fmtDate(p.date)}</span>
-                    <span className="flex-1 text-slate-700">{p.text}</span>
-                    <button onClick={() => startEditProg(p)} className="text-slate-300 hover:text-blue-500 shrink-0"><Pencil size={13} /></button>
-                    <button onClick={() => delProg(p.id)} className="text-slate-300 hover:text-rose-500 shrink-0"><X size={13} /></button>
-                  </div>
-                )
-              ))}</div>
-            )}
-          </div>
-
-          <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={!!f.verified} onChange={(e) => set("verified", e.target.checked)} className="w-4 h-4 accent-emerald-600" /><span className="text-slate-500">Kontak terverifikasi</span></label>
+    <div>
+      <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-2">
+        <div className="flex flex-wrap gap-2 items-center mb-2">
+          <div className="relative flex-1 min-w-40"><Search size={14} className="absolute left-2.5 top-2 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
+          <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
+          <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
+          <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={14} /> Lead</button>
         </div>
-        <div className="flex items-center gap-2 mt-5">
-          <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan</button>
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
-          {lead.id && <button onClick={del} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
+
+        <div className="flex flex-wrap gap-2">
+          <label className="text-xs flex items-center gap-1.5 border border-emerald-300 text-emerald-700 rounded-lg px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 cursor-pointer"><FileSpreadsheet size={12} /> {busy ? "Mengimpor…" : "Import Excel / CSV"}<input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { importFile(e.target.files[0]); e.target.value = ""; }} /></label>
+          <button onClick={exportCSV} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"><Download size={12} /> Export</button>
+          <button onClick={() => setShowDup(true)} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"><Copy size={12} /> Cek Duplikat</button>
+          <span className="text-xs text-slate-400 self-center ml-auto">{filtered.length} / {leads.length}</span>
         </div>
       </div>
+
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-auto" style={{ maxHeight: "calc(100vh - 160px)" }}>
+        <table className="text-sm" style={{ minWidth: "1700px", width: "100%" }}>
+          <thead className="text-slate-400 text-[11px] uppercase tracking-wider">
+            <tr>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", left: 0, top: 0, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "120px", position: "sticky", top: 0, zIndex: 15 }}>Kota</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "160px", position: "sticky", top: 0, zIndex: 15 }}>Key Person</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "150px", position: "sticky", top: 0, zIndex: 15 }}>Jabatan</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "200px", position: "sticky", top: 0, zIndex: 15 }}>Email</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", top: 0, zIndex: 15 }}>Telepon / WA</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: 0, zIndex: 15 }}>Website</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: 0, zIndex: 15 }}>Produk</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "300px", position: "sticky", top: 0, zIndex: 15 }}>Progress Harian</th>
+              <th className="px-3 py-2 bg-slate-50" style={{ minWidth: "80px", position: "sticky", top: 0, zIndex: 15 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((c) => {
+              const wa = waLink(c.phone);
+              const web = normUrl(c.website);
+              const progressMatch = findProgressMatch(c, q);
+              return (
+              <tr key={c.id} className="border-t border-slate-100 hover:bg-orange-50/40 transition-colors align-top cursor-pointer group" onClick={() => setEdit(c)}>
+                <td className="px-3 py-2 bg-white group-hover:bg-orange-50/40" style={{ position: "sticky", left: 0, zIndex: 10, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
+                  <div className="font-medium flex items-center gap-1.5 flex-wrap">
+                    {c.name}
+                    {typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}
+                    {isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white">NEW</span>}
+                    {c.verified ? <ShieldCheck size={12} className="text-emerald-500" /> : <ShieldAlert size={12} className="text-slate-300" />}
+                  </div>
+                  {progressMatch && (
+                    <div className="text-[10px] text-orange-600 mt-1 bg-orange-50 border border-orange-100 rounded-lg px-1.5 py-1 max-w-[200px]">
+                      <span className="font-semibold">{fmtDate(progressMatch.date)}:</span> {progressMatch.text.length > 60 ? progressMatch.text.slice(0, 60) + "…" : progressMatch.text}
+                    </div>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{c.key_person_title || "—"}</td>
+                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{c.email ? <a href={`mailto:${c.email}`} className="text-blue-600 hover:underline break-all">{c.email}</a> : <span className="text-slate-300">—</span>}</td>
+                <td className="px-3 py-2 text-xs whitespace-pre-line" onClick={(e) => e.stopPropagation()}>{c.phone ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1"><MessageCircle size={11} className="shrink-0" />{c.phone}</a> : <span className="text-slate-600">{c.phone}</span>) : <span className="text-slate-300">—</span>}</td>
+                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{web ? <a href={web} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">{prettyDomain(c.website)}</a> : <span className="text-slate-300">—</span>}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
+                <td
+                  className="px-3 py-2 text-xs rounded-lg transition-colors hover:bg-orange-50/60"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseEnter={(e) => { if (c.progressLog && c.progressLog.length > 0) openProgressPopup(c, e.currentTarget.getBoundingClientRect()); }}
+                  onMouseLeave={scheduleClosePopup}
+                >
+                  {c.progressLog && c.progressLog.length > 0 ? (
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                      {c.progressLog.map((p) => (
+                        <div key={p.id} className="border-l-2 border-orange-200 pl-2">
+                          <div className="text-[10px] text-slate-400 font-mono">{fmtDate(p.date)}</div>
+                          <div className="text-slate-700 leading-snug">{p.text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <span className="text-slate-300">—</span>}
+                </td>
+                <td className="px-3 py-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => setEdit(c)} className="text-slate-400 hover:text-blue-600 p-1"><Pencil size={15} /></button>
+                  <button onClick={() => del(c.id)} className="text-slate-400 hover:text-rose-600 p-1"><Trash2 size={15} /></button>
+                </td>
+              </tr> ); })}
+          </tbody>
+        </table>
+        {filtered.length === 0 && <div className="p-8 text-center text-sm text-slate-400">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
+      </div>
+
+      {progressPopup && progressPopup.lead.progressLog && progressPopup.lead.progressLog.length > 0 && (
+        <div
+          className="fixed z-50 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
+          style={{
+            left: Math.min(progressPopup.rect.right + 10, window.innerWidth - 336),
+            top: Math.min(Math.max(progressPopup.rect.top - 10, 12), window.innerHeight - 340),
+          }}
+          onMouseEnter={cancelClosePopup}
+          onMouseLeave={scheduleClosePopup}
+        >
+          <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-orange-50 to-white border-b border-slate-100">
+            <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider">Progress Harian</div>
+            <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{progressPopup.lead.name}</div>
+          </div>
+          <div className="p-4 max-h-72 overflow-y-auto">
+            {progressPopup.lead.progressLog.map((p, i) => (
+              <div key={p.id} className="flex gap-3 relative">
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-4 ring-orange-100 mt-1 shrink-0" />
+                  {i < progressPopup.lead.progressLog.length - 1 && <div className="w-px flex-1 bg-slate-200 mt-1" />}
+                </div>
+                <div className="flex-1 min-w-0 pb-4">
+                  <div className="text-[10px] font-semibold text-slate-400 font-mono mb-1">{fmtDate(p.date)}</div>
+                  <div className="text-xs text-slate-700 leading-relaxed bg-slate-50 rounded-2xl rounded-tl-sm px-3 py-2">{p.text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {edit && <LeadModal lead={edit} stages={stages} settings={settings} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
+      {showDup && <DuplicateModal leads={leads} onClose={() => setShowDup(false)} onChanged={onChanged} />}
     </div>
   );
 }
