@@ -7,7 +7,7 @@ import Leads from "./tabs/Leads";
 import Deal from "./tabs/Deal";
 import VisitFollowup from "./tabs/VisitFollowup";
 import Kompetitor from "./tabs/Kompetitor";
-import Community from "./tabs/Nex";
+import Nex from "./tabs/Nex";
 import Advisor from "./tabs/Advisor";
 import ChatAssistant from "./tabs/ChatAssistant";
 import SettingsTab from "./tabs/Settings";
@@ -164,7 +164,7 @@ export default function App() {
               {tab === "deal" && <Deal leads={leads} stages={stageList} onEdit={setEditLead} onChanged={reload} />}
               {tab === "visitfollowup" && <VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
-              {tab === "komunitas" && <Community />}
+              {tab === "komunitas" && <Nex />}
               {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
               {tab === "asisten" && <ChatAssistant />}
               {tab === "settings" && <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />}
