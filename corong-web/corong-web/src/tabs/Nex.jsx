@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, MessageCircle, Trash2, Loader2, Send, ThumbsUp, Share2, Image as ImageIcon } from "lucide-react";
+import { X, MessageCircle, Trash2, Loader2, Send, ThumbsUp, Share2, Image as ImageIcon, Pencil } from "lucide-react";
 import * as db from "../lib/db";
 
 function fmtWhen(iso) {
@@ -26,6 +26,84 @@ function Avatar({ name, size = 38 }) {
   return (
     <div className={`rounded-full font-bold flex items-center justify-center shrink-0 ${avatarColor(name)}`} style={{ width: size, height: size, fontSize: size * 0.42 }}>
       {initial}
+    </div>
+  );
+}
+
+function ProfileCard({ myName, myBio, postCount, totalLikes, onEdit }) {
+  return (
+    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+      <div className="h-16 bg-gradient-to-r from-violet-500 to-fuchsia-500" />
+      <div className="px-4 pb-4">
+        <div className="-mt-8 flex items-end justify-between">
+          <div className="rounded-full border-4 border-white">
+            <Avatar name={myName} size={64} />
+          </div>
+          <button onClick={onEdit} className="text-xs border border-slate-300 rounded-xl px-3 py-1.5 hover:bg-slate-50 font-medium flex items-center gap-1.5 mb-1">
+            <Pencil size={12} /> Edit Profil
+          </button>
+        </div>
+        <div className="mt-2">
+          <div className="font-bold text-lg text-slate-900">{myName || "User Nexto"}</div>
+          {myBio && <div className="text-xs text-slate-500 mt-0.5">{myBio}</div>}
+        </div>
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
+          <div><span className="font-bold text-slate-900">{postCount}</span> Post</div>
+          <div><span className="font-bold text-slate-900">{totalLikes}</span> Suka diterima</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileEditModal({ initialName, initialBio, onClose, onSaved }) {
+  const [name, setName] = useState(initialName);
+  const [bio, setBio] = useState(initialBio);
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    if (!name.trim()) { alert("Nama gak boleh kosong."); return; }
+    setBusy(true);
+    try {
+      await db.saveCommunityProfile({ name: name.trim(), bio: bio.trim() });
+      onSaved(name.trim(), bio.trim());
+      onClose();
+    } catch (e) { alert("Gagal simpan: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-bold text-base">Edit Profil Nex</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+        </div>
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-xs font-medium text-slate-500">Nama tampilan</span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Misal: Nando"
+              className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+              autoFocus
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-slate-500">Bio / jabatan (opsional)</span>
+            <input
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Misal: Sales di PT Sinar Plastindo"
+              className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+            />
+          </label>
+        </div>
+        <button onClick={save} disabled={busy} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium">
+          {busy ? "Menyimpan…" : "Simpan"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -244,14 +322,14 @@ function PostCard({ post, myId, onDeleted }) {
   );
 }
 
-export default function Community() {
+export default function Nex() {
   const [posts, setPosts] = useState(null);
   const [showComposer, setShowComposer] = useState(false);
   const [myId, setMyId] = useState(null);
   const [myName, setMyName] = useState("");
-  const [nameBusy, setNameBusy] = useState(false);
-  const [showNamePrompt, setShowNamePrompt] = useState(false);
-  const [nameInput, setNameInput] = useState("");
+  const [myBio, setMyBio] = useState("");
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   const load = async () => {
     try { setPosts(await db.getCommunityPosts()); }
@@ -260,27 +338,27 @@ export default function Community() {
 
   useEffect(() => {
     db.getCurrentUserId().then(setMyId);
-    db.getCommunityDisplayName().then((n) => {
-      if (!n) setShowNamePrompt(true);
-      else setMyName(n);
+    db.getCommunityProfile().then((p) => {
+      setMyName(p.name); setMyBio(p.bio); setProfileLoaded(true);
+      if (!p.name) setShowProfileEdit(true);
     });
     load();
   }, []);
 
-  const saveNamePrompt = async () => {
-    if (!nameInput.trim()) return;
-    setNameBusy(true);
-    try { await db.saveCommunityDisplayName(nameInput.trim()); setMyName(nameInput.trim()); setShowNamePrompt(false); }
-    catch (e) { alert("Gagal simpan nama: " + e.message); }
-    finally { setNameBusy(false); }
-  };
+  const myPosts = posts ? posts.filter((p) => p.user_id === myId) : [];
+  const postCount = myPosts.length;
+  const totalLikes = myPosts.reduce((a, p) => a + (p.likeCount || 0), 0);
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-violet-700">Nex</h1>
-        <p className="text-xs text-slate-400 mt-0.5">Tanya strategi, cari supplier/buyer, atau share info ke sesama pengguna Nexto.</p>
+        <p className="text-xs text-slate-400 mt-0.5">Share info sesama sales.</p>
       </div>
+
+      {profileLoaded && (
+        <ProfileCard myName={myName} myBio={myBio} postCount={postCount} totalLikes={totalLikes} onEdit={() => setShowProfileEdit(true)} />
+      )}
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setShowComposer(true)}>
         <Avatar name={myName || "?"} />
@@ -302,24 +380,13 @@ export default function Community() {
 
       {showComposer && <ComposerModal displayName={myName || "User Nexto"} onClose={() => setShowComposer(false)} onPosted={load} />}
 
-      {showNamePrompt && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-5">
-            <h2 className="font-bold text-base mb-1.5">Siapa nama kamu di Nex?</h2>
-            <p className="text-xs text-slate-500 mb-3">Nama ini yang bakal keliatan pas kamu post/komentar (bukan nama akun login kamu).</p>
-            <input
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && saveNamePrompt()}
-              placeholder="Misal: Nando - PT Sinar Plastindo"
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-              autoFocus
-            />
-            <button onClick={saveNamePrompt} disabled={nameBusy} className="w-full mt-3 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium">
-              {nameBusy ? "Menyimpan…" : "Simpan & lanjut"}
-            </button>
-          </div>
-        </div>
+      {showProfileEdit && (
+        <ProfileEditModal
+          initialName={myName}
+          initialBio={myBio}
+          onClose={() => setShowProfileEdit(false)}
+          onSaved={(n, b) => { setMyName(n); setMyBio(b); }}
+        />
       )}
     </div>
   );
