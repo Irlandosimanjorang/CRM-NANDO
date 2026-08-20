@@ -345,14 +345,17 @@ export default function Nex() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-violet-700">Nex</h1>
-        <p className="text-xs text-slate-400 mt-0.5">Share info sesama sales.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-violet-700">Nex</h1>
+          <p className="text-xs text-slate-400 mt-0.5">Share info sesama sales.</p>
+        </div>
+        {profileLoaded && (
+          <button onClick={() => setShowProfileEdit(true)} className="shrink-0" title={`${myName || "User Nexto"} · ${postCount} Post · ${totalLikes} Suka`}>
+            <Avatar name={myName || "?"} size={40} />
+          </button>
+        )}
       </div>
-
-      {profileLoaded && (
-        <ProfileCard myName={myName} myBio={myBio} postCount={postCount} totalLikes={totalLikes} onEdit={() => setShowProfileEdit(true)} />
-      )}
 
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setShowComposer(true)}>
         <Avatar name={myName || "?"} />
