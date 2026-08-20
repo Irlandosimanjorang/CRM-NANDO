@@ -288,6 +288,62 @@ export async function getChatHistory() {
   return data || [];
 }
 
+// ---- COMMUNITY ----
+export async function getCommunityDisplayName() {
+  const s = await getSettings();
+  return s.community_display_name || "";
+}
+export async function saveCommunityDisplayName(name) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("settings").upsert({ user_id: uid, community_display_name: name, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
+export async function getCommunityPosts(category) {
+  let q = supabase.from("community_posts").select("*, community_replies(id)").order("created_at", { ascending: false });
+  if (category) q = q.eq("category", category);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).map((p) => ({ ...p, replyCount: (p.community_replies || []).length }));
+}
+
+export async function createCommunityPost({ category, title, body }) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const displayName = (await getCommunityDisplayName()) || "User Nexto";
+  const { data, error } = await supabase.from("community_posts").insert({ user_id: uid, author_name: displayName, category, title, body }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCommunityPost(id) {
+  const { error } = await supabase.from("community_posts").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function getReplies(postId) {
+  const { data, error } = await supabase.from("community_replies").select("*").eq("post_id", postId).order("created_at", { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addReply(postId, body) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const displayName = (await getCommunityDisplayName()) || "User Nexto";
+  const { data, error } = await supabase.from("community_replies").insert({ post_id: postId, user_id: uid, author_name: displayName, body }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteReply(id) {
+  const { error } = await supabase.from("community_replies").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function getCurrentUserId() {
+  const { data } = await supabase.auth.getUser();
+  return data?.user?.id || null;
+}
+
 // ---- DATA CLEANUP ----
 export async function getSuggestedCategories() {
   const { data, error } = await supabase.functions.invoke("suggest-categories");
