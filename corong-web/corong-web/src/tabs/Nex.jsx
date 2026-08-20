@@ -32,26 +32,20 @@ function Avatar({ name, size = 38 }) {
 
 function ProfileCard({ myName, myBio, postCount, totalLikes, onEdit }) {
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-      <div className="h-16 bg-gradient-to-r from-violet-500 to-fuchsia-500" />
-      <div className="px-4 pb-4">
-        <div className="-mt-8 flex items-end justify-between">
-          <div className="rounded-full border-4 border-white">
-            <Avatar name={myName} size={64} />
-          </div>
-          <button onClick={onEdit} className="text-xs border border-slate-300 rounded-xl px-3 py-1.5 hover:bg-slate-50 font-medium flex items-center gap-1.5 mb-1">
-            <Pencil size={12} /> Edit Profil
-          </button>
-        </div>
-        <div className="mt-2">
-          <div className="font-bold text-lg text-slate-900">{myName || "User Nexto"}</div>
-          {myBio && <div className="text-xs text-slate-500 mt-0.5">{myBio}</div>}
-        </div>
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
-          <div><span className="font-bold text-slate-900">{postCount}</span> Post</div>
-          <div><span className="font-bold text-slate-900">{totalLikes}</span> Suka diterima</div>
+    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3 flex items-center gap-3">
+      <Avatar name={myName} size={44} />
+      <div className="min-w-0 flex-1">
+        <div className="font-bold text-sm text-slate-900 truncate">{myName || "User Nexto"}</div>
+        {myBio ? (
+          <div className="text-[11px] text-slate-500 truncate">{myBio}</div>
+        ) : null}
+        <div className="text-[11px] text-slate-400 mt-0.5">
+          <span className="font-semibold text-slate-600">{postCount}</span> Post · <span className="font-semibold text-slate-600">{totalLikes}</span> Suka
         </div>
       </div>
+      <button onClick={onEdit} className="text-xs border border-slate-300 rounded-xl px-2.5 py-1.5 hover:bg-slate-50 font-medium flex items-center gap-1 shrink-0">
+        <Pencil size={11} /> Edit
+      </button>
     </div>
   );
 }
