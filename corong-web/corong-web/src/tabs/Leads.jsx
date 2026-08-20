@@ -40,6 +40,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const [edit, setEdit] = useState(null);
   const [busy, setBusy] = useState(false);
   const [showDup, setShowDup] = useState(false);
+  const [progressPopup, setProgressPopup] = useState(null); // { lead, rect }
 
   const filtered = useMemo(() => leads.filter((c) => {
     if (fCat && c.category !== fCat) return false;
@@ -130,7 +131,6 @@ export default function Leads({ leads, stages, settings, onChanged }) {
     <div>
       <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-2">
         <div className="flex flex-wrap gap-2 items-center mb-2">
-          <h1 className="text-lg font-bold tracking-tight mr-1 shrink-0">Leads</h1>
           <div className="relative flex-1 min-w-40"><Search size={14} className="absolute left-2.5 top-2 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
           <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
           <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
@@ -188,7 +188,12 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                 <td className="px-3 py-2 text-xs whitespace-pre-line" onClick={(e) => e.stopPropagation()}>{c.phone ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1"><MessageCircle size={11} className="shrink-0" />{c.phone}</a> : <span className="text-slate-600">{c.phone}</span>) : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{web ? <a href={web} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">{prettyDomain(c.website)}</a> : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
-                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>
+                <td
+                  className="px-3 py-2 text-xs rounded-lg transition-colors hover:bg-orange-50/60"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseEnter={(e) => { if (c.progressLog && c.progressLog.length > 0) setProgressPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() }); }}
+                  onMouseLeave={() => setProgressPopup(null)}
+                >
                   {c.progressLog && c.progressLog.length > 0 ? (
                     <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
                       {c.progressLog.map((p) => (
@@ -209,6 +214,35 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         </table>
         {filtered.length === 0 && <div className="p-8 text-center text-sm text-slate-400">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
       </div>
+
+      {progressPopup && progressPopup.lead.progressLog && progressPopup.lead.progressLog.length > 0 && (
+        <div
+          className="fixed z-50 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden pointer-events-none"
+          style={{
+            left: Math.min(progressPopup.rect.right + 10, window.innerWidth - 336),
+            top: Math.min(Math.max(progressPopup.rect.top - 10, 12), window.innerHeight - 340),
+          }}
+        >
+          <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-orange-50 to-white border-b border-slate-100">
+            <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider">Progress Harian</div>
+            <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{progressPopup.lead.name}</div>
+          </div>
+          <div className="p-4 max-h-72 overflow-y-auto">
+            {progressPopup.lead.progressLog.map((p, i) => (
+              <div key={p.id} className="flex gap-3 relative">
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-4 ring-orange-100 mt-1 shrink-0" />
+                  {i < progressPopup.lead.progressLog.length - 1 && <div className="w-px flex-1 bg-slate-200 mt-1" />}
+                </div>
+                <div className="flex-1 min-w-0 pb-4">
+                  <div className="text-[10px] font-semibold text-slate-400 font-mono mb-1">{fmtDate(p.date)}</div>
+                  <div className="text-xs text-slate-700 leading-relaxed bg-slate-50 rounded-2xl rounded-tl-sm px-3 py-2">{p.text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {edit && <LeadModal lead={edit} stages={stages} settings={settings} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
       {showDup && <DuplicateModal leads={leads} onClose={() => setShowDup(false)} onChanged={onChanged} />}
