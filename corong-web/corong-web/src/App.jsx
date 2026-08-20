@@ -32,7 +32,7 @@ const NAV = [
   { key: "deal", label: "Deal", short: "Deal", icon: Trophy },
   { key: "visitfollowup", label: "Visit & Follow-up", short: "Visit", icon: CalendarCheck },
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
-  { key: "komunitas", label: "Komunitas", short: "Komunitas", icon: Users2 },
+  { key: "komunitas", label: "Nex", short: "Nex", icon: Users2, special: true },
   { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
   { key: "asisten", label: "Asisten", short: "Chat", icon: Bot },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
@@ -135,8 +135,12 @@ export default function App() {
           <div className="leading-tight"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
         </div>
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-          {NAV.map((n) => { const I = n.icon; const active = tab === n.key; return (
-            <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm transition-all ${active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/25" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
+          {NAV.map((n) => { const I = n.icon; const active = tab === n.key;
+            const cls = n.special
+              ? (active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg shadow-violet-600/25" : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200")
+              : (active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/25" : "text-slate-300 hover:bg-white/5 hover:text-white");
+            return (
+            <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm transition-all ${cls}`}>
               <I size={17} strokeWidth={active ? 2.5 : 2} /> {n.label}
             </button> ); })}
         </nav>
@@ -170,8 +174,10 @@ export default function App() {
 
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/90 backdrop-blur-lg border-t border-slate-200">
           <div className="max-w-lg mx-auto flex justify-around px-1 pt-1.5 pb-2 overflow-x-auto">
-            {NAV.map((n) => { const I = n.icon; const active = tab === n.key; return (
-              <button key={n.key} onClick={() => setTab(n.key)} className={`flex flex-col items-center gap-0.5 flex-1 py-1 rounded-xl ${active ? "text-orange-600" : "text-slate-400"}`}>
+            {NAV.map((n) => { const I = n.icon; const active = tab === n.key;
+              const cls = n.special ? (active ? "text-violet-600" : "text-violet-400") : (active ? "text-orange-600" : "text-slate-400");
+              return (
+              <button key={n.key} onClick={() => setTab(n.key)} className={`flex flex-col items-center gap-0.5 flex-1 py-1 rounded-xl ${cls}`}>
                 <I size={20} strokeWidth={active ? 2.5 : 2} /><span className="text-[9px] font-medium leading-none truncate max-w-full">{n.short}</span>
               </button> ); })}
           </div>
