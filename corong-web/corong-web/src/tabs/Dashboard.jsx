@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon } from "lucide-react";
+import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles } from "lucide-react";
 import { todayISO, fmtRp } from "../lib/helpers";
 
 function StatCard({ icon: I, label, value, accent, small }) {
@@ -77,6 +77,61 @@ function PipelineFunnel({ stages, counts }) {
   );
 }
 
+// Win rate, rata-rata hari closing, dan kategori terlaris - dihitung dari lead yang
+// udah closed (menang/kalah). Ambang batas 8 lead sama kayak yang dipake AI Advisor
+// & proactive-check, biar konsisten kapan insight-nya mulai muncul.
+function PerformanceInsight({ leads, stages }) {
+  const wonKeys = stages.filter((s) => s.type === "won").map((s) => s.key);
+  const lostKeys = stages.filter((s) => s.type === "lost").map((s) => s.key);
+  const closedWon = leads.filter((l) => wonKeys.includes(l.stage_key));
+  const closedLost = leads.filter((l) => lostKeys.includes(l.stage_key));
+  const totalClosed = closedWon.length + closedLost.length;
+
+  if (totalClosed < 8) {
+    return (
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1"><Sparkles size={16} className="text-orange-500" /> Insight Performa</div>
+        <p className="text-xs text-slate-400 mt-1">Baru ada {totalClosed} lead closed (menang/kalah). Kumpulin minimal 8 dulu biar polanya keliatan di sini.</p>
+      </div>
+    );
+  }
+
+  const winRate = Math.round((closedWon.length / totalClosed) * 100);
+  const daysArr = closedWon
+    .map((l) => {
+      if (!l.created_at || !l.deal_date) return null;
+      const d = Math.floor((new Date(l.deal_date) - new Date(l.created_at)) / 86400000);
+      return d >= 0 ? d : null;
+    })
+    .filter((d) => d !== null);
+  const avgDays = daysArr.length ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length) : null;
+
+  const catWin = {};
+  for (const l of closedWon) { const k = l.category || "Lainnya"; catWin[k] = (catWin[k] || 0) + 1; }
+  const topCat = Object.entries(catWin).sort((a, b) => b[1] - a[1])[0];
+
+  return (
+    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"><Sparkles size={16} className="text-orange-500" /> Insight Performa</div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <div className="text-2xl font-bold font-mono text-orange-600">{winRate}%</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Win rate</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold font-mono text-slate-800">{avgDays ?? "—"}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Rata-rata hari closing</div>
+        </div>
+        <div>
+          <div className="text-sm font-bold text-slate-800 truncate" title={topCat ? topCat[0] : ""}>{topCat ? topCat[0] : "—"}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Kategori terlaris</div>
+        </div>
+      </div>
+      <p className="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-100">Berdasarkan {totalClosed} lead yang udah closed.</p>
+    </div>
+  );
+}
+
 export default function Dashboard({ leads, stages, onGo }) {
   const s = useMemo(() => {
     const won = stages.filter((x) => x.type === "won").map((x) => x.key);
@@ -133,6 +188,8 @@ export default function Dashboard({ leads, stages, onGo }) {
         <RevenueCard label="Revenue Tahun Ini" value={s.revYear} dark />
         <RevenueCard label="Revenue Bulan Ini" value={s.revMonth} />
       </div>
+
+      <PerformanceInsight leads={leads} stages={stages} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <RevenueTrendChart months={s.months} />
