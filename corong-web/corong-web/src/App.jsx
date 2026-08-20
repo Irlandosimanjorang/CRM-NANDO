@@ -7,7 +7,7 @@ import Leads from "./tabs/Leads";
 import Deal from "./tabs/Deal";
 import VisitFollowup from "./tabs/VisitFollowup";
 import Kompetitor from "./tabs/Kompetitor";
-import Community from "./tabs/Community";
+import Community from "./tabs/Nex";
 import Advisor from "./tabs/Advisor";
 import ChatAssistant from "./tabs/ChatAssistant";
 import SettingsTab from "./tabs/Settings";
