@@ -56,6 +56,43 @@ Deno.serve(async (req) => {
     const wonKeys = (stages || []).filter((s) => s.type === "won").map((s) => s.key);
     const lostKeys = (stages || []).filter((s) => s.type === "lost").map((s) => s.key);
     const active = (leads || []).filter((c) => !wonKeys.includes(c.stage_key) && !lostKeys.includes(c.stage_key));
+
+    // --- Pola dari histori closing lead USER INI SENDIRI (bukan data akun lain) ---
+    function daysBetweenDates(a, b) {
+      if (!a || !b) return null;
+      const d = Math.floor((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
+      return isNaN(d) ? null : d;
+    }
+    const closedWon = (leads || []).filter((c) => wonKeys.includes(c.stage_key));
+    const closedLost = (leads || []).filter((c) => lostKeys.includes(c.stage_key));
+    const totalClosed = closedWon.length + closedLost.length;
+
+    let insightLines = "";
+    if (totalClosed >= 8) {
+      const winRate = Math.round((closedWon.length / totalClosed) * 100);
+      const winDays = closedWon.map((c) => daysBetweenDates(c.created_at, c.deal_date)).filter((d) => d !== null && d >= 0);
+      const avgDaysToWin = winDays.length ? Math.round(winDays.reduce((a, b) => a + b, 0) / winDays.length) : null;
+
+      const bucketOf = (n) => (n === 0 ? "0" : n <= 2 ? "1-2" : n <= 5 ? "3-5" : "6+");
+      const buckets = {};
+      for (const c of [...closedWon, ...closedLost]) {
+        const n = (c.progress_notes || []).length;
+        const b = bucketOf(n);
+        buckets[b] = buckets[b] || { won: 0, lost: 0 };
+        wonKeys.includes(c.stage_key) ? buckets[b].won++ : buckets[b].lost++;
+      }
+      const catWin = {};
+      for (const c of closedWon) { const k = c.category || "Lainnya"; catWin[k] = (catWin[k] || 0) + 1; }
+
+      const lines = [];
+      lines.push(`Dari ${totalClosed} lead kamu yang udah closed: win rate ${winRate}%.`);
+      if (avgDaysToWin !== null) lines.push(`Rata-rata butuh ${avgDaysToWin} hari dari lead masuk sampai deal.`);
+      const bucketEntries = Object.entries(buckets).map(([b, v]) => `${b} catatan progress: ${v.won} menang / ${v.lost} kalah`);
+      if (bucketEntries.length) lines.push(`Pola jumlah catatan progress vs hasil: ${bucketEntries.join("; ")}.`);
+      const topCat = Object.entries(catWin).sort((a, b) => b[1] - a[1])[0];
+      if (topCat) lines.push(`Kategori paling sering closing buat kamu: ${topCat[0]}.`);
+      insightLines = lines.join("\n");
+    }
     const queue = [...active]
       .sort((a, b) => potential(b, stages) - potential(a, stages))
       .slice(0, 12);
@@ -75,7 +112,7 @@ Deno.serve(async (req) => {
         recent_progress: (c.progress_notes || []).slice(0, 3).map((p) => `${p.note_date}: ${(p.text || "").slice(0, 140)}`),
       }));
       const prompt = `Kamu adalah sales coach B2B yang tajam untuk sales industri PVC di Indonesia. Hari ini ${today}. Untuk SETIAP lead, baca tahap, prioritas, dan catatan progress-nya, lalu beri arahan praktis - spesifik ke lead itu, tanpa basa-basi umum.
-Balas HANYA berupa JSON array, tanpa markdown. Tiap item persis:
+${insightLines ? `Pola dari histori closing lead kamu sendiri, dipakai buat mempertajam saran (jangan disebutkan literal ke user, cukup jadi bahan pertimbangan):\n${insightLines}\n` : ""}Balas HANYA berupa JSON array, tanpa markdown. Tiap item persis:
 {"name":"<nama persis>","assessment":"<2 kalimat: posisi lead ini sekarang & alasannya>","action":"<langkah paling penting berikutnya, 1 kalimat jelas>","steps":["<2-3 langkah konkret pendukung, tiap poin di bawah 12 kata>"],"urgency":"high|medium|low"}.
 Ini lead-lead paling potensial (prioritas tinggi / tahap maju) - fokus ke cara mendorong mereka lebih dekat ke closing. Tulis dalam Bahasa Indonesia yang santai tapi profesional.
 Leads:
