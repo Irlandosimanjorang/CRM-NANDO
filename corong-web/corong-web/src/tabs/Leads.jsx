@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy } from "lucide-react";
@@ -40,26 +40,6 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const [edit, setEdit] = useState(null);
   const [busy, setBusy] = useState(false);
   const [showDup, setShowDup] = useState(false);
-
-  // Ngukur tinggi blok search/filter/toolbar biar header tabel nempel PAS di
-  // bawahnya pas di-scroll (freeze bareng), otomatis nyesuain kalau layoutnya
-  // beda tinggi (mobile vs desktop, atau pas teks tombol berubah).
-  const toolbarRef = useRef(null);
-  const [theadTop, setTheadTop] = useState(112);
-  useEffect(() => {
-    const el = toolbarRef.current;
-    if (!el) return;
-    const compute = () => {
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-      const base = isDesktop ? 0 : 56; // tinggi header mobile yang sticky
-      setTheadTop(base + el.offsetHeight);
-    };
-    compute();
-    const ro = new ResizeObserver(compute);
-    ro.observe(el);
-    window.addEventListener("resize", compute);
-    return () => { ro.disconnect(); window.removeEventListener("resize", compute); };
-  }, []);
 
   const filtered = useMemo(() => leads.filter((c) => {
     if (fCat && c.category !== fCat) return false;
@@ -148,7 +128,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
 
   return (
     <div>
-      <div ref={toolbarRef} className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-3">
+      <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-3">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <h1 className="text-2xl font-bold tracking-tight">Leads</h1>
         </div>
@@ -168,20 +148,20 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto overflow-y-visible">
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
         <table className="text-sm" style={{ minWidth: "1700px", width: "100%" }}>
           <thead className="text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", left: 0, top: theadTop, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "120px", position: "sticky", top: theadTop, zIndex: 15 }}>Kota</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "160px", position: "sticky", top: theadTop, zIndex: 15 }}>Key Person</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "150px", position: "sticky", top: theadTop, zIndex: 15 }}>Jabatan</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "200px", position: "sticky", top: theadTop, zIndex: 15 }}>Email</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", top: theadTop, zIndex: 15 }}>Telepon / WA</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: theadTop, zIndex: 15 }}>Website</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: theadTop, zIndex: 15 }}>Produk</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "300px", position: "sticky", top: theadTop, zIndex: 15 }}>Progress Harian</th>
-              <th className="px-3 py-2 bg-slate-50" style={{ minWidth: "80px", position: "sticky", top: theadTop, zIndex: 15 }}></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", left: 0, top: 0, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "120px", position: "sticky", top: 0, zIndex: 15 }}>Kota</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "160px", position: "sticky", top: 0, zIndex: 15 }}>Key Person</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "150px", position: "sticky", top: 0, zIndex: 15 }}>Jabatan</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "200px", position: "sticky", top: 0, zIndex: 15 }}>Email</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", top: 0, zIndex: 15 }}>Telepon / WA</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: 0, zIndex: 15 }}>Website</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: 0, zIndex: 15 }}>Produk</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "300px", position: "sticky", top: 0, zIndex: 15 }}>Progress Harian</th>
+              <th className="px-3 py-2 bg-slate-50" style={{ minWidth: "80px", position: "sticky", top: 0, zIndex: 15 }}></th>
             </tr>
           </thead>
           <tbody>
