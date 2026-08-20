@@ -111,7 +111,7 @@ export async function deleteProgress(id) {
 
 // ---- SMART IMPORT (AI baca layout Excel yang formatnya ga standar) ----
 export async function smartImportMap(sampleRows) {
-  const { data, error } = await supabase.functions.invoke("smart-import-map", { body: { sampleRows } });
+  const { data, error } = await supabase.functions.invoke("smart-import-map-ts", { body: { sampleRows } });
   if (error) throw error;
   return data;
 }
