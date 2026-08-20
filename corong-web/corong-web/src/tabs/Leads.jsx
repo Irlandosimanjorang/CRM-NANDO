@@ -128,27 +128,24 @@ export default function Leads({ leads, stages, settings, onChanged }) {
 
   return (
     <div>
-      <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-3">
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-          <h1 className="text-2xl font-bold tracking-tight">Leads</h1>
-        </div>
-
-        <div className="flex flex-wrap gap-2 items-center mb-3">
-          <div className="relative flex-1 min-w-40"><Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
-          <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
-          <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
-          <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Lead</button>
+      <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-2">
+        <div className="flex flex-wrap gap-2 items-center mb-2">
+          <h1 className="text-lg font-bold tracking-tight mr-1 shrink-0">Leads</h1>
+          <div className="relative flex-1 min-w-40"><Search size={14} className="absolute left-2.5 top-2 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
+          <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
+          <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
+          <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={14} /> Lead</button>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <label className="text-xs flex items-center gap-1.5 border border-emerald-300 text-emerald-700 rounded-lg px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 cursor-pointer"><FileSpreadsheet size={13} /> {busy ? "Mengimpor…" : "Import Excel / CSV"}<input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { importFile(e.target.files[0]); e.target.value = ""; }} /></label>
-          <button onClick={exportCSV} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-3 py-1.5 bg-white hover:bg-slate-50"><Download size={13} /> Export</button>
-          <button onClick={() => setShowDup(true)} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-3 py-1.5 bg-white hover:bg-slate-50"><Copy size={13} /> Cek Duplikat</button>
+          <label className="text-xs flex items-center gap-1.5 border border-emerald-300 text-emerald-700 rounded-lg px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 cursor-pointer"><FileSpreadsheet size={12} /> {busy ? "Mengimpor…" : "Import Excel / CSV"}<input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { importFile(e.target.files[0]); e.target.value = ""; }} /></label>
+          <button onClick={exportCSV} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"><Download size={12} /> Export</button>
+          <button onClick={() => setShowDup(true)} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"><Copy size={12} /> Cek Duplikat</button>
           <span className="text-xs text-slate-400 self-center ml-auto">{filtered.length} / {leads.length}</span>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-auto" style={{ maxHeight: "calc(100vh - 160px)" }}>
         <table className="text-sm" style={{ minWidth: "1700px", width: "100%" }}>
           <thead className="text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
