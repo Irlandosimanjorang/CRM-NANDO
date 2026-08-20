@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
 import Auth from "./Auth";
@@ -78,7 +78,46 @@ export default function App() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { if (session) reload(); }, [session]);
+  // Reload diem-diem (TANPA nyalain loading spinner) - dipakai buat nyegerin data
+  // pas balik dari tab/app lain yang udah lama ditinggal, tanpa bikin layar kedip loading.
+  const silentReload = async () => {
+    try {
+      const [st, se, ls, comp] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors()]);
+      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp);
+    } catch (e) { console.error(e); }
+  };
+
+  // Supabase otomatis ngecek/refresh token pas tab balik fokus, yang bikin onAuthStateChange
+  // nembak terus tiap kali pindah tab/app - walau user-nya sama aja, bukan login baru.
+  // Makanya reload PENUH (loading spinner) cuma dipicu kalau user_id-nya beneran ganti
+  // (login pertama kali / ganti akun), bukan tiap kali sesi ke-refresh doang.
+  const prevUserId = useRef(null);
+  useEffect(() => {
+    const uid = session?.user?.id || null;
+    if (uid && uid !== prevUserId.current) {
+      prevUserId.current = uid;
+      reload();
+    } else if (!uid) {
+      prevUserId.current = null;
+    }
+  }, [session]);
+
+  // Kalau tab ditinggal lebih dari 5 menit terus dibuka lagi, sync data diem-diem
+  // (ga nyalain loading spinner) biar tetep fresh tanpa bikin capek liat loading mulu.
+  useEffect(() => {
+    let hiddenAt = null;
+    const onVisibility = () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+      } else if (hiddenAt && session) {
+        const awayMs = Date.now() - hiddenAt;
+        if (awayMs > 5 * 60 * 1000) silentReload();
+        hiddenAt = null;
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [session]);
 
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
