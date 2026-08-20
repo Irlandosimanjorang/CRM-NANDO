@@ -65,13 +65,50 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       const firstStage = stages[0]?.key;
       const existing = new Set(leads.map((l) => l.name.toLowerCase()));
       const out = [];
+      let usedAiFallback = false;
+
       for (const sn of wb.SheetNames) {
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: "" });
-        for (const r of rows) { const m = mapRow(r, "Lainnya", firstStage); if (m && !existing.has(m.name.toLowerCase())) { existing.add(m.name.toLowerCase()); out.push(m); } }
+        const headerRows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: "" });
+        const nonEmptyRows = headerRows.filter((r) => Object.values(r).some((v) => String(v).trim()));
+        let sheetOut = [];
+        for (const r of headerRows) { const m = mapRow(r, "Lainnya", firstStage); if (m) sheetOut.push(m); }
+
+        // Kalau nebak dari judul kolom gagal buat sebagian besar baris (header aneh / ga ada header),
+        // coba cara AI: baca isi datanya langsung, bukan cuma nama kolomnya.
+        if (nonEmptyRows.length > 0 && sheetOut.length < nonEmptyRows.length * 0.5) {
+          const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: "" });
+          const nonEmptyAoa = aoa.filter((r) => r.some((v) => String(v).trim()));
+          if (nonEmptyAoa.length > 0) {
+            try {
+              const sample = nonEmptyAoa.slice(0, 6);
+              const { has_header, mapping } = await db.smartImportMap(sample);
+              if (mapping && (mapping.name !== null && mapping.name !== undefined)) {
+                const dataRows = has_header ? nonEmptyAoa.slice(1) : nonEmptyAoa;
+                const aiOut = [];
+                for (const row of dataRows) {
+                  const get = (idx) => (idx === null || idx === undefined ? "" : String(row[idx] ?? "").trim());
+                  const name = get(mapping.name);
+                  if (!name) continue;
+                  aiOut.push({
+                    name, category: "Lainnya", stage_key: firstStage,
+                    company_type: get(mapping.company_type), email: get(mapping.email), phone: get(mapping.phone),
+                    key_person: get(mapping.key_person), key_person_title: get(mapping.key_person_title),
+                    product: get(mapping.product), city: get(mapping.city), province: get(mapping.province),
+                    website: get(mapping.website), background: get(mapping.background), source: "import",
+                  });
+                }
+                if (aiOut.length > sheetOut.length) { sheetOut = aiOut; usedAiFallback = true; }
+              }
+            } catch (aiErr) { /* AI gagal, tetep pake hasil heuristik biasa (walau minim) */ }
+          }
+        }
+
+        for (const m of sheetOut) { if (m.name && !existing.has(m.name.toLowerCase())) { existing.add(m.name.toLowerCase()); out.push(m); } }
       }
-      if (out.length === 0) { alert("Ga ada baris kebaca. Pastikan ada kolom nama perusahaan."); return; }
+
+      if (out.length === 0) { alert("Ga ada baris kebaca. Pastikan ada data nama perusahaan."); return; }
       for (let i = 0; i < out.length; i += 200) await db.bulkInsertLeads(out.slice(i, i + 200));
-      alert(`✅ Import selesai. Masuk: ${out.length} lead.`);
+      alert(`✅ Import selesai${usedAiFallback ? " (dibantu AI baca formatnya)" : ""}. Masuk: ${out.length} lead.`);
       onChanged();
     } catch (e) { alert("Gagal import: " + e.message); }
     finally { setBusy(false); }
