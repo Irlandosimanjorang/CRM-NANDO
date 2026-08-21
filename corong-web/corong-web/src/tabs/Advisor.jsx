@@ -71,7 +71,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen }) {
                 if (!c) return null;
                 const ds = daysSince(c.last_contact);
                 return (
-                  <div key={i} className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+                  <div key={i} className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="min-w-0">
                         <div className="font-semibold flex items-center gap-2 flex-wrap">{c.name}<span className="text-[10px] border rounded-full px-2 py-0.5" style={chipStyle(stageMeta(stages, c.stage_key).hex)}>{stageMeta(stages, c.stage_key).label}</span><span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: um.hex }}>{um.label}</span></div>
