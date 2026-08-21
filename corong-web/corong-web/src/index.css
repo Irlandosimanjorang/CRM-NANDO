@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Sembunyiin scrollbar bawaan browser di semua elemen (tetep bisa discroll,
+   cuma bar-nya aja yang gak keliatan) biar kesannya lebih kayak app mobile. */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge lama */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge baru */
+}
