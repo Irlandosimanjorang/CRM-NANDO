@@ -156,7 +156,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-auto" style={{ maxHeight: "calc(100vh - 160px)" }}>
+      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] overflow-auto" style={{ maxHeight: "calc(100vh - 160px)" }}>
         <table className="text-sm" style={{ minWidth: "1700px", width: "100%" }}>
           <thead className="text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
