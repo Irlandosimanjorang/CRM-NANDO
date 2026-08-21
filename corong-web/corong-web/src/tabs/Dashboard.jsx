@@ -6,9 +6,10 @@ function StatCard({ icon: I, label, value, accent, small }) {
   const ac = accent === "orange" ? "text-orange-600" : accent === "emerald" ? "text-emerald-600" : "text-slate-800";
   const bub = accent === "orange" ? "bg-orange-100 text-orange-600" : accent === "emerald" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500";
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3.5">
-      <div className="flex items-center gap-2 text-xs text-slate-400 mb-2"><span className={`w-7 h-7 rounded-xl flex items-center justify-center ${bub}`}><I size={15} /></span> {label}</div>
-      <div className={`font-mono font-bold ${small ? "text-base" : "text-2xl"} ${ac}`}>{value}</div>
+    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 transition-transform hover:-translate-y-0.5">
+      <span className={`w-9 h-9 rounded-2xl flex items-center justify-center mb-2.5 ${bub}`}><I size={16} /></span>
+      <div className={`font-mono font-bold leading-none ${small ? "text-base" : "text-2xl"} ${ac}`}>{value}</div>
+      <div className="text-[11px] text-slate-400 mt-1.5">{label}</div>
     </div>
   );
 }
@@ -16,17 +17,17 @@ function StatCard({ icon: I, label, value, accent, small }) {
 function RevenueCard({ label, value, dark }) {
   const [revealed, setRevealed] = useState(false);
   return (
-    <div className={dark ? "bg-slate-900 rounded-2xl shadow-sm p-4 text-white" : "bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4"}>
-      <div className={`flex items-center justify-between text-xs mb-2 ${dark ? "text-slate-300" : "text-slate-400"}`}>
+    <div className={dark ? "bg-slate-900 rounded-[28px] shadow-[0_4px_24px_-6px_rgba(15,23,42,0.35)] p-4 text-white" : "bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4"}>
+      <div className={`flex items-center justify-between text-xs mb-3 ${dark ? "text-slate-300" : "text-slate-400"}`}>
         <div className="flex items-center gap-2">
-          <span className={`w-7 h-7 rounded-xl flex items-center justify-center ${dark ? "bg-orange-600/20 text-orange-400" : "bg-orange-100 text-orange-600"}`}><Wallet size={15} /></span>
+          <span className={`w-8 h-8 rounded-2xl flex items-center justify-center ${dark ? "bg-orange-600/20 text-orange-400" : "bg-orange-100 text-orange-600"}`}><Wallet size={15} /></span>
           {label}
         </div>
         <button onClick={() => setRevealed((v) => !v)} className={dark ? "text-slate-400 hover:text-white" : "text-slate-400 hover:text-slate-700"} title={revealed ? "Sembunyikan" : "Tampilkan"}>
           {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
       </div>
-      <div className={`font-mono font-bold text-xl ${dark ? "" : "text-slate-800"}`}>
+      <div className={`font-mono font-bold text-xl tracking-tight ${dark ? "" : "text-slate-800"}`}>
         {revealed ? fmtRp(value) : "Rp ••••••••"}
       </div>
     </div>
@@ -37,8 +38,8 @@ function RevenueTrendChart({ months }) {
   const max = Math.max(...months.map((m) => m.value), 1);
   const w = 100 / months.length;
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><BarChart3 size={16} className="text-orange-500" /> Tren Revenue 6 Bulan Terakhir</div>
+    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><BarChart3 size={14} /></span> Tren Revenue 6 Bulan Terakhir</div>
       <svg viewBox="0 0 300 140" className="w-full" style={{ height: "160px" }}>
         {months.map((m, i) => {
           const barH = max > 0 ? (m.value / max) * 90 : 0;
@@ -58,17 +59,17 @@ function RevenueTrendChart({ months }) {
 function PipelineFunnel({ stages, counts }) {
   const max = Math.max(...counts.map((c) => c.count), 1);
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><FunnelIcon size={16} className="text-orange-500" /> Funnel Pipeline</div>
-      <div className="space-y-2.5">
+    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><FunnelIcon size={14} /></span> Funnel Pipeline</div>
+      <div className="space-y-3">
         {counts.map((c, i) => (
           <div key={i}>
-            <div className="flex items-center justify-between text-xs mb-1">
+            <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="text-slate-600 font-medium">{c.label}</span>
               <span className="text-slate-400 font-mono">{c.count}</span>
             </div>
             <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all" style={{ width: `${(c.count / max) * 100}%`, backgroundColor: c.hex }} />
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(c.count / max) * 100}%`, backgroundColor: c.hex }} />
             </div>
           </div>
         ))}
@@ -89,9 +90,9 @@ function PerformanceInsight({ leads, stages }) {
 
   if (totalClosed < 8) {
     return (
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1"><Sparkles size={16} className="text-orange-500" /> Insight Performa</div>
-        <p className="text-xs text-slate-400 mt-1">Baru ada {totalClosed} lead closed (menang/kalah). Kumpulin minimal 8 dulu biar polanya keliatan di sini.</p>
+      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1"><span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Sparkles size={14} /></span> Insight Performa</div>
+        <p className="text-xs text-slate-400 mt-2">Baru ada {totalClosed} lead closed (menang/kalah). Kumpulin minimal 8 dulu biar polanya keliatan di sini.</p>
       </div>
     );
   }
@@ -111,8 +112,8 @@ function PerformanceInsight({ leads, stages }) {
   const topCat = Object.entries(catWin).sort((a, b) => b[1] - a[1])[0];
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"><Sparkles size={16} className="text-orange-500" /> Insight Performa</div>
+    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"><span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Sparkles size={14} /></span> Insight Performa</div>
       <div className="grid grid-cols-3 gap-3">
         <div>
           <div className="text-2xl font-bold font-mono text-orange-600">{winRate}%</div>
@@ -180,8 +181,8 @@ export default function Dashboard({ leads, stages, onGo }) {
   return (
     <div className="space-y-5">
       <div>
-        <div className="text-[11px] uppercase tracking-widest text-orange-600 font-semibold mb-0.5">Nexto · Sales Funnel</div>
-        <p className="text-xs text-slate-400 mt-0.5 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">Dashboard</h1>
+        <p className="text-xs text-slate-400 mt-1 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -204,7 +205,7 @@ export default function Dashboard({ leads, stages, onGo }) {
         <StatCard icon={AlertCircle} label="Perlu Follow-up" value={s.followup} accent="orange" />
         <StatCard icon={Mail} label="Ada Kontak" value={`${s.contact}/${s.total}`} />
       </div>
-      <button onClick={() => onGo("leads")} className="text-sm text-orange-700 hover:underline">Lihat semua leads →</button>
+      <button onClick={() => onGo("leads")} className="w-full text-sm text-orange-700 font-medium bg-orange-50 hover:bg-orange-100 transition-colors rounded-2xl py-3 text-center">Lihat semua leads →</button>
     </div>
   );
 }
