@@ -1,5 +1,15 @@
 import { supabase } from "./supabaseClient";
 
+// Bersihin kolom telepon/WA: cuma boleh angka + karakter pemisah wajar (+, -, spasi,
+// koma, slash, kurung). Nama/label kayak "Admin 1:" otomatis kebuang, sisa nomornya
+// digabung dipisah koma. Dipake di semua jalur nulis lead (manual, import Excel).
+function sanitizePhone(raw) {
+  if (!raw) return "";
+  const matches = String(raw).match(/(\+?\d[\d\-\s]{5,}\d)/g) || [];
+  const cleaned = matches.map((m) => m.replace(/\s+/g, "").trim()).filter(Boolean);
+  return cleaned.join(", ");
+}
+
 // ---- STAGES ----
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");
@@ -48,7 +58,7 @@ export async function upsertLead(lead) {
   const row = {
     user_id: uid,
     name: lead.name, category: lead.category, stage_key: lead.stage_key,
-    company_type: lead.company_type || "", email: lead.email || "", phone: lead.phone || "",
+    company_type: lead.company_type || "", email: lead.email || "", phone: sanitizePhone(lead.phone),
     key_person: lead.key_person || "", key_person_title: lead.key_person_title || "",
     product: lead.product || "", city: lead.city || "", province: lead.province || "",
     website: lead.website || "", sales_owner: lead.sales_owner || "", background: lead.background || "",
@@ -123,7 +133,7 @@ export async function smartImportMap(sampleRows) {
 // ---- BULK IMPORT ----
 export async function bulkInsertLeads(leads) {
   const uid = (await supabase.auth.getUser()).data.user.id;
-  const rows = leads.map((l) => ({ user_id: uid, ...l }));
+  const rows = leads.map((l) => ({ user_id: uid, ...l, phone: sanitizePhone(l.phone) }));
   const { data, error } = await supabase.from("leads").insert(rows).select("id, name");
   if (error) throw error;
   return data;
