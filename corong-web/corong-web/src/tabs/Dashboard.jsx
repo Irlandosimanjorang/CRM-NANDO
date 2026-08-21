@@ -190,8 +190,6 @@ export default function Dashboard({ leads, stages, onGo }) {
         <RevenueCard label="Revenue Bulan Ini" value={s.revMonth} />
       </div>
 
-      <PerformanceInsight leads={leads} stages={stages} />
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <RevenueTrendChart months={s.months} />
         <PipelineFunnel stages={stages} counts={s.stageCounts} />
