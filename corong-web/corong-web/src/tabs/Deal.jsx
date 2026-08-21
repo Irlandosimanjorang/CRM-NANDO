@@ -167,7 +167,7 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
           <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium">Quantity</th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
+                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">Quantity<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
               <tbody>
                 {deals.map((c) => { const sm = stageMeta(stages, c.stage_key); return (
@@ -178,7 +178,7 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
                     <td className="px-3 py-2 text-xs text-slate-600">{c.sales_owner || "—"}</td>
                     <td className="px-3 py-2 text-xs text-slate-600">{c.deal_date ? fmtDate(c.deal_date) : "—"}</td>
                     <td className="px-3 py-2 text-xs text-slate-600">{c.chemical || "—"}</td>
-                    <td className="px-3 py-2 text-xs font-mono text-slate-700">{c.tonnage ? `${Number(c.tonnage).toLocaleString("id-ID")} ${c.tonnage_unit === "kg" ? "kg" : "ton"}` : "—"}</td>
+                    <td className="px-3 py-2 text-xs font-mono text-slate-700">{c.tonnage ? (qtyRevealed ? `${Number(c.tonnage).toLocaleString("id-ID")} ${c.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
                     <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{c.deal_value ? (rpRevealed ? fmtRp(c.deal_value) : "••••••") : "—"}</td>
                   </tr> ); })}
               </tbody>
