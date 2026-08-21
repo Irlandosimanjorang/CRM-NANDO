@@ -192,7 +192,7 @@ export default function ChatAssistant() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4 space-y-3 mb-3">
+      <div className="flex-1 overflow-y-auto bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 space-y-3 mb-3">
         {loading ? (
           <div className="flex items-center justify-center h-full text-sm text-slate-400 gap-2"><Loader2 size={16} className="animate-spin" /> Memuat percakapan…</div>
         ) : messages.length === 0 ? (
