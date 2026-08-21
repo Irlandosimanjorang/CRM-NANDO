@@ -81,7 +81,7 @@ function MonthCalendar({ leads, onEdit, month, setMonth }) {
   const goToday = () => setMonth(new Date());
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1.5">
           <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronLeft size={16} /></button>
@@ -143,10 +143,10 @@ function VisitView({ leads, onEdit, onChanged }) {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><CalendarCheck size={13} /> Akan datang</div><div className="font-mono font-bold text-2xl text-orange-600">{upcoming.length}</div></div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><CalendarCheck size={13} /> Total terjadwal</div><div className="font-mono font-bold text-2xl text-slate-800">{visits.length}</div></div>
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><CalendarCheck size={13} /> Akan datang</div><div className="font-mono font-bold text-2xl text-orange-600">{upcoming.length}</div></div>
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><CalendarCheck size={13} /> Total terjadwal</div><div className="font-mono font-bold text-2xl text-slate-800">{visits.length}</div></div>
           </div>
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
+          <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
                 <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Lokasi</th><th className="text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Tanggal visit</th><th className="text-left px-3 py-2 font-medium">Ketemu</th><th className="text-left px-3 py-2 font-medium">Agenda</th>
