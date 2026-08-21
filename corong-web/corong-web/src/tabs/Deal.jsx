@@ -140,9 +140,9 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
       ) : (
         <>
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Deal</div><div className="font-mono font-bold text-2xl text-emerald-600">{deals.length}</div></div>
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Deal</div><div className="font-mono font-bold text-2xl text-emerald-600">{deals.length}</div></div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3">
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3">
               <div className="flex items-center justify-between mb-1">
                 <div className="text-xs text-slate-400 flex items-center gap-1"><Building2 size={13} /> Total Quantity</div>
                 <button onClick={() => setQtyRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>
@@ -154,7 +154,7 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-3">
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3">
               <div className="flex items-center justify-between mb-1">
                 <div className="text-xs text-slate-400 flex items-center gap-1"><TrendingUp size={13} /> Total Rp</div>
                 <button onClick={() => setRpRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={rpRevealed ? "Sembunyikan" : "Tampilkan"}>
@@ -164,7 +164,7 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
               <div className="font-mono font-bold text-base text-slate-800">{rpRevealed ? fmtRp(totalValue) : "••••••"}</div>
             </div>
           </div>
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-x-auto">
+          <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
                 <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium">Quantity</th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
