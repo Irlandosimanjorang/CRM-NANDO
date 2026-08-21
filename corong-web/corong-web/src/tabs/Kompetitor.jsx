@@ -15,7 +15,7 @@ export default function Kompetitor({ competitors, onChanged }) {
       ) : (
         <div className="space-y-3">
           {competitors.map((k) => (
-            <div key={k.id} className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4">
+            <div key={k.id} className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
               <div className="flex items-center justify-between mb-1 cursor-pointer" onClick={() => setEdit(k)}>
                 <span className="font-semibold flex items-center gap-2"><Swords size={15} className="text-rose-400" />{k.name}<span className="text-[10px] text-slate-400 font-normal">· {k.usages.length} company</span></span>
               </div>
