@@ -128,35 +128,35 @@ export default function App() {
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50/50 via-slate-50 to-slate-50 text-slate-900 flex">
       <aside className="hidden md:flex flex-col w-60 bg-slate-900 text-white sticky top-0 h-screen shrink-0">
-        <div className="px-5 py-5 flex items-center gap-2.5">
+        <div className="px-5 py-6 flex items-center gap-2.5 border-b border-white/5">
           <NextoBadge size={36} />
           <div className="leading-tight"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
         </div>
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
           {NAV.map((n) => { const I = n.icon; const active = tab === n.key;
             const cls = n.special
               ? (active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg shadow-violet-600/25" : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200")
-              : (active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/25" : "text-slate-300 hover:bg-white/5 hover:text-white");
+              : (active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/20" : "text-slate-300 hover:bg-white/[0.06] hover:text-white");
             return (
-            <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm transition-all ${cls}`}>
+            <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm transition-all duration-150 ${cls}`}>
               <I size={17} strokeWidth={active ? 2.5 : 2} /> {n.label}
             </button> ); })}
         </nav>
-        <button onClick={() => supabase.auth.signOut()} className="m-3 px-3 py-2.5 rounded-2xl bg-white/5 text-xs text-slate-300 hover:bg-white/10 flex items-center gap-2"><LogOut size={14} /> Keluar</button>
+        <button onClick={() => supabase.auth.signOut()} className="m-3 px-4 py-2.5 rounded-2xl bg-white/[0.04] text-xs text-slate-300 hover:bg-white/10 flex items-center gap-2 transition-colors"><LogOut size={14} /> Keluar</button>
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="md:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-slate-200/70">
-          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2.5">
+        <header className="md:hidden sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-slate-200/60 shadow-[0_1px_12px_-2px_rgba(15,23,42,0.06)]">
+          <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center gap-2.5">
             <NextoBadge size={32} />
             <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === tab)?.label}</span></div></div>
             <button onClick={() => supabase.auth.signOut()} className="text-slate-400"><LogOut size={16} /></button>
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-28">
+        <main className="flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-32">
           {loading ? <Splash inline /> : (
             <>
               {tab === "dashboard" && <Dashboard leads={leads} stages={stageList} onGo={setTab} />}
@@ -172,13 +172,15 @@ export default function App() {
           )}
         </main>
 
-        <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/90 backdrop-blur-lg border-t border-slate-200">
-          <div className="max-w-lg mx-auto flex justify-around px-1 pt-1.5 pb-2 overflow-x-auto">
+        <nav className="md:hidden fixed bottom-3 inset-x-3 z-40">
+          <div className="max-w-lg mx-auto flex justify-around px-1.5 py-2 bg-white/90 backdrop-blur-xl rounded-[26px] shadow-[0_8px_32px_-6px_rgba(15,23,42,0.18)] border border-white/60">
             {NAV.map((n) => { const I = n.icon; const active = tab === n.key;
-              const cls = n.special ? (active ? "text-violet-600" : "text-violet-400") : (active ? "text-orange-600" : "text-slate-400");
+              const cls = n.special
+                ? (active ? "text-violet-600 bg-violet-50" : "text-violet-400")
+                : (active ? "text-orange-600 bg-orange-50" : "text-slate-400");
               return (
-              <button key={n.key} onClick={() => setTab(n.key)} className={`flex flex-col items-center gap-0.5 flex-1 py-1 rounded-xl ${cls}`}>
-                <I size={20} strokeWidth={active ? 2.5 : 2} /><span className="text-[9px] font-medium leading-none truncate max-w-full">{n.short}</span>
+              <button key={n.key} onClick={() => setTab(n.key)} className={`flex flex-col items-center gap-0.5 flex-1 py-1.5 rounded-2xl transition-colors ${cls}`}>
+                <I size={19} strokeWidth={active ? 2.5 : 2} /><span className="text-[9px] font-medium leading-none truncate max-w-full mt-0.5">{n.short}</span>
               </button> ); })}
           </div>
         </nav>
