@@ -189,15 +189,8 @@ export default function App() {
   const FREE_TABS = ["dashboard", "leads"];
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
-  const effectiveTab = isPremium || FREE_TABS.includes(tab) ? tab : "dashboard";
+  const effectiveTab = tab;
   const isLocked = (key) => !isPremium && !FREE_TABS.includes(key);
-  const handleNavClick = (key) => {
-    if (isLocked(key)) {
-      alert("Fitur ini cuma buat paket Premium (Rp149rb/bulan). Upgrade dulu ya bro buat bukanya - klik banner \"Upgrade\" di atas.");
-      return;
-    }
-    setTab(key);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/50 via-slate-50 to-slate-50 text-slate-900 flex">
@@ -228,7 +221,7 @@ export default function App() {
               ? (active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg shadow-violet-600/25" : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200")
               : (active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/20" : "text-slate-300 hover:bg-white/[0.06] hover:text-white");
             return (
-            <button key={n.key} onClick={() => handleNavClick(n.key)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm transition-all duration-150 ${cls}`}>
+            <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm transition-all duration-150 ${cls}`}>
               <I size={17} strokeWidth={active ? 2.5 : 2} /> <span className="flex-1 text-left">{n.label}</span> {locked && <Lock size={13} className="shrink-0" />}
             </button> ); })}
         </nav>
@@ -255,12 +248,12 @@ export default function App() {
             <>
               {effectiveTab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} onGo={setTab} />}
               {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
-              {effectiveTab === "deal" && <Deal leads={leads} stages={stageList} dealTransactions={dealTransactions} onEdit={setEditLead} onChanged={reload} />}
-              {effectiveTab === "visitfollowup" && <VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} />}
-              {effectiveTab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
-              {effectiveTab === "komunitas" && <Nex />}
-              {effectiveTab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
-              {effectiveTab === "settings" && <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />}
+              {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={leads} stages={stageList} dealTransactions={dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "kompetitor" && <PreviewLock locked={isLocked("kompetitor")}><Kompetitor competitors={competitors} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "komunitas" && <PreviewLock locked={isLocked("komunitas")}><Nex /></PreviewLock>}
+              {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={leads} stages={stageList} onOpen={setEditLead} /></PreviewLock>}
+              {effectiveTab === "settings" && <PreviewLock locked={isLocked("settings")}><SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} /></PreviewLock>}
             </>
           )}
         </main>
@@ -274,7 +267,7 @@ export default function App() {
                 ? (active ? "text-violet-600 bg-violet-50" : "text-violet-400")
                 : (active ? "text-orange-600 bg-orange-50" : "text-slate-400");
               return (
-              <button key={n.key} onClick={() => handleNavClick(n.key)} className={`relative flex flex-col items-center gap-0.5 flex-1 py-1.5 rounded-2xl transition-colors ${cls}`}>
+              <button key={n.key} onClick={() => setTab(n.key)} className={`relative flex flex-col items-center gap-0.5 flex-1 py-1.5 rounded-2xl transition-colors ${cls}`}>
                 <I size={19} strokeWidth={active ? 2.5 : 2} /><span className="text-[9px] font-medium leading-none truncate max-w-full mt-0.5">{n.short}</span>
                 {locked && <Lock size={9} className="absolute top-0.5 right-2" />}
               </button> ); })}
@@ -283,6 +276,26 @@ export default function App() {
       </div>
 
       {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} />}
+    </div>
+  );
+}
+
+// Bungkus konten tab yang butuh Premium - kelihatan isinya (biar user tau apa
+// yang bakal mereka dapet), tapi klik apapun di dalemnya (tombol, form, dst)
+// ke-tangkep sama lapisan transparan ini dan cuma munculin ajakan upgrade -
+// gak ada perubahan data yang beneran kejadian.
+function PreviewLock({ locked, children }) {
+  if (!locked) return children;
+  return (
+    <div className="relative">
+      <div className="mb-3 bg-slate-800 text-white text-xs rounded-2xl px-4 py-2.5 flex items-center gap-2">
+        <Lock size={13} className="shrink-0" /> Mode lihat-lihat doang - upgrade ke Premium buat bisa nambah/ubah data di sini.
+      </div>
+      <div
+        onClick={() => alert("Ini fitur Premium bro - di paket Free cuma bisa dilihat doang, gak bisa diubah. Upgrade dulu (Rp149rb/bulan) buat bisa pake fiturnya.")}
+        className="absolute inset-0 top-11 z-20 cursor-pointer"
+      />
+      {children}
     </div>
   );
 }
