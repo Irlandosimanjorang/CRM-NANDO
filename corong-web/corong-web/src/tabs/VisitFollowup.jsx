@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History } from "lucide-react";
+import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic } from "lucide-react";
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
+import MeetingRecorderModal from "../components/MeetingRecorderModal";
 
 // Rumus Haversine - itung jarak lurus antara 2 titik GPS (dalam meter)
 function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -42,6 +43,25 @@ function TodayVisitsCard({ leads, onChanged }) {
     finally { setCheckingIn(null); }
   };
 
+  const savePin = async (lead) => {
+    if (!navigator.geolocation) { alert("HP/browser kamu ga dukung GPS."); return; }
+    setCheckingIn(lead.id);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          await db.saveLeadLocation(lead.id, latitude, longitude);
+          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0 });
+          alert(`✅ Titik lokasi "${lead.name}" tersimpan & check-in tercatat.`);
+          onChanged();
+        } catch (e) { alert("Gagal simpan lokasi: " + e.message); }
+        finally { setCheckingIn(null); }
+      },
+      () => { alert("Gagal ambil lokasi GPS. Pastikan izin lokasi diaktifkan."); setCheckingIn(null); },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
+
   if (todayVisits.length === 0) return null;
 
   return (
@@ -65,17 +85,31 @@ function TodayVisitsCard({ leads, onChanged }) {
                   {!hasCoords ? "Belum ada titik lokasi tersimpan" : distance === null ? "Nyari posisi kamu…" : canCheckIn ? "Kamu udah di lokasi ✓" : `${distance >= 1000 ? (distance / 1000).toFixed(1) + " km" : distance + " m"} lagi`}
                 </div>
               </div>
-              <button
-                onClick={() => doCheckIn(c, distance)}
-                disabled={!canCheckIn || checkingIn === c.id}
-                className={`shrink-0 text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${canCheckIn ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-slate-100 text-slate-400"}`}
-              >
-                <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Saya Sudah Sampai"}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button onClick={() => setRecordingLead(c)} title="Rekam Meeting" className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-orange-600"><Mic size={14} /></button>
+                {!hasCoords ? (
+                  <button
+                    onClick={() => savePin(c)}
+                    disabled={checkingIn === c.id}
+                    className="text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60"
+                  >
+                    <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Simpan Lokasi Ini"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => doCheckIn(c, distance)}
+                    disabled={!canCheckIn || checkingIn === c.id}
+                    className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${canCheckIn ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-slate-100 text-slate-400"}`}
+                  >
+                    <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Saya Sudah Sampai"}
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
+      {recordingLead && <MeetingRecorderModal lead={recordingLead} onClose={() => setRecordingLead(null)} onSaved={onChanged} />}
     </div>
   );
 }
@@ -232,6 +266,7 @@ function MonthCalendar({ leads, onEdit, month, setMonth }) {
 
 function VisitView({ leads, onEdit, onChanged }) {
   const [add, setAdd] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [view, setView] = useState("table");
   const [month, setMonth] = useState(new Date());
   const visits = useMemo(() => leads.filter((c) => c.visit_date).sort((a, b) => (a.visit_date < b.visit_date ? -1 : 1)), [leads]);
@@ -244,7 +279,10 @@ function VisitView({ leads, onEdit, onChanged }) {
           <button onClick={() => setView("table")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "table" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Table2 size={13} /> Tabel</button>
           <button onClick={() => setView("calendar")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "calendar" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Calendar size={13} /> Kalender</button>
         </div>
-        <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setRecording(true)} className="flex items-center gap-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm px-3 py-2 rounded-xl font-medium"><Mic size={15} /> Rekam Meeting</button>
+          <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
+        </div>
       </div>
 
       <TodayVisitsCard leads={leads} onChanged={onChanged} />
@@ -280,6 +318,7 @@ function VisitView({ leads, onEdit, onChanged }) {
         </>
       )}
       {add && <AddVisitModal leads={leads} onClose={() => setAdd(false)} onSaved={() => { setAdd(false); onChanged(); }} />}
+      {recording && <MeetingRecorderModal leads={leads} onClose={() => setRecording(false)} onSaved={onChanged} />}
     </div>
   );
 }
