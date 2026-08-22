@@ -25,6 +25,25 @@ export function NextoBadge({ size = 36 }) {
   );
 }
 
+// ---- DATA DUMMY buat preview tab Premium (user Free) ----
+// Ngasal doang - biar user Free liat gambaran "beneran kepake" bukan tab kosong.
+// Gak pernah disimpen ke database, murni buat ditampilin doang.
+const today = new Date().toISOString().slice(0, 10);
+const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+const DUMMY_LEADS = [
+  { id: "dummy-1", name: "PT Sinar Abadi Plastik", category: "Resin & Compound", stage_key: "presentasi", city: "Tangerang", key_person: "Budi Santoso", key_person_title: "Purchasing Manager", phone: "0812xxxxxx01", email: "budi@sinarabadi.co.id", visit_date: today, visit_meet: "Budi Santoso", visit_agenda: "Presentasi produk & harga penawaran", last_contact: "2026-08-20", next_action: "Follow up hasil presentasi minggu lalu", latitude: null, longitude: null, source: "manual" },
+  { id: "dummy-2", name: "CV Karya Plastindo", category: "Pipa & Fitting", stage_key: "negosiasi", city: "Bekasi", key_person: "Sari Wulandari", key_person_title: "Direktur", phone: "0812xxxxxx02", email: "sari@karyaplastindo.id", visit_date: tomorrow, visit_meet: "Sari Wulandari", visit_agenda: "Trial sample produk", last_contact: "2026-08-18", next_action: "Kirim sample ke pabrik", latitude: null, longitude: null, source: "manual" },
+  { id: "dummy-3", name: "PT Maju Bersama Kimia", category: "Kabel Listrik", stage_key: "deal", city: "Surabaya", key_person: "Ahmad Fauzi", key_person_title: "Owner", phone: "0812xxxxxx03", email: "ahmad@majubersama.co.id", last_contact: "2026-08-15", latitude: null, longitude: null, source: "telegram" },
+];
+const DUMMY_DEAL_TX = [
+  { id: "dd-1", lead_id: "dummy-3", lead_name: "PT Maju Bersama Kimia", deal_date: "2026-08-15", deal_value: 45000000, tonnage: 5, tonnage_unit: "ton", chemical: "PVC Resin K67" },
+  { id: "dd-2", lead_id: "dummy-2", lead_name: "CV Karya Plastindo", deal_date: "2026-08-10", deal_value: 28000000, tonnage: 3, tonnage_unit: "ton", chemical: "Calcium Zinc Stabilizer" },
+];
+const DUMMY_COMPETITORS = [
+  { id: "dc-1", name: "PT Kompetitor Jaya", background: "Pemain lama di area Jabodetabek", product: "PVC Compound", notes: "Harga agresif tapi servis lambat", usages: [{ id: "u1", company: "PT ABC Plastik", product: "Compound X", price: "Rp15.000/kg", quantity: "2 ton/bulan" }] },
+  { id: "dc-2", name: "CV Rival Chemical", background: "Fokus segmen kabel listrik", product: "Kabel Compound", notes: "Kuat di after-sales support", usages: [] },
+];
+
 const NAV = [
   { key: "dashboard", label: "Dashboard", short: "Beranda", icon: LayoutDashboard },
   { key: "leads", label: "Leads", short: "Leads", icon: Users },
@@ -248,11 +267,11 @@ export default function App() {
             <>
               {effectiveTab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} onGo={setTab} />}
               {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
-              {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={leads} stages={stageList} dealTransactions={dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "kompetitor" && <PreviewLock locked={isLocked("kompetitor")}><Kompetitor competitors={competitors} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "komunitas" && <PreviewLock locked={isLocked("komunitas")}><Nex /></PreviewLock>}
-              {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={leads} stages={stageList} onOpen={setEditLead} /></PreviewLock>}
+              {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "kompetitor" && <PreviewLock locked={isLocked("kompetitor")}><Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "komunitas" && <PreviewLock locked={isLocked("komunitas")}><Nex dummy={isLocked("komunitas")} /></PreviewLock>}
+              {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} /></PreviewLock>}
               {effectiveTab === "settings" && <PreviewLock locked={isLocked("settings")}><SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} /></PreviewLock>}
             </>
           )}
