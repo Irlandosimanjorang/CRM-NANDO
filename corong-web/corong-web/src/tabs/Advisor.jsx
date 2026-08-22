@@ -5,13 +5,25 @@ import { stageMeta, chipStyle, daysSince, fmtDate } from "../lib/helpers";
 
 const uMeta = { high: { label: "High", hex: "#e11d48" }, medium: { label: "Medium", hex: "#d97706" }, low: { label: "Low", hex: "#64748b" } };
 
-export default function Advisor({ leads, stages, onApplied, onOpen }) {
+const DUMMY_HISTORY = [
+  {
+    run_date: new Date().toISOString().slice(0, 10),
+    ran_at: "08:00",
+    recs: [
+      { id: "dummy-1", urgency: "high", assessment: "Lead ini udah 5 hari gak dikontak, padahal masih di tahap presentasi.", action: "Follow up hasil presentasi minggu lalu", steps: ["Telpon PIC-nya", "Tanya feedback soal harga penawaran"], talking_point: "Pak Budi, gimana pertimbangannya soal penawaran kemarin?" },
+      { id: "dummy-2", urgency: "medium", assessment: "Lagi di tahap negosiasi, sample udah dikirim tapi belum ada kabar.", action: "Follow up hasil trial sample", steps: ["Tanya kapan hasil trial keluar"], talking_point: "Gimana hasil trial sample-nya, ada kendala?" },
+    ],
+  },
+];
+
+export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null); // run_date yang dipilih
 
   const load = async () => {
+    if (dummy) { setHistory(DUMMY_HISTORY); setSelected(DUMMY_HISTORY[0].run_date); setLoading(false); return; }
     setLoading(true); setError("");
     try {
       const rows = await db.getAdvisorHistory();
@@ -20,7 +32,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen }) {
     } catch (e) { setError(`Gagal muat histori: ${e.message}`); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [dummy]);
 
   const applyAction = async (lead, action) => { await db.upsertLead({ ...lead, next_action: action }); onApplied(); };
 
