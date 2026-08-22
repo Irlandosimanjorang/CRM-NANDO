@@ -73,7 +73,12 @@ export default function App() {
   const reload = async () => {
     setLoading(true);
     try {
-      const [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
+      let [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
+      // Akun baru (belum pernah setup pipeline sama sekali) - otomatis kasih
+      // pipeline default biar gak kosong melompong abis daftar sendiri.
+      if (st.length === 0) {
+        try { await db.initDefaultStages(); st = await db.getStages(); } catch (e) { console.error(e); }
+      }
       setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -176,7 +181,16 @@ export default function App() {
   if (!authReady) return <Splash />;
   if (!session) return <Auth />;
 
+  // ---- SISTEM 2 TIPE (FREE / PREMIUM) ----
+  // Gak ada trial otomatis - daftar langsung dapet Free (Dashboard & Leads doang).
+  // Fitur AI (Bot Telegram, AI Advisor, Rekam Meeting, dst) pake token API
+  // berbayar, jadi cuma kebuka abis di-upgrade ke Premium (settings.plan = 'premium').
+  const isPremium = settings.plan === "premium";
+  const FREE_TABS = ["dashboard", "leads"];
+
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
+  const visibleNav = isPremium ? NAV : NAV.filter((n) => FREE_TABS.includes(n.key));
+  const effectiveTab = isPremium || FREE_TABS.includes(tab) ? tab : "dashboard";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/50 via-slate-50 to-slate-50 text-slate-900 flex">
@@ -200,7 +214,7 @@ export default function App() {
           <div className="leading-tight"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
         </div>
         <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
-          {NAV.map((n) => { const I = n.icon; const active = tab === n.key;
+          {visibleNav.map((n) => { const I = n.icon; const active = effectiveTab === n.key;
             const cls = n.special
               ? (active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg shadow-violet-600/25" : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200")
               : (active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/20" : "text-slate-300 hover:bg-white/[0.06] hover:text-white");
@@ -216,29 +230,35 @@ export default function App() {
         <header className="md:hidden sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-slate-200/60 shadow-[0_1px_12px_-2px_rgba(15,23,42,0.06)]">
           <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center gap-2.5">
             <NextoBadge size={32} />
-            <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === tab)?.label}</span></div></div>
+            <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === effectiveTab)?.label}</span></div></div>
             <button onClick={() => supabase.auth.signOut()} className="text-slate-400"><LogOut size={16} /></button>
           </div>
         </header>
 
         <main className="flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-32">
+          {!isPremium && (
+            <div className="mb-4 bg-orange-50 border border-orange-200 text-orange-800 text-xs rounded-2xl px-4 py-2.5 flex items-center justify-between gap-2">
+              <span>Kamu sekarang di paket <b>Free</b> (Dashboard &amp; Leads doang). Upgrade ke Premium (Rp149rb/bulan) buat buka semua fitur + bot Telegram + Calendar + AI.</span>
+              <a href="https://wa.me/6281234567890" target="_blank" rel="noreferrer" className="shrink-0 underline font-medium">Upgrade</a>
+            </div>
+          )}
           {loading ? <Splash inline /> : (
             <>
-              {tab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} onGo={setTab} />}
-              {tab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
-              {tab === "deal" && <Deal leads={leads} stages={stageList} dealTransactions={dealTransactions} onEdit={setEditLead} onChanged={reload} />}
-              {tab === "visitfollowup" && <VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} />}
-              {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
-              {tab === "komunitas" && <Nex />}
-              {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
-              {tab === "settings" && <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />}
+              {effectiveTab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} onGo={setTab} />}
+              {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
+              {effectiveTab === "deal" && <Deal leads={leads} stages={stageList} dealTransactions={dealTransactions} onEdit={setEditLead} onChanged={reload} />}
+              {effectiveTab === "visitfollowup" && <VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} />}
+              {effectiveTab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
+              {effectiveTab === "komunitas" && <Nex />}
+              {effectiveTab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
+              {effectiveTab === "settings" && <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />}
             </>
           )}
         </main>
 
         <nav className="md:hidden fixed bottom-3 inset-x-3 z-40">
           <div className="max-w-lg mx-auto flex justify-around px-1.5 py-2 bg-white/90 backdrop-blur-xl rounded-[26px] shadow-[0_8px_32px_-6px_rgba(15,23,42,0.18)] border border-white/60">
-            {NAV.map((n) => { const I = n.icon; const active = tab === n.key;
+            {visibleNav.map((n) => { const I = n.icon; const active = effectiveTab === n.key;
               const cls = n.special
                 ? (active ? "text-violet-600 bg-violet-50" : "text-violet-400")
                 : (active ? "text-orange-600 bg-orange-50" : "text-slate-400");
