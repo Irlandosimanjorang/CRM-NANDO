@@ -47,9 +47,11 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
   const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
   const pick = (c) => {
     setSel(c); setQ("");
-    setChemical(c.chemical || ""); setTonnage(c.tonnage || ""); setTonnageUnit(c.tonnage_unit || "ton");
-    setValueDigits(c.deal_value ? String(c.deal_value) : "");
-    setDate(c.deal_date || todayISO());
+    // Sengaja field-field ini dikosongin (bukan diisi dari deal lead sebelumnya) -
+    // ini transaksi BARU, bukan nimpa transaksi lama.
+    setChemical(""); setTonnage(""); setTonnageUnit("ton");
+    setValueDigits("");
+    setDate(todayISO());
   };
   const onValueChange = (e) => {
     const digits = e.target.value.replace(/\D/g, "");
@@ -59,7 +61,11 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
     if (!sel) { alert("Pilih company dulu."); return; }
     setBusy(true);
     try {
-      await db.upsertLead({ ...sel, stage_key: stageKey, deal_date: date, chemical, tonnage: Number(tonnage) || 0, tonnage_unit: tonnageUnit, deal_value: Number(valueDigits) || 0 });
+      // Update tahap lead-nya (misal jadi "Deal/Menang"), TAPI catetnya sebagai
+      // transaksi baru - bukan nimpa nilai deal_value/deal_date yang lama, biar
+      // repeat order/transaksi berkali-kali ke perusahaan yang sama tetap kehitung semua.
+      await db.upsertLead({ ...sel, stage_key: stageKey });
+      await db.addDealTransaction({ lead_id: sel.id, lead_name: sel.name, deal_date: date, deal_value: Number(valueDigits) || 0, tonnage: Number(tonnage) || 0, tonnage_unit: tonnageUnit, chemical });
       clearDraft();
       onSaved();
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
@@ -117,12 +123,15 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
   );
 }
 
-export default function Deal({ leads, stages, onEdit, onChanged }) {
+export default function Deal({ leads, stages, dealTransactions, onEdit, onChanged }) {
   const [add, setAdd] = useState(false);
   const [qtyRevealed, setQtyRevealed] = useState(false);
   const [rpRevealed, setRpRevealed] = useState(false);
-  const wonKeys = stages.filter((s) => s.type === "won").map((s) => s.key);
-  const deals = useMemo(() => leads.filter((c) => wonKeys.includes(c.stage_key)), [leads, stages]);
+  const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
+  const deals = useMemo(
+    () => [...(dealTransactions || [])].sort((a, b) => (b.deal_date || "").localeCompare(a.deal_date || "")),
+    [dealTransactions]
+  );
   const totalValue = deals.reduce((a, c) => a + (Number(c.deal_value) || 0), 0);
   const totalTonInKg = deals.reduce((a, c) => {
     const t = Number(c.tonnage) || 0;
@@ -140,7 +149,7 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
       ) : (
         <>
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Deal</div><div className="font-mono font-bold text-2xl text-emerald-600">{deals.length}</div></div>
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Transaksi</div><div className="font-mono font-bold text-2xl text-emerald-600">{deals.length}</div></div>
 
             <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3">
               <div className="flex items-center justify-between mb-1">
@@ -170,16 +179,19 @@ export default function Deal({ leads, stages, onEdit, onChanged }) {
                 <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">Quantity<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
               <tbody>
-                {deals.map((c) => { const sm = stageMeta(stages, c.stage_key); return (
-                  <tr key={c.id} className="border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer" onClick={() => onEdit(c)}>
-                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
-                    <td className="px-3 py-2"><span className="text-[11px] border rounded-full px-2 py-0.5" style={chipStyle(sm.hex)}>{sm.label}</span></td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{c.sales_owner || "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{c.deal_date ? fmtDate(c.deal_date) : "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{c.chemical || "—"}</td>
-                    <td className="px-3 py-2 text-xs font-mono text-slate-700">{c.tonnage ? (qtyRevealed ? `${Number(c.tonnage).toLocaleString("id-ID")} ${c.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
-                    <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{c.deal_value ? (rpRevealed ? fmtRp(c.deal_value) : "••••••") : "—"}</td>
+                {deals.map((t) => {
+                  const lead = leadsById[t.lead_id];
+                  const sm = lead ? stageMeta(stages, lead.stage_key) : null;
+                  return (
+                  <tr key={t.id} className="border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer" onClick={() => lead && onEdit(lead)}>
+                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{t.lead_name}{lead && typeBadge(lead.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(lead.company_type)}</span>}</div></td>
+                    <td className="px-3 py-2 text-xs text-slate-600">{lead?.city || "—"}</td>
+                    <td className="px-3 py-2">{sm ? <span className="text-[11px] border rounded-full px-2 py-0.5" style={chipStyle(sm.hex)}>{sm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
+                    <td className="px-3 py-2 text-xs text-slate-600">{lead?.sales_owner || "—"}</td>
+                    <td className="px-3 py-2 text-xs text-slate-600">{t.deal_date ? fmtDate(t.deal_date) : "—"}</td>
+                    <td className="px-3 py-2 text-xs text-slate-600">{t.chemical || "—"}</td>
+                    <td className="px-3 py-2 text-xs font-mono text-slate-700">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${t.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
+                    <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : "••••••") : "—"}</td>
                   </tr> ); })}
               </tbody>
             </table>
