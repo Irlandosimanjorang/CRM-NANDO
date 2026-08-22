@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check } from "lucide-react";
+import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin } from "lucide-react";
 import * as db from "../lib/db";
 import { CATEGORIES, COMPANY_TYPES, fmtDate, todayISO } from "../lib/helpers";
 
@@ -13,7 +13,28 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [locBusy, setLocBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+
+  const saveLocation = () => {
+    if (!lead.id) { alert("Simpan lead-nya dulu sebelum simpan lokasi."); return; }
+    if (!navigator.geolocation) { alert("HP/browser kamu ga dukung GPS."); return; }
+    setLocBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          await db.saveLeadLocation(lead.id, latitude, longitude);
+          await db.checkIn({ lead_id: lead.id, lead_name: f.name, latitude, longitude, distance_meters: 0 });
+          setF((p) => ({ ...p, latitude, longitude }));
+          alert("✅ Lokasi tersimpan & check-in tercatat.");
+        } catch (e) { alert("Gagal simpan lokasi: " + e.message); }
+        finally { setLocBusy(false); }
+      },
+      () => { alert("Gagal ambil lokasi GPS. Pastikan izin lokasi diaktifkan."); setLocBusy(false); },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
 
   const save = async () => {
     if (!f.name?.trim()) { alert("Nama wajib diisi."); return; }
@@ -53,6 +74,15 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
           <div className="grid grid-cols-2 gap-3"><Field label="Email"><input className={inp} value={f.email || ""} onChange={(e) => set("email", e.target.value)} /></Field><Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field></div>
           <div className="grid grid-cols-2 gap-3"><Field label="Key person"><input className={inp} value={f.key_person || ""} onChange={(e) => set("key_person", e.target.value)} /></Field><Field label="Jabatan"><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field></div>
           <Field label="Kota"><input className={inp} value={f.city || ""} onChange={(e) => set("city", e.target.value)} /></Field>
+          <div className="flex items-center justify-between border border-slate-200 rounded-2xl p-3 bg-slate-50">
+            <div className="text-xs">
+              <div className="font-semibold text-slate-600 flex items-center gap-1.5"><MapPin size={13} /> Titik lokasi GPS</div>
+              <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas kamu lagi di lokasi"}</div>
+            </div>
+            <button onClick={saveLocation} disabled={locBusy || !lead.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-xl px-3 py-1.5 hover:bg-orange-50 disabled:opacity-50 shrink-0 font-medium">
+              {locBusy ? "Menyimpan…" : f.latitude ? "Update Lokasi" : "Simpan Lokasi Ini"}
+            </button>
+          </div>
           <Field label="Website"><input className={inp} value={f.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" /></Field>
           <div className="border border-orange-200 bg-orange-50/60 rounded-2xl p-3"><Field label="Next action"><input className={inp} value={f.next_action || ""} onChange={(e) => set("next_action", e.target.value)} placeholder="langkah berikutnya" /></Field></div>
 
