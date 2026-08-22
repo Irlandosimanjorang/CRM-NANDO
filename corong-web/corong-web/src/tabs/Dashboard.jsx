@@ -173,13 +173,13 @@ export default function Dashboard({ leads, stages, dealTransactions, onGo }) {
     return {
       total: leads.length,
       active: leads.filter((c) => activeKeys.includes(c.stage_key)).length,
-      deals: dealLeads.length,
+      deals: leads.filter((c) => won.includes(c.stage_key)).length,
       followup: leads.filter((c) => c.next_action && c.next_action.trim()).length,
       contact: leads.filter((c) => c.email || c.phone).length,
       visitsToday: leads.filter((c) => c.visit_date === todayISO()).length,
       revYear, revMonth, months, stageCounts,
     };
-  }, [leads, stages]);
+  }, [leads, stages, dealTransactions]);
 
   return (
     <div className="space-y-5">
