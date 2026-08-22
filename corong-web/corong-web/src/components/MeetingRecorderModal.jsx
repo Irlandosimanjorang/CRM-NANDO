@@ -14,6 +14,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
   const [seconds, setSeconds] = useState(0);
   const [stage, setStage] = useState("idle"); // idle | recording | processing | review | error
   const [notes, setNotes] = useState("");
+  const [nextAction, setNextAction] = useState("");
   const [transcript, setTranscript] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -78,6 +79,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
         const path = await db.uploadMeetingAudio(lead.id, blob);
         const result = await db.transcribeMeeting(path, lead.name);
         setNotes(result.notes || "");
+        setNextAction(result.next_action || "");
         setTranscript(result.transcript || "");
         setStage("review");
       } catch (e) {
@@ -93,6 +95,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     setBusy(true);
     try {
       await db.addProgress(lead.id, notes.trim());
+      if (nextAction.trim()) await db.updateLeadNextAction(lead.id, nextAction.trim());
       onSaved();
       onClose();
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
@@ -164,7 +167,13 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
             {stage === "review" && (
               <div>
                 <span className="text-xs font-medium text-slate-500">Catatan meeting (bisa diedit sebelum disimpan)</span>
-                <textarea className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" rows={8} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <textarea className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" rows={7} value={notes} onChange={(e) => setNotes(e.target.value)} />
+
+                <label className="block mt-3">
+                  <span className="text-xs font-medium text-slate-500">Next action (otomatis kedeteksi AI, bisa diedit/dikosongin)</span>
+                  <input className="w-full mt-1 px-3 py-2 text-sm border border-orange-300 bg-orange-50/60 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="Kosong (AI ga nemu next step yang jelas)" />
+                </label>
+
                 <button onClick={() => setShowTranscript((v) => !v)} className="text-xs text-slate-400 hover:text-slate-600 mt-2">
                   {showTranscript ? "Sembunyikan" : "Lihat"} transkrip mentah
                 </button>
