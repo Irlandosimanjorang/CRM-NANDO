@@ -120,8 +120,6 @@ export async function checkIn({ lead_id, lead_name, latitude, longitude, distanc
     .select()
     .single();
   if (error) throw error;
-  // Check-in juga otomatis nyatet progress + update last_contact, biar konsisten
-  // sama alur progress note yang udah ada.
   const today = new Date().toISOString().slice(0, 10);
   const jarak = distance_meters != null ? `${Math.round(distance_meters)}m dari titik lokasi` : "";
   await supabase.from("progress_notes").insert({
@@ -171,6 +169,21 @@ export async function deleteProgress(id) {
 export async function updateProgress(id, text) {
   const { error } = await supabase.from("progress_notes").update({ text }).eq("id", id);
   if (error) throw error;
+}
+
+// ---- REKAM MEETING ----
+export async function uploadMeetingAudio(leadId, blob) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const path = `${uid}/${leadId}-${Date.now()}.webm`;
+  const { error } = await supabase.storage.from("meeting-audio").upload(path, blob, { contentType: blob.type || "audio/webm" });
+  if (error) throw error;
+  return path;
+}
+
+export async function transcribeMeeting(storagePath, leadName) {
+  const { data, error } = await supabase.functions.invoke("transcribe-meeting", { body: { storagePath, leadName } });
+  if (error) throw error;
+  return data;
 }
 
 // ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----
