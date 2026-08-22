@@ -21,6 +21,7 @@ function TodayVisitsCard({ leads, onChanged }) {
   const [myPos, setMyPos] = useState(null);
   const [geoError, setGeoError] = useState(false);
   const [checkingIn, setCheckingIn] = useState(null);
+  const [recordingLead, setRecordingLead] = useState(null);
   const watchIdRef = useRef(null);
 
   useEffect(() => {
