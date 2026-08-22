@@ -132,6 +132,17 @@ export async function checkIn({ lead_id, lead_name, latitude, longitude, distanc
   return data;
 }
 
+export async function getTodayCheckedInLeadIds() {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("visit_checkins")
+    .select("lead_id")
+    .gte("checked_in_at", `${today}T00:00:00`)
+    .lt("checked_in_at", `${today}T23:59:59.999`);
+  if (error) throw error;
+  return (data || []).map((r) => r.lead_id);
+}
+
 export async function getCheckins(monthFilter) {
   let q = supabase.from("visit_checkins").select("*").order("checked_in_at", { ascending: false });
   if (monthFilter) {
