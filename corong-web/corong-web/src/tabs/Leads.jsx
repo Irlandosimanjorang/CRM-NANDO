@@ -43,6 +43,15 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const [progressPopup, setProgressPopup] = useState(null); // { lead, rect }
   const [pinningId, setPinningId] = useState(null);
 
+  const haversineMeters = (lat1, lon1, lat2, lon2) => {
+    const R = 6371000;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
   const pinLocation = (lead) => {
     if (!navigator.geolocation) { alert("HP/browser kamu ga dukung GPS."); return; }
     setPinningId(lead.id);
@@ -50,10 +59,18 @@ export default function Leads({ leads, stages, settings, onChanged }) {
       async (pos) => {
         try {
           const { latitude, longitude } = pos.coords;
-          await db.saveLeadLocation(lead.id, latitude, longitude);
-          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0 });
+          if (lead.latitude == null) {
+            // Kunjungan pertama: simpan titik lokasi + jadi check-in awal
+            await db.saveLeadLocation(lead.id, latitude, longitude);
+            await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0 });
+          } else {
+            // Udah ada titik lokasi tersimpan: ini check-in kunjungan berikutnya,
+            // itung jaraknya dari titik yang udah tersimpan.
+            const distance = haversineMeters(latitude, longitude, lead.latitude, lead.longitude);
+            await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: distance });
+          }
           onChanged();
-        } catch (e) { alert("Gagal simpan lokasi: " + e.message); }
+        } catch (e) { alert("Gagal check-in: " + e.message); }
         finally { setPinningId(null); }
       },
       () => { alert("Gagal ambil lokasi GPS. Pastikan izin lokasi diaktifkan."); setPinningId(null); },
@@ -237,13 +254,14 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                   ) : <span className="text-slate-300">—</span>}
                 </td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>
-                  {c.latitude ? (
-                    <a href={`https://maps.google.com/?q=${c.latitude},${c.longitude}`} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1"><MapPin size={12} /> Tersimpan</a>
-                  ) : (
-                    <button onClick={() => pinLocation(c)} disabled={pinningId === c.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-lg px-2 py-1 hover:bg-orange-50 disabled:opacity-50 flex items-center gap-1">
-                      <MapPin size={12} /> {pinningId === c.id ? "Menyimpan…" : "Simpan Lokasi"}
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => pinLocation(c)} disabled={pinningId === c.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-lg px-2 py-1 hover:bg-orange-50 disabled:opacity-50 flex items-center gap-1 whitespace-nowrap">
+                      <MapPin size={12} /> {pinningId === c.id ? "Menyimpan…" : c.latitude ? "Check In" : "Simpan Lokasi"}
                     </button>
-                  )}
+                    {c.latitude && (
+                      <a href={`https://maps.google.com/?q=${c.latitude},${c.longitude}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Lihat di peta" className="text-slate-400 hover:text-emerald-600 shrink-0"><ExternalLink size={13} /></a>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => setEdit(c)} className="text-slate-400 hover:text-blue-600 p-1"><Pencil size={15} /></button>
