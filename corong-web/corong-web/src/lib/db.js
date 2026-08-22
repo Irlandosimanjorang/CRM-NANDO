@@ -106,6 +106,45 @@ export async function setLeadStage(id, stage_key) {
   if (error) throw error;
 }
 
+// ---- LOKASI GPS & CHECK-IN ----
+export async function saveLeadLocation(id, latitude, longitude) {
+  const { error } = await supabase.from("leads").update({ latitude, longitude }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters }) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { data, error } = await supabase
+    .from("visit_checkins")
+    .insert({ user_id: uid, lead_id, lead_name, latitude, longitude, distance_meters })
+    .select()
+    .single();
+  if (error) throw error;
+  // Check-in juga otomatis nyatet progress + update last_contact, biar konsisten
+  // sama alur progress note yang udah ada.
+  const today = new Date().toISOString().slice(0, 10);
+  const jarak = distance_meters != null ? `${Math.round(distance_meters)}m dari titik lokasi` : "";
+  await supabase.from("progress_notes").insert({
+    user_id: uid, lead_id, note_date: today,
+    text: `Check-in GPS terverifikasi${jarak ? " (" + jarak + ")" : ""}.`,
+  });
+  await supabase.from("leads").update({ last_contact: today }).eq("id", lead_id);
+  return data;
+}
+
+export async function getCheckins(monthFilter) {
+  let q = supabase.from("visit_checkins").select("*").order("checked_in_at", { ascending: false });
+  if (monthFilter) {
+    const start = `${monthFilter}-01`;
+    const [y, m] = monthFilter.split("-").map(Number);
+    const endDate = new Date(y, m, 1).toISOString().slice(0, 10);
+    q = q.gte("checked_in_at", start).lt("checked_in_at", endDate);
+  }
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
 // ---- PROGRESS ----
 export async function addProgress(lead_id, text) {
   const uid = (await supabase.auth.getUser()).data.user.id;
