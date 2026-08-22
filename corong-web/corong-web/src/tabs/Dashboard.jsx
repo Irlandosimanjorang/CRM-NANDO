@@ -133,21 +133,24 @@ function PerformanceInsight({ leads, stages }) {
   );
 }
 
-export default function Dashboard({ leads, stages, onGo }) {
+export default function Dashboard({ leads, stages, dealTransactions, onGo }) {
   const s = useMemo(() => {
     const won = stages.filter((x) => x.type === "won").map((x) => x.key);
     const activeKeys = stages.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
     const now = new Date();
     const curYear = now.getFullYear();
     const curMonth = now.getMonth();
-    const dealLeads = leads.filter((c) => won.includes(c.stage_key));
-    const revYear = dealLeads.reduce((a, c) => {
-      const d = c.deal_date ? new Date(c.deal_date) : null;
-      return d && d.getFullYear() === curYear ? a + (Number(c.deal_value) || 0) : a;
+    // Revenue sekarang dihitung dari SEMUA transaksi deal (bukan cuma nilai
+    // terakhir per lead), biar repeat order/transaksi berkali-kali ke perusahaan
+    // yang sama kehitung semua, bukan cuma yang paling baru doang.
+    const txs = dealTransactions || [];
+    const revYear = txs.reduce((a, t) => {
+      const d = t.deal_date ? new Date(t.deal_date) : null;
+      return d && d.getFullYear() === curYear ? a + (Number(t.deal_value) || 0) : a;
     }, 0);
-    const revMonth = dealLeads.reduce((a, c) => {
-      const d = c.deal_date ? new Date(c.deal_date) : null;
-      return d && d.getFullYear() === curYear && d.getMonth() === curMonth ? a + (Number(c.deal_value) || 0) : a;
+    const revMonth = txs.reduce((a, t) => {
+      const d = t.deal_date ? new Date(t.deal_date) : null;
+      return d && d.getFullYear() === curYear && d.getMonth() === curMonth ? a + (Number(t.deal_value) || 0) : a;
     }, 0);
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
@@ -155,9 +158,9 @@ export default function Dashboard({ leads, stages, onGo }) {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(curYear, curMonth - i, 1);
       const y = d.getFullYear(), m = d.getMonth();
-      const value = dealLeads.reduce((a, c) => {
-        const dd = c.deal_date ? new Date(c.deal_date) : null;
-        return dd && dd.getFullYear() === y && dd.getMonth() === m ? a + (Number(c.deal_value) || 0) : a;
+      const value = txs.reduce((a, t) => {
+        const dd = t.deal_date ? new Date(t.deal_date) : null;
+        return dd && dd.getFullYear() === y && dd.getMonth() === m ? a + (Number(t.deal_value) || 0) : a;
       }, 0);
       months.push({ label: monthNames[m], value });
     }
