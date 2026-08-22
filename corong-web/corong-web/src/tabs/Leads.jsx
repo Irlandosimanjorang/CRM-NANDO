@@ -1,7 +1,7 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy, MapPin } from "lucide-react";
+import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy, MapPin, CheckCircle2 } from "lucide-react";
 import * as db from "../lib/db";
 import { CATEGORIES, stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
@@ -42,6 +42,12 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const [showDup, setShowDup] = useState(false);
   const [progressPopup, setProgressPopup] = useState(null); // { lead, rect }
   const [pinningId, setPinningId] = useState(null);
+  const [checkedInToday, setCheckedInToday] = useState(new Set());
+
+  const loadCheckedInToday = () => {
+    db.getTodayCheckedInLeadIds().then((ids) => setCheckedInToday(new Set(ids))).catch(() => {});
+  };
+  useEffect(() => { loadCheckedInToday(); }, []);
 
   const haversineMeters = (lat1, lon1, lat2, lon2) => {
     const R = 6371000;
@@ -69,7 +75,9 @@ export default function Leads({ leads, stages, settings, onChanged }) {
             const distance = haversineMeters(latitude, longitude, lead.latitude, lead.longitude);
             await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: distance });
           }
+          setCheckedInToday((prev) => new Set(prev).add(lead.id));
           onChanged();
+          loadCheckedInToday();
         } catch (e) { alert("Gagal check-in: " + e.message); }
         finally { setPinningId(null); }
       },
@@ -198,6 +206,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
             <tr>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", left: 0, top: 0, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "120px", position: "sticky", top: 0, zIndex: 15 }}>Kota</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "130px", position: "sticky", top: 0, zIndex: 15 }}>Lokasi</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "160px", position: "sticky", top: 0, zIndex: 15 }}>Key Person</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "150px", position: "sticky", top: 0, zIndex: 15 }}>Jabatan</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "200px", position: "sticky", top: 0, zIndex: 15 }}>Email</th>
@@ -205,7 +214,6 @@ export default function Leads({ leads, stages, settings, onChanged }) {
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: 0, zIndex: 15 }}>Website</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: 0, zIndex: 15 }}>Produk</th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "300px", position: "sticky", top: 0, zIndex: 15 }}>Progress Harian</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "130px", position: "sticky", top: 0, zIndex: 15 }}>Lokasi</th>
               <th className="px-3 py-2 bg-slate-50" style={{ minWidth: "80px", position: "sticky", top: 0, zIndex: 15 }}></th>
             </tr>
           </thead>
@@ -230,6 +238,22 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
+                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1.5">
+                    {checkedInToday.has(c.id) ? (
+                      <span className="text-xs border border-blue-300 text-blue-700 bg-blue-50 rounded-lg px-2 py-1 flex items-center gap-1 whitespace-nowrap font-medium">
+                        <CheckCircle2 size={12} /> Check In
+                      </span>
+                    ) : (
+                      <button onClick={() => pinLocation(c)} disabled={pinningId === c.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-lg px-2 py-1 hover:bg-orange-50 disabled:opacity-50 flex items-center gap-1 whitespace-nowrap">
+                        <MapPin size={12} /> {pinningId === c.id ? "Menyimpan…" : c.latitude ? "Check In" : "Simpan Lokasi"}
+                      </button>
+                    )}
+                    {c.latitude && (
+                      <a href={`https://maps.google.com/?q=${c.latitude},${c.longitude}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Lihat di peta" className="text-slate-400 hover:text-emerald-600 shrink-0"><ExternalLink size={13} /></a>
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.key_person_title || "—"}</td>
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{c.email ? <a href={`mailto:${c.email}`} className="text-blue-600 hover:underline break-all">{c.email}</a> : <span className="text-slate-300">—</span>}</td>
@@ -252,16 +276,6 @@ export default function Leads({ leads, stages, settings, onChanged }) {
                       ))}
                     </div>
                   ) : <span className="text-slate-300">—</span>}
-                </td>
-                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={() => pinLocation(c)} disabled={pinningId === c.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-lg px-2 py-1 hover:bg-orange-50 disabled:opacity-50 flex items-center gap-1 whitespace-nowrap">
-                      <MapPin size={12} /> {pinningId === c.id ? "Menyimpan…" : c.latitude ? "Check In" : "Simpan Lokasi"}
-                    </button>
-                    {c.latitude && (
-                      <a href={`https://maps.google.com/?q=${c.latitude},${c.longitude}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Lihat di peta" className="text-slate-400 hover:text-emerald-600 shrink-0"><ExternalLink size={13} /></a>
-                    )}
-                  </div>
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => setEdit(c)} className="text-slate-400 hover:text-blue-600 p-1"><Pencil size={15} /></button>
