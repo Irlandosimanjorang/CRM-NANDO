@@ -60,6 +60,7 @@ export default function App() {
   const [stages, setStages] = useState([]);
   const [settings, setSettings] = useState({ sales_names: [] });
   const [leads, setLeads] = useState([]);
+  const [dealTransactions, setDealTransactions] = useState([]);
   const [competitors, setCompetitors] = useState([]);
   const [editLead, setEditLead] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,8 +75,8 @@ export default function App() {
   const reload = async () => {
     setLoading(true);
     try {
-      const [st, se, ls, comp] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors()]);
-      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp);
+      const [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
+      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -84,8 +85,8 @@ export default function App() {
   // pas balik dari tab/app lain yang udah lama ditinggal, tanpa bikin layar kedip loading.
   const silentReload = async () => {
     try {
-      const [st, se, ls, comp] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors()]);
-      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp);
+      const [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
+      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
     } catch (e) { console.error(e); }
   };
 
@@ -159,9 +160,9 @@ export default function App() {
         <main className="flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-32">
           {loading ? <Splash inline /> : (
             <>
-              {tab === "dashboard" && <Dashboard leads={leads} stages={stageList} onGo={setTab} />}
+              {tab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} onGo={setTab} />}
               {tab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
-              {tab === "deal" && <Deal leads={leads} stages={stageList} onEdit={setEditLead} onChanged={reload} />}
+              {tab === "deal" && <Deal leads={leads} stages={stageList} dealTransactions={dealTransactions} onEdit={setEditLead} onChanged={reload} />}
               {tab === "visitfollowup" && <VisitFollowup leads={leads} onEdit={setEditLead} onChanged={reload} />}
               {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
               {tab === "komunitas" && <Nex />}
