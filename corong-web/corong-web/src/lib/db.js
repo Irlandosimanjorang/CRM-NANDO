@@ -106,6 +106,11 @@ export async function setLeadStage(id, stage_key) {
   if (error) throw error;
 }
 
+export async function updateLeadNextAction(id, next_action) {
+  const { error } = await supabase.from("leads").update({ next_action }).eq("id", id);
+  if (error) throw error;
+}
+
 // ---- LOKASI GPS & CHECK-IN ----
 export async function saveLeadLocation(id, latitude, longitude) {
   const { error } = await supabase.from("leads").update({ latitude, longitude }).eq("id", id);
