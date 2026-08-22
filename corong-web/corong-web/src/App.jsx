@@ -13,7 +13,7 @@ import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2,
+  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -189,8 +189,15 @@ export default function App() {
   const FREE_TABS = ["dashboard", "leads"];
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
-  const visibleNav = isPremium ? NAV : NAV.filter((n) => FREE_TABS.includes(n.key));
   const effectiveTab = isPremium || FREE_TABS.includes(tab) ? tab : "dashboard";
+  const isLocked = (key) => !isPremium && !FREE_TABS.includes(key);
+  const handleNavClick = (key) => {
+    if (isLocked(key)) {
+      alert("Fitur ini cuma buat paket Premium (Rp149rb/bulan). Upgrade dulu ya bro buat bukanya - klik banner \"Upgrade\" di atas.");
+      return;
+    }
+    setTab(key);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/50 via-slate-50 to-slate-50 text-slate-900 flex">
@@ -214,13 +221,15 @@ export default function App() {
           <div className="leading-tight"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
         </div>
         <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
-          {visibleNav.map((n) => { const I = n.icon; const active = effectiveTab === n.key;
-            const cls = n.special
+          {NAV.map((n) => { const I = n.icon; const active = effectiveTab === n.key; const locked = isLocked(n.key);
+            const cls = locked
+              ? "text-slate-500 hover:bg-white/[0.03] cursor-pointer"
+              : n.special
               ? (active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg shadow-violet-600/25" : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200")
               : (active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/20" : "text-slate-300 hover:bg-white/[0.06] hover:text-white");
             return (
-            <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm transition-all duration-150 ${cls}`}>
-              <I size={17} strokeWidth={active ? 2.5 : 2} /> {n.label}
+            <button key={n.key} onClick={() => handleNavClick(n.key)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm transition-all duration-150 ${cls}`}>
+              <I size={17} strokeWidth={active ? 2.5 : 2} /> <span className="flex-1 text-left">{n.label}</span> {locked && <Lock size={13} className="shrink-0" />}
             </button> ); })}
         </nav>
         <button onClick={() => supabase.auth.signOut()} className="m-3 px-4 py-2.5 rounded-2xl bg-white/[0.04] text-xs text-slate-300 hover:bg-white/10 flex items-center gap-2 transition-colors"><LogOut size={14} /> Keluar</button>
@@ -258,13 +267,16 @@ export default function App() {
 
         <nav className="md:hidden fixed bottom-3 inset-x-3 z-40">
           <div className="max-w-lg mx-auto flex justify-around px-1.5 py-2 bg-white/90 backdrop-blur-xl rounded-[26px] shadow-[0_8px_32px_-6px_rgba(15,23,42,0.18)] border border-white/60">
-            {visibleNav.map((n) => { const I = n.icon; const active = effectiveTab === n.key;
-              const cls = n.special
+            {NAV.map((n) => { const I = n.icon; const active = effectiveTab === n.key; const locked = isLocked(n.key);
+              const cls = locked
+                ? "text-slate-300"
+                : n.special
                 ? (active ? "text-violet-600 bg-violet-50" : "text-violet-400")
                 : (active ? "text-orange-600 bg-orange-50" : "text-slate-400");
               return (
-              <button key={n.key} onClick={() => setTab(n.key)} className={`flex flex-col items-center gap-0.5 flex-1 py-1.5 rounded-2xl transition-colors ${cls}`}>
+              <button key={n.key} onClick={() => handleNavClick(n.key)} className={`relative flex flex-col items-center gap-0.5 flex-1 py-1.5 rounded-2xl transition-colors ${cls}`}>
                 <I size={19} strokeWidth={active ? 2.5 : 2} /><span className="text-[9px] font-medium leading-none truncate max-w-full mt-0.5">{n.short}</span>
+                {locked && <Lock size={9} className="absolute top-0.5 right-2" />}
               </button> ); })}
           </div>
         </nav>
