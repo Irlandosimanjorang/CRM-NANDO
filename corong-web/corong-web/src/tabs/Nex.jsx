@@ -316,7 +316,12 @@ function PostCard({ post, myId, onDeleted }) {
   );
 }
 
-export default function Nex() {
+const DUMMY_POSTS = [
+  { id: "np-1", user_id: "dummy", author_name: "Rizal - Sales PVC Jakarta", body: "Ada yang punya kontak supplier CaZn stabilizer buat area Cikarang? Client gua lagi cari yang bisa kirim cepet.", image_urls: [], created_at: new Date(Date.now() - 3600000).toISOString(), replyCount: 3, likeCount: 5, likedByMe: false, share_count: 1 },
+  { id: "np-2", user_id: "dummy", author_name: "Dewi - Sales Bandung", body: "Baru closing 8 ton bulan ini ke pabrik kabel di Soreang! Semangat terus tim 🔥", image_urls: [], created_at: new Date(Date.now() - 86400000).toISOString(), replyCount: 7, likeCount: 12, likedByMe: true, share_count: 2 },
+];
+
+export default function Nex({ dummy }) {
   const [posts, setPosts] = useState(null);
   const [showComposer, setShowComposer] = useState(false);
   const [myId, setMyId] = useState(null);
@@ -326,18 +331,24 @@ export default function Nex() {
   const [profileLoaded, setProfileLoaded] = useState(false);
 
   const load = async () => {
+    if (dummy) { setPosts(DUMMY_POSTS); return; }
     try { setPosts(await db.getCommunityPosts()); }
     catch (e) { setPosts([]); }
   };
 
   useEffect(() => {
+    if (dummy) {
+      setMyId("dummy-me"); setMyName("Kamu"); setMyBio("Sales B2B"); setProfileLoaded(true);
+      load();
+      return;
+    }
     db.getCurrentUserId().then(setMyId);
     db.getCommunityProfile().then((p) => {
       setMyName(p.name); setMyBio(p.bio); setProfileLoaded(true);
       if (!p.name) setShowProfileEdit(true);
     });
     load();
-  }, []);
+  }, [dummy]);
 
   const myPosts = posts ? posts.filter((p) => p.user_id === myId) : [];
   const postCount = myPosts.length;
