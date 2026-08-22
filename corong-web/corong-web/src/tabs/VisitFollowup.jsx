@@ -1,7 +1,118 @@
-import { useMemo, useState } from "react";
-import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History } from "lucide-react";
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
+
+// Rumus Haversine - itung jarak lurus antara 2 titik GPS (dalam meter)
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+const CHECKIN_RADIUS_M = 100;
+
+function TodayVisitsCard({ leads, onChanged }) {
+  const todayVisits = useMemo(() => leads.filter((c) => c.visit_date === todayISO()), [leads]);
+  const [myPos, setMyPos] = useState(null);
+  const [geoError, setGeoError] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(null);
+  const watchIdRef = useRef(null);
+
+  useEffect(() => {
+    if (todayVisits.length === 0 || !navigator.geolocation) return;
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => { setMyPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoError(false); },
+      () => setGeoError(true),
+      { enableHighAccuracy: true, maximumAge: 10000 }
+    );
+    return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
+  }, [todayVisits.length]);
+
+  const doCheckIn = async (lead, distance) => {
+    setCheckingIn(lead.id);
+    try {
+      await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude: myPos.lat, longitude: myPos.lng, distance_meters: distance });
+      alert(`✅ Check-in "${lead.name}" berhasil dicatat.`);
+      onChanged();
+    } catch (e) { alert("Gagal check-in: " + e.message); }
+    finally { setCheckingIn(null); }
+  };
+
+  if (todayVisits.length === 0) return null;
+
+  return (
+    <div className="bg-white border border-orange-200 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 mb-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-3">
+        <span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Navigation size={14} /></span>
+        Kunjungan Hari Ini
+      </div>
+      {geoError && <p className="text-xs text-rose-500 mb-2">Gagal akses GPS. Pastikan izin lokasi diaktifkan buat browser/app ini.</p>}
+      <div className="space-y-2">
+        {todayVisits.map((c) => {
+          const hasCoords = c.latitude != null && c.longitude != null;
+          let distance = null;
+          if (hasCoords && myPos) distance = Math.round(haversineMeters(myPos.lat, myPos.lng, c.latitude, c.longitude));
+          const canCheckIn = hasCoords && distance !== null && distance <= CHECKIN_RADIUS_M;
+          return (
+            <div key={c.id} className="flex items-center justify-between gap-3 border border-slate-100 rounded-2xl p-3">
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate">{c.name}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  {!hasCoords ? "Belum ada titik lokasi tersimpan" : distance === null ? "Nyari posisi kamu…" : canCheckIn ? "Kamu udah di lokasi ✓" : `${distance >= 1000 ? (distance / 1000).toFixed(1) + " km" : distance + " m"} lagi`}
+                </div>
+              </div>
+              <button
+                onClick={() => doCheckIn(c, distance)}
+                disabled={!canCheckIn || checkingIn === c.id}
+                className={`shrink-0 text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${canCheckIn ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-slate-100 text-slate-400"}`}
+              >
+                <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Saya Sudah Sampai"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CheckinHistory() {
+  const [month, setMonth] = useState(todayISO().slice(0, 7));
+  const [items, setItems] = useState(null);
+
+  useEffect(() => {
+    db.getCheckins(month).then(setItems).catch(() => setItems([]));
+  }, [month]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-3 py-2 bg-white" />
+      </div>
+      {items === null ? (
+        <div className="text-sm text-slate-400 py-8 text-center">Memuat…</div>
+      ) : items.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><History size={32} className="mx-auto text-slate-300 mb-3" />Belum ada check-in di bulan ini.</div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((ci) => (
+            <div key={ci.id} className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate">{ci.lead_name}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{new Date(ci.checked_in_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+              </div>
+              <a href={`https://maps.google.com/?q=${ci.latitude},${ci.longitude}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-orange-600 hover:underline flex items-center gap-1"><MapPin size={12} /> Lihat peta</a>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 const DAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -136,6 +247,8 @@ function VisitView({ leads, onEdit, onChanged }) {
         <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
       </div>
 
+      <TodayVisitsCard leads={leads} onChanged={onChanged} />
+
       {visits.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana aja.</div>
       ) : view === "calendar" ? (
@@ -204,16 +317,21 @@ export default function VisitFollowup({ leads, onEdit, onChanged }) {
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight mb-3">Visit & Follow-up</h1>
-      <div className="flex gap-2 mb-4 border-b border-slate-200">
-        <button onClick={() => setTab("visit")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 ${tab === "visit" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+      <div className="flex gap-2 mb-4 border-b border-slate-200 overflow-x-auto">
+        <button onClick={() => setTab("visit")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 shrink-0 ${tab === "visit" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
           <CalendarCheck size={15} /> Visit <span className="text-xs text-slate-400">({visitCount})</span>
         </button>
-        <button onClick={() => setTab("followup")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 ${tab === "followup" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+        <button onClick={() => setTab("followup")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 shrink-0 ${tab === "followup" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
           <CalendarClock size={15} /> Follow-up <span className="text-xs text-slate-400">({followupCount})</span>
+        </button>
+        <button onClick={() => setTab("checkin")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 shrink-0 ${tab === "checkin" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+          <History size={15} /> Riwayat Check-in
         </button>
       </div>
 
-      {tab === "visit" ? <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} /> : <FollowupView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
+      {tab === "visit" && <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
+      {tab === "followup" && <FollowupView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
+      {tab === "checkin" && <CheckinHistory />}
     </div>
   );
 }
