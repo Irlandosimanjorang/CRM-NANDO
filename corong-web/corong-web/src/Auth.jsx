@@ -28,8 +28,8 @@ const FREE_FEATURES = ["Dashboard", "Kelola Leads"];
 const PREMIUM_FEATURES = ["Semua fitur di paket Free", "Deal & tracking transaksi", "Visit & Follow-up + Check-in GPS", "Rekam Meeting otomatis", "Analisa Kompetitor", "AI Advisor harian", "Bot Telegram (agent aktif)", "Sinkron Google Calendar", "Nex — komunitas sesama sales"];
 
 const FAQS = [
-  { q: "Trial-nya berapa lama?", a: "30 hari penuh, semua fitur kebuka gratis. Gak perlu kartu kredit buat mulai." },
-  { q: "Abis trial gimana kalau belum upgrade?", a: "Akun kamu otomatis turun ke paket Free — data kamu tetap aman, cuma akses fiturnya dibatasi ke Dashboard & Leads doang." },
+  { q: "Paket Free-nya kayak gimana?", a: "Free bisa dipake selamanya, akses Dashboard & Leads. Cukup buat mulai rapiin data lead kamu." },
+  { q: "Fitur AI (bot Telegram, AI Advisor, dst) kenapa berbayar?", a: "Fitur AI itu jalan pake API berbayar (token AI), jadi kebukanya di paket Premium biar biayanya kekover." },
   { q: "Bisa berhenti kapan aja?", a: "Bisa. Gak ada kontrak/kunci jangka panjang." },
   { q: "Data aku aman gak?", a: "Data kamu terkunci per akun, gak bisa diakses akun lain. Disimpen di infrastruktur cloud yang sama dipakai banyak aplikasi bisnis lainnya." },
 ];
@@ -78,7 +78,7 @@ export default function Auth() {
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight mb-5 max-w-2xl">Satu tempat buat semua urusan sales kamu.</h1>
           <p className="text-stone-400 text-sm md:text-base mb-8 max-w-xl leading-relaxed">Dari lead pertama masuk sampai deal closing — kelola pipeline, update progress lewat chat Telegram, dan biarin AI bantu nyaranin lead mana yang harus dikejar duluan.</p>
           <div className="flex flex-wrap items-center gap-3">
-            <a href="#daftar" className="bg-orange-600 hover:bg-orange-700 text-white text-sm px-6 py-3 rounded-xl font-medium flex items-center gap-2">Daftar Gratis, Trial 30 Hari <ArrowRight size={15} /></a>
+            <a href="#daftar" className="bg-orange-600 hover:bg-orange-700 text-white text-sm px-6 py-3 rounded-xl font-medium flex items-center gap-2">Daftar Gratis <ArrowRight size={15} /></a>
             <a href="#harga" className="text-stone-300 hover:text-white text-sm px-4 py-3">Lihat harga →</a>
           </div>
         </div>
@@ -142,8 +142,7 @@ export default function Auth() {
             <a href="#daftar" className="block text-center w-full border border-slate-300 hover:bg-slate-50 text-sm py-2.5 rounded-xl font-medium">Mulai Gratis</a>
           </div>
           <div className={`${CARD} p-6 border-orange-300 relative overflow-hidden`}>
-            <div className="absolute top-0 right-0 bg-orange-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">TRIAL 30 HARI</div>
-            <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-1">Premium</div>
+                        <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-1">Premium</div>
             <div className="text-3xl font-bold mb-1">Rp149rb<span className="text-sm font-normal text-slate-400">/bulan</span></div>
             <div className="text-xs text-slate-400 mb-5">Akses semua fitur</div>
             <ul className="space-y-2.5 mb-6">
@@ -151,7 +150,7 @@ export default function Auth() {
                 <li key={f} className="flex items-center gap-2 text-sm text-slate-600"><Check size={15} className="text-emerald-500 shrink-0" /> {f}</li>
               ))}
             </ul>
-            <a href="#daftar" className="block text-center w-full bg-orange-600 hover:bg-orange-700 text-white text-sm py-2.5 rounded-xl font-medium">Coba 30 Hari Gratis</a>
+            <a href="#daftar" className="block text-center w-full bg-orange-600 hover:bg-orange-700 text-white text-sm py-2.5 rounded-xl font-medium">Upgrade ke Premium</a>
           </div>
         </div>
       </section>
@@ -181,7 +180,7 @@ export default function Auth() {
             </div>
             <div className="text-[11px] font-semibold text-orange-600 uppercase tracking-widest mb-2">Nexto CRM</div>
             <h3 className="text-xl font-bold mb-1">{mode === "signin" ? "Selamat datang kembali" : "Buat akun baru"}</h3>
-            <p className="text-xs text-slate-400 mb-5">{mode === "signin" ? "Masuk buat akses pipeline-mu." : "Gratis, trial 30 hari, gak perlu kartu kredit."}</p>
+            <p className="text-xs text-slate-400 mb-5">{mode === "signin" ? "Masuk buat akses pipeline-mu." : "Gratis buat mulai, upgrade kapan aja kamu siap."}</p>
             <div className="space-y-3">
               <input className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
               <input type="password" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
