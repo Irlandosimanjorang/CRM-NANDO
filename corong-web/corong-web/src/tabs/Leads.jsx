@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy, MapPin, CheckCircle2 } from "lucide-react";
@@ -48,6 +48,50 @@ export default function Leads({ leads, stages, settings, onChanged }) {
     db.getTodayCheckedInLeadIds().then((ids) => setCheckedInToday(new Set(ids))).catch(() => {});
   };
   useEffect(() => { loadCheckedInToday(); }, []);
+
+  // Lebar kolom bisa diatur manual kayak Excel - tarik handle di kanan tiap header.
+  const [colWidths, setColWidths] = useState({
+    name: 220, city: 120, location: 130, keyPerson: 160, title: 150,
+    email: 200, phone: 220, website: 180, product: 180, progress: 300,
+  });
+  const resizingRef = useRef(null);
+
+  const onResizeMove = useCallback((e) => {
+    const r = resizingRef.current;
+    if (!r) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const delta = clientX - r.startX;
+    const newWidth = Math.max(70, r.startWidth + delta);
+    setColWidths((prev) => ({ ...prev, [r.key]: newWidth }));
+  }, []);
+  const onResizeEnd = useCallback(() => {
+    resizingRef.current = null;
+    document.removeEventListener("mousemove", onResizeMove);
+    document.removeEventListener("mouseup", onResizeEnd);
+    document.removeEventListener("touchmove", onResizeMove);
+    document.removeEventListener("touchend", onResizeEnd);
+  }, [onResizeMove]);
+  const startResize = (key, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    resizingRef.current = { key, startX: clientX, startWidth: colWidths[key] };
+    document.addEventListener("mousemove", onResizeMove);
+    document.addEventListener("mouseup", onResizeEnd);
+    document.addEventListener("touchmove", onResizeMove);
+    document.addEventListener("touchend", onResizeEnd);
+  };
+
+  function ColResizeHandle({ colKey }) {
+    return (
+      <div
+        onMouseDown={(e) => startResize(colKey, e)}
+        onTouchStart={(e) => startResize(colKey, e)}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-orange-400/60 active:bg-orange-500/80 z-10"
+      />
+    );
+  }
 
   const haversineMeters = (lat1, lon1, lat2, lon2) => {
     const R = 6371000;
@@ -204,16 +248,16 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         <table className="text-sm" style={{ minWidth: "1700px", width: "100%" }}>
           <thead className="text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", left: 0, top: 0, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "120px", position: "sticky", top: 0, zIndex: 15 }}>Kota</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "130px", position: "sticky", top: 0, zIndex: 15 }}>Lokasi</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "160px", position: "sticky", top: 0, zIndex: 15 }}>Key Person</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "150px", position: "sticky", top: 0, zIndex: 15 }}>Jabatan</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "200px", position: "sticky", top: 0, zIndex: 15 }}>Email</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "220px", position: "sticky", top: 0, zIndex: 15 }}>Telepon / WA</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: 0, zIndex: 15 }}>Website</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "180px", position: "sticky", top: 0, zIndex: 15 }}>Produk</th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50" style={{ minWidth: "300px", position: "sticky", top: 0, zIndex: 15 }}>Progress Harian</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.name, width: colWidths.name, position: "sticky", left: 0, top: 0, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan<ColResizeHandle colKey="name" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.city, width: colWidths.city, position: "sticky", top: 0, zIndex: 15 }}>Kota<ColResizeHandle colKey="city" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.location, width: colWidths.location, position: "sticky", top: 0, zIndex: 15 }}>Lokasi<ColResizeHandle colKey="location" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.keyPerson, width: colWidths.keyPerson, position: "sticky", top: 0, zIndex: 15 }}>Key Person<ColResizeHandle colKey="keyPerson" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.title, width: colWidths.title, position: "sticky", top: 0, zIndex: 15 }}>Jabatan<ColResizeHandle colKey="title" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.email, width: colWidths.email, position: "sticky", top: 0, zIndex: 15 }}>Email<ColResizeHandle colKey="email" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.phone, width: colWidths.phone, position: "sticky", top: 0, zIndex: 15 }}>Telepon / WA<ColResizeHandle colKey="phone" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.website, width: colWidths.website, position: "sticky", top: 0, zIndex: 15 }}>Website<ColResizeHandle colKey="website" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.product, width: colWidths.product, position: "sticky", top: 0, zIndex: 15 }}>Produk<ColResizeHandle colKey="product" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.progress, width: colWidths.progress, position: "sticky", top: 0, zIndex: 15 }}>Progress Harian<ColResizeHandle colKey="progress" /></th>
               <th className="px-3 py-2 bg-slate-50" style={{ minWidth: "80px", position: "sticky", top: 0, zIndex: 15 }}></th>
             </tr>
           </thead>
