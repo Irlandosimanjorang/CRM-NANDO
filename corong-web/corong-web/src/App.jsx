@@ -9,7 +9,6 @@ import VisitFollowup from "./tabs/VisitFollowup";
 import Kompetitor from "./tabs/Kompetitor";
 import Nex from "./tabs/Nex";
 import Advisor from "./tabs/Advisor";
-import ChatAssistant from "./tabs/ChatAssistant";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
@@ -34,7 +33,6 @@ const NAV = [
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
   { key: "komunitas", label: "Nex", short: "Nex", icon: Users2, special: true },
   { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
-  { key: "asisten", label: "Asisten", short: "Chat", icon: Bot },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
 ];
 
@@ -167,7 +165,6 @@ export default function App() {
               {tab === "kompetitor" && <Kompetitor competitors={competitors} onChanged={reload} />}
               {tab === "komunitas" && <Nex />}
               {tab === "advisor" && <Advisor leads={leads} stages={stageList} onOpen={setEditLead} />}
-              {tab === "asisten" && <ChatAssistant />}
               {tab === "settings" && <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />}
             </>
           )}
