@@ -120,6 +120,58 @@ export default function App() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [session]);
 
+  // Pull-to-refresh: tarik layar dari paling atas (cuma aktif kalau scroll udah
+  // di posisi 0) buat refresh data manual - berguna soalnya PWA yang di-install
+  // gak punya tombol refresh browser lagi.
+  const [pullVisual, setPullVisual] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const pullDistanceRef = useRef(0);
+  const touchStartY = useRef(0);
+  const pulling = useRef(false);
+
+  useEffect(() => {
+    if (!session) return;
+    const onTouchStart = (e) => {
+      if (window.scrollY === 0 && !refreshing) {
+        touchStartY.current = e.touches[0].clientY;
+        pulling.current = true;
+      }
+    };
+    const onTouchMove = (e) => {
+      if (!pulling.current) return;
+      const delta = e.touches[0].clientY - touchStartY.current;
+      if (delta > 0 && window.scrollY === 0) {
+        const d = Math.min(delta * 0.5, 90);
+        pullDistanceRef.current = d;
+        setPullVisual(d);
+      } else {
+        pulling.current = false;
+        pullDistanceRef.current = 0;
+        setPullVisual(0);
+      }
+    };
+    const onTouchEnd = async () => {
+      if (!pulling.current) return;
+      pulling.current = false;
+      const d = pullDistanceRef.current;
+      pullDistanceRef.current = 0;
+      setPullVisual(0);
+      if (d > 60) {
+        setRefreshing(true);
+        await silentReload();
+        setRefreshing(false);
+      }
+    };
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
+    document.addEventListener("touchend", onTouchEnd);
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [session, refreshing]);
+
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
   if (!session) return <Auth />;
@@ -128,6 +180,20 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/50 via-slate-50 to-slate-50 text-slate-900 flex">
+      {(pullVisual > 0 || refreshing) && (
+        <div
+          className="md:hidden fixed top-0 inset-x-0 z-50 flex items-start justify-center pointer-events-none transition-[height] duration-150"
+          style={{ height: refreshing ? 56 : pullVisual }}
+        >
+          <div className="bg-white rounded-full p-2 shadow-lg mt-2">
+            <Loader2
+              size={18}
+              className="text-orange-500"
+              style={refreshing ? { animation: "spin 0.8s linear infinite" } : { transform: `rotate(${pullVisual * 3}deg)` }}
+            />
+          </div>
+        </div>
+      )}
       <aside className="hidden md:flex flex-col w-60 bg-slate-900 text-white sticky top-0 h-screen shrink-0">
         <div className="px-5 py-6 flex items-center gap-2.5 border-b border-white/5">
           <NextoBadge size={36} />
