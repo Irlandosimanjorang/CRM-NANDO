@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff } from "lucide-react";
+import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
 
@@ -127,29 +127,52 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
   const [add, setAdd] = useState(false);
   const [qtyRevealed, setQtyRevealed] = useState(false);
   const [rpRevealed, setRpRevealed] = useState(false);
+  const [expanded, setExpanded] = useState(new Set());
   const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
-  const deals = useMemo(
-    () => [...(dealTransactions || [])].sort((a, b) => (b.deal_date || "").localeCompare(a.deal_date || "")),
-    [dealTransactions]
-  );
+
+  const deals = dealTransactions || [];
   const totalValue = deals.reduce((a, c) => a + (Number(c.deal_value) || 0), 0);
   const totalTonInKg = deals.reduce((a, c) => {
     const t = Number(c.tonnage) || 0;
     return a + (c.tonnage_unit === "kg" ? t : t * 1000);
   }, 0);
 
+  // Kelompokin semua transaksi per perusahaan - 1 baris per perusahaan di tabel,
+  // transaksi lainnya kebuka lewat tombol expand.
+  const groups = useMemo(() => {
+    const map = {};
+    for (const t of deals) {
+      if (!map[t.lead_id]) map[t.lead_id] = [];
+      map[t.lead_id].push(t);
+    }
+    return Object.entries(map)
+      .map(([leadId, txs]) => ({
+        leadId,
+        txs: txs.sort((a, b) => (b.deal_date || "").localeCompare(a.deal_date || "")),
+      }))
+      .sort((a, b) => (b.txs[0].deal_date || "").localeCompare(a.txs[0].deal_date || ""));
+  }, [deals]);
+
+  const toggleExpand = (leadId) => setExpanded((prev) => { const n = new Set(prev); n.has(leadId) ? n.delete(leadId) : n.add(leadId); return n; });
+
+  const delTx = async (id) => {
+    if (!window.confirm("Hapus transaksi ini?")) return;
+    try { await db.deleteDealTransaction(id); onChanged(); }
+    catch (e) { alert("Gagal hapus: " + e.message); }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="flex items-center gap-2"><Trophy size={20} className="text-emerald-500" /><h1 className="text-2xl font-bold tracking-tight">Deal</h1><span className="text-sm text-slate-400">({deals.length})</span></div>
+        <div className="flex items-center gap-2"><Trophy size={20} className="text-emerald-500" /><h1 className="text-2xl font-bold tracking-tight">Deal</h1><span className="text-sm text-slate-400">({groups.length})</span></div>
         <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah Deal</button>
       </div>
-      {deals.length === 0 ? (
+      {groups.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Trophy size={32} className="mx-auto text-slate-300 mb-3" />Belum ada deal. Klik "Tambah Deal" atau ubah tahap lead jadi "Deal (menang)".</div>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Transaksi</div><div className="font-mono font-bold text-2xl text-emerald-600">{deals.length}</div></div>
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Deal</div><div className="font-mono font-bold text-2xl text-emerald-600">{groups.length}</div><div className="text-[10px] text-slate-400 mt-0.5">{deals.length} transaksi</div></div>
 
             <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3">
               <div className="flex items-center justify-between mb-1">
@@ -176,23 +199,57 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
           <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">Quantity<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
+                <th className="px-3 py-2 font-medium" style={{ width: "28px" }}></th>
+                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">Quantity<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
               <tbody>
-                {deals.map((t) => {
-                  const lead = leadsById[t.lead_id];
+                {groups.map((g) => {
+                  const lead = leadsById[g.leadId];
                   const sm = lead ? stageMeta(stages, lead.stage_key) : null;
+                  const latest = g.txs[0];
+                  const isOpen = expanded.has(g.leadId);
+                  const groupTotalRp = g.txs.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
                   return (
-                  <tr key={t.id} className="border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer" onClick={() => lead && onEdit(lead)}>
-                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{t.lead_name}{lead && typeBadge(lead.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(lead.company_type)}</span>}</div></td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{lead?.city || "—"}</td>
-                    <td className="px-3 py-2">{sm ? <span className="text-[11px] border rounded-full px-2 py-0.5" style={chipStyle(sm.hex)}>{sm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{lead?.sales_owner || "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{t.deal_date ? fmtDate(t.deal_date) : "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{t.chemical || "—"}</td>
-                    <td className="px-3 py-2 text-xs font-mono text-slate-700">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${t.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
-                    <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : "••••••") : "—"}</td>
-                  </tr> ); })}
+                  <>
+                    <tr key={g.leadId} className="border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer" onClick={() => lead && onEdit(lead)}>
+                      <td className="px-3 py-2" onClick={(e) => { e.stopPropagation(); toggleExpand(g.leadId); }}>
+                        {g.txs.length > 1 && (isOpen ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="font-medium flex items-center gap-1.5">
+                          {latest.lead_name}
+                          {lead && typeBadge(lead.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(lead.company_type)}</span>}
+                          {g.txs.length > 1 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">{g.txs.length}x</span>}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-600">{lead?.city || "—"}</td>
+                      <td className="px-3 py-2">{sm ? <span className="text-[11px] border rounded-full px-2 py-0.5" style={chipStyle(sm.hex)}>{sm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
+                      <td className="px-3 py-2 text-xs text-slate-600">{lead?.sales_owner || "—"}</td>
+                      <td className="px-3 py-2 text-xs text-slate-600">{latest.deal_date ? fmtDate(latest.deal_date) : "—"}</td>
+                      <td className="px-3 py-2 text-xs text-slate-600">{latest.chemical || "—"}</td>
+                      <td className="px-3 py-2 text-xs font-mono text-slate-700">{latest.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${latest.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
+                      <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{groupTotalRp ? (rpRevealed ? fmtRp(groupTotalRp) : "••••••") : "—"}</td>
+                    </tr>
+                    {isOpen && g.txs.map((t) => (
+                      <tr key={t.id} className="border-t border-slate-50 bg-slate-50/50 text-xs">
+                        <td></td>
+                        <td className="px-3 py-1.5 pl-8 text-slate-400" colSpan={1}>↳ transaksi</td>
+                        <td className="px-3 py-1.5"></td>
+                        <td className="px-3 py-1.5"></td>
+                        <td className="px-3 py-1.5"></td>
+                        <td className="px-3 py-1.5 text-slate-600">{t.deal_date ? fmtDate(t.deal_date) : "—"}</td>
+                        <td className="px-3 py-1.5 text-slate-600">{t.chemical || "—"}</td>
+                        <td className="px-3 py-1.5 font-mono text-slate-600">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${t.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
+                        <td className="px-3 py-1.5 font-mono text-emerald-700 font-semibold">
+                          <div className="flex items-center justify-between gap-2">
+                            {t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : "••••••") : "—"}
+                            <button onClick={(e) => { e.stopPropagation(); delTx(t.id); }} className="text-slate-300 hover:text-rose-500"><Trash2 size={12} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                  ); })}
               </tbody>
             </table>
           </div>
