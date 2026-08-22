@@ -26,9 +26,27 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Setting audio khusus buat nangkep suara jarak agak jauh/pelan lebih baik:
+      // - autoGainControl: browser otomatis "naikin volume" suara yang pelan/jauh
+      // - noiseSuppression tetep nyala (bantu kejernihan, bukan ngeredam suara)
+      // - echoCancellation DIMATIKAN - ini fitur buat video call (nge-cancel suara
+      //   speaker HP sendiri biar ga kedengeran balik di mic), TAPI algoritmanya
+      //   suka salah nebak suara jarak jauh/pelan sebagai "noise" terus diredam.
+      //   Buat rekam meeting (bukan panggilan 2 arah), fitur ini ga perlu & malah ngerugiin.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+          channelCount: 1,
+        },
+      });
       chunksRef.current = [];
-      const mr = new MediaRecorder(stream);
+      // Bitrate dinaikin ke 96kbps (dari default yang suka lebih rendah) - detail
+      // suara pelan/jauh lebih kejaga, ga ilang gara-gara kompresi kasar. Masih
+      // aman soal ukuran file (25 menit rekaman ~18MB, di bawah limit Whisper 25MB).
+      const mr = new MediaRecorder(stream, { audioBitsPerSecond: 96000 });
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorderRef.current = mr;
       mr.start();
@@ -44,6 +62,14 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     clearInterval(timerRef.current);
     const mr = mediaRecorderRef.current;
     if (!mr) return;
+    // Rekaman kependekan (misal ke-tap gak sengaja) - gausah buang-buang panggilan
+    // API buat proses audio yang hampir kosong.
+    if (seconds < 3) {
+      mr.stream.getTracks().forEach((t) => t.stop());
+      setStage("idle");
+      alert("Rekamannya kependekan, coba lagi ya.");
+      return;
+    }
     setStage("processing");
     mr.onstop = async () => {
       mr.stream.getTracks().forEach((t) => t.stop());
