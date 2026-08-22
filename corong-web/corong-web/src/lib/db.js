@@ -173,6 +173,29 @@ export async function updateProgress(id, text) {
   if (error) throw error;
 }
 
+// ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----
+export async function getDealTransactions() {
+  const { data, error } = await supabase.from("deal_transactions").select("*").order("deal_date", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical }) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { data, error } = await supabase.from("deal_transactions").insert({
+    user_id: uid, lead_id, lead_name, deal_date: deal_date || null,
+    deal_value: Number(deal_value) || 0, tonnage: Number(tonnage) || 0,
+    tonnage_unit: tonnage_unit || "ton", chemical: chemical || "",
+  }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteDealTransaction(id) {
+  const { error } = await supabase.from("deal_transactions").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // ---- SMART IMPORT (AI baca layout Excel yang formatnya ga standar) ----
 export async function smartImportMap(sampleRows) {
   const { data, error } = await supabase.functions.invoke("smart-import-map-ts", { body: { sampleRows } });
