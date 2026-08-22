@@ -80,7 +80,7 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
               <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas kamu lagi di lokasi"}</div>
             </div>
             <button onClick={saveLocation} disabled={locBusy || !lead.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-xl px-3 py-1.5 hover:bg-orange-50 disabled:opacity-50 shrink-0 font-medium">
-              {locBusy ? "Menyimpan…" : f.latitude ? "Update Lokasi" : "Simpan Lokasi Ini"}
+              {locBusy ? "Menyimpan…" : f.latitude ? "Check In" : "Simpan Lokasi Ini"}
             </button>
           </div>
           <Field label="Website"><input className={inp} value={f.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" /></Field>
