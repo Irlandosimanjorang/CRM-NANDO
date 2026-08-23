@@ -80,6 +80,23 @@ export default function App() {
   const [dealTransactions, setDealTransactions] = useState([]);
   const [competitors, setCompetitors] = useState([]);
   const [org, setOrg] = useState(null);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinMsg, setJoinMsg] = useState("");
+  const joinWithCode = async () => {
+    if (!joinCode.trim()) return;
+    setJoinBusy(true); setJoinMsg("");
+    try {
+      const res = await db.redeemInviteCode(joinCode.trim());
+      setJoinMsg(`✅ Gabung ke ${res.org_name}! Semua fitur Enterprise sekarang kebuka.`);
+      setJoinCode("");
+      await reload();
+    } catch (e) {
+      setJoinMsg("Gagal: " + e.message);
+    } finally {
+      setJoinBusy(false);
+    }
+  };
   const [editLead, setEditLead] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -261,9 +278,21 @@ export default function App() {
 
         <main className="flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-32">
           {!isPremium && (
-            <div className="mb-4 bg-orange-50 border border-orange-200 text-orange-800 text-xs rounded-2xl px-4 py-2.5 flex items-center justify-between gap-2">
-              <span>Kamu sekarang di paket <b>Free</b> (Dashboard &amp; Leads doang). Upgrade ke Premium (Rp149rb/bulan) buat buka semua fitur + bot Telegram + Calendar + AI.</span>
-              <a href="https://subscription.myr.id/m/nexto-premium-88379/" target="_blank" rel="noreferrer" className="shrink-0 underline font-medium">Upgrade</a>
+            <div className="mb-4 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 space-y-2.5">
+              <div className="flex items-center justify-between gap-2 text-xs text-orange-800">
+                <span>Kamu sekarang di paket <b>Free</b> (Dashboard &amp; Leads doang). Upgrade ke Premium (Rp149rb/bulan) buat buka semua fitur + bot Telegram + Calendar + AI.</span>
+                <a href="https://subscription.myr.id/m/nexto-premium-88379/" target="_blank" rel="noreferrer" className="shrink-0 underline font-medium">Upgrade</a>
+              </div>
+              <div className="border-t border-orange-200/60 pt-2.5">
+                <p className="text-[11px] text-orange-700 mb-1.5">Atau punya kode undangan dari tim (bos kamu udah Enterprise)? Masukin di sini, gratis buat kamu:</p>
+                <div className="flex gap-2">
+                  <input className="flex-1 px-3 py-1.5 text-xs border border-orange-300 rounded-lg uppercase bg-white" placeholder="MASUKIN KODE" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
+                  <button onClick={joinWithCode} disabled={joinBusy} className="text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-lg px-3 font-medium">
+                    {joinBusy ? "..." : "Gabung"}
+                  </button>
+                </div>
+                {joinMsg && <p className={`text-[11px] mt-1.5 ${joinMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{joinMsg}</p>}
+              </div>
             </div>
           )}
           {loading ? <Splash inline /> : (
