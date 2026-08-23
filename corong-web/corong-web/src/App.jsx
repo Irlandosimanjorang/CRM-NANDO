@@ -250,7 +250,7 @@ export default function App() {
         <div className="px-5 py-6 flex items-center gap-2.5 border-b border-white/5">
           <NextoBadge size={36} />
           <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
-          <ProfileAvatar settings={settings} session={session} onChanged={reload} size={32} align="left" />
+          <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={32} align="left" />
         </div>
         <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
           {NAV.map((n) => { const I = n.icon; const active = effectiveTab === n.key; const locked = isLocked(n.key);
@@ -272,7 +272,7 @@ export default function App() {
           <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center gap-2.5">
             <NextoBadge size={32} />
             <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === effectiveTab)?.label}</span></div></div>
-            <ProfileAvatar settings={settings} session={session} onChanged={reload} size={32} />
+            <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={32} />
           </div>
         </header>
 
@@ -353,7 +353,7 @@ function PreviewLock({ locked, children }) {
 
 // Avatar bulat pojok kanan atas (kayak Gmail/Notion) - klik buka kartu profil
 // isinya foto, jabatan, email, dan tombol edit.
-function ProfileAvatar({ settings, session, onChanged, size = 36, align = "right" }) {
+function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "right" }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [jobTitle, setJobTitle] = useState(settings.job_title || "");
@@ -363,6 +363,11 @@ function ProfileAvatar({ settings, session, onChanged, size = 36, align = "right
 
   const initial = (settings.community_display_name || session?.user?.email || "?").charAt(0).toUpperCase();
   const email = session?.user?.email || "";
+  const planInfo = org?.plan === "enterprise"
+    ? { label: "Enterprise", cls: "bg-violet-100 text-violet-700" }
+    : settings.plan === "premium"
+    ? { label: "Premium", cls: "bg-orange-100 text-orange-700" }
+    : { label: "Free", cls: "bg-slate-100 text-slate-500" };
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -404,9 +409,12 @@ function ProfileAvatar({ settings, session, onChanged, size = 36, align = "right
                   </div>
                 </div>
                 <div className="pt-9 pb-4 px-5">
-                  <div className="font-bold text-[15px] text-slate-900 truncate">{settings.community_display_name || "Belum ada nama"}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-bold text-[15px] text-slate-900 truncate">{settings.community_display_name || "Belum ada nama"}</div>
+                    <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 ${planInfo.cls}`}>{planInfo.label}</span>
+                  </div>
                   {settings.job_title && (
-                    <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-orange-100 text-orange-700 rounded-full px-2.5 py-1">{settings.job_title}</span>
+                    <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2.5 py-1">{settings.job_title}</span>
                   )}
                   {email && (
                     <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
