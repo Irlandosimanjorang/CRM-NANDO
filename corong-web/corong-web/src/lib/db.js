@@ -58,6 +58,37 @@ export async function removeMember(memberId) {
   if (error) throw error;
 }
 
+// Buat ANGGOTA (bukan Owner) keluar dari organisasi yang dia join - abis ini
+// dia otomatis balik punya organisasi sendiri lagi (solo), bukan nyangkut kosong.
+export async function leaveOrg() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("organization_members").delete().eq("user_id", uid);
+  if (error) throw error;
+  clearOrgCache();
+  await getMyOrgId(); // langsung bikinin organisasi baru buat dia
+}
+
+// ---- PROFIL AKUN (avatar bulat pojok kanan atas) ----
+export async function uploadAvatar(file) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${uid}/avatar-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function saveMyProfile({ avatar_url, job_title, name }) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const patch = { user_id: uid, updated_at: new Date().toISOString() };
+  if (avatar_url !== undefined) patch.avatar_url = avatar_url;
+  if (job_title !== undefined) patch.job_title = job_title;
+  if (name !== undefined) patch.community_display_name = name;
+  const { error } = await supabase.from("settings").upsert(patch);
+  if (error) throw error;
+}
+
 // ---- STAGES ----
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");
