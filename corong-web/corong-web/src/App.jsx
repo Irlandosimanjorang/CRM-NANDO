@@ -434,7 +434,7 @@ function ProfileAvatar({ settings, session, onChanged, size = 36, align = "right
                   <input className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Sales Executive" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
                 </label>
                 <div className="flex gap-2">
-                  <button onClick={() => setEditing(false)} className="flex-1 text-xs border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium">Batal</button>
+                  <button onClick={() => setEditing(false)} className="flex-1 text-xs text-slate-700 border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium">Batal</button>
                   <button onClick={saveProfile} disabled={saving} className="flex-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2.5 font-medium">{saving ? "..." : "Simpan"}</button>
                 </div>
               </div>
