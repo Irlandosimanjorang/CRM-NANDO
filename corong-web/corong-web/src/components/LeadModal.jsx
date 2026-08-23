@@ -1,10 +1,61 @@
 import { useState } from "react";
-import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin } from "lucide-react";
+import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
 import { CATEGORIES, COMPANY_TYPES, fmtDate, todayISO } from "../lib/helpers";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
+
+// Template siap pakai - {{nama}} & {{pic}} otomatis keganti pas dipilih.
+const EMAIL_TEMPLATES = {
+  perkenalan: {
+    label: "Perkenalan",
+    subject: "Perkenalan dari Nexto - Solusi untuk {{nama}}",
+    body: `Selamat siang {{pic}},
+
+Perkenalkan, saya dari tim sales yang ingin memperkenalkan produk kami yang mungkin relevan untuk kebutuhan produksi {{nama}}.
+
+Kami melayani kebutuhan bahan baku PVC/kimia dengan kualitas terjamin dan harga kompetitif. Boleh saya jadwalkan waktu singkat untuk diskusi lebih lanjut?
+
+Terima kasih atas waktunya.`,
+  },
+  penawaran: {
+    label: "Penawaran",
+    subject: "Penawaran Produk untuk {{nama}}",
+    body: `Selamat siang {{pic}},
+
+Menindaklanjuti diskusi kita sebelumnya, dengan senang hati kami sampaikan penawaran produk untuk {{nama}}.
+
+[Rincian produk, harga, dan ketentuan bisa ditambahkan di sini]
+
+Kami siap membantu kalau ada pertanyaan lebih lanjut. Ditunggu kabarnya ya.`,
+  },
+  followup: {
+    label: "Follow-up",
+    subject: "Follow-up - {{nama}}",
+    body: `Selamat siang {{pic}},
+
+Semoga kabar baik. Saya ingin follow-up terkait diskusi kita sebelumnya mengenai kebutuhan {{nama}}.
+
+Apakah ada perkembangan atau pertanyaan yang bisa saya bantu? Saya siap membantu kapan saja dibutuhkan.
+
+Terima kasih.`,
+  },
+  terimakasih: {
+    label: "Ucapan Terima Kasih",
+    subject: "Terima Kasih - {{nama}}",
+    body: `Selamat siang {{pic}},
+
+Terima kasih banyak atas waktu dan kesempatan diskusi/pertemuan kita. Senang bisa membahas kebutuhan {{nama}} lebih lanjut.
+
+Kalau ada yang bisa saya bantu selanjutnya, jangan ragu untuk menghubungi saya kapan saja.
+
+Sekali lagi terima kasih.`,
+  },
+};
+function fillTemplate(str, lead) {
+  return str.replace(/\{\{nama\}\}/g, lead.name || "perusahaan Anda").replace(/\{\{pic\}\}/g, lead.key_person || "Bapak/Ibu");
+}
 
 export default function LeadModal({ lead, stages, settings, onClose, onSaved }) {
   const [f, setF] = useState({ ...lead });
@@ -15,6 +66,38 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
   const [busy, setBusy] = useState(false);
   const [locBusy, setLocBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+
+  // ---- KIRIM EMAIL ----
+  const [showEmail, setShowEmail] = useState(false);
+  const [emailTpl, setEmailTpl] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState("");
+
+  const pickTemplate = (key) => {
+    setEmailTpl(key);
+    if (!key) { setEmailSubject(""); setEmailBody(""); return; }
+    const t = EMAIL_TEMPLATES[key];
+    setEmailSubject(fillTemplate(t.subject, f));
+    setEmailBody(fillTemplate(t.body, f));
+  };
+
+  const sendEmail = async () => {
+    if (!f.email) { alert("Lead ini belum punya alamat email."); return; }
+    if (!emailSubject.trim() || !emailBody.trim()) { alert("Subjek & isi email wajib diisi."); return; }
+    setEmailBusy(true); setEmailMsg("");
+    try {
+      await db.sendLeadEmail({ lead_id: lead.id, to_email: f.email, to_name: f.name, subject: emailSubject, body: emailBody, sender_name: settings?.community_display_name });
+      setEmailMsg("✅ Email berhasil terkirim & kecatet di progress.");
+      setEmailTpl(""); setEmailSubject(""); setEmailBody("");
+      onSaved();
+    } catch (e) {
+      setEmailMsg("Gagal: " + e.message);
+    } finally {
+      setEmailBusy(false);
+    }
+  };
 
   const saveLocation = () => {
     if (!lead.id) { alert("Simpan lead-nya dulu sebelum simpan lokasi."); return; }
@@ -116,6 +199,34 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
                   </div>
                 )
               ))}</div>
+            )}
+          </div>
+
+          <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50">
+            <button onClick={() => setShowEmail((v) => !v)} className="w-full flex items-center justify-between text-xs font-semibold text-slate-600">
+              <span className="flex items-center gap-1.5"><Mail size={14} /> Kirim Email</span>
+              <span className="text-slate-400">{showEmail ? "▲" : "▼"}</span>
+            </button>
+            {showEmail && (
+              <div className="mt-3 space-y-2.5">
+                {!f.email ? (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2">Lead ini belum punya alamat email — isi dulu di field Email di atas.</p>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-slate-400">Kirim ke: <b>{f.email}</b></p>
+                    <select className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white" value={emailTpl} onChange={(e) => pickTemplate(e.target.value)}>
+                      <option value="">— Pilih template —</option>
+                      {Object.entries(EMAIL_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.label}</option>)}
+                    </select>
+                    <input className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white" placeholder="Subjek email" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
+                    <textarea className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white min-h-[120px]" placeholder="Isi email" value={emailBody} onChange={(e) => setEmailBody(e.target.value)} />
+                    <button onClick={sendEmail} disabled={emailBusy} className="w-full bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1.5">
+                      {emailBusy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} {emailBusy ? "Mengirim…" : "Kirim Email"}
+                    </button>
+                    {emailMsg && <p className={`text-[11px] ${emailMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{emailMsg}</p>}
+                  </>
+                )}
+              </div>
             )}
           </div>
 
