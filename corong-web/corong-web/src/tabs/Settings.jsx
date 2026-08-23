@@ -1,377 +1,445 @@
-import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown } from "lucide-react";
-import { supabase } from "../lib/supabaseClient";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
-import DataCleanupModal from "../components/DataCleanupModal";
+import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
+import MeetingRecorderModal from "../components/MeetingRecorderModal";
 
-const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
+// Rumus Haversine - itung jarak lurus antara 2 titik GPS (dalam meter)
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
-export default function Settings({ settings, stages, leads, onChanged }) {
-  const [names, setNames] = useState((settings.sales_names || []).join(", "));
-  const [st, setSt] = useState(stages.map((s) => ({ ...s })));
+const CHECKIN_RADIUS_M = 100;
+
+function PhotoCheckinModal({ pending, onClose, onDone }) {
+  const [photo, setPhoto] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [exporting, setExporting] = useState(false);
-  const [tgLink, setTgLink] = useState(null);
-  const [tgCode, setTgCode] = useState("");
-  const [tgBusy, setTgBusy] = useState(false);
-  const [tgLoading, setTgLoading] = useState(true);
-  const [gcalLink, setGcalLink] = useState(null);
-  const [gcalBusy, setGcalBusy] = useState(false);
-  const [gcalLoading, setGcalLoading] = useState(true);
-  const [syncBusy, setSyncBusy] = useState(false);
-  const [syncMsg, setSyncMsg] = useState("");
-  const [showCleanup, setShowCleanup] = useState(false);
-  const [pwNew, setPwNew] = useState("");
-  const [pwConfirm, setPwConfirm] = useState("");
-  const [pwBusy, setPwBusy] = useState(false);
-  const [pwMsg, setPwMsg] = useState("");
 
-  // ---- TIM / ORGANISASI ----
-  const [org, setOrg] = useState(null);
-  const [members, setMembers] = useState([]);
-  const [myUid, setMyUid] = useState(null);
-  const [orgLoading, setOrgLoading] = useState(true);
-  const [inviteCode, setInviteCode] = useState("");
-  const [inviteBusy, setInviteBusy] = useState(false);
-  const [joinCode, setJoinCode] = useState("");
-  const [joinBusy, setJoinBusy] = useState(false);
-  const [joinMsg, setJoinMsg] = useState("");
-
-  const loadOrg = () => {
-    setOrgLoading(true);
-    Promise.all([db.getMyOrg(), db.getOrgMembers(), db.getCurrentUserId()])
-      .then(([o, m, uid]) => { setOrg(o); setMembers(m); setMyUid(uid); })
-      .catch(() => {})
-      .finally(() => setOrgLoading(false));
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhoto(file);
+    setPreview(URL.createObjectURL(file));
   };
 
-  useEffect(() => {
-    db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); }).catch(() => setTgLoading(false));
-    db.getGoogleCalendarLink().then((l) => { setGcalLink(l); setGcalLoading(false); }).catch(() => setGcalLoading(false));
-    loadOrg();
-  }, []);
-
-  const isOwner = org && myUid && org.owner_user_id === myUid;
-  const isEnterprise = org?.plan === "enterprise";
-  // Yang bayar paket Individual (bukan Enterprise) sengaja gak dikasih akses
-  // fitur tim sama sekali - paket itu emang didesain solo doang.
-  const isIndividualPaid = settings.plan === "premium" && !isEnterprise;
-
-  const generateInvite = async () => {
-    setInviteBusy(true);
-    try { setInviteCode(await db.createInviteCode("sales_rep")); }
-    catch (e) { alert("Gagal bikin kode: " + e.message); }
-    finally { setInviteBusy(false); }
-  };
-
-  const removeMember = async (id, name) => {
-    if (!window.confirm(`Keluarin ${name || "anggota ini"} dari tim?`)) return;
-    try { await db.removeMember(id); loadOrg(); }
-    catch (e) { alert("Gagal: " + e.message); }
-  };
-
-  const [leaveBusy, setLeaveBusy] = useState(false);
-  const leaveOrganization = async () => {
-    if (!window.confirm(`Keluar dari organisasi "${org?.name}"? Kamu bakal balik punya ruang kerja sendiri (kosong).`)) return;
-    setLeaveBusy(true);
-    try { await db.leaveOrg(); loadOrg(); onChanged(); }
-    catch (e) { alert("Gagal keluar: " + e.message); }
-    finally { setLeaveBusy(false); }
-  };
-
-  const joinWithCode = async () => {
-    if (!joinCode.trim()) return;
-    setJoinBusy(true); setJoinMsg("");
+  const confirm = async () => {
+    if (!photo) { alert("Foto wajib dilampirin buat check-in."); return; }
+    setBusy(true);
     try {
-      const res = await db.redeemInviteCode(joinCode.trim());
-      setJoinMsg(`✅ Berhasil gabung ke ${res.org_name}. Refresh halaman buat lihat data tim.`);
-      setJoinCode("");
-      loadOrg();
-      onChanged();
-    } catch (e) {
-      setJoinMsg("Gagal gabung: " + e.message);
-    } finally {
-      setJoinBusy(false);
-    }
-  };
-
-  const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales Rep" };
-
-  const genCode = async () => {
-    setTgBusy(true);
-    try { const code = await db.generateTelegramCode(); setTgCode(code); }
-    catch (e) { alert("Gagal generate kode: " + e.message); }
-    finally { setTgBusy(false); }
-  };
-  const unlinkTg = async () => {
-    if (!window.confirm("Putuskan koneksi Telegram?")) return;
-    setTgBusy(true);
-    try { await db.unlinkTelegram(); setTgLink(null); setTgCode(""); }
-    catch (e) { alert("Gagal: " + e.message); }
-    finally { setTgBusy(false); }
-  };
-
-  const connectGcal = async () => {
-    setGcalBusy(true);
-    try { await db.connectGoogleCalendar(); }
-    catch (e) { alert("Gagal mulai koneksi: " + e.message); setGcalBusy(false); }
-  };
-  const disconnectGcal = async () => {
-    if (!window.confirm("Putuskan koneksi Google Calendar?")) return;
-    setGcalBusy(true);
-    try { await db.disconnectGoogleCalendar(); setGcalLink(null); }
-    catch (e) { alert("Gagal: " + e.message); }
-    finally { setGcalBusy(false); }
-  };
-
-  const syncOldData = async () => {
-    setSyncBusy(true); setSyncMsg("");
-    try {
-      const res = await db.bulkSyncCalendar();
-      setSyncMsg(`✅ ${res.visitSynced} jadwal visit berhasil di-sync ke Google Calendar.`);
-    } catch (e) {
-      setSyncMsg("Gagal sync: " + e.message);
-    } finally {
-      setSyncBusy(false);
-    }
-  };
-
-  const setStage = (i, k, v) => setSt((p) => p.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)));
-  const addStage = () => setSt((p) => [...p, { key: `tahap_${Date.now()}`, label: "Tahap Baru", hex: "#94a3b8", type: "normal" }]);
-  const delStage = (i) => setSt((p) => p.filter((_, idx) => idx !== i));
-
-  const save = async () => {
-    setBusy(true); setMsg("");
-    try {
-      await db.saveSalesNames(names.split(",").map((s) => s.trim()).filter(Boolean));
-      await db.saveStages(st);
-      setMsg("Pengaturan tersimpan.");
-      onChanged();
-    } catch (e) { setMsg("Gagal simpan: " + e.message); }
+      const photo_url = await db.uploadCheckinPhoto(photo);
+      await pending.run(photo_url);
+      onDone();
+    } catch (e) { alert("Gagal check-in: " + e.message); }
     finally { setBusy(false); }
   };
 
-  const exportBackup = async () => {
-    setExporting(true);
-    try {
-      const data = await db.exportAllData();
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `nexto-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-    } catch (e) { alert("Gagal export: " + e.message); }
-    finally { setExporting(false); }
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-bold text-base">Foto Bukti Check-in</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">Wajib lampirin foto (misal foto lokasi/produk/notulen) buat "{pending.leadName}".</p>
+        <label className="block cursor-pointer">
+          {preview ? (
+            <img src={preview} alt="" className="w-full h-48 object-cover rounded-2xl border border-slate-200" />
+          ) : (
+            <div className="w-full h-48 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 gap-2">
+              <Camera size={28} />
+              <span className="text-xs font-medium">Ambil / pilih foto</span>
+            </div>
+          )}
+          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+        </label>
+        <button onClick={confirm} disabled={busy || !photo} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} {busy ? "Menyimpan…" : "Konfirmasi Check-in"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TodayVisitsCard({ leads, onChanged }) {
+  const todayVisits = useMemo(() => leads.filter((c) => c.visit_date === todayISO()), [leads]);
+  const [myPos, setMyPos] = useState(null);
+  const [geoError, setGeoError] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(null);
+  const [recordingLead, setRecordingLead] = useState(null);
+  const [pendingCheckin, setPendingCheckin] = useState(null);
+  const watchIdRef = useRef(null);
+
+  useEffect(() => {
+    if (todayVisits.length === 0 || !navigator.geolocation) return;
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => { setMyPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoError(false); },
+      () => setGeoError(true),
+      { enableHighAccuracy: true, maximumAge: 10000 }
+    );
+    return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
+  }, [todayVisits.length]);
+
+  // Kedua alur (udah ada titik lokasi ATAU baru pertama kali) sama-sama minta
+  // foto dulu sebelum check-in beneran kesimpen - lewat PhotoCheckinModal.
+  const askCheckIn = (lead, distance) => {
+    setPendingCheckin({
+      leadName: lead.name,
+      run: async (photo_url) => {
+        setCheckingIn(lead.id);
+        try {
+          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude: myPos.lat, longitude: myPos.lng, distance_meters: distance, photo_url });
+          onChanged();
+        } finally { setCheckingIn(null); }
+      },
+    });
   };
 
-  const changePassword = async () => {
-    setPwMsg("");
-    if (pwNew.length < 6) { setPwMsg("Password minimal 6 karakter."); return; }
-    if (pwNew !== pwConfirm) { setPwMsg("Konfirmasi password gak cocok."); return; }
-    setPwBusy(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: pwNew });
-      if (error) throw error;
-      setPwMsg("✅ Password berhasil diganti.");
-      setPwNew(""); setPwConfirm("");
-    } catch (e) {
-      setPwMsg("Gagal ganti password: " + e.message);
-    } finally {
-      setPwBusy(false);
-    }
+  const askSavePin = (lead) => {
+    if (!navigator.geolocation) { alert("HP/browser kamu ga dukung GPS."); return; }
+    setPendingCheckin({
+      leadName: lead.name,
+      run: (photo_url) => new Promise((resolve, reject) => {
+        setCheckingIn(lead.id);
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            try {
+              const { latitude, longitude } = pos.coords;
+              await db.saveLeadLocation(lead.id, latitude, longitude);
+              await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0, photo_url });
+              onChanged();
+              resolve();
+            } catch (e) { reject(e); }
+            finally { setCheckingIn(null); }
+          },
+          () => { setCheckingIn(null); reject(new Error("Gagal ambil lokasi GPS. Pastikan izin lokasi diaktifkan.")); },
+          { enableHighAccuracy: true, timeout: 15000 }
+        );
+      }),
+    });
   };
+
+  if (todayVisits.length === 0) return null;
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-bold tracking-tight">Pengaturan</h1>
-
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Users size={15} className="text-violet-500" /> Tim</h3>
-        {orgLoading ? (
-          <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
-        ) : (
-          <>
-            <p className="text-xs text-slate-500 mb-3">
-              Paket: <b>{isEnterprise ? "Enterprise" : "Free/Premium (solo)"}</b> · {members.length}/{org?.member_limit || 1} anggota
-            </p>
-            <div className="space-y-1.5 mb-3">
-              {members.map((m) => (
-                <div key={m.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
-                  <div className="text-xs flex items-center gap-1.5">
-                    {m.role === "owner" && <Crown size={12} className="text-amber-500" />}
-                    {m.user_id === myUid ? "Kamu" : m.user_id.slice(0, 8)} <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>
-                  </div>
-                  {isOwner && m.user_id !== myUid && (
-                    <button onClick={() => removeMember(m.id, ROLE_LABEL[m.role])} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
-                  )}
+    <div className="bg-white border border-orange-200 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 mb-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-3">
+        <span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Navigation size={14} /></span>
+        Kunjungan Hari Ini
+      </div>
+      {geoError && <p className="text-xs text-rose-500 mb-2">Gagal akses GPS. Pastikan izin lokasi diaktifkan buat browser/app ini.</p>}
+      <div className="space-y-2">
+        {todayVisits.map((c) => {
+          const hasCoords = c.latitude != null && c.longitude != null;
+          let distance = null;
+          if (hasCoords && myPos) distance = Math.round(haversineMeters(myPos.lat, myPos.lng, c.latitude, c.longitude));
+          const canCheckIn = hasCoords && distance !== null && distance <= CHECKIN_RADIUS_M;
+          return (
+            <div key={c.id} className="flex items-center justify-between gap-3 border border-slate-100 rounded-2xl p-3">
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate">{c.name}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  {!hasCoords ? "Belum ada titik lokasi tersimpan" : distance === null ? "Nyari posisi kamu…" : canCheckIn ? "Kamu udah di lokasi ✓" : `${distance >= 1000 ? (distance / 1000).toFixed(1) + " km" : distance + " m"} lagi`}
                 </div>
-              ))}
-            </div>
-
-            {!isOwner ? (
-              // Dia anggota organisasi ORANG LAIN (udah pernah gabung pake kode) -
-              // kolom "gabung" disembunyiin, gantiin sama tombol keluar.
-              <div className="border-t border-slate-100 mt-1 pt-3">
-                <p className="text-xs text-slate-500 mb-2">Kamu anggota organisasi <b>{org?.name}</b>.</p>
-                <button onClick={leaveOrganization} disabled={leaveBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">
-                  {leaveBusy ? "Keluar..." : "Keluar dari Organisasi"}
-                </button>
               </div>
-            ) : isIndividualPaid ? (
-              <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Paket kamu <b>Individual</b> - fitur tim (undang/gabung anggota) khusus paket Enterprise.</p>
-            ) : (
-              <>
-                {isEnterprise ? (
-                  members.length >= (org?.member_limit || 1) ? (
-                    <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
-                  ) : inviteCode ? (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                      <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota tim, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
-                      <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
-                        <span className="flex-1 tracking-wider">{inviteCode}</span>
-                        <button onClick={() => navigator.clipboard.writeText(inviteCode)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-2">Bisa dipake berkali-kali sampe kuota anggota penuh. Berlaku 7 hari.</p>
-                    </div>
-                  ) : (
-                    <button onClick={generateInvite} disabled={inviteBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-                      {inviteBusy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Undang Anggota
-                    </button>
-                  )
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button onClick={() => setRecordingLead(c)} title="Rekam Meeting" className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-orange-600"><Mic size={14} /></button>
+                {!hasCoords ? (
+                  <button
+                    onClick={() => askSavePin(c)}
+                    disabled={checkingIn === c.id}
+                    className="text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60"
+                  >
+                    <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Simpan Lokasi Ini"}
+                  </button>
                 ) : (
-                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise (Rp599rb/bulan, maks 6 orang) buat bisa undang anggota tim.</p>
+                  <button
+                    onClick={() => askCheckIn(c, distance)}
+                    disabled={!canCheckIn || checkingIn === c.id}
+                    className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${canCheckIn ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-slate-100 text-slate-400"}`}
+                  >
+                    <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Saya Sudah Sampai"}
+                  </button>
                 )}
-
-                <div className="border-t border-slate-100 mt-3 pt-3">
-                  <p className="text-xs font-medium text-slate-500 mb-1.5">Punya kode undangan?</p>
-                  <div className="flex gap-2">
-                    <input className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl uppercase" placeholder="Masukin kode" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
-                    <button onClick={joinWithCode} disabled={joinBusy} className="text-sm bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-4 font-medium">
-                      {joinBusy ? <Loader2 size={15} className="animate-spin" /> : "Gabung"}
-                    </button>
-                  </div>
-                  {joinMsg && <p className={`text-xs mt-2 ${joinMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{joinMsg}</p>}
-                </div>
-              </>
-            )}
-          </>
-        )}
+              </div>
+            </div>
+          );
+        })}
       </div>
+      {recordingLead && <MeetingRecorderModal lead={recordingLead} onClose={() => setRecordingLead(null)} onSaved={onChanged} />}
+      {pendingCheckin && (
+        <PhotoCheckinModal
+          pending={pendingCheckin}
+          onClose={() => setPendingCheckin(null)}
+          onDone={() => { setPendingCheckin(null); alert(`✅ Check-in "${pendingCheckin.leadName}" berhasil dicatat.`); }}
+        />
+      )}
+    </div>
+  );
+}
 
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 space-y-3">
-        <label className="block"><span className="text-xs font-medium text-slate-500">Nama sales (pisah koma)</span><input className={inp} value={names} onChange={(e) => setNames(e.target.value)} placeholder="Nando, Budi, Sari" /></label>
+function CheckinHistory() {
+  const [month, setMonth] = useState(todayISO().slice(0, 7));
+  const [items, setItems] = useState(null);
+
+  useEffect(() => {
+    db.getCheckins(month).then(setItems).catch(() => setItems([]));
+  }, [month]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-3 py-2 bg-white" />
       </div>
-
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-        <div className="flex items-center justify-between mb-2"><h3 className="font-semibold text-sm">Tahap pipeline</h3><button onClick={addStage} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={13} /> tambah tahap</button></div>
-        <p className="text-xs text-slate-400 mb-3">Tipe nentuin hitungan dashboard: <b>Deal</b> = menang, <b>Lost</b> = gugur, <b>Normal</b> = masih jalan.</p>
+      {items === null ? (
+        <div className="text-sm text-slate-400 py-8 text-center">Memuat…</div>
+      ) : items.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><History size={32} className="mx-auto text-slate-300 mb-3" />Belum ada check-in di bulan ini.</div>
+      ) : (
         <div className="space-y-2">
-          {st.map((s, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-center">
-              <input type="color" className="col-span-1 h-9 rounded border border-slate-300" value={s.hex} onChange={(e) => setStage(i, "hex", e.target.value)} />
-              <input className="col-span-5 px-2 py-1.5 text-sm border border-slate-300 rounded-lg" value={s.label} onChange={(e) => setStage(i, "label", e.target.value)} />
-              <select className="col-span-4 px-2 py-1.5 text-sm border border-slate-300 rounded-lg" value={s.type} onChange={(e) => setStage(i, "type", e.target.value)}>
-                <option value="normal">Normal</option><option value="won">Deal (menang)</option><option value="lost">Lost</option>
-              </select>
-              <button onClick={() => delStage(i)} className="col-span-2 text-slate-300 hover:text-rose-500 flex justify-center"><Trash2 size={15} /></button>
+          {items.map((ci) => (
+            <div key={ci.id} className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate">{ci.lead_name}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{new Date(ci.checked_in_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+              </div>
+              <a href={`https://maps.google.com/?q=${ci.latitude},${ci.longitude}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-orange-600 hover:underline flex items-center gap-1"><MapPin size={12} /> Lihat peta</a>
             </div>
           ))}
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
 
-      {msg && <div className={`text-sm rounded-xl p-3 ${msg.startsWith("Gagal") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{msg}</div>}
-      <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan pengaturan</button>
+const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
+const DAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Sparkles size={15} className="text-orange-500" /> Rapihin Data</h3>
-        <p className="text-xs text-slate-500 mb-3">Cari saran kategori buat lead "Lainnya", lead yang udah lama ga aktif, dan data kontak yang kurang lengkap. Semua perubahan tetap kamu yang approve.</p>
-        <button onClick={() => setShowCleanup(true)} className="text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-          <Sparkles size={15} /> Buka Rapihin Data
-        </button>
-      </div>
+function dateStr(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
 
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Send size={15} className="text-sky-500" /> Telegram Bot</h3>
-        <p className="text-xs text-slate-500 mb-3">Sambungin akun Telegram kamu buat tambah lead, jadwalin visit, dan catat progress langsung dari chat.</p>
-        {tgLoading ? (
-          <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
-        ) : tgLink ? (
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="text-sm text-emerald-700 flex items-center gap-1.5"><CheckCircle2 size={15} /> Terhubung {tgLink.username ? `sebagai @${tgLink.username}` : ""}</div>
-            <button onClick={unlinkTg} disabled={tgBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">Putuskan koneksi</button>
+function AddVisitModal({ leads, onClose, onSaved }) {
+  const [q, setQ] = useState("");
+  const [sel, setSel] = useState(null);
+  const [date, setDate] = useState(todayISO());
+  const [meet, setMeet] = useState("");
+  const [agenda, setAgenda] = useState("");
+  const [busy, setBusy] = useState(false);
+  const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
+  const pick = (c) => { setSel(c); setQ(""); setMeet(c.visit_meet || c.key_person || ""); setAgenda(c.visit_agenda || ""); if (c.visit_date) setDate(c.visit_date); };
+  const save = async () => {
+    if (!sel) { alert("Pilih company dulu."); return; }
+    setBusy(true);
+    try { await db.upsertLead({ ...sel, visit_date: date, visit_meet: meet, visit_agenda: agenda }); onSaved(); }
+    catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
+  };
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><CalendarCheck size={18} className="text-orange-500" /> Tambah Visit</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
+        <div className="space-y-3">
+          <div>
+            <span className="text-xs font-medium text-slate-500">Company *</span>
+            {sel ? (
+              <div className="mt-1 flex items-center justify-between border border-orange-300 bg-orange-50 rounded-xl px-3 py-2"><span className="text-sm font-medium">{sel.name}</span><button onClick={() => setSel(null)} className="text-xs text-slate-500 hover:text-rose-500">ganti</button></div>
+            ) : (
+              <div className="relative">
+                <Search size={15} className="absolute left-2.5 top-3.5 text-slate-400" />
+                <input autoFocus className="w-full mt-1 pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
+                {matches.length > 0 && <div className="mt-1 border border-slate-200 rounded-xl bg-white shadow-sm max-h-52 overflow-y-auto">{matches.map((c) => <div key={c.id} onClick={() => pick(c)} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0"><div className="font-medium">{c.name}</div><div className="text-[11px] text-slate-400">{[c.city, c.category].filter(Boolean).join(" · ")}</div></div>)}</div>}
+                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Company ga ketemu. Tambahin di tab Leads dulu.</p>}
+              </div>
+            )}
           </div>
-        ) : tgCode ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-            <p className="text-xs text-slate-600 mb-2">Buka Telegram, cari bot kamu, lalu kirim pesan ini:</p>
-            <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
-              <span className="flex-1">/link {tgCode}</span>
-              <button onClick={() => navigator.clipboard.writeText(`/link ${tgCode}`)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
+          <div className={sel ? "" : "opacity-40 pointer-events-none"}>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal visit</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
+              <label className="block"><span className="text-xs font-medium text-slate-500">Ketemu siapa</span><input className={inp} value={meet} onChange={(e) => setMeet(e.target.value)} placeholder="mis. Bu Rina (purchasing)" /></label>
             </div>
-            <p className="text-[11px] text-slate-400 mt-2">Kode berlaku 10 menit. Setelah terhubung, refresh halaman ini.</p>
+            <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Agenda</span><textarea className={inp} rows={2} value={agenda} onChange={(e) => setAgenda(e.target.value)} placeholder="mau bahas apa" /></label>
           </div>
-        ) : (
-          <button onClick={genCode} disabled={tgBusy} className="text-sm bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-            {tgBusy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} Hubungkan Telegram
-          </button>
-        )}
+        </div>
+        <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan visit</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button></div>
+      </div>
+    </div>
+  );
+}
+
+function MonthCalendar({ leads, onEdit, month, setMonth }) {
+  const year = month.getFullYear();
+  const monthIdx = month.getMonth();
+  const today = todayISO();
+
+  const visitsByDate = useMemo(() => {
+    const map = {};
+    leads.forEach((c) => { if (c.visit_date) { (map[c.visit_date] ||= []).push(c); } });
+    return map;
+  }, [leads]);
+
+  const firstWeekday = new Date(year, monthIdx, 1).getDay();
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const monthLabel = month.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  const prevMonth = () => setMonth(new Date(year, monthIdx - 1, 1));
+  const nextMonth = () => setMonth(new Date(year, monthIdx + 1, 1));
+  const goToday = () => setMonth(new Date());
+
+  return (
+    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1.5">
+          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronLeft size={16} /></button>
+          <span className="text-sm font-semibold text-slate-700 capitalize w-36 text-center">{monthLabel}</span>
+          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronRight size={16} /></button>
+        </div>
+        <button onClick={goToday} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 hover:bg-slate-50 text-slate-600">Hari ini</button>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
-        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar kamu biar jadwal visit & follow-up dari bot Telegram otomatis masuk ke calendar.</p>
-        {gcalLoading ? (
-          <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
-        ) : gcalLink ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="text-sm text-emerald-700 flex items-center gap-1.5"><CheckCircle2 size={15} /> Terhubung {gcalLink.email ? `sebagai ${gcalLink.email}` : ""}</div>
-              <button onClick={disconnectGcal} disabled={gcalBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">Putuskan koneksi</button>
-            </div>
-            <div className="border-t border-slate-100 pt-3">
-              <p className="text-xs text-slate-500 mb-2">Punya jadwal visit lama yang dibuat sebelum Google Calendar terhubung? Klik ini buat sync-in semuanya sekaligus.</p>
-              <button onClick={syncOldData} disabled={syncBusy} className="text-xs bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-                {syncBusy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {syncBusy ? "Menyinkronkan…" : "Sync semua jadwal lama"}
-              </button>
-              {syncMsg && <p className={`text-xs mt-2 ${syncMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{syncMsg}</p>}
-            </div>
-          </div>
-        ) : (
-          <button onClick={connectGcal} disabled={gcalBusy} className="text-sm bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-            {gcalBusy ? <Loader2 size={15} className="animate-spin" /> : <Calendar size={15} />} Hubungkan Google Calendar
-          </button>
-        )}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {DAY_LABELS.map((d) => <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1">{d}</div>)}
       </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d, i) => {
+          if (d === null) return <div key={i} className="min-h-[74px] rounded-lg" />;
+          const ds = dateStr(year, monthIdx, d);
+          const isToday = ds === today;
+          const dayVisits = visitsByDate[ds] || [];
+          return (
+            <div key={i} className={`min-h-[74px] rounded-lg border p-1 ${isToday ? "border-orange-400 bg-orange-50/50" : "border-slate-100"}`}>
+              <div className={`text-[10px] font-medium mb-1 ${isToday ? "text-orange-600" : "text-slate-400"}`}>{d}</div>
+              <div className="space-y-0.5">
+                {dayVisits.slice(0, 2).map((c) => (
+                  <button key={c.id} onClick={() => onEdit(c)} className="w-full text-left text-[9px] leading-tight bg-orange-100 text-orange-700 rounded px-1 py-0.5 truncate hover:bg-orange-200">
+                    {c.name}
+                  </button>
+                ))}
+                {dayVisits.length > 2 && <div className="text-[9px] text-slate-400 px-1">+{dayVisits.length - 2} lagi</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><KeyRound size={15} className="text-slate-500" /> Ganti Password</h3>
-        <p className="text-xs text-slate-500 mb-3">Ganti password akun kamu kapan aja. Minimal 6 karakter.</p>
-        <div className="space-y-2 max-w-sm">
-          <input type="password" className={inp} placeholder="Password baru" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
-          <input type="password" className={inp} placeholder="Ulangi password baru" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && changePassword()} />
-          {pwMsg && <div className={`text-xs rounded-lg p-2 ${pwMsg.startsWith("Gagal") || pwMsg.includes("gak cocok") || pwMsg.includes("minimal") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{pwMsg}</div>}
-          <button onClick={changePassword} disabled={pwBusy} className="bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5">
-            {pwBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Ganti Password
-          </button>
+function VisitView({ leads, onEdit, onChanged }) {
+  const [add, setAdd] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [view, setView] = useState("table");
+  const [month, setMonth] = useState(new Date());
+  const visits = useMemo(() => leads.filter((c) => c.visit_date).sort((a, b) => (a.visit_date < b.visit_date ? -1 : 1)), [leads]);
+  const upcoming = visits.filter((c) => c.visit_date >= todayISO());
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex bg-slate-100 rounded-xl p-1">
+          <button onClick={() => setView("table")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "table" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Table2 size={13} /> Tabel</button>
+          <button onClick={() => setView("calendar")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "calendar" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Calendar size={13} /> Kalender</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setRecording(true)} className="flex items-center gap-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm px-3 py-2 rounded-xl font-medium"><Mic size={15} /> Rekam Meeting</button>
+          <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-        <h3 className="font-semibold text-sm mb-1">Backup data</h3>
-        <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori AI Advisor) jadi 1 file — simpen di komputer/HP kamu sesekali biar aman.</p>
-        <button onClick={exportBackup} disabled={exporting} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
-          {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export semua data"}
+      <TodayVisitsCard leads={leads} onChanged={onChanged} />
+
+      {visits.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana aja.</div>
+      ) : view === "calendar" ? (
+        <MonthCalendar leads={leads} onEdit={onEdit} month={month} setMonth={setMonth} />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><CalendarCheck size={13} /> Akan datang</div><div className="font-mono font-bold text-2xl text-orange-600">{upcoming.length}</div></div>
+            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><CalendarCheck size={13} /> Total terjadwal</div><div className="font-mono font-bold text-2xl text-slate-800">{visits.length}</div></div>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
+                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Lokasi</th><th className="text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Tanggal visit</th><th className="text-left px-3 py-2 font-medium">Ketemu</th><th className="text-left px-3 py-2 font-medium">Agenda</th>
+              </tr></thead>
+              <tbody>
+                {visits.map((c) => { const past = c.visit_date < todayISO(); const today = c.visit_date === todayISO(); const meet = c.visit_meet || c.key_person; return (
+                  <tr key={c.id} className={`border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer ${past ? "opacity-50" : ""}`} onClick={() => onEdit(c)}>
+                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
+                    <td className="px-3 py-2 text-xs text-slate-600">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
+                    <td className="px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
+                    <td className="px-3 py-2 text-xs"><span className={today ? "text-orange-600 font-medium" : "text-slate-600"}>{fmtDate(c.visit_date)}{today && " · hari ini"}</span></td>
+                    <td className="px-3 py-2 text-xs text-slate-600">{meet || "—"}</td>
+                    <td className="px-3 py-2 text-xs text-slate-600 max-w-56">{c.visit_agenda ? <div className="line-clamp-2">{c.visit_agenda}</div> : <span className="text-slate-300">—</span>}</td>
+                  </tr> ); })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      {add && <AddVisitModal leads={leads} onClose={() => setAdd(false)} onSaved={() => { setAdd(false); onChanged(); }} />}
+      {recording && <MeetingRecorderModal leads={leads} onClose={() => setRecording(false)} onSaved={onChanged} />}
+    </div>
+  );
+}
+
+function FollowupView({ leads, onEdit, onChanged }) {
+  const todo = useMemo(() => leads.filter((c) => c.next_action && c.next_action.trim()), [leads]);
+  const done = async (id) => { await db.upsertLead({ ...leads.find((l) => l.id === id), next_action: "" }); onChanged(); };
+
+  return (
+    <div>
+      <p className="text-sm text-slate-500 mb-3">Semua lead yang punya "Next action". Klik nama buat buka, ✓ buat tandai selesai.</p>
+      {todo.length === 0 ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarClock size={32} className="mx-auto text-slate-300 mb-3" />Belum ada next action. Buka lead → isi kolom "Next action".</div>
+      ) : (
+        <div className="space-y-2">
+          {todo.map((c) => { const pm = prioMeta(c.priority); return (
+            <div key={c.id} className="bg-white border border-slate-200/80 border-l-4 border-l-rose-400 rounded-2xl shadow-sm p-3 flex items-start gap-3">
+              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit(c)}>
+                <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-sm">{c.name}</span>{pm && <span className="text-[10px] border rounded-full px-1.5 py-0.5" style={chipStyle(pm.hex)}>{pm.label}</span>}</div>
+                <div className="text-xs text-orange-700 mt-0.5">→ {c.next_action}</div>
+              </div>
+              <button onClick={() => done(c.id)} title="Tandai selesai" className="text-slate-300 hover:text-emerald-500 p-1"><CheckCircle2 size={16} /></button>
+            </div> ); })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function VisitFollowup({ leads, onEdit, onChanged }) {
+  const [tab, setTab] = useState("visit");
+  const visitCount = leads.filter((c) => c.visit_date).length;
+  const followupCount = leads.filter((c) => c.next_action && c.next_action.trim()).length;
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold tracking-tight mb-3">Visit & Follow-up</h1>
+      <div className="flex gap-2 mb-4 border-b border-slate-200 overflow-x-auto">
+        <button onClick={() => setTab("visit")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 shrink-0 ${tab === "visit" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+          <CalendarCheck size={15} /> Visit <span className="text-xs text-slate-400">({visitCount})</span>
+        </button>
+        <button onClick={() => setTab("followup")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 shrink-0 ${tab === "followup" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+          <CalendarClock size={15} /> Follow-up <span className="text-xs text-slate-400">({followupCount})</span>
+        </button>
+        <button onClick={() => setTab("checkin")} className={`text-sm px-4 py-2.5 border-b-2 -mb-px flex items-center gap-1.5 shrink-0 ${tab === "checkin" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+          <History size={15} /> Riwayat Check-in
         </button>
       </div>
 
-      <div className="bg-white border border-rose-200 rounded-2xl shadow-sm p-4">
-        <h3 className="font-semibold text-sm mb-1 text-rose-600">Zona bahaya</h3>
-        <p className="text-xs text-slate-500 mb-2">Keluar dari akun ini di perangkat ini.</p>
-        <button onClick={() => supabase.auth.signOut()} className="text-sm border border-rose-300 text-rose-600 rounded-xl px-3 py-2 hover:bg-rose-50">Keluar</button>
-      </div>
-
-      {showCleanup && <DataCleanupModal leads={leads} stages={stages} onClose={() => setShowCleanup(false)} onChanged={onChanged} />}
+      {tab === "visit" && <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
+      {tab === "followup" && <FollowupView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
+      {tab === "checkin" && <CheckinHistory />}
     </div>
   );
 }
