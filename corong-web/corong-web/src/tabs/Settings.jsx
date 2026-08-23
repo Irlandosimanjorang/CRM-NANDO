@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -27,10 +27,64 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   const [pwBusy, setPwBusy] = useState(false);
   const [pwMsg, setPwMsg] = useState("");
 
+  // ---- TIM / ORGANISASI ----
+  const [org, setOrg] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [myUid, setMyUid] = useState(null);
+  const [orgLoading, setOrgLoading] = useState(true);
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinMsg, setJoinMsg] = useState("");
+
+  const loadOrg = () => {
+    setOrgLoading(true);
+    Promise.all([db.getMyOrg(), db.getOrgMembers(), db.getCurrentUserId()])
+      .then(([o, m, uid]) => { setOrg(o); setMembers(m); setMyUid(uid); })
+      .catch(() => {})
+      .finally(() => setOrgLoading(false));
+  };
+
   useEffect(() => {
     db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); }).catch(() => setTgLoading(false));
     db.getGoogleCalendarLink().then((l) => { setGcalLink(l); setGcalLoading(false); }).catch(() => setGcalLoading(false));
+    loadOrg();
   }, []);
+
+  const isOwner = org && myUid && org.owner_user_id === myUid;
+  const isEnterprise = org?.plan === "enterprise";
+
+  const generateInvite = async () => {
+    setInviteBusy(true);
+    try { setInviteCode(await db.createInviteCode("sales_rep")); }
+    catch (e) { alert("Gagal bikin kode: " + e.message); }
+    finally { setInviteBusy(false); }
+  };
+
+  const removeMember = async (id, name) => {
+    if (!window.confirm(`Keluarin ${name || "anggota ini"} dari tim?`)) return;
+    try { await db.removeMember(id); loadOrg(); }
+    catch (e) { alert("Gagal: " + e.message); }
+  };
+
+  const joinWithCode = async () => {
+    if (!joinCode.trim()) return;
+    setJoinBusy(true); setJoinMsg("");
+    try {
+      const res = await db.redeemInviteCode(joinCode.trim());
+      setJoinMsg(`✅ Berhasil gabung ke ${res.org_name}. Refresh halaman buat lihat data tim.`);
+      setJoinCode("");
+      loadOrg();
+      onChanged();
+    } catch (e) {
+      setJoinMsg("Gagal gabung: " + e.message);
+    } finally {
+      setJoinBusy(false);
+    }
+  };
+
+  const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales Rep" };
 
   const genCode = async () => {
     setTgBusy(true);
@@ -120,6 +174,66 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Pengaturan</h1>
+
+      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Users size={15} className="text-violet-500" /> Tim</h3>
+        {orgLoading ? (
+          <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
+        ) : (
+          <>
+            <p className="text-xs text-slate-500 mb-3">
+              Paket: <b>{isEnterprise ? "Enterprise" : "Free/Premium (solo)"}</b> · {members.length}/{org?.member_limit || 1} anggota
+            </p>
+            <div className="space-y-1.5 mb-3">
+              {members.map((m) => (
+                <div key={m.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
+                  <div className="text-xs flex items-center gap-1.5">
+                    {m.role === "owner" && <Crown size={12} className="text-amber-500" />}
+                    {m.user_id === myUid ? "Kamu" : m.user_id.slice(0, 8)} <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>
+                  </div>
+                  {isOwner && m.user_id !== myUid && (
+                    <button onClick={() => removeMember(m.id, ROLE_LABEL[m.role])} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {isOwner && (
+              isEnterprise ? (
+                members.length >= (org?.member_limit || 1) ? (
+                  <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
+                ) : inviteCode ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota tim, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
+                    <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
+                      <span className="flex-1 tracking-wider">{inviteCode}</span>
+                      <button onClick={() => navigator.clipboard.writeText(inviteCode)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-2">Berlaku 1 jam.</p>
+                  </div>
+                ) : (
+                  <button onClick={generateInvite} disabled={inviteBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+                    {inviteBusy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Undang Anggota
+                  </button>
+                )
+              ) : (
+                <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise (Rp599rb/bulan, maks 6 orang) buat bisa undang anggota tim.</p>
+              )
+            )}
+
+            <div className="border-t border-slate-100 mt-3 pt-3">
+              <p className="text-xs font-medium text-slate-500 mb-1.5">Punya kode undangan?</p>
+              <div className="flex gap-2">
+                <input className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl uppercase" placeholder="Masukin kode" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
+                <button onClick={joinWithCode} disabled={joinBusy} className="text-sm bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-4 font-medium">
+                  {joinBusy ? <Loader2 size={15} className="animate-spin" /> : "Gabung"}
+                </button>
+              </div>
+              {joinMsg && <p className={`text-xs mt-2 ${joinMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{joinMsg}</p>}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 space-y-3">
         <label className="block"><span className="text-xs font-medium text-slate-500">Nama sales (pisah koma)</span><input className={inp} value={names} onChange={(e) => setNames(e.target.value)} placeholder="Nando, Budi, Sari" /></label>
