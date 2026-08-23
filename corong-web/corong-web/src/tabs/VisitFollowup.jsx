@@ -124,8 +124,13 @@ function TodayVisitsCard({ leads, onChanged }) {
             } catch (e) { reject(e); }
             finally { setCheckingIn(null); }
           },
-          () => { setCheckingIn(null); reject(new Error("Gagal ambil lokasi GPS. Pastikan izin lokasi diaktifkan.")); },
-          { enableHighAccuracy: true, timeout: 15000 }
+          () => {
+            setCheckingIn(null);
+            // Laptop gak punya GPS asli (beda sama HP), jadi lebih sering gagal/lambat -
+            // kasih pesan yang ngearahin ke setting, bukan cuma bilang gagal doang.
+            reject(new Error("Gagal ambil lokasi. Kalau ini dari laptop, laptop emang gak punya GPS asli (beda sama HP) - cek Windows Settings > Privacy > Location harus nyala, dan izin lokasi Chrome buat nexto.site harus \"Allow\". Coba pake HP kalau masih gagal."));
+          },
+          { enableHighAccuracy: true, timeout: 25000, maximumAge: 30000 }
         );
       }),
     });
