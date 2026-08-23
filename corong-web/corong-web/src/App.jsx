@@ -228,7 +228,7 @@ export default function App() {
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
   const effectiveTab = tab;
-  const isLocked = (key) => !isPremium && !FREE_TABS.includes(key);
+  const isLocked = (key) => !loading && !isPremium && !FREE_TABS.includes(key);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/50 via-slate-50 to-slate-50 text-slate-900 flex">
@@ -277,7 +277,7 @@ export default function App() {
         </header>
 
         <main className="flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-32">
-          {!isPremium && (
+          {!loading && !isPremium && (
             <div className="mb-4 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 space-y-2.5">
               <div className="flex items-center justify-between gap-2 text-xs text-orange-800">
                 <span>Kamu sekarang di paket <b>Free</b> (Dashboard &amp; Leads doang). Upgrade ke Premium (Rp149rb/bulan) buat buka semua fitur + bot Telegram + Calendar + AI.</span>
