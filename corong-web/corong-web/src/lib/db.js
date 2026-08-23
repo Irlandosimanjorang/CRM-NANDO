@@ -39,10 +39,28 @@ export async function createInviteCode(role = "sales_rep") {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
   const code = Array.from({ length: 6 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
-  const expires = new Date(Date.now() + 60 * 60000).toISOString(); // 1 jam
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60000).toISOString(); // 7 hari
   const { error } = await supabase.from("org_invite_codes").insert({ code, org_id: orgId, created_by: uid, role, expires_at: expires });
   if (error) throw error;
   return code;
+}
+
+export async function getPendingInviteCodes() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase
+    .from("org_invite_codes")
+    .select("*")
+    .eq("org_id", orgId)
+    .is("used_by", null)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function revokeInviteCode(code) {
+  const { error } = await supabase.from("org_invite_codes").delete().eq("code", code);
+  if (error) throw error;
 }
 
 export async function redeemInviteCode(code) {
