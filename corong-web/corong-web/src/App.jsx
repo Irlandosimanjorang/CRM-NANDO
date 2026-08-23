@@ -79,6 +79,7 @@ export default function App() {
   const [leads, setLeads] = useState([]);
   const [dealTransactions, setDealTransactions] = useState([]);
   const [competitors, setCompetitors] = useState([]);
+  const [org, setOrg] = useState(null);
   const [editLead, setEditLead] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,6 +99,7 @@ export default function App() {
       if (st.length === 0) {
         try { await db.initDefaultStages(); st = await db.getStages(); } catch (e) { console.error(e); }
       }
+      try { setOrg(await db.getMyOrg()); } catch (e) { console.error(e); }
       setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -204,7 +206,7 @@ export default function App() {
   // Gak ada trial otomatis - daftar langsung dapet Free (Dashboard & Leads doang).
   // Fitur AI (Bot Telegram, AI Advisor, Rekam Meeting, dst) pake token API
   // berbayar, jadi cuma kebuka abis di-upgrade ke Premium (settings.plan = 'premium').
-  const isPremium = settings.plan === "premium";
+  const isPremium = settings.plan === "premium" || org?.plan === "enterprise";
   const FREE_TABS = ["dashboard", "leads"];
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
