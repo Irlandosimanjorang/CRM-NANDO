@@ -84,6 +84,74 @@ export default function Auth() {
         </div>
       </section>
 
+      {/* CARA KERJA BOT — diagram hub-and-spoke */}
+      <section className="text-white" style={{ background: "#15130f" }}>
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-16 md:py-20">
+          <div className="text-center mb-10">
+            <div className="text-[11px] font-semibold text-orange-400 uppercase tracking-widest mb-3">Satu chat, semua kerjaan</div>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">1 bot Telegram, ngerjain semuanya</h2>
+            <p className="text-sm text-stone-400 max-w-xl mx-auto">Gak perlu buka app buat tiap kerjaan kecil — tinggal chat aja, bot-nya yang urus ke CRM.</p>
+          </div>
+          <svg width="100%" viewBox="0 0 700 560" role="img" className="max-w-2xl mx-auto block">
+            <title>Diagram cara kerja bot Telegram Nexto</title>
+            <desc>Bot Telegram sebagai pusat, terhubung ke tiga fungsi: atur jadwal visit yang otomatis masuk Google Calendar, update progress lewat chat atau voice note, dan edit data CRM langsung dari obrolan.</desc>
+            <defs>
+              <linearGradient id="hubGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#fb923c" />
+                <stop offset="1" stopColor="#9a3412" />
+              </linearGradient>
+            </defs>
+
+            {/* Garis penghubung */}
+            <path d="M195,178 Q270,205 315,228" fill="none" stroke="#ea580c" strokeWidth="2" opacity="0.55" strokeLinecap="round" />
+            <path d="M505,178 Q430,205 385,228" fill="none" stroke="#ea580c" strokeWidth="2" opacity="0.55" strokeLinecap="round" />
+            <path d="M350,405 L350,347" fill="none" stroke="#ea580c" strokeWidth="2" opacity="0.55" strokeLinecap="round" />
+
+            {/* Hub tengah */}
+            <circle cx="350" cy="280" r="70" fill="url(#hubGrad)" />
+            <text x="350" y="272" textAnchor="middle" fill="#ffffff" fontSize="15" fontWeight="700">Bot Telegram</text>
+            <text x="350" y="292" textAnchor="middle" fill="#ffedd5" fontSize="11">1 chat, semua beres</text>
+
+            {/* Node A: Atur Visit */}
+            <rect x="15" y="30" width="290" height="148" rx="20" fill="#221f1a" stroke="#ea580c" strokeOpacity="0.35" strokeWidth="1" />
+            <circle cx="48" cy="62" r="5" fill="#fb923c" />
+            <text x="65" y="67" fill="#ffffff" fontSize="14" fontWeight="700">Atur jadwal visit</text>
+            <text x="40" y="90" fill="#a8a29e" fontSize="11.5">
+              <tspan x="40" dy="0">Sebut nama perusahaan +</tspan>
+              <tspan x="40" dy="16">tanggal, langsung tercatat</tspan>
+              <tspan x="40" dy="16">di jadwal kunjungan kamu.</tspan>
+            </text>
+            <rect x="40" y="132" width="234" height="24" rx="12" fill="#ea580c" fillOpacity="0.15" stroke="#ea580c" strokeOpacity="0.4" strokeWidth="1" />
+            <text x="52" y="148" fill="#fdba74" fontSize="11" fontWeight="600">📅 Otomatis sinkron ke Google Calendar</text>
+            <text x="40" y="170" fill="#78716c" fontSize="10.5" fontStyle="italic">"Jadwalin visit PT Sinar Abadi Senin depan"</text>
+
+            {/* Node B: Update Progress */}
+            <rect x="395" y="30" width="290" height="148" rx="20" fill="#221f1a" stroke="#ea580c" strokeOpacity="0.35" strokeWidth="1" />
+            <circle cx="428" cy="62" r="5" fill="#fb923c" />
+            <text x="445" y="67" fill="#ffffff" fontSize="14" fontWeight="700">Update progress</text>
+            <text x="420" y="90" fill="#a8a29e" fontSize="11.5">
+              <tspan x="420" dy="0">Sebut key person &amp; hasil</tspan>
+              <tspan x="420" dy="16">obrolan, langsung ke-log</tspan>
+              <tspan x="420" dy="16">rapi di kartu lead-nya.</tspan>
+            </text>
+            <rect x="420" y="132" width="200" height="24" rx="12" fill="#ea580c" fillOpacity="0.15" stroke="#ea580c" strokeOpacity="0.4" strokeWidth="1" />
+            <text x="432" y="148" fill="#fdba74" fontSize="11" fontWeight="600">🎤 Bisa ketik atau kirim voice note</text>
+            <text x="420" y="170" fill="#78716c" fontSize="10.5" fontStyle="italic">"Ketemu Pak Budi, minat trial 2 ton"</text>
+
+            {/* Node C: Edit Data CRM */}
+            <rect x="175" y="405" width="350" height="122" rx="20" fill="#221f1a" stroke="#ea580c" strokeOpacity="0.35" strokeWidth="1" />
+            <circle cx="208" cy="437" r="5" fill="#fb923c" />
+            <text x="225" y="442" textAnchor="start" fill="#ffffff" fontSize="14" fontWeight="700">Edit data CRM</text>
+            <text x="200" y="465" fill="#a8a29e" fontSize="11.5">
+              <tspan x="200" dy="0">Tambah lead baru, hapus, atau ubah</tspan>
+              <tspan x="200" dy="16">data — cukup nyuruh lewat chat,</tspan>
+              <tspan x="200" dy="16">tanpa buka aplikasi sama sekali.</tspan>
+            </text>
+            <text x="200" y="514" fill="#78716c" fontSize="10.5" fontStyle="italic">"Hapus lead CV Maju Jaya, salah input"</text>
+          </svg>
+        </div>
+      </section>
+
       {/* FITUR */}
       <section id="fitur" className="max-w-5xl mx-auto px-4 md:px-6 py-16 md:py-20">
         <div className="text-center mb-10">
