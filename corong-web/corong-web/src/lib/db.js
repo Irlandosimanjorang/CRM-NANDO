@@ -107,6 +107,43 @@ export async function saveMyProfile({ avatar_url, job_title, name }) {
   if (error) throw error;
 }
 
+// ---- GENERATE LEADS (AI cari calon lead lewat web search) ----
+export async function generateLeads({ keyword, city } = {}) {
+  const { data, error } = await supabase.functions.invoke("generate-leads", { body: { keyword, city } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function getGeneratedLeads() {
+  const { data, error } = await supabase.from("generated_leads").select("*").eq("status", "pending").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getLeadGenCooldown() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("organizations").select("last_lead_gen_at").eq("id", orgId).single();
+  if (error) throw error;
+  return data?.last_lead_gen_at || null;
+}
+
+export async function importGeneratedLead(genLead, defaultStageKey) {
+  await upsertLead({
+    name: genLead.name, category: "Lainnya", stage_key: defaultStageKey || "",
+    key_person: genLead.key_person || "", key_person_title: genLead.key_person_title || "",
+    website: genLead.website || "", phone: genLead.phone || "", city: genLead.city || "",
+    product: genLead.product || "", source: "ai_generated",
+  });
+  const { error } = await supabase.from("generated_leads").update({ status: "imported" }).eq("id", genLead.id);
+  if (error) throw error;
+}
+
+export async function dismissGeneratedLead(id) {
+  const { error } = await supabase.from("generated_leads").update({ status: "dismissed" }).eq("id", id);
+  if (error) throw error;
+}
+
 // ---- STAGES ----
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");
