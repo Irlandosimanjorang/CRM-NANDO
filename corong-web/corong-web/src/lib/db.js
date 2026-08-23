@@ -177,6 +177,10 @@ export async function upsertLead(lead) {
   const orgId = await getMyOrgId();
   const row = {
     user_id: uid, org_id: orgId,
+    // assigned_to = "pemilik" lead ini buat keperluan role-based visibility.
+    // Lead baru: default ke diri sendiri. Lead yang udah ada: dipertahanin
+    // apa adanya (gak ke-reset ke siapa aja yang lagi ngedit).
+    assigned_to: lead.assigned_to || uid,
     name: lead.name, category: lead.category, stage_key: lead.stage_key,
     company_type: lead.company_type || "", email: lead.email || "", phone: sanitizePhone(lead.phone),
     key_person: lead.key_person || "", key_person_title: lead.key_person_title || "",
@@ -360,7 +364,7 @@ export async function smartImportMap(sampleRows) {
 export async function bulkInsertLeads(leads) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
-  const rows = leads.map((l) => ({ user_id: uid, org_id: orgId, ...l, phone: sanitizePhone(l.phone) }));
+  const rows = leads.map((l) => ({ user_id: uid, org_id: orgId, assigned_to: l.assigned_to || uid, ...l, phone: sanitizePhone(l.phone) }));
   const { data, error } = await supabase.from("leads").insert(rows).select("id, name");
   if (error) throw error;
   return data;
