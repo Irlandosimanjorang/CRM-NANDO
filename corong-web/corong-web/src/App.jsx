@@ -250,7 +250,7 @@ export default function App() {
         <div className="px-5 py-6 flex items-center gap-2.5 border-b border-white/5">
           <NextoBadge size={36} />
           <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
-          <ProfileAvatar settings={settings} onChanged={reload} size={32} />
+          <ProfileAvatar settings={settings} onChanged={reload} size={32} align="left" />
         </div>
         <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
           {NAV.map((n) => { const I = n.icon; const active = effectiveTab === n.key; const locked = isLocked(n.key);
@@ -353,7 +353,7 @@ function PreviewLock({ locked, children }) {
 
 // Avatar bulat pojok kanan atas (kayak Gmail/Notion) - klik buka menu kecil
 // isinya foto, jabatan, dan tombol edit.
-function ProfileAvatar({ settings, onChanged, size = 36 }) {
+function ProfileAvatar({ settings, onChanged, size = 36, align = "right" }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [jobTitle, setJobTitle] = useState(settings.job_title || "");
@@ -393,7 +393,7 @@ function ProfileAvatar({ settings, onChanged, size = 36 }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setEditing(false); }} />
-          <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 p-4">
+          <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4`}>
             {!editing ? (
               <>
                 <div className="flex items-center gap-3 mb-3">
