@@ -13,7 +13,7 @@ import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera,
+  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -410,7 +410,7 @@ function ProfileAvatar({ settings, session, onChanged, size = 36, align = "right
                   )}
                   {email && (
                     <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
-                      <Send size={11} className="shrink-0" /><span className="truncate">{email}</span>
+                      <Mail size={11} className="shrink-0" /><span className="truncate">{email}</span>
                     </div>
                   )}
                   <button onClick={() => setEditing(true)} className="w-full mt-4 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 font-medium transition-colors">Edit Profil</button>
