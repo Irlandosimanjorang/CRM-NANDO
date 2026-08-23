@@ -404,7 +404,7 @@ function ProfileAvatar({ settings, session, onChanged, size = 36, align = "right
                   </div>
                 </div>
                 <div className="pt-9 pb-4 px-5">
-                  <div className="font-bold text-[15px] truncate">{settings.community_display_name || "Belum ada nama"}</div>
+                  <div className="font-bold text-[15px] text-slate-900 truncate">{settings.community_display_name || "Belum ada nama"}</div>
                   {settings.job_title && (
                     <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-orange-100 text-orange-700 rounded-full px-2.5 py-1">{settings.job_title}</span>
                   )}
@@ -427,11 +427,11 @@ function ProfileAvatar({ settings, session, onChanged, size = 36, align = "right
                 </label>
                 <label className="block mb-2.5">
                   <span className="text-[11px] font-medium text-slate-400">Nama</span>
-                  <input className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={name} onChange={(e) => setName(e.target.value)} />
+                  <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={name} onChange={(e) => setName(e.target.value)} />
                 </label>
                 <label className="block mb-4">
                   <span className="text-[11px] font-medium text-slate-400">Jabatan</span>
-                  <input className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Sales Executive" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                  <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Sales Executive" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
                 </label>
                 <div className="flex gap-2">
                   <button onClick={() => setEditing(false)} className="flex-1 text-xs text-slate-700 border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium">Batal</button>
