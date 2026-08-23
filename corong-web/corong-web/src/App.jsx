@@ -4,6 +4,7 @@ import * as db from "./lib/db";
 import Auth from "./Auth";
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
+import GenerateLeads from "./tabs/GenerateLeads";
 import Deal from "./tabs/Deal";
 import VisitFollowup from "./tabs/VisitFollowup";
 import Kompetitor from "./tabs/Kompetitor";
@@ -13,7 +14,7 @@ import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail,
+  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -47,6 +48,7 @@ const DUMMY_COMPETITORS = [
 const NAV = [
   { key: "dashboard", label: "Dashboard", short: "Beranda", icon: LayoutDashboard },
   { key: "leads", label: "Leads", short: "Leads", icon: Users },
+  { key: "generateleads", label: "Generate Leads", short: "Cari Lead", icon: Sparkles },
   { key: "deal", label: "Deal", short: "Deal", icon: Trophy },
   { key: "visitfollowup", label: "Visit & Follow-up", short: "Visit", icon: CalendarCheck },
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
@@ -299,6 +301,7 @@ export default function App() {
             <>
               {effectiveTab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} onGo={setTab} />}
               {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
+              {effectiveTab === "generateleads" && <PreviewLock locked={isLocked("generateleads")}><GenerateLeads stages={stageList} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "kompetitor" && <PreviewLock locked={isLocked("kompetitor")}><Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} /></PreviewLock>}
