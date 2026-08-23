@@ -87,7 +87,7 @@ export default function Auth() {
       {/* CARA KERJA BOT — diagram orbital bercahaya */}
       <section className="text-white" style={{ background: "#0c0b09" }}>
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-16 md:py-20">
-          <div className="text-center mb-8">
+          <div className="text-center mb-10">
             <div className="text-[11px] font-semibold text-orange-400 uppercase tracking-widest mb-3">Satu chat, semua kerjaan</div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">1 bot Telegram, ngerjain semuanya</h2>
             <p className="text-sm text-stone-400 max-w-xl mx-auto">Gak perlu buka app buat tiap kerjaan kecil — tinggal chat aja, bot-nya yang urus ke CRM.</p>
@@ -97,10 +97,9 @@ export default function Auth() {
             <title>Diagram cara kerja bot Telegram Nexto</title>
             <desc>Bot Telegram sebagai hub bercahaya di tengah, terhubung lewat garis orbital ke tiga fungsi: atur jadwal visit, update progress, dan edit data CRM.</desc>
             <defs>
-              <radialGradient id="orbCore" cx="45%" cy="40%" r="65%">
-                <stop offset="0" stopColor="#fed7aa" />
-                <stop offset="35%" stopColor="#fb923c" />
-                <stop offset="100%" stopColor="#9a3412" />
+              <radialGradient id="orbCore" cx="42%" cy="38%" r="70%">
+                <stop offset="0" stopColor="#fb923c" />
+                <stop offset="100%" stopColor="#7c2d12" />
               </radialGradient>
               <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
                 <feGaussianBlur stdDeviation="7" result="b" />
@@ -112,50 +111,45 @@ export default function Auth() {
             </defs>
 
             {/* Halo lembut di belakang hub */}
-            <circle cx="350" cy="240" r="95" fill="#f97316" opacity="0.25" filter="url(#glowSoft)" />
+            <circle cx="350" cy="265" r="95" fill="#f97316" opacity="0.22" filter="url(#glowSoft)" />
 
             {/* Garis orbital penghubung (bercahaya) */}
-            <path d="M195,150 Q260,175 300,208" fill="none" stroke="#fb923c" strokeWidth="1.5" opacity="0.75" strokeLinecap="round" filter="url(#glow)" />
-            <path d="M505,150 Q440,175 400,208" fill="none" stroke="#fb923c" strokeWidth="1.5" opacity="0.75" strokeLinecap="round" filter="url(#glow)" />
-            <path d="M350,422 Q350,370 350,307" fill="none" stroke="#fb923c" strokeWidth="1.5" opacity="0.75" strokeLinecap="round" filter="url(#glow)" />
+            <path d="M188,168 Q260,200 302,235" fill="none" stroke="#fb923c" strokeWidth="1.5" opacity="0.75" strokeLinecap="round" filter="url(#glow)" />
+            <path d="M512,168 Q440,200 398,235" fill="none" stroke="#fb923c" strokeWidth="1.5" opacity="0.75" strokeLinecap="round" filter="url(#glow)" />
+            <path d="M350,410 Q350,365 350,332" fill="none" stroke="#fb923c" strokeWidth="1.5" opacity="0.75" strokeLinecap="round" filter="url(#glow)" />
             {/* Garis tipis dekoratif tambahan biar berasa "jaringan" */}
-            <path d="M177,140 Q260,120 350,145" fill="none" stroke="#fb923c" strokeWidth="0.5" opacity="0.2" />
-            <path d="M523,140 Q440,120 350,145" fill="none" stroke="#fb923c" strokeWidth="0.5" opacity="0.2" />
+            <path d="M170,160 Q260,138 350,168" fill="none" stroke="#fb923c" strokeWidth="0.5" opacity="0.18" />
+            <path d="M530,160 Q440,138 350,168" fill="none" stroke="#fb923c" strokeWidth="0.5" opacity="0.18" />
 
             {/* Hub tengah - bola bercahaya + partikel */}
-            <circle cx="350" cy="240" r="62" fill="url(#orbCore)" filter="url(#glow)" />
+            <circle cx="350" cy="265" r="62" fill="url(#orbCore)" filter="url(#glow)" />
             <g fill="#fff7ed">
-              <circle cx="338" cy="218" r="1.6" opacity="0.7" />
-              <circle cx="365" cy="212" r="1.1" opacity="0.5" />
-              <circle cx="328" cy="242" r="2" opacity="0.75" />
-              <circle cx="360" cy="250" r="1.4" opacity="0.55" />
-              <circle cx="345" cy="262" r="1" opacity="0.4" />
-              <circle cx="375" cy="232" r="1.7" opacity="0.6" />
-              <circle cx="320" cy="228" r="1.2" opacity="0.45" />
-              <circle cx="355" cy="200" r="1.5" opacity="0.5" />
-              <circle cx="368" cy="260" r="1" opacity="0.35" />
-              <circle cx="332" cy="255" r="1.6" opacity="0.5" />
+              <circle cx="336" cy="242" r="1.6" opacity="0.6" />
+              <circle cx="363" cy="236" r="1.1" opacity="0.45" />
+              <circle cx="326" cy="268" r="2" opacity="0.65" />
+              <circle cx="358" cy="278" r="1.4" opacity="0.5" />
+              <circle cx="343" cy="290" r="1" opacity="0.35" />
+              <circle cx="373" cy="258" r="1.7" opacity="0.55" />
+              <circle cx="318" cy="252" r="1.2" opacity="0.4" />
+              <circle cx="366" cy="288" r="1" opacity="0.3" />
             </g>
-            <text x="350" y="236" textAnchor="middle" fill="#ffffff" fontSize="14" fontWeight="700">Bot Telegram</text>
-            <text x="350" y="253" textAnchor="middle" fill="#ffedd5" fontSize="10.5">1 chat, semua beres</text>
+            <text x="350" y="261" textAnchor="middle" fill="#fff7ed" fontSize="14" fontWeight="700">Bot Telegram</text>
+            <text x="350" y="278" textAnchor="middle" fill="#ffe4c4" fontSize="10.5">1 chat, semua beres</text>
 
             {/* Node A: Atur Visit */}
-            <circle cx="177" cy="140" r="20" fill="#221f1a" stroke="#fb923c" strokeWidth="1.5" filter="url(#glow)" />
-            <circle cx="177" cy="140" r="6" fill="#fb923c" />
-            <text x="177" y="103" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="700">Atur visit</text>
-            <text x="177" y="119" textAnchor="middle" fill="#a8a29e" fontSize="10.5">→ Google Calendar</text>
+            <circle cx="170" cy="140" r="20" fill="#1a1815" stroke="#fb923c" strokeWidth="1.5" filter="url(#glow)" />
+            <circle cx="170" cy="140" r="6" fill="#fb923c" />
+            <text x="170" y="182" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="700">Atur visit</text>
 
             {/* Node B: Update Progress */}
-            <circle cx="523" cy="140" r="20" fill="#221f1a" stroke="#fb923c" strokeWidth="1.5" filter="url(#glow)" />
-            <circle cx="523" cy="140" r="6" fill="#fb923c" />
-            <text x="523" y="103" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="700">Update progress</text>
-            <text x="523" y="119" textAnchor="middle" fill="#a8a29e" fontSize="10.5">Chat / voice note</text>
+            <circle cx="530" cy="140" r="20" fill="#1a1815" stroke="#fb923c" strokeWidth="1.5" filter="url(#glow)" />
+            <circle cx="530" cy="140" r="6" fill="#fb923c" />
+            <text x="530" y="182" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="700">Update progress</text>
 
             {/* Node C: Edit CRM */}
-            <circle cx="350" cy="440" r="20" fill="#221f1a" stroke="#fb923c" strokeWidth="1.5" filter="url(#glow)" />
-            <circle cx="350" cy="440" r="6" fill="#fb923c" />
-            <text x="350" y="478" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="700">Edit data CRM</text>
-            <text x="350" y="463" textAnchor="middle" fill="#a8a29e" fontSize="10.5">Tambah / hapus lead</text>
+            <circle cx="350" cy="430" r="20" fill="#1a1815" stroke="#fb923c" strokeWidth="1.5" filter="url(#glow)" />
+            <circle cx="350" cy="430" r="6" fill="#fb923c" />
+            <text x="350" y="472" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="700">Edit data CRM</text>
           </svg>
 
           {/* Kartu detail ringkas di bawah diagram */}
