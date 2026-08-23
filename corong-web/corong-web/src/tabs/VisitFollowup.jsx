@@ -46,7 +46,7 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
           <h3 className="font-bold text-base">Foto Bukti Check-in</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Wajib lampirin foto (misal foto lokasi/produk/notulen) buat "{pending.leadName}".</p>
+        <p className="text-xs text-slate-500 mb-4">Wajib lampirin foto buat "{pending.leadName}".</p>
         <label className="block cursor-pointer">
           {preview ? (
             <img src={preview} alt="" className="w-full h-48 object-cover rounded-2xl border border-slate-200" />
