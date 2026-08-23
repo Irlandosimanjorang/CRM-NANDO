@@ -10,6 +10,55 @@ function sanitizePhone(raw) {
   return cleaned.join(", ");
 }
 
+// ---- ORGANISASI ----
+let cachedOrgId = null;
+export async function getMyOrgId() {
+  if (cachedOrgId) return cachedOrgId;
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { data, error } = await supabase.from("organization_members").select("org_id").eq("user_id", uid).limit(1).single();
+  if (error) throw error;
+  cachedOrgId = data.org_id;
+  return cachedOrgId;
+}
+export function clearOrgCache() { cachedOrgId = null; }
+
+export async function getMyOrg() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("organizations").select("*").eq("id", orgId).single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getOrgMembers() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("organization_members").select("*").eq("org_id", orgId);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createInviteCode(role = "sales_rep") {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const orgId = await getMyOrgId();
+  const code = Array.from({ length: 6 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
+  const expires = new Date(Date.now() + 60 * 60000).toISOString(); // 1 jam
+  const { error } = await supabase.from("org_invite_codes").insert({ code, org_id: orgId, created_by: uid, role, expires_at: expires });
+  if (error) throw error;
+  return code;
+}
+
+export async function redeemInviteCode(code) {
+  const { data, error } = await supabase.rpc("redeem_invite_code", { p_code: code });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  clearOrgCache();
+  return data;
+}
+
+export async function removeMember(memberId) {
+  const { error } = await supabase.from("organization_members").delete().eq("id", memberId);
+  if (error) throw error;
+}
+
 // ---- STAGES ----
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");
@@ -20,7 +69,29 @@ export async function saveStages(stages) {
   const { data: rows } = await supabase.from("stages").select("id");
   if (rows?.length) await supabase.from("stages").delete().in("id", rows.map((r) => r.id));
   const uid = (await supabase.auth.getUser()).data.user.id;
-  const payload = stages.map((s, i) => ({ user_id: uid, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
+  const orgId = await getMyOrgId();
+  const payload = stages.map((s, i) => ({ user_id: uid, org_id: orgId, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
+  const { error } = await supabase.from("stages").insert(payload);
+  if (error) throw error;
+}
+
+// ---- ONBOARDING AKUN BARU ----
+// Dipanggil otomatis pas akun baru pertama kali login & belum punya pipeline
+// sama sekali - biar gak "kosong melompong" abis daftar sendiri.
+export async function initDefaultStages() {
+  const { data: existing } = await supabase.from("stages").select("id").limit(1);
+  if (existing && existing.length > 0) return; // udah ada isinya, jangan ditimpa
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const orgId = await getMyOrgId();
+  const defaults = [
+    { key: "prospek", label: "Prospek Baru", hex: "#94a3b8", type: "normal" },
+    { key: "kontak", label: "Kontak Awal", hex: "#60a5fa", type: "normal" },
+    { key: "presentasi", label: "Presentasi / Visit", hex: "#fbbf24", type: "normal" },
+    { key: "negosiasi", label: "Negosiasi", hex: "#f97316", type: "normal" },
+    { key: "deal", label: "Deal / Menang", hex: "#10b981", type: "won" },
+    { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
+  ];
+  const payload = defaults.map((s, i) => ({ user_id: uid, org_id: orgId, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
   const { error } = await supabase.from("stages").insert(payload);
   if (error) throw error;
 }
@@ -55,8 +126,9 @@ export async function getLeads() {
 
 export async function upsertLead(lead) {
   const uid = (await supabase.auth.getUser()).data.user.id;
+  const orgId = await getMyOrgId();
   const row = {
-    user_id: uid,
+    user_id: uid, org_id: orgId,
     name: lead.name, category: lead.category, stage_key: lead.stage_key,
     company_type: lead.company_type || "", email: lead.email || "", phone: sanitizePhone(lead.phone),
     key_person: lead.key_person || "", key_person_title: lead.key_person_title || "",
@@ -119,16 +191,19 @@ export async function saveLeadLocation(id, latitude, longitude) {
 
 export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
+  const orgId = await getMyOrgId();
   const { data, error } = await supabase
     .from("visit_checkins")
-    .insert({ user_id: uid, lead_id, lead_name, latitude, longitude, distance_meters })
+    .insert({ user_id: uid, org_id: orgId, lead_id, lead_name, latitude, longitude, distance_meters })
     .select()
     .single();
   if (error) throw error;
+  // Check-in juga otomatis nyatet progress + update last_contact, biar konsisten
+  // sama alur progress note yang udah ada.
   const today = new Date().toISOString().slice(0, 10);
   const jarak = distance_meters != null ? `${Math.round(distance_meters)}m dari titik lokasi` : "";
   await supabase.from("progress_notes").insert({
-    user_id: uid, lead_id, note_date: today,
+    user_id: uid, org_id: orgId, lead_id, note_date: today,
     text: `Check-in GPS terverifikasi${jarak ? " (" + jarak + ")" : ""}.`,
   });
   await supabase.from("leads").update({ last_contact: today }).eq("id", lead_id);
@@ -162,8 +237,9 @@ export async function getCheckins(monthFilter) {
 // ---- PROGRESS ----
 export async function addProgress(lead_id, text) {
   const uid = (await supabase.auth.getUser()).data.user.id;
+  const orgId = await getMyOrgId();
   const date = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase.from("progress_notes").insert({ user_id: uid, lead_id, note_date: date, text }).select().single();
+  const { data, error } = await supabase.from("progress_notes").insert({ user_id: uid, org_id: orgId, lead_id, note_date: date, text }).select().single();
   if (error) throw error;
   await supabase.from("leads").update({ last_contact: date }).eq("id", lead_id);
   return { id: data.id, date, text };
@@ -188,7 +264,7 @@ export async function uploadMeetingAudio(leadId, blob) {
 export async function transcribeMeeting(storagePath, leadName) {
   const { data, error } = await supabase.functions.invoke("transcribe-meeting", { body: { storagePath, leadName } });
   if (error) throw error;
-  return data;
+  return data; // { transcript, notes }
 }
 
 // ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----
@@ -200,8 +276,9 @@ export async function getDealTransactions() {
 
 export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
+  const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("deal_transactions").insert({
-    user_id: uid, lead_id, lead_name, deal_date: deal_date || null,
+    user_id: uid, org_id: orgId, lead_id, lead_name, deal_date: deal_date || null,
     deal_value: Number(deal_value) || 0, tonnage: Number(tonnage) || 0,
     tonnage_unit: tonnage_unit || "ton", chemical: chemical || "",
   }).select().single();
@@ -224,7 +301,8 @@ export async function smartImportMap(sampleRows) {
 // ---- BULK IMPORT ----
 export async function bulkInsertLeads(leads) {
   const uid = (await supabase.auth.getUser()).data.user.id;
-  const rows = leads.map((l) => ({ user_id: uid, ...l, phone: sanitizePhone(l.phone) }));
+  const orgId = await getMyOrgId();
+  const rows = leads.map((l) => ({ user_id: uid, org_id: orgId, ...l, phone: sanitizePhone(l.phone) }));
   const { data, error } = await supabase.from("leads").insert(rows).select("id, name");
   if (error) throw error;
   return data;
@@ -241,14 +319,15 @@ export async function getCompetitors() {
 }
 export async function upsertCompetitor(comp) {
   const uid = (await supabase.auth.getUser()).data.user.id;
-  const row = { user_id: uid, name: comp.name, background: comp.background || "", product: comp.product || "", notes: comp.notes || "" };
+  const orgId = await getMyOrgId();
+  const row = { user_id: uid, org_id: orgId, name: comp.name, background: comp.background || "", product: comp.product || "", notes: comp.notes || "" };
   let compId = comp.id;
   if (compId) { const { error } = await supabase.from("competitors").update(row).eq("id", compId); if (error) throw error; }
   else { const { data, error } = await supabase.from("competitors").insert(row).select("id").single(); if (error) throw error; compId = data.id; }
   await supabase.from("competitor_usages").delete().eq("competitor_id", compId);
   const usages = (comp.usages || []).filter((u) => u.company || u.product || u.price || u.quantity);
   if (usages.length) {
-    const rows = usages.map((u) => ({ user_id: uid, competitor_id: compId, company: u.company || "", product: u.product || "", price: u.price || "", quantity: u.quantity || "" }));
+    const rows = usages.map((u) => ({ user_id: uid, org_id: orgId, competitor_id: compId, company: u.company || "", product: u.product || "", price: u.price || "", quantity: u.quantity || "" }));
     const { error } = await supabase.from("competitor_usages").insert(rows); if (error) throw error;
   }
   return compId;
