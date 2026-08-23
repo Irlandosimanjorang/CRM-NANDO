@@ -86,7 +86,7 @@ export default function App() {
   useEffect(() => {
     if (!isConfigured) { setAuthReady(true); return; }
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { db.clearOrgCache(); setSession(s); });
     return () => sub.subscription.unsubscribe();
   }, []);
 
