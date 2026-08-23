@@ -13,7 +13,7 @@ import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock,
+  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -232,7 +232,8 @@ export default function App() {
       <aside className="hidden md:flex flex-col w-60 bg-slate-900 text-white sticky top-0 h-screen shrink-0">
         <div className="px-5 py-6 flex items-center gap-2.5 border-b border-white/5">
           <NextoBadge size={36} />
-          <div className="leading-tight"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
+          <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
+          <ProfileAvatar settings={settings} onChanged={reload} size={32} />
         </div>
         <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
           {NAV.map((n) => { const I = n.icon; const active = effectiveTab === n.key; const locked = isLocked(n.key);
@@ -254,7 +255,7 @@ export default function App() {
           <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center gap-2.5">
             <NextoBadge size={32} />
             <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === effectiveTab)?.label}</span></div></div>
-            <button onClick={() => supabase.auth.signOut()} className="text-slate-400"><LogOut size={16} /></button>
+            <ProfileAvatar settings={settings} onChanged={reload} size={32} />
           </div>
         </header>
 
@@ -317,6 +318,86 @@ function PreviewLock({ locked, children }) {
         className="absolute inset-0 top-11 z-20 cursor-pointer"
       />
       {children}
+    </div>
+  );
+}
+
+// Avatar bulat pojok kanan atas (kayak Gmail/Notion) - klik buka menu kecil
+// isinya foto, jabatan, dan tombol edit.
+function ProfileAvatar({ settings, onChanged, size = 36 }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [jobTitle, setJobTitle] = useState(settings.job_title || "");
+  const [name, setName] = useState(settings.community_display_name || "");
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const initial = (settings.community_display_name || "?").charAt(0).toUpperCase();
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await db.uploadAvatar(file);
+      await db.saveMyProfile({ avatar_url: url });
+      onChanged();
+    } catch (err) { alert("Gagal upload foto: " + err.message); }
+    finally { setUploading(false); }
+  };
+
+  const saveProfile = async () => {
+    setSaving(true);
+    try {
+      await db.saveMyProfile({ job_title: jobTitle, name });
+      onChanged();
+      setEditing(false);
+    } catch (err) { alert("Gagal simpan: " + err.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen((v) => !v)} className="shrink-0 rounded-full overflow-hidden bg-orange-600 text-white flex items-center justify-center font-semibold" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+        {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setEditing(false); }} />
+          <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-lg z-50 p-4">
+            {!editing ? (
+              <>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-600 text-white flex items-center justify-center font-semibold text-lg shrink-0">
+                    {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm truncate">{settings.community_display_name || "Belum ada nama"}</div>
+                    <div className="text-xs text-slate-400 truncate">{settings.job_title || "Belum ada jabatan"}</div>
+                  </div>
+                </div>
+                <button onClick={() => setEditing(true)} className="w-full text-xs border border-slate-300 rounded-xl py-2 hover:bg-slate-50">Edit Profil</button>
+              </>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-600 text-white flex items-center justify-center font-semibold text-lg shrink-0 relative">
+                    {uploading ? <Loader2 size={16} className="animate-spin" /> : settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+                  </div>
+                  <span className="text-xs text-orange-600 flex items-center gap-1"><Camera size={13} /> Ganti foto</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+                </label>
+                <input className="w-full mb-2 px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500" placeholder="Nama" value={name} onChange={(e) => setName(e.target.value)} />
+                <input className="w-full mb-3 px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500" placeholder="Jabatan (misal Sales Executive)" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                <div className="flex gap-2">
+                  <button onClick={() => setEditing(false)} className="flex-1 text-xs border border-slate-300 rounded-xl py-2 hover:bg-slate-50">Batal</button>
+                  <button onClick={saveProfile} disabled={saving} className="flex-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2 font-medium">{saving ? "..." : "Simpan"}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
