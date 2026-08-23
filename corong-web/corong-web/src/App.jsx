@@ -260,7 +260,7 @@ export default function App() {
           {!isPremium && (
             <div className="mb-4 bg-orange-50 border border-orange-200 text-orange-800 text-xs rounded-2xl px-4 py-2.5 flex items-center justify-between gap-2">
               <span>Kamu sekarang di paket <b>Free</b> (Dashboard &amp; Leads doang). Upgrade ke Premium (Rp149rb/bulan) buat buka semua fitur + bot Telegram + Calendar + AI.</span>
-              <a href="https://wa.me/6281234567890" target="_blank" rel="noreferrer" className="shrink-0 underline font-medium">Upgrade</a>
+              <a href="https://subscription.myr.id/m/nexto-premium-88379/" target="_blank" rel="noreferrer" className="shrink-0 underline font-medium">Upgrade</a>
             </div>
           )}
           {loading ? <Splash inline /> : (
