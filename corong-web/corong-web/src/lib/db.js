@@ -237,12 +237,22 @@ export async function saveLeadLocation(id, latitude, longitude) {
   if (error) throw error;
 }
 
-export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters }) {
+export async function uploadCheckinPhoto(file) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${uid}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("checkin-photos").upload(path, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("checkin-photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters, photo_url }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
   const { data, error } = await supabase
     .from("visit_checkins")
-    .insert({ user_id: uid, org_id: orgId, lead_id, lead_name, latitude, longitude, distance_meters })
+    .insert({ user_id: uid, org_id: orgId, lead_id, lead_name, latitude, longitude, distance_meters, photo_url: photo_url || null })
     .select()
     .single();
   if (error) throw error;
@@ -252,7 +262,7 @@ export async function checkIn({ lead_id, lead_name, latitude, longitude, distanc
   const jarak = distance_meters != null ? `${Math.round(distance_meters)}m dari titik lokasi` : "";
   await supabase.from("progress_notes").insert({
     user_id: uid, org_id: orgId, lead_id, note_date: today,
-    text: `Check-in GPS terverifikasi${jarak ? " (" + jarak + ")" : ""}.`,
+    text: `Check-in GPS terverifikasi${jarak ? " (" + jarak + ")" : ""}${photo_url ? " + foto bukti" : ""}.`,
   });
   await supabase.from("leads").update({ last_contact: today }).eq("id", lead_id);
   return data;
