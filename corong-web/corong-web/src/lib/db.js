@@ -14,10 +14,9 @@ function sanitizePhone(raw) {
 let cachedOrgId = null;
 export async function getMyOrgId() {
   if (cachedOrgId) return cachedOrgId;
-  const uid = (await supabase.auth.getUser()).data.user.id;
-  const { data, error } = await supabase.from("organization_members").select("org_id").eq("user_id", uid).limit(1).single();
+  const { data, error } = await supabase.rpc("ensure_my_org");
   if (error) throw error;
-  cachedOrgId = data.org_id;
+  cachedOrgId = data;
   return cachedOrgId;
 }
 export function clearOrgCache() { cachedOrgId = null; }
