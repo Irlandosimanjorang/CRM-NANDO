@@ -123,9 +123,26 @@ export async function getGeneratedLeads() {
 
 export async function getLeadGenCooldown() {
   const orgId = await getMyOrgId();
-  const { data, error } = await supabase.from("organizations").select("last_lead_gen_at").eq("id", orgId).single();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("lead_gen_runs")
+    .select("generated_at")
+    .eq("org_id", orgId)
+    .gte("generated_at", sevenDaysAgo)
+    .order("generated_at", { ascending: true });
   if (error) throw error;
-  return data?.last_lead_gen_at || null;
+  const runs = data || [];
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const usedToday = runs.some((r) => r.generated_at.slice(0, 10) === todayStr);
+  const usedThisWeek = runs.length;
+  let nextAvailableAt = null;
+  if (usedToday) {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(0, 0, 0, 0);
+    nextAvailableAt = tomorrow.toISOString();
+  } else if (usedThisWeek >= 2) {
+    nextAvailableAt = new Date(new Date(runs[0].generated_at).getTime() + 7 * 24 * 3600 * 1000).toISOString();
+  }
+  return { canGenerate: !usedToday && usedThisWeek < 2, usedThisWeek, nextAvailableAt };
 }
 
 export async function importGeneratedLead(genLead, defaultStageKey) {
