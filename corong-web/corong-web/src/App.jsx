@@ -250,7 +250,7 @@ export default function App() {
         <div className="px-5 py-6 flex items-center gap-2.5 border-b border-white/5">
           <NextoBadge size={36} />
           <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
-          <ProfileAvatar settings={settings} onChanged={reload} size={32} align="left" />
+          <ProfileAvatar settings={settings} session={session} onChanged={reload} size={32} align="left" />
         </div>
         <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
           {NAV.map((n) => { const I = n.icon; const active = effectiveTab === n.key; const locked = isLocked(n.key);
@@ -272,7 +272,7 @@ export default function App() {
           <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center gap-2.5">
             <NextoBadge size={32} />
             <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === effectiveTab)?.label}</span></div></div>
-            <ProfileAvatar settings={settings} onChanged={reload} size={32} />
+            <ProfileAvatar settings={settings} session={session} onChanged={reload} size={32} />
           </div>
         </header>
 
@@ -351,9 +351,9 @@ function PreviewLock({ locked, children }) {
   );
 }
 
-// Avatar bulat pojok kanan atas (kayak Gmail/Notion) - klik buka menu kecil
-// isinya foto, jabatan, dan tombol edit.
-function ProfileAvatar({ settings, onChanged, size = 36, align = "right" }) {
+// Avatar bulat pojok kanan atas (kayak Gmail/Notion) - klik buka kartu profil
+// isinya foto, jabatan, email, dan tombol edit.
+function ProfileAvatar({ settings, session, onChanged, size = 36, align = "right" }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [jobTitle, setJobTitle] = useState(settings.job_title || "");
@@ -361,7 +361,8 @@ function ProfileAvatar({ settings, onChanged, size = 36, align = "right" }) {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const initial = (settings.community_display_name || "?").charAt(0).toUpperCase();
+  const initial = (settings.community_display_name || session?.user?.email || "?").charAt(0).toUpperCase();
+  const email = session?.user?.email || "";
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -387,42 +388,56 @@ function ProfileAvatar({ settings, onChanged, size = 36, align = "right" }) {
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((v) => !v)} className="shrink-0 rounded-full overflow-hidden bg-orange-600 text-white flex items-center justify-center font-semibold" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+      <button onClick={() => setOpen((v) => !v)} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
         {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setEditing(false); }} />
-          <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4`}>
+          <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full mt-2.5 w-72 bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-50 overflow-hidden border border-slate-100`}>
             {!editing ? (
               <>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-600 text-white flex items-center justify-center font-semibold text-lg shrink-0">
+                {/* Header gradient band + avatar nongol - pola kartu profil app mobile */}
+                <div className="h-16 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800 relative">
+                  <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-2xl ring-4 ring-white shadow-md">
                     {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate">{settings.community_display_name || "Belum ada nama"}</div>
-                    <div className="text-xs text-slate-400 truncate">{settings.job_title || "Belum ada jabatan"}</div>
-                  </div>
                 </div>
-                <button onClick={() => setEditing(true)} className="w-full text-xs border border-slate-300 rounded-xl py-2 hover:bg-slate-50">Edit Profil</button>
+                <div className="pt-9 pb-4 px-5">
+                  <div className="font-bold text-[15px] truncate">{settings.community_display_name || "Belum ada nama"}</div>
+                  {settings.job_title && (
+                    <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-orange-100 text-orange-700 rounded-full px-2.5 py-1">{settings.job_title}</span>
+                  )}
+                  {email && (
+                    <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
+                      <Send size={11} className="shrink-0" /><span className="truncate">{email}</span>
+                    </div>
+                  )}
+                  <button onClick={() => setEditing(true)} className="w-full mt-4 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 font-medium transition-colors">Edit Profil</button>
+                </div>
               </>
             ) : (
-              <>
-                <label className="flex items-center gap-2 mb-3 cursor-pointer">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-600 text-white flex items-center justify-center font-semibold text-lg shrink-0 relative">
-                    {uploading ? <Loader2 size={16} className="animate-spin" /> : settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+              <div className="p-5">
+                <label className="flex items-center gap-3 mb-4 cursor-pointer">
+                  <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-xl shrink-0 ring-2 ring-orange-100">
+                    {uploading ? <Loader2 size={18} className="animate-spin" /> : settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
                   </div>
-                  <span className="text-xs text-orange-600 flex items-center gap-1"><Camera size={13} /> Ganti foto</span>
+                  <span className="text-xs text-orange-600 font-medium flex items-center gap-1"><Camera size={13} /> Ganti foto</span>
                   <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
                 </label>
-                <input className="w-full mb-2 px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500" placeholder="Nama" value={name} onChange={(e) => setName(e.target.value)} />
-                <input className="w-full mb-3 px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500" placeholder="Jabatan (misal Sales Executive)" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                <label className="block mb-2.5">
+                  <span className="text-[11px] font-medium text-slate-400">Nama</span>
+                  <input className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={name} onChange={(e) => setName(e.target.value)} />
+                </label>
+                <label className="block mb-4">
+                  <span className="text-[11px] font-medium text-slate-400">Jabatan</span>
+                  <input className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Sales Executive" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                </label>
                 <div className="flex gap-2">
-                  <button onClick={() => setEditing(false)} className="flex-1 text-xs border border-slate-300 rounded-xl py-2 hover:bg-slate-50">Batal</button>
-                  <button onClick={saveProfile} disabled={saving} className="flex-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2 font-medium">{saving ? "..." : "Simpan"}</button>
+                  <button onClick={() => setEditing(false)} className="flex-1 text-xs border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium">Batal</button>
+                  <button onClick={saveProfile} disabled={saving} className="flex-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2.5 font-medium">{saving ? "..." : "Simpan"}</button>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </>
