@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic } from "lucide-react";
+import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
 import MeetingRecorderModal from "../components/MeetingRecorderModal";
@@ -16,12 +16,68 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
 
 const CHECKIN_RADIUS_M = 100;
 
+function PhotoCheckinModal({ pending, onClose, onDone }) {
+  const [photo, setPhoto] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhoto(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const confirm = async () => {
+    if (!photo) { alert("Foto wajib dilampirin buat check-in."); return; }
+    setBusy(true);
+    try {
+      const photo_url = await db.uploadCheckinPhoto(photo);
+      await pending.run(photo_url);
+      onDone();
+    } catch (e) { alert("Gagal check-in: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-bold text-base">Foto Bukti Check-in</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">Wajib lampirin foto (misal foto lokasi/produk/notulen) buat "{pending.leadName}".</p>
+        <label className="block cursor-pointer">
+          {preview ? (
+            <img src={preview} alt="" className="w-full h-48 object-cover rounded-2xl border border-slate-200" />
+          ) : (
+            <div className="w-full h-48 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 gap-2">
+              <Camera size={28} />
+              <span className="text-xs font-medium">Ambil / pilih foto</span>
+            </div>
+          )}
+          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+        </label>
+        <button onClick={confirm} disabled={busy || !photo} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} {busy ? "Menyimpan…" : "Konfirmasi Check-in"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TodayVisitsCard({ leads, onChanged }) {
   const todayVisits = useMemo(() => leads.filter((c) => c.visit_date === todayISO()), [leads]);
   const [myPos, setMyPos] = useState(null);
   const [geoError, setGeoError] = useState(false);
   const [checkingIn, setCheckingIn] = useState(null);
   const [recordingLead, setRecordingLead] = useState(null);
+  const [pendingCheckin, setPendingCheckin] = useState(null);
+  const [checkedInToday, setCheckedInToday] = useState(new Set());
+
+  useEffect(() => {
+    db.getTodayCheckedInLeadIds().then((ids) => setCheckedInToday(new Set(ids))).catch(() => {});
+  }, []);
   const watchIdRef = useRef(null);
 
   useEffect(() => {
@@ -34,33 +90,45 @@ function TodayVisitsCard({ leads, onChanged }) {
     return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
   }, [todayVisits.length]);
 
-  const doCheckIn = async (lead, distance) => {
-    setCheckingIn(lead.id);
-    try {
-      await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude: myPos.lat, longitude: myPos.lng, distance_meters: distance });
-      alert(`✅ Check-in "${lead.name}" berhasil dicatat.`);
-      onChanged();
-    } catch (e) { alert("Gagal check-in: " + e.message); }
-    finally { setCheckingIn(null); }
+  // Kedua alur (udah ada titik lokasi ATAU baru pertama kali) sama-sama minta
+  // foto dulu sebelum check-in beneran kesimpen - lewat PhotoCheckinModal.
+  const askCheckIn = (lead, distance) => {
+    setPendingCheckin({
+      leadId: lead.id,
+      leadName: lead.name,
+      run: async (photo_url) => {
+        setCheckingIn(lead.id);
+        try {
+          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude: myPos.lat, longitude: myPos.lng, distance_meters: distance, photo_url });
+          onChanged();
+        } finally { setCheckingIn(null); }
+      },
+    });
   };
 
-  const savePin = async (lead) => {
+  const askSavePin = (lead) => {
     if (!navigator.geolocation) { alert("HP/browser kamu ga dukung GPS."); return; }
-    setCheckingIn(lead.id);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-          await db.saveLeadLocation(lead.id, latitude, longitude);
-          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0 });
-          alert(`✅ Titik lokasi "${lead.name}" tersimpan & check-in tercatat.`);
-          onChanged();
-        } catch (e) { alert("Gagal simpan lokasi: " + e.message); }
-        finally { setCheckingIn(null); }
-      },
-      () => { alert("Gagal ambil lokasi GPS. Pastikan izin lokasi diaktifkan."); setCheckingIn(null); },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
+    setPendingCheckin({
+      leadId: lead.id,
+      leadName: lead.name,
+      run: (photo_url) => new Promise((resolve, reject) => {
+        setCheckingIn(lead.id);
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            try {
+              const { latitude, longitude } = pos.coords;
+              await db.saveLeadLocation(lead.id, latitude, longitude);
+              await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0, photo_url });
+              onChanged();
+              resolve();
+            } catch (e) { reject(e); }
+            finally { setCheckingIn(null); }
+          },
+          () => { setCheckingIn(null); reject(new Error("Gagal ambil lokasi GPS. Pastikan izin lokasi diaktifkan.")); },
+          { enableHighAccuracy: true, timeout: 15000 }
+        );
+      }),
+    });
   };
 
   if (todayVisits.length === 0) return null;
@@ -88,9 +156,13 @@ function TodayVisitsCard({ leads, onChanged }) {
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button onClick={() => setRecordingLead(c)} title="Rekam Meeting" className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-orange-600"><Mic size={14} /></button>
-                {!hasCoords ? (
+                {checkedInToday.has(c.id) ? (
+                  <span className="text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200">
+                    <CheckCircle2 size={13} /> Sudah Check-in
+                  </span>
+                ) : !hasCoords ? (
                   <button
-                    onClick={() => savePin(c)}
+                    onClick={() => askSavePin(c)}
                     disabled={checkingIn === c.id}
                     className="text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60"
                   >
@@ -98,7 +170,7 @@ function TodayVisitsCard({ leads, onChanged }) {
                   </button>
                 ) : (
                   <button
-                    onClick={() => doCheckIn(c, distance)}
+                    onClick={() => askCheckIn(c, distance)}
                     disabled={!canCheckIn || checkingIn === c.id}
                     className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${canCheckIn ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-slate-100 text-slate-400"}`}
                   >
@@ -111,6 +183,17 @@ function TodayVisitsCard({ leads, onChanged }) {
         })}
       </div>
       {recordingLead && <MeetingRecorderModal lead={recordingLead} onClose={() => setRecordingLead(null)} onSaved={onChanged} />}
+      {pendingCheckin && (
+        <PhotoCheckinModal
+          pending={pendingCheckin}
+          onClose={() => setPendingCheckin(null)}
+          onDone={() => {
+            setCheckedInToday((prev) => new Set(prev).add(pendingCheckin.leadId));
+            alert(`✅ Check-in "${pendingCheckin.leadName}" berhasil dicatat.`);
+            setPendingCheckin(null);
+          }}
+        />
+      )}
     </div>
   );
 }
