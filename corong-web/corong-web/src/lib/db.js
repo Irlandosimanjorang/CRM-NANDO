@@ -163,6 +163,14 @@ export async function dismissGeneratedLead(id) {
   if (error) throw error;
 }
 
+// ---- KIRIM EMAIL KE LEAD ----
+export async function sendLeadEmail({ lead_id, to_email, to_name, subject, body, sender_name }) {
+  const { data, error } = await supabase.functions.invoke("send-lead-email", { body: { lead_id, to_email, to_name, subject, body, sender_name } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // ---- STAGES ----
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");
