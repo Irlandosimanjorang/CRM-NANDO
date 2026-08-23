@@ -54,6 +54,9 @@ export default function Settings({ settings, stages, leads, onChanged }) {
 
   const isOwner = org && myUid && org.owner_user_id === myUid;
   const isEnterprise = org?.plan === "enterprise";
+  // Yang bayar paket Individual (bukan Enterprise) sengaja gak dikasih akses
+  // fitur tim sama sekali - paket itu emang didesain solo doang.
+  const isIndividualPaid = settings.plan === "premium" && !isEnterprise;
 
   const generateInvite = async () => {
     setInviteBusy(true);
@@ -198,39 +201,45 @@ export default function Settings({ settings, stages, leads, onChanged }) {
               ))}
             </div>
 
-            {isOwner && (
-              isEnterprise ? (
-                members.length >= (org?.member_limit || 1) ? (
-                  <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
-                ) : inviteCode ? (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                    <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota tim, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
-                    <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
-                      <span className="flex-1 tracking-wider">{inviteCode}</span>
-                      <button onClick={() => navigator.clipboard.writeText(inviteCode)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-2">Berlaku 1 jam.</p>
-                  </div>
-                ) : (
-                  <button onClick={generateInvite} disabled={inviteBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-                    {inviteBusy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Undang Anggota
-                  </button>
-                )
-              ) : (
-                <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise (Rp599rb/bulan, maks 6 orang) buat bisa undang anggota tim.</p>
-              )
-            )}
+            {isIndividualPaid ? (
+              <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Paket kamu <b>Individual</b> - fitur tim (undang/gabung anggota) khusus paket Enterprise.</p>
+            ) : (
+              <>
+                {isOwner && (
+                  isEnterprise ? (
+                    members.length >= (org?.member_limit || 1) ? (
+                      <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
+                    ) : inviteCode ? (
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                        <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota tim, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
+                        <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
+                          <span className="flex-1 tracking-wider">{inviteCode}</span>
+                          <button onClick={() => navigator.clipboard.writeText(inviteCode)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-2">Berlaku 1 jam.</p>
+                      </div>
+                    ) : (
+                      <button onClick={generateInvite} disabled={inviteBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+                        {inviteBusy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Undang Anggota
+                      </button>
+                    )
+                  ) : (
+                    <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise (Rp599rb/bulan, maks 6 orang) buat bisa undang anggota tim.</p>
+                  )
+                )}
 
-            <div className="border-t border-slate-100 mt-3 pt-3">
-              <p className="text-xs font-medium text-slate-500 mb-1.5">Punya kode undangan?</p>
-              <div className="flex gap-2">
-                <input className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl uppercase" placeholder="Masukin kode" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
-                <button onClick={joinWithCode} disabled={joinBusy} className="text-sm bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-4 font-medium">
-                  {joinBusy ? <Loader2 size={15} className="animate-spin" /> : "Gabung"}
-                </button>
-              </div>
-              {joinMsg && <p className={`text-xs mt-2 ${joinMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{joinMsg}</p>}
-            </div>
+                <div className="border-t border-slate-100 mt-3 pt-3">
+                  <p className="text-xs font-medium text-slate-500 mb-1.5">Punya kode undangan?</p>
+                  <div className="flex gap-2">
+                    <input className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl uppercase" placeholder="Masukin kode" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
+                    <button onClick={joinWithCode} disabled={joinBusy} className="text-sm bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-4 font-medium">
+                      {joinBusy ? <Loader2 size={15} className="animate-spin" /> : "Gabung"}
+                    </button>
+                  </div>
+                  {joinMsg && <p className={`text-xs mt-2 ${joinMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{joinMsg}</p>}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
