@@ -116,7 +116,9 @@ export async function generateLeads({ keyword, city } = {}) {
 }
 
 export async function getGeneratedLeads() {
-  const { data, error } = await supabase.from("generated_leads").select("*").eq("status", "pending").order("created_at", { ascending: false });
+  // Ambil SEMUA riwayat (bukan cuma yang pending) - biar tetep keliatan
+  // walau udah diimport, gak ilang dari daftar.
+  const { data, error } = await supabase.from("generated_leads").select("*").order("created_at", { ascending: false });
   if (error) throw error;
   return data || [];
 }
