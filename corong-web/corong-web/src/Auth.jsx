@@ -124,7 +124,7 @@ export default function Auth() {
             {/* Garis penghubung glowing */}
             <path d="M195,178 Q270,210 313,248" fill="none" stroke="#fb923c" strokeWidth="2" opacity="0.8" strokeLinecap="round" filter="url(#glow)" />
             <path d="M505,178 Q430,210 387,248" fill="none" stroke="#fb923c" strokeWidth="2" opacity="0.8" strokeLinecap="round" filter="url(#glow)" />
-            <path d="M350,415 Q350,375 350,357" fill="none" stroke="#fb923c" strokeWidth="2" opacity="0.8" strokeLinecap="round" filter="url(#glow)" />
+            <path d="M350,415 Q368,386 350,357" fill="none" stroke="#fb923c" strokeWidth="2" opacity="0.8" strokeLinecap="round" filter="url(#glow)" />
 
             {/* Hub tengah - bola bercahaya + partikel */}
             <circle cx="350" cy="290" r="68" fill="url(#orbCore)" filter="url(#glow)" />
