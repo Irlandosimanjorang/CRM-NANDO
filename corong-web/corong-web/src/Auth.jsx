@@ -29,38 +29,82 @@ import {
 } from "lucide-react";
 const NEXTO_LOGO_SRC = "/nexto-logo.png";
 
-function NextoLogo({ width = 90, className = "" }) {
+function NextoLogo({ width = 150, className = "" }) {
   return (
     <div
-      className={`relative shrink-0 ${className}`}
+      className={`flex items-center ${className}`}
       style={{ width, lineHeight: 0 }}
       aria-label="Nexto"
       role="img"
     >
-      {/* Base: N, E, T, O menjadi hitam */}
-      <img
-        src={NEXTO_LOGO_SRC}
-        alt=""
+      {/* AI robot head — intentionally placed BEFORE the NEXTO wordmark */}
+      <div
+        className="relative mr-2.5 flex shrink-0 items-center justify-center"
+        style={{ width: Math.max(30, width * 0.19), height: Math.max(30, width * 0.19) }}
         aria-hidden="true"
-        width={width}
-        className="block h-auto w-full object-contain"
-        style={{
-          filter:
-            "brightness(0) contrast(1.15) drop-shadow(0 1px 1px rgba(15, 23, 42, 0.08))",
-        }}
-      />
+      >
+        <div
+          className="absolute rounded-[28%] border"
+          style={{
+            inset: "8%",
+            background:
+              "linear-gradient(145deg, #f3f5f7 0%, #cbd2da 48%, #9aa5b2 100%)",
+            borderColor: "#7f8b98",
+            boxShadow:
+              "0 3px 8px rgba(15,23,42,.14), inset 0 1px 1px rgba(255,255,255,.9)",
+          }}
+        />
+        <div
+          className="absolute flex items-center justify-center rounded-full"
+          style={{
+            width: "58%",
+            height: "30%",
+            background: "#171717",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,.35)",
+          }}
+        >
+          <span
+            className="mr-1 rounded-full"
+            style={{
+              width: "10%",
+              height: "24%",
+              background: "#f97316",
+              boxShadow: "0 0 5px rgba(249,115,22,.7)",
+            }}
+          />
+          <span
+            className="rounded-full"
+            style={{
+              width: "10%",
+              height: "24%",
+              background: "#f97316",
+              boxShadow: "0 0 5px rgba(249,115,22,.7)",
+            }}
+          />
+        </div>
+        <span
+          className="absolute rounded-full"
+          style={{
+            width: "11%",
+            height: "11%",
+            right: "9%",
+            top: "5%",
+            background: "#22c55e",
+            boxShadow: "0 0 0 2px white, 0 0 7px rgba(34,197,94,.55)",
+          }}
+        />
+      </div>
 
-      {/* Overlay: pertahankan X orange dari logo asli */}
+      {/* Transparent wordmark: X stays orange, other letters use the dark/light
+          asset as supplied. No black rectangle/background is added. */}
       <img
         src={NEXTO_LOGO_SRC}
         alt=""
         aria-hidden="true"
-        width={width}
-        className="pointer-events-none absolute inset-0 block h-full w-full object-contain"
+        className="block h-auto w-auto object-contain"
         style={{
-          clipPath: "polygon(42% 0%, 60% 0%, 60% 100%, 42% 100%)",
-          WebkitClipPath:
-            "polygon(42% 0%, 60% 0%, 60% 100%, 42% 100%)",
+          width: Math.max(92, width * 0.78),
+          maxWidth: "calc(100% - 40px)",
         }}
       />
     </div>
@@ -68,47 +112,39 @@ function NextoLogo({ width = 90, className = "" }) {
 }
 
 
-function NextoHeaderBrand() {
+function NextoDarkWordmark({ width = 108, className = "" }) {
   return (
-    <a
-      href="#"
-      className="group flex items-center gap-2.5"
+    <div
+      className={`relative inline-block shrink-0 ${className}`}
+      style={{ width, lineHeight: 0 }}
       aria-label="Nexto"
+      role="img"
     >
-      {/* NEXTO logo: dark/black presentation with white letters + orange X */}
-      <span className="flex h-9 items-center rounded-[10px] border border-slate-800 bg-[#08090b] px-2.5 shadow-[0_6px_20px_-10px_rgba(15,23,42,0.5)]">
-        <img
-          src={NEXTO_LOGO_SRC}
-          alt="Nexto"
-          className="block h-[25px] w-auto object-contain"
-        />
-      </span>
+      {/* Base: make the complete wordmark white */}
+      <img
+        src={NEXTO_LOGO_SRC}
+        alt=""
+        aria-hidden="true"
+        className="block h-auto w-full object-contain"
+        style={{
+          filter:
+            "brightness(0) invert(1) contrast(1.08) drop-shadow(0 1px 1px rgba(0,0,0,.18))",
+        }}
+      />
 
-      {/* Header-only Nexto AI robot head */}
-      <span
-        className="relative flex h-9 w-9 items-center justify-center rounded-[11px] border border-orange-500/30 bg-[#111214] shadow-[0_0_24px_-8px_rgba(249,115,22,0.7)] transition-transform duration-200 group-hover:scale-105"
-        title="Nexto AI"
-      >
-        {/* ears */}
-        <span className="absolute -left-[3px] top-[13px] h-[12px] w-[4px] rounded-full bg-slate-600" />
-        <span className="absolute -right-[3px] top-[13px] h-[12px] w-[4px] rounded-full bg-slate-600" />
-
-        {/* head */}
-        <span className="relative h-[27px] w-[28px] rounded-[10px] border border-slate-300/50 bg-gradient-to-br from-slate-200 via-slate-400 to-slate-700 shadow-[0_5px_15px_-7px_rgba(0,0,0,0.9)]">
-          {/* visor */}
-          <span className="absolute left-[4px] right-[4px] top-[7px] h-[10px] rounded-full border border-orange-500/20 bg-[#08090b]">
-            <span className="absolute left-[6px] top-[3px] h-[3px] w-[3px] rounded-full bg-orange-400 shadow-[0_0_7px_rgba(251,146,60,0.9)]" />
-            <span className="absolute right-[6px] top-[3px] h-[3px] w-[3px] rounded-full bg-orange-400 shadow-[0_0_7px_rgba(251,146,60,0.9)]" />
-          </span>
-
-          {/* small Nexto mark */}
-          <span className="absolute bottom-[3px] left-1/2 h-[4px] w-[4px] -translate-x-1/2 rotate-45 rounded-[1px] bg-orange-500" />
-        </span>
-
-        {/* live indicator */}
-        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-[#111214] bg-emerald-400" />
-      </span>
-    </a>
+      {/* Overlay: preserve the orange X from the original asset */}
+      <img
+        src={NEXTO_LOGO_SRC}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 block h-full w-full object-contain"
+        style={{
+          clipPath: "polygon(39% 0%, 61% 0%, 61% 100%, 39% 100%)",
+          WebkitClipPath:
+            "polygon(39% 0%, 61% 0%, 61% 100%, 39% 100%)",
+        }}
+      />
+    </div>
   );
 }
 
@@ -1280,7 +1316,9 @@ export default function Auth() {
       ========================================================== */}
       <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 sm:px-7 lg:px-10">
-          <NextoHeaderBrand />
+          <a href="#" className="flex items-center">
+            <NextoLogo width={92} />
+          </a>
 
           <nav className="hidden items-center gap-7 md:flex">
             <a
@@ -2098,7 +2136,7 @@ export default function Auth() {
               <div className="scroll-mt-24">
                 <div className="rounded-[28px] border border-white/[0.09] bg-white/[0.04] p-6 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.8)] sm:p-7">
                   <div className="mb-6 flex items-center justify-between gap-3">
-                    <NextoLogo width={108} />
+                    <NextoDarkWordmark width={108} />
                     <div className="text-right">
                       <div className="text-[8px] text-slate-500">
                         Sales Loop Engine
@@ -2205,7 +2243,7 @@ export default function Auth() {
       <footer className="border-t border-white/[0.06] bg-[#080a0d] px-5 pb-8 text-white sm:px-7 lg:px-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 border-t border-white/[0.06] pt-7 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <NextoLogo width={82} />
+            <NextoDarkWordmark width={82} />
             <div className="text-[8px] text-slate-600">
               Sales Loop Engine
             </div>
