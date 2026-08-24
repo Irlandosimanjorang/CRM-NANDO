@@ -13,60 +13,245 @@ import Advisor from "./tabs/Advisor";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import {
-  LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
+  LayoutDashboard,
+  Users,
+  Trophy,
+  CalendarCheck,
+  Swords,
+  Lightbulb,
+  Bot,
+  Settings as SettingsIcon,
+  Loader2,
+  LogOut,
+  Users2,
+  Lock,
+  Camera,
+  Mail,
+  Sparkles,
+  Search,
+  Bell,
+  ChevronRight,
+  Command,
+  ArrowUpRight,
+  Zap,
+  CircleCheck,
+  X,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" className="shrink-0">
-      <path d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z" fill="#f97316" />
-      <path d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z" fill="#9a3412" />
+      <path
+        d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z"
+        fill="#f97316"
+      />
+      <path
+        d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z"
+        fill="#9a3412"
+      />
     </svg>
   );
 }
 
 // ---- DATA DUMMY buat preview tab Premium (user Free) ----
-// Ngasal doang - biar user Free liat gambaran "beneran kepake" bukan tab kosong.
-// Gak pernah disimpen ke database, murni buat ditampilin doang.
+// Tidak disimpan ke database. Murni untuk preview.
 const today = new Date().toISOString().slice(0, 10);
 const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+
 const DUMMY_LEADS = [
-  { id: "dummy-1", name: "PT Sinar Abadi Plastik", category: "Resin & Compound", stage_key: "presentasi", city: "Tangerang", key_person: "Budi Santoso", key_person_title: "Purchasing Manager", phone: "0812xxxxxx01", email: "budi@sinarabadi.co.id", visit_date: today, visit_meet: "Budi Santoso", visit_agenda: "Presentasi produk & harga penawaran", last_contact: "2026-08-20", next_action: "Follow up hasil presentasi minggu lalu", latitude: null, longitude: null, source: "manual" },
-  { id: "dummy-2", name: "CV Karya Plastindo", category: "Pipa & Fitting", stage_key: "negosiasi", city: "Bekasi", key_person: "Sari Wulandari", key_person_title: "Direktur", phone: "0812xxxxxx02", email: "sari@karyaplastindo.id", visit_date: tomorrow, visit_meet: "Sari Wulandari", visit_agenda: "Trial sample produk", last_contact: "2026-08-18", next_action: "Kirim sample ke pabrik", latitude: null, longitude: null, source: "manual" },
-  { id: "dummy-3", name: "PT Maju Bersama Kimia", category: "Kabel Listrik", stage_key: "deal", city: "Surabaya", key_person: "Ahmad Fauzi", key_person_title: "Owner", phone: "0812xxxxxx03", email: "ahmad@majubersama.co.id", last_contact: "2026-08-15", latitude: null, longitude: null, source: "telegram" },
+  {
+    id: "dummy-1",
+    name: "PT Sinar Abadi Plastik",
+    category: "Resin & Compound",
+    stage_key: "presentasi",
+    city: "Tangerang",
+    key_person: "Budi Santoso",
+    key_person_title: "Purchasing Manager",
+    phone: "0812xxxxxx01",
+    email: "budi@sinarabadi.co.id",
+    visit_date: today,
+    visit_meet: "Budi Santoso",
+    visit_agenda: "Presentasi produk & harga penawaran",
+    last_contact: "2026-08-20",
+    next_action: "Follow up hasil presentasi minggu lalu",
+    latitude: null,
+    longitude: null,
+    source: "manual",
+  },
+  {
+    id: "dummy-2",
+    name: "CV Karya Plastindo",
+    category: "Pipa & Fitting",
+    stage_key: "negosiasi",
+    city: "Bekasi",
+    key_person: "Sari Wulandari",
+    key_person_title: "Direktur",
+    phone: "0812xxxxxx02",
+    email: "sari@karyaplastindo.id",
+    visit_date: tomorrow,
+    visit_meet: "Sari Wulandari",
+    visit_agenda: "Trial sample produk",
+    last_contact: "2026-08-18",
+    next_action: "Kirim sample ke pabrik",
+    latitude: null,
+    longitude: null,
+    source: "manual",
+  },
+  {
+    id: "dummy-3",
+    name: "PT Maju Bersama Kimia",
+    category: "Kabel Listrik",
+    stage_key: "deal",
+    city: "Surabaya",
+    key_person: "Ahmad Fauzi",
+    key_person_title: "Owner",
+    phone: "0812xxxxxx03",
+    email: "ahmad@majubersama.co.id",
+    last_contact: "2026-08-15",
+    latitude: null,
+    longitude: null,
+    source: "telegram",
+  },
 ];
+
 const DUMMY_DEAL_TX = [
-  { id: "dd-1", lead_id: "dummy-3", lead_name: "PT Maju Bersama Kimia", deal_date: "2026-08-15", deal_value: 45000000, tonnage: 5, tonnage_unit: "ton", chemical: "PVC Resin K67" },
-  { id: "dd-2", lead_id: "dummy-2", lead_name: "CV Karya Plastindo", deal_date: "2026-08-10", deal_value: 28000000, tonnage: 3, tonnage_unit: "ton", chemical: "Calcium Zinc Stabilizer" },
+  {
+    id: "dd-1",
+    lead_id: "dummy-3",
+    lead_name: "PT Maju Bersama Kimia",
+    deal_date: "2026-08-15",
+    deal_value: 45000000,
+    tonnage: 5,
+    tonnage_unit: "ton",
+    chemical: "PVC Resin K67",
+  },
+  {
+    id: "dd-2",
+    lead_id: "dummy-2",
+    lead_name: "CV Karya Plastindo",
+    deal_date: "2026-08-10",
+    deal_value: 28000000,
+    tonnage: 3,
+    tonnage_unit: "ton",
+    chemical: "Calcium Zinc Stabilizer",
+  },
 ];
+
 const DUMMY_COMPETITORS = [
-  { id: "dc-1", name: "PT Kompetitor Jaya", background: "Pemain lama di area Jabodetabek", product: "PVC Compound", notes: "Harga agresif tapi servis lambat", usages: [{ id: "u1", company: "PT ABC Plastik", product: "Compound X", price: "Rp15.000/kg", quantity: "2 ton/bulan" }] },
-  { id: "dc-2", name: "CV Rival Chemical", background: "Fokus segmen kabel listrik", product: "Kabel Compound", notes: "Kuat di after-sales support", usages: [] },
+  {
+    id: "dc-1",
+    name: "PT Kompetitor Jaya",
+    background: "Pemain lama di area Jabodetabek",
+    product: "PVC Compound",
+    notes: "Harga agresif tapi servis lambat",
+    usages: [
+      {
+        id: "u1",
+        company: "PT ABC Plastik",
+        product: "Compound X",
+        price: "Rp15.000/kg",
+        quantity: "2 ton/bulan",
+      },
+    ],
+  },
+  {
+    id: "dc-2",
+    name: "CV Rival Chemical",
+    background: "Fokus segmen kabel listrik",
+    product: "Kabel Compound",
+    notes: "Kuat di after-sales support",
+    usages: [],
+  },
 ];
 
 const NAV = [
-  { key: "dashboard", label: "Dashboard", short: "Beranda", icon: LayoutDashboard },
-  { key: "leads", label: "Leads", short: "Leads", icon: Users },
-  { key: "generateleads", label: "Generate Leads", short: "Cari Lead", icon: Sparkles },
-  { key: "deal", label: "Deal", short: "Deal", icon: Trophy },
-  { key: "visitfollowup", label: "Visit & Follow-up", short: "Visit", icon: CalendarCheck },
-  { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
-  { key: "komunitas", label: "Nex", short: "Nex", icon: Users2, special: true },
-  { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
-  { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
+  {
+    key: "dashboard",
+    label: "Dashboard",
+    short: "Home",
+    icon: LayoutDashboard,
+  },
+  {
+    key: "leads",
+    label: "Leads",
+    short: "Leads",
+    icon: Users,
+  },
+  {
+    key: "generateleads",
+    label: "Generate Leads",
+    short: "Cari Lead",
+    icon: Sparkles,
+  },
+  {
+    key: "deal",
+    label: "Deal",
+    short: "Deal",
+    icon: Trophy,
+  },
+  {
+    key: "visitfollowup",
+    label: "Visit & Follow-up",
+    short: "Visit",
+    icon: CalendarCheck,
+  },
+  {
+    key: "kompetitor",
+    label: "Kompetitor",
+    short: "Rival",
+    icon: Swords,
+  },
+  {
+    key: "komunitas",
+    label: "Nex",
+    short: "Nex",
+    icon: Users2,
+    special: true,
+  },
+  {
+    key: "advisor",
+    label: "AI Advisor",
+    short: "AI",
+    icon: Lightbulb,
+    ai: true,
+  },
+  {
+    key: "settings",
+    label: "Pengaturan",
+    short: "More",
+    icon: SettingsIcon,
+  },
 ];
 
 function ConfigScreen() {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
-        <div className="mb-4"><NextoBadge size={48} /></div>
-        <h1 className="text-lg font-bold mb-2">Sambungin ke Supabase dulu</h1>
-        <p className="text-sm text-slate-500 mb-3">Buat file <code className="bg-slate-100 px-1 rounded">.env</code> di root project (salin dari <code className="bg-slate-100 px-1 rounded">.env.example</code>), isi:</p>
-        <pre className="text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto">VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...</pre>
-        <p className="text-xs text-slate-400 mt-3">Ambil dari Supabase → Project Settings → API. Terus restart <code className="bg-slate-100 px-1 rounded">npm run dev</code>.</p>
+    <div className="min-h-screen bg-[#f7f8fa] flex items-center justify-center p-4">
+      <div className="max-w-md bg-white border border-slate-200/80 rounded-[28px] shadow-[0_20px_60px_-25px_rgba(15,23,42,0.18)] p-7">
+        <div className="mb-4">
+          <NextoBadge size={48} />
+        </div>
+
+        <h1 className="text-lg font-bold mb-2 text-slate-950">
+          Sambungin ke Supabase dulu
+        </h1>
+
+        <p className="text-sm text-slate-500 mb-3">
+          Buat file{" "}
+          <code className="bg-slate-100 px-1 rounded">.env</code> di root
+          project (salin dari{" "}
+          <code className="bg-slate-100 px-1 rounded">.env.example</code>),
+          isi:
+        </p>
+
+        <pre className="text-xs bg-slate-950 text-slate-100 rounded-xl p-3 overflow-x-auto">
+          VITE_SUPABASE_URL=...
+          {"\n"}VITE_SUPABASE_ANON_KEY=...
+        </pre>
+
+        <p className="text-xs text-slate-400 mt-3">
+          Ambil dari Supabase → Project Settings → API. Terus restart{" "}
+          <code className="bg-slate-100 px-1 rounded">npm run dev</code>.
+        </p>
       </div>
     </div>
   );
@@ -82,15 +267,30 @@ export default function App() {
   const [dealTransactions, setDealTransactions] = useState([]);
   const [competitors, setCompetitors] = useState([]);
   const [org, setOrg] = useState(null);
+
   const [joinCode, setJoinCode] = useState("");
   const [joinBusy, setJoinBusy] = useState(false);
   const [joinMsg, setJoinMsg] = useState("");
+
+  const [editLead, setEditLead] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const joinWithCode = async () => {
     if (!joinCode.trim()) return;
-    setJoinBusy(true); setJoinMsg("");
+
+    setJoinBusy(true);
+    setJoinMsg("");
+
     try {
       const res = await db.redeemInviteCode(joinCode.trim());
-      setJoinMsg(`✅ Gabung ke ${res.org_name}! Semua fitur Enterprise sekarang kebuka.`);
+
+      setJoinMsg(
+        `✅ Gabung ke ${res.org_name}! Semua fitur Enterprise sekarang kebuka.`
+      );
+
       setJoinCode("");
       await reload();
     } catch (e) {
@@ -99,47 +299,90 @@ export default function App() {
       setJoinBusy(false);
     }
   };
-  const [editLead, setEditLead] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isConfigured) { setAuthReady(true); return; }
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { db.clearOrgCache(); setSession(s); });
+    if (!isConfigured) {
+      setAuthReady(true);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthReady(true);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      db.clearOrgCache();
+      setSession(s);
+    });
+
     return () => sub.subscription.unsubscribe();
   }, []);
 
   const reload = async () => {
     setLoading(true);
+
     try {
-      let [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
-      // Akun baru (belum pernah setup pipeline sama sekali) - otomatis kasih
-      // pipeline default biar gak kosong melompong abis daftar sendiri.
+      let [st, se, ls, comp, dt] = await Promise.all([
+        db.getStages(),
+        db.getSettings(),
+        db.getLeads(),
+        db.getCompetitors(),
+        db.getDealTransactions(),
+      ]);
+
       if (st.length === 0) {
-        try { await db.initDefaultStages(); st = await db.getStages(); } catch (e) { console.error(e); }
+        try {
+          await db.initDefaultStages();
+          st = await db.getStages();
+        } catch (e) {
+          console.error(e);
+        }
       }
-      try { setOrg(await db.getMyOrg()); } catch (e) { console.error(e); }
-      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+
+      try {
+        setOrg(await db.getMyOrg());
+      } catch (e) {
+        console.error(e);
+      }
+
+      setStages(st);
+      setSettings(se);
+      setLeads(ls);
+      setCompetitors(comp);
+      setDealTransactions(dt);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Reload diem-diem (TANPA nyalain loading spinner) - dipakai buat nyegerin data
-  // pas balik dari tab/app lain yang udah lama ditinggal, tanpa bikin layar kedip loading.
   const silentReload = async () => {
     try {
-      const [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
-      setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
-    } catch (e) { console.error(e); }
+      const [st, se, ls, comp, dt] = await Promise.all([
+        db.getStages(),
+        db.getSettings(),
+        db.getLeads(),
+        db.getCompetitors(),
+        db.getDealTransactions(),
+      ]);
+
+      setStages(st);
+      setSettings(se);
+      setLeads(ls);
+      setCompetitors(comp);
+      setDealTransactions(dt);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  // Supabase otomatis ngecek/refresh token pas tab balik fokus, yang bikin onAuthStateChange
-  // nembak terus tiap kali pindah tab/app - walau user-nya sama aja, bukan login baru.
-  // Makanya reload PENUH (loading spinner) cuma dipicu kalau user_id-nya beneran ganti
-  // (login pertama kali / ganti akun), bukan tiap kali sesi ke-refresh doang.
   const prevUserId = useRef(null);
+
   useEffect(() => {
     const uid = session?.user?.id || null;
+
     if (uid && uid !== prevUserId.current) {
       prevUserId.current = uid;
       reload();
@@ -148,26 +391,28 @@ export default function App() {
     }
   }, [session]);
 
-  // Kalau tab ditinggal lebih dari 5 menit terus dibuka lagi, sync data diem-diem
-  // (ga nyalain loading spinner) biar tetep fresh tanpa bikin capek liat loading mulu.
   useEffect(() => {
     let hiddenAt = null;
+
     const onVisibility = () => {
       if (document.hidden) {
         hiddenAt = Date.now();
       } else if (hiddenAt && session) {
         const awayMs = Date.now() - hiddenAt;
-        if (awayMs > 5 * 60 * 1000) silentReload();
+
+        if (awayMs > 5 * 60 * 1000) {
+          silentReload();
+        }
+
         hiddenAt = null;
       }
     };
+
     document.addEventListener("visibilitychange", onVisibility);
+
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [session]);
 
-  // Pull-to-refresh: tarik layar dari paling atas (cuma aktif kalau scroll udah
-  // di posisi 0) buat refresh data manual - berguna soalnya PWA yang di-install
-  // gak punya tombol refresh browser lagi.
   const [pullVisual, setPullVisual] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const pullDistanceRef = useRef(0);
@@ -176,15 +421,19 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return;
+
     const onTouchStart = (e) => {
       if (window.scrollY === 0 && !refreshing) {
         touchStartY.current = e.touches[0].clientY;
         pulling.current = true;
       }
     };
+
     const onTouchMove = (e) => {
       if (!pulling.current) return;
+
       const delta = e.touches[0].clientY - touchStartY.current;
+
       if (delta > 0 && window.scrollY === 0) {
         const d = Math.min(delta * 0.5, 90);
         pullDistanceRef.current = d;
@@ -195,21 +444,34 @@ export default function App() {
         setPullVisual(0);
       }
     };
+
     const onTouchEnd = async () => {
       if (!pulling.current) return;
+
       pulling.current = false;
+
       const d = pullDistanceRef.current;
+
       pullDistanceRef.current = 0;
       setPullVisual(0);
+
       if (d > 60) {
         setRefreshing(true);
         await silentReload();
         setRefreshing(false);
       }
     };
-    document.addEventListener("touchstart", onTouchStart, { passive: true });
-    document.addEventListener("touchmove", onTouchMove, { passive: true });
+
+    document.addEventListener("touchstart", onTouchStart, {
+      passive: true,
+    });
+
+    document.addEventListener("touchmove", onTouchMove, {
+      passive: true,
+    });
+
     document.addEventListener("touchend", onTouchEnd);
+
     return () => {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchmove", onTouchMove);
@@ -222,231 +484,977 @@ export default function App() {
   if (!session) return <Auth />;
 
   // ---- SISTEM 2 TIPE (FREE / PREMIUM) ----
-  // Gak ada trial otomatis - daftar langsung dapet Free (Dashboard & Leads doang).
-  // Fitur AI (Bot Telegram, AI Advisor, Rekam Meeting, dst) pake token API
-  // berbayar, jadi cuma kebuka abis di-upgrade ke Premium (settings.plan = 'premium').
-  const isPremium = settings.plan === "premium" || org?.plan === "enterprise";
+  const isPremium =
+    settings.plan === "premium" || org?.plan === "enterprise";
+
   const FREE_TABS = ["dashboard", "leads"];
 
-  const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
+  const stageList = stages.length
+    ? stages
+    : [
+        {
+          key: "prospek",
+          label: "Prospek",
+          hex: "#94a3b8",
+          type: "normal",
+        },
+      ];
+
   const effectiveTab = tab;
-  const isLocked = (key) => !loading && !isPremium && !FREE_TABS.includes(key);
+
+  const isLocked = (key) =>
+    !loading && !isPremium && !FREE_TABS.includes(key);
+
+  const currentNav = NAV.find((n) => n.key === effectiveTab) || NAV[0];
+
+  const profileName =
+    settings.community_display_name ||
+    session?.user?.email?.split("@")[0] ||
+    "Sales";
+
+  const firstName = profileName.split(" ")[0];
+
+  const goTo = (key) => {
+    setTab(key);
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openAI = () => {
+    setTab("advisor");
+    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50/50 via-slate-50 to-slate-50 text-slate-900 flex">
+    <div className="min-h-screen bg-[#f6f7f9] text-slate-900 flex selection:bg-orange-100 selection:text-orange-900">
+      {/* =========================================================
+          MOBILE PULL REFRESH
+      ========================================================== */}
       {(pullVisual > 0 || refreshing) && (
         <div
-          className="md:hidden fixed top-0 inset-x-0 z-50 flex items-start justify-center pointer-events-none transition-[height] duration-150"
+          className="md:hidden fixed top-0 inset-x-0 z-[80] flex items-start justify-center pointer-events-none transition-[height] duration-150"
           style={{ height: refreshing ? 56 : pullVisual }}
         >
-          <div className="bg-white rounded-full p-2 shadow-lg mt-2">
+          <div className="bg-white rounded-full p-2 shadow-[0_8px_25px_-8px_rgba(15,23,42,0.3)] mt-2 border border-slate-100">
             <Loader2
               size={18}
               className="text-orange-500"
-              style={refreshing ? { animation: "spin 0.8s linear infinite" } : { transform: `rotate(${pullVisual * 3}deg)` }}
+              style={
+                refreshing
+                  ? { animation: "spin 0.8s linear infinite" }
+                  : {
+                      transform: `rotate(${pullVisual * 3}deg)`,
+                    }
+              }
             />
           </div>
         </div>
       )}
-      <aside className="hidden md:flex flex-col w-60 bg-slate-900 text-white sticky top-0 h-screen shrink-0">
-        <div className="px-5 py-6 flex items-center gap-2.5 border-b border-white/5">
-          <NextoBadge size={36} />
-          <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-[15px]">Nexto</div></div>
-          <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={32} align="left" />
+
+      {/* =========================================================
+          DESKTOP SIDEBAR
+      ========================================================== */}
+      <aside className="hidden md:flex flex-col w-[248px] bg-[#0b0d10] text-white sticky top-0 h-screen shrink-0 border-r border-white/[0.04]">
+        {/* Logo */}
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-xl bg-orange-500/20 blur-lg" />
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                <NextoBadge size={28} />
+              </div>
+            </div>
+
+            <div className="flex-1 leading-tight">
+              <div className="font-bold tracking-[-0.03em] text-[16px]">
+                Nexto
+              </div>
+              <div className="text-[8px] uppercase tracking-[0.18em] text-slate-600 mt-0.5">
+                Sales Intelligence
+              </div>
+            </div>
+
+            <ProfileAvatar
+              settings={settings}
+              session={session}
+              org={org}
+              onChanged={reload}
+              size={32}
+              align="left"
+            />
+          </div>
         </div>
-        <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
-          {NAV.map((n) => { const I = n.icon; const active = effectiveTab === n.key; const locked = isLocked(n.key);
-            const cls = locked
-              ? "text-slate-500 hover:bg-white/[0.03] cursor-pointer"
-              : n.special
-              ? (active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg shadow-violet-600/25" : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200")
-              : (active ? "bg-orange-600 text-white font-semibold shadow-lg shadow-orange-600/20" : "text-slate-300 hover:bg-white/[0.06] hover:text-white");
+
+        {/* AI Command Button */}
+        <div className="px-4 pb-4">
+          <button
+            onClick={openAI}
+            className="group relative w-full overflow-hidden rounded-2xl border border-orange-500/20 bg-orange-500/[0.07] px-3.5 py-3 text-left transition-all hover:border-orange-500/35 hover:bg-orange-500/[0.11]"
+          >
+            <div className="absolute -right-5 -top-5 h-16 w-16 rounded-full bg-orange-500/10 blur-xl transition group-hover:bg-orange-500/20" />
+
+            <div className="relative flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500/15 text-orange-400">
+                <Sparkles size={15} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-bold text-white">
+                  Ask Nexto
+                </div>
+                <div className="mt-0.5 text-[8px] text-slate-500">
+                  Tanya apa saja tentang sales kamu
+                </div>
+              </div>
+
+              <ArrowUpRight
+                size={13}
+                className="text-orange-500 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              />
+            </div>
+          </button>
+        </div>
+
+        {/* Section label */}
+        <div className="px-6 pb-2 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-700">
+          Workspace
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto scrollbar-none">
+          {NAV.map((n) => {
+            const I = n.icon;
+            const active = effectiveTab === n.key;
+            const locked = isLocked(n.key);
+
+            let cls = "";
+
+            if (locked) {
+              cls =
+                "text-slate-600 hover:bg-white/[0.025] cursor-pointer";
+            } else if (n.special) {
+              cls = active
+                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-[0_8px_25px_-10px_rgba(139,92,246,0.8)]"
+                : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200";
+            } else if (n.ai) {
+              cls = active
+                ? "bg-orange-500/10 text-orange-300 font-semibold border border-orange-500/15"
+                : "text-orange-400/80 hover:bg-orange-500/[0.07] hover:text-orange-300";
+            } else {
+              cls = active
+                ? "bg-white/[0.08] text-white font-semibold shadow-inner"
+                : "text-slate-400 hover:bg-white/[0.045] hover:text-slate-200";
+            }
+
             return (
-            <button key={n.key} onClick={() => setTab(n.key)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm transition-all duration-150 ${cls}`}>
-              <I size={17} strokeWidth={active ? 2.5 : 2} /> <span className="flex-1 text-left">{n.label}</span> {locked && <Lock size={13} className="shrink-0" />}
-            </button> ); })}
+              <button
+                key={n.key}
+                onClick={() => goTo(n.key)}
+                className={`group relative w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[12px] transition-all duration-150 ${cls}`}
+              >
+                {active && !locked && !n.special && (
+                  <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-orange-500" />
+                )}
+
+                <I
+                  size={16}
+                  strokeWidth={active ? 2.5 : 1.8}
+                  className={
+                    n.ai
+                      ? "text-orange-400"
+                      : active
+                      ? "text-white"
+                      : "text-slate-500 group-hover:text-slate-300"
+                  }
+                />
+
+                <span className="flex-1 text-left">{n.label}</span>
+
+                {n.ai && (
+                  <span className="rounded-full bg-orange-500/10 px-1.5 py-0.5 text-[7px] font-bold text-orange-400">
+                    AI
+                  </span>
+                )}
+
+                {locked && (
+                  <Lock size={11} className="shrink-0 text-slate-700" />
+                )}
+              </button>
+            );
+          })}
         </nav>
-        <button onClick={() => supabase.auth.signOut()} className="m-3 px-4 py-2.5 rounded-2xl bg-white/[0.04] text-xs text-slate-300 hover:bg-white/10 flex items-center gap-2 transition-colors"><LogOut size={14} /> Keluar</button>
+
+        {/* Sidebar footer */}
+        <div className="p-3">
+          <div className="mb-2 rounded-xl border border-white/[0.05] bg-white/[0.025] px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <div
+                className={`h-1.5 w-1.5 rounded-full ${
+                  isPremium ? "bg-emerald-400" : "bg-slate-500"
+                }`}
+              />
+
+              <span className="text-[9px] font-medium text-slate-400">
+                {org?.plan === "enterprise"
+                  ? "Enterprise workspace"
+                  : settings.plan === "premium"
+                  ? "Premium workspace"
+                  : "Free workspace"}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="w-full px-3.5 py-2.5 rounded-xl text-[10px] text-slate-500 hover:bg-white/[0.05] hover:text-slate-300 flex items-center gap-2 transition-colors"
+          >
+            <LogOut size={13} />
+            Keluar
+          </button>
+        </div>
       </aside>
 
+      {/* =========================================================
+          MAIN AREA
+      ========================================================== */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="md:hidden sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-slate-200/60 shadow-[0_1px_12px_-2px_rgba(15,23,42,0.06)]">
-          <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center gap-2.5">
-            <NextoBadge size={32} />
-            <div className="leading-tight flex-1"><div className="font-bold tracking-tight text-sm">Nexto · <span className="text-slate-500 font-medium">{NAV.find((n) => n.key === effectiveTab)?.label}</span></div></div>
-            <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={32} />
+        {/* =======================================================
+            MOBILE HEADER
+        ======================================================== */}
+        <header className="md:hidden sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/70">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950">
+              <NextoBadge size={27} />
+            </div>
+
+            <div className="leading-tight flex-1 min-w-0">
+              <div className="font-bold tracking-tight text-[13px] text-slate-950">
+                Nexto
+              </div>
+
+              <div className="text-[9px] text-slate-400 truncate">
+                {currentNav.label}
+              </div>
+            </div>
+
+            <button
+              onClick={openAI}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600 border border-orange-100"
+            >
+              <Sparkles size={15} />
+            </button>
+
+            <ProfileAvatar
+              settings={settings}
+              session={session}
+              org={org}
+              onChanged={reload}
+              size={34}
+            />
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-32">
-          {!loading && !isPremium && (
-            <div className="mb-4 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 space-y-2.5">
-              <div className="flex items-center justify-between gap-2 text-xs text-orange-800">
-                <span>Kamu sekarang di paket <b>Free</b> (Dashboard &amp; Leads doang). Upgrade ke Premium (Rp149rb/bulan) buat buka semua fitur + bot Telegram + Calendar + AI.</span>
-                <a href="https://subscription.myr.id/m/nexto-premium-88379/" target="_blank" rel="noreferrer" className="shrink-0 underline font-medium">Upgrade</a>
+        {/* =======================================================
+            DESKTOP TOP BAR
+        ======================================================== */}
+        <header className="hidden md:flex h-[72px] shrink-0 items-center border-b border-slate-200/70 bg-white/80 backdrop-blur-xl px-7">
+          <div className="max-w-[1180px] w-full mx-auto flex items-center gap-5">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-medium text-slate-400">
+                  Workspace
+                </span>
+
+                <ChevronRight size={11} className="text-slate-300" />
+
+                <span className="text-[10px] font-semibold text-slate-700">
+                  {currentNav.label}
+                </span>
               </div>
-              <div className="border-t border-orange-200/60 pt-2.5">
-                <p className="text-[11px] text-orange-700 mb-1.5">Atau punya kode undangan dari tim (bos kamu udah Enterprise)? Masukin di sini, gratis buat kamu:</p>
-                <div className="flex gap-2">
-                  <input className="flex-1 px-3 py-1.5 text-xs border border-orange-300 rounded-lg uppercase bg-white" placeholder="MASUKIN KODE" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
-                  <button onClick={joinWithCode} disabled={joinBusy} className="text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-lg px-3 font-medium">
-                    {joinBusy ? "..." : "Gabung"}
-                  </button>
+            </div>
+
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="group flex w-[230px] items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-left transition hover:border-slate-300 hover:bg-white"
+            >
+              <Search size={14} className="text-slate-400" />
+
+              <span className="flex-1 text-[10px] text-slate-400">
+                Cari di Nexto...
+              </span>
+
+              <span className="flex items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[8px] font-medium text-slate-400">
+                <Command size={8} />
+                K
+              </span>
+            </button>
+
+            <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-slate-700 transition">
+              <Bell size={15} />
+
+              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-orange-500 ring-2 ring-white" />
+            </button>
+
+            <button
+              onClick={openAI}
+              className="group flex items-center gap-2 rounded-xl bg-slate-950 px-3.5 py-2.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              <Sparkles size={12} className="text-orange-400" />
+              Ask Nexto
+              <ArrowUpRight
+                size={11}
+                className="text-slate-500 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              />
+            </button>
+          </div>
+        </header>
+
+        {/* =======================================================
+            CONTENT
+        ======================================================== */}
+        <main className="flex-1 p-3 sm:p-4 md:p-6 max-w-[1180px] w-full mx-auto pb-28 md:pb-10">
+          {/* Free plan banner */}
+          {!loading && !isPremium && (
+            <div className="mb-5 overflow-hidden rounded-[18px] border border-orange-200/80 bg-gradient-to-r from-orange-50 via-white to-orange-50/50">
+              <div className="px-4 py-3.5">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                      <Zap size={13} />
+                    </div>
+
+                    <div>
+                      <div className="text-[10px] font-bold text-orange-900">
+                        Kamu sedang menggunakan paket Free
+                      </div>
+
+                      <div className="mt-1 max-w-2xl text-[9px] leading-4 text-orange-700/70">
+                        Dashboard & Leads tersedia. Upgrade ke Premium untuk
+                        membuka AI, Bot Telegram, Calendar, Visit, Deal,
+                        Kompetitor, dan fitur sales lainnya.
+                      </div>
+                    </div>
+                  </div>
+
+                  <a
+                    href="https://subscription.myr.id/m/nexto-premium-88379/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-orange-600 px-3.5 py-2 text-[9px] font-bold text-white transition hover:bg-orange-700"
+                  >
+                    Upgrade Rp149rb/bulan
+                    <ArrowUpRight size={11} />
+                  </a>
                 </div>
-                {joinMsg && <p className={`text-[11px] mt-1.5 ${joinMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{joinMsg}</p>}
+
+                <div className="mt-3 border-t border-orange-200/60 pt-3">
+                  <p className="mb-2 text-[9px] font-medium text-orange-700/70">
+                    Punya kode undangan dari tim Enterprise? Gabung gratis.
+                  </p>
+
+                  <div className="flex gap-2">
+                    <input
+                      className="min-w-0 flex-1 rounded-lg border border-orange-200 bg-white px-3 py-2 text-[10px] uppercase text-slate-800 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                      placeholder="MASUKIN KODE"
+                      value={joinCode}
+                      onChange={(e) =>
+                        setJoinCode(e.target.value.toUpperCase())
+                      }
+                      maxLength={6}
+                    />
+
+                    <button
+                      onClick={joinWithCode}
+                      disabled={joinBusy}
+                      className="rounded-lg bg-orange-600 px-3.5 text-[9px] font-semibold text-white hover:bg-orange-700 disabled:opacity-60"
+                    >
+                      {joinBusy ? "..." : "Gabung"}
+                    </button>
+                  </div>
+
+                  {joinMsg && (
+                    <p
+                      className={`mt-1.5 text-[9px] ${
+                        joinMsg.startsWith("Gagal")
+                          ? "text-rose-600"
+                          : "text-emerald-700"
+                      }`}
+                    >
+                      {joinMsg}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}
-          {loading ? <Splash inline /> : (
+
+          {/* Page intro / command strip */}
+          {!loading && (
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+
+                  <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-orange-600">
+                    Sales workspace
+                  </span>
+                </div>
+
+                <h1 className="text-[22px] font-bold tracking-[-0.04em] text-slate-950 sm:text-[26px]">
+                  {effectiveTab === "dashboard"
+                    ? `Good ${getDayPart()}, ${firstName}.`
+                    : currentNav.label}
+                </h1>
+
+                <p className="mt-1 text-[10px] text-slate-400">
+                  {effectiveTab === "dashboard"
+                    ? "Ini yang perlu kamu tahu tentang sales kamu hari ini."
+                    : getTabDescription(effectiveTab)}
+                </p>
+              </div>
+
+              <button
+                onClick={openAI}
+                className="group inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[9px] font-semibold text-slate-600 shadow-sm transition hover:border-orange-200 hover:text-orange-600 sm:self-auto"
+              >
+                <Sparkles size={12} className="text-orange-500" />
+                Tanya Nexto
+                <ChevronRight
+                  size={11}
+                  className="text-slate-300 transition group-hover:translate-x-0.5"
+                />
+              </button>
+            </div>
+          )}
+
+          {/* Content */}
+          {loading ? (
+            <Splash inline />
+          ) : (
             <>
-              {effectiveTab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} onGo={setTab} />}
-              {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
-              {effectiveTab === "generateleads" && <PreviewLock locked={isLocked("generateleads")}><GenerateLeads stages={stageList} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "kompetitor" && <PreviewLock locked={isLocked("kompetitor")}><Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "komunitas" && <PreviewLock locked={isLocked("komunitas")}><Nex dummy={isLocked("komunitas")} /></PreviewLock>}
-              {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} /></PreviewLock>}
-              {effectiveTab === "settings" && <PreviewLock locked={isLocked("settings")}><SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "dashboard" && (
+                <Dashboard
+                  leads={leads}
+                  stages={stageList}
+                  dealTransactions={dealTransactions}
+                  onGo={setTab}
+                />
+              )}
+
+              {effectiveTab === "leads" && (
+                <Leads
+                  leads={leads}
+                  stages={stageList}
+                  settings={settings}
+                  onChanged={reload}
+                />
+              )}
+
+              {effectiveTab === "generateleads" && (
+                <PreviewLock locked={isLocked("generateleads")}>
+                  <GenerateLeads
+                    stages={stageList}
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
+
+              {effectiveTab === "deal" && (
+                <PreviewLock locked={isLocked("deal")}>
+                  <Deal
+                    leads={isLocked("deal") ? DUMMY_LEADS : leads}
+                    stages={stageList}
+                    dealTransactions={
+                      isLocked("deal")
+                        ? DUMMY_DEAL_TX
+                        : dealTransactions
+                    }
+                    onEdit={setEditLead}
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
+
+              {effectiveTab === "visitfollowup" && (
+                <PreviewLock locked={isLocked("visitfollowup")}>
+                  <VisitFollowup
+                    leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads}
+                    onEdit={setEditLead}
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
+
+              {effectiveTab === "kompetitor" && (
+                <PreviewLock locked={isLocked("kompetitor")}>
+                  <Kompetitor
+                    competitors={
+                      isLocked("kompetitor")
+                        ? DUMMY_COMPETITORS
+                        : competitors
+                    }
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
+
+              {effectiveTab === "komunitas" && (
+                <PreviewLock locked={isLocked("komunitas")}>
+                  <Nex dummy={isLocked("komunitas")} />
+                </PreviewLock>
+              )}
+
+              {effectiveTab === "advisor" && (
+                <PreviewLock locked={isLocked("advisor")}>
+                  <Advisor
+                    leads={isLocked("advisor") ? DUMMY_LEADS : leads}
+                    stages={stageList}
+                    onOpen={setEditLead}
+                    dummy={isLocked("advisor")}
+                  />
+                </PreviewLock>
+              )}
+
+              {effectiveTab === "settings" && (
+                <PreviewLock locked={isLocked("settings")}>
+                  <SettingsTab
+                    settings={settings}
+                    stages={stageList}
+                    leads={leads}
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
             </>
           )}
         </main>
 
+        {/* =======================================================
+            MOBILE BOTTOM NAV
+        ======================================================== */}
         <nav className="md:hidden fixed bottom-3 inset-x-3 z-40">
-          <div className="max-w-lg mx-auto flex justify-around px-1.5 py-2 bg-white/90 backdrop-blur-xl rounded-[26px] shadow-[0_8px_32px_-6px_rgba(15,23,42,0.18)] border border-white/60">
-            {NAV.map((n) => { const I = n.icon; const active = effectiveTab === n.key; const locked = isLocked(n.key);
-              const cls = locked
-                ? "text-slate-300"
-                : n.special
-                ? (active ? "text-violet-600 bg-violet-50" : "text-violet-400")
-                : (active ? "text-orange-600 bg-orange-50" : "text-slate-400");
+          <div className="max-w-lg mx-auto flex items-center gap-1 px-1.5 py-1.5 bg-[#0b0d10]/95 backdrop-blur-2xl rounded-[22px] shadow-[0_15px_45px_-10px_rgba(15,23,42,0.35)] border border-white/[0.08]">
+            {NAV.map((n) => {
+              const I = n.icon;
+              const active = effectiveTab === n.key;
+              const locked = isLocked(n.key);
+
+              let cls = "";
+
+              if (locked) {
+                cls = "text-slate-600";
+              } else if (n.special) {
+                cls = active
+                  ? "text-violet-300 bg-violet-500/15"
+                  : "text-violet-400";
+              } else if (n.ai) {
+                cls = active
+                  ? "text-orange-400 bg-orange-500/10"
+                  : "text-orange-500";
+              } else {
+                cls = active
+                  ? "text-white bg-white/[0.09]"
+                  : "text-slate-500";
+              }
+
               return (
-              <button key={n.key} onClick={() => setTab(n.key)} className={`relative flex flex-col items-center gap-0.5 flex-1 py-1.5 rounded-2xl transition-colors ${cls}`}>
-                <I size={19} strokeWidth={active ? 2.5 : 2} /><span className="text-[9px] font-medium leading-none truncate max-w-full mt-0.5">{n.short}</span>
-                {locked && <Lock size={9} className="absolute top-0.5 right-2" />}
-              </button> ); })}
+                <button
+                  key={n.key}
+                  onClick={() => goTo(n.key)}
+                  className={`relative flex flex-col items-center gap-1 flex-1 py-2 rounded-2xl transition-colors ${cls}`}
+                >
+                  <I
+                    size={17}
+                    strokeWidth={active ? 2.5 : 1.8}
+                  />
+
+                  <span className="text-[7px] font-medium leading-none truncate max-w-full">
+                    {n.short}
+                  </span>
+
+                  {locked && (
+                    <Lock
+                      size={7}
+                      className="absolute top-1 right-2 text-slate-700"
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </nav>
       </div>
 
-      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} />}
+      {/* =========================================================
+          SEARCH OVERLAY
+      ========================================================== */}
+      {searchOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[90] bg-slate-950/30 backdrop-blur-sm"
+            onClick={() => setSearchOpen(false)}
+          />
+
+          <div className="fixed left-1/2 top-[12vh] z-[100] w-[calc(100%-32px)] max-w-xl -translate-x-1/2 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_30px_90px_-25px_rgba(15,23,42,0.35)]">
+            <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+              <Search size={16} className="text-slate-400" />
+
+              <input
+                autoFocus
+                className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                placeholder="Cari lead, deal, customer..."
+              />
+
+              <button
+                onClick={() => setSearchOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400 hover:text-slate-700"
+              >
+                <X size={13} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="mb-3 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                Quick access
+              </div>
+
+              <button
+                onClick={() => {
+                  setSearchOpen(false);
+                  openAI();
+                }}
+                className="group flex w-full items-center gap-3 rounded-xl border border-orange-100 bg-orange-50/60 p-3 text-left transition hover:bg-orange-50"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+                  <Sparkles size={14} />
+                </div>
+
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold text-slate-800">
+                    Tanya Nexto AI
+                  </div>
+                  <div className="mt-0.5 text-[8px] text-slate-400">
+                    Minta Nexto menganalisis sales kamu
+                  </div>
+                </div>
+
+                <ArrowUpRight
+                  size={12}
+                  className="text-orange-500"
+                />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* =========================================================
+          EDIT LEAD
+      ========================================================== */}
+      {editLead && (
+        <LeadModal
+          lead={editLead}
+          stages={stageList}
+          settings={settings}
+          onClose={() => setEditLead(null)}
+          onSaved={() => {
+            setEditLead(null);
+            reload();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// Bungkus konten tab yang butuh Premium - kelihatan isinya (biar user tau apa
-// yang bakal mereka dapet), tapi klik apapun di dalemnya (tombol, form, dst)
-// ke-tangkep sama lapisan transparan ini dan cuma munculin ajakan upgrade -
-// gak ada perubahan data yang beneran kejadian.
+// ================================================================
+// PREMIUM LOCK
+// ================================================================
 function PreviewLock({ locked, children }) {
   if (!locked) return children;
+
   return (
     <div className="relative">
-      <div className="mb-3 bg-slate-800 text-white text-xs rounded-2xl px-4 py-2.5 flex items-center gap-2">
-        <Lock size={13} className="shrink-0" /> Mode lihat-lihat doang - upgrade ke Premium buat bisa nambah/ubah data di sini.
+      <div className="mb-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-[#0b0d10] px-4 py-2.5 text-[9px] text-slate-300 shadow-sm">
+        <Lock size={12} className="shrink-0 text-orange-400" />
+
+        <span className="flex-1">
+          Mode preview — upgrade ke Premium untuk menggunakan fitur ini.
+        </span>
+
+        <span className="hidden sm:block rounded-full bg-orange-500/10 px-2 py-1 text-[7px] font-bold uppercase tracking-wide text-orange-400">
+          Premium
+        </span>
       </div>
+
       <div
-        onClick={() => alert("Ini fitur Premium bro - di paket Free cuma bisa dilihat doang, gak bisa diubah. Upgrade dulu (Rp149rb/bulan) buat bisa pake fiturnya.")}
+        onClick={() =>
+          alert(
+            "Ini fitur Premium bro — di paket Free cuma bisa dilihat doang. Upgrade dulu (Rp149rb/bulan) buat pake fiturnya."
+          )
+        }
         className="absolute inset-0 top-11 z-20 cursor-pointer"
       />
-      {children}
+
+      <div className="opacity-[0.82]">{children}</div>
     </div>
   );
 }
 
-// Avatar bulat pojok kanan atas (kayak Gmail/Notion) - klik buka kartu profil
-// isinya foto, jabatan, email, dan tombol edit.
-function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "right" }) {
+// ================================================================
+// PROFILE AVATAR
+// ================================================================
+function ProfileAvatar({
+  settings,
+  session,
+  org,
+  onChanged,
+  size = 36,
+  align = "right",
+}) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [jobTitle, setJobTitle] = useState(settings.job_title || "");
-  const [name, setName] = useState(settings.community_display_name || "");
+  const [name, setName] = useState(
+    settings.community_display_name || ""
+  );
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const initial = (settings.community_display_name || session?.user?.email || "?").charAt(0).toUpperCase();
+  const initial = (
+    settings.community_display_name ||
+    session?.user?.email ||
+    "?"
+  )
+    .charAt(0)
+    .toUpperCase();
+
   const email = session?.user?.email || "";
-  const planInfo = org?.plan === "enterprise"
-    ? { label: "Enterprise", cls: "bg-violet-100 text-violet-700" }
-    : settings.plan === "premium"
-    ? { label: "Premium", cls: "bg-orange-100 text-orange-700" }
-    : { label: "Free", cls: "bg-slate-100 text-slate-500" };
+
+  const planInfo =
+    org?.plan === "enterprise"
+      ? {
+          label: "Enterprise",
+          cls: "bg-violet-100 text-violet-700",
+        }
+      : settings.plan === "premium"
+      ? {
+          label: "Premium",
+          cls: "bg-orange-100 text-orange-700",
+        }
+      : {
+          label: "Free",
+          cls: "bg-slate-100 text-slate-500",
+        };
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
+
     if (!file) return;
+
     setUploading(true);
+
     try {
       const url = await db.uploadAvatar(file);
-      await db.saveMyProfile({ avatar_url: url });
+
+      await db.saveMyProfile({
+        avatar_url: url,
+      });
+
       onChanged();
-    } catch (err) { alert("Gagal upload foto: " + err.message); }
-    finally { setUploading(false); }
+    } catch (err) {
+      alert("Gagal upload foto: " + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const saveProfile = async () => {
     setSaving(true);
+
     try {
-      await db.saveMyProfile({ job_title: jobTitle, name });
+      await db.saveMyProfile({
+        job_title: jobTitle,
+        name,
+      });
+
       onChanged();
       setEditing(false);
-    } catch (err) { alert("Gagal simpan: " + err.message); }
-    finally { setSaving(false); }
+    } catch (err) {
+      alert("Gagal simpan: " + err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((v) => !v)} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
-        {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_10px_-1px_rgba(0,0,0,0.25)]"
+        style={{
+          width: size,
+          height: size,
+          fontSize: size * 0.4,
+        }}
+      >
+        {settings.avatar_url ? (
+          <img
+            src={settings.avatar_url}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          initial
+        )}
       </button>
+
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setEditing(false); }} />
-          <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full mt-2.5 w-72 bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-50 overflow-hidden border border-slate-100`}>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => {
+              setOpen(false);
+              setEditing(false);
+            }}
+          />
+
+          <div
+            className={`absolute ${
+              align === "left" ? "left-0" : "right-0"
+            } top-full mt-2.5 w-72 bg-white rounded-[24px] shadow-[0_20px_55px_-12px_rgba(15,23,42,0.3)] z-50 overflow-hidden border border-slate-100`}
+          >
             {!editing ? (
               <>
-                {/* Header gradient band + avatar nongol - pola kartu profil app mobile */}
-                <div className="h-16 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800 relative">
+                <div className="h-16 bg-gradient-to-br from-[#17191d] via-[#101215] to-orange-950 relative">
+                  <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-1 text-[7px] font-bold uppercase tracking-wide text-white/70">
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    Online
+                  </div>
+
                   <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-2xl ring-4 ring-white shadow-md">
-                    {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+                    {settings.avatar_url ? (
+                      <img
+                        src={settings.avatar_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      initial
+                    )}
                   </div>
                 </div>
+
                 <div className="pt-9 pb-4 px-5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-bold text-[15px] text-slate-900 truncate">{settings.community_display_name || "Belum ada nama"}</div>
-                    <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 ${planInfo.cls}`}>{planInfo.label}</span>
+                    <div className="font-bold text-[15px] text-slate-900 truncate">
+                      {settings.community_display_name ||
+                        "Belum ada nama"}
+                    </div>
+
+                    <span
+                      className={`shrink-0 text-[9px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 ${planInfo.cls}`}
+                    >
+                      {planInfo.label}
+                    </span>
                   </div>
+
                   {settings.job_title && (
-                    <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2.5 py-1">{settings.job_title}</span>
+                    <span className="inline-block mt-1.5 text-[9px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2.5 py-1">
+                      {settings.job_title}
+                    </span>
                   )}
+
                   {email && (
-                    <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
-                      <Mail size={11} className="shrink-0" /><span className="truncate">{email}</span>
+                    <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-400">
+                      <Mail size={11} className="shrink-0" />
+                      <span className="truncate">{email}</span>
                     </div>
                   )}
-                  <button onClick={() => setEditing(true)} className="w-full mt-4 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 font-medium transition-colors">Edit Profil</button>
+
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="w-full mt-4 text-[10px] bg-slate-950 hover:bg-slate-800 text-white rounded-xl py-2.5 font-semibold transition-colors"
+                  >
+                    Edit Profil
+                  </button>
                 </div>
               </>
             ) : (
               <div className="p-5">
                 <label className="flex items-center gap-3 mb-4 cursor-pointer">
                   <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-xl shrink-0 ring-2 ring-orange-100">
-                    {uploading ? <Loader2 size={18} className="animate-spin" /> : settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+                    {uploading ? (
+                      <Loader2
+                        size={18}
+                        className="animate-spin"
+                      />
+                    ) : settings.avatar_url ? (
+                      <img
+                        src={settings.avatar_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      initial
+                    )}
                   </div>
-                  <span className="text-xs text-orange-600 font-medium flex items-center gap-1"><Camera size={13} /> Ganti foto</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+
+                  <span className="text-[10px] text-orange-600 font-semibold flex items-center gap-1">
+                    <Camera size={13} />
+                    Ganti foto
+                  </span>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFile}
+                    disabled={uploading}
+                  />
                 </label>
+
                 <label className="block mb-2.5">
-                  <span className="text-[11px] font-medium text-slate-400">Nama</span>
-                  <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={name} onChange={(e) => setName(e.target.value)} />
+                  <span className="text-[10px] font-medium text-slate-400">
+                    Nama
+                  </span>
+
+                  <input
+                    className="w-full mt-1 px-3 py-2.5 text-[11px] text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
                 </label>
+
                 <label className="block mb-4">
-                  <span className="text-[11px] font-medium text-slate-400">Jabatan</span>
-                  <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Sales Executive" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                  <span className="text-[10px] font-medium text-slate-400">
+                    Jabatan
+                  </span>
+
+                  <input
+                    className="w-full mt-1 px-3 py-2.5 text-[11px] text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+                    placeholder="Sales Executive"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                  />
                 </label>
+
                 <div className="flex gap-2">
-                  <button onClick={() => setEditing(false)} className="flex-1 text-xs text-slate-700 border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium">Batal</button>
-                  <button onClick={saveProfile} disabled={saving} className="flex-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2.5 font-medium">{saving ? "..." : "Simpan"}</button>
+                  <button
+                    onClick={() => setEditing(false)}
+                    className="flex-1 text-[10px] text-slate-700 border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium"
+                  >
+                    Batal
+                  </button>
+
+                  <button
+                    onClick={saveProfile}
+                    disabled={saving}
+                    className="flex-1 text-[10px] bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2.5 font-medium"
+                  >
+                    {saving ? "..." : "Simpan"}
+                  </button>
                 </div>
               </div>
             )}
@@ -457,11 +1465,61 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
   );
 }
 
+// ================================================================
+// LOADING / SPLASH
+// ================================================================
 function Splash({ inline }) {
   return (
-    <div className={`${inline ? "py-20" : "min-h-screen"} bg-slate-50 flex flex-col items-center justify-center gap-3`}>
-      <div className="animate-pulse"><NextoBadge size={48} /></div>
-      <div className="text-slate-400 text-sm flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
+    <div
+      className={`${
+        inline ? "py-24" : "min-h-screen"
+      } bg-transparent flex flex-col items-center justify-center gap-4`}
+    >
+      <div className="relative">
+        <div className="absolute inset-0 rounded-2xl bg-orange-500/20 blur-xl animate-pulse" />
+
+        <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0b0d10] shadow-[0_15px_40px_-12px_rgba(15,23,42,0.3)]">
+          <NextoBadge size={38} />
+        </div>
+      </div>
+
+      <div className="text-slate-400 text-[10px] flex items-center gap-1.5">
+        <Loader2
+          size={12}
+          className="animate-spin text-orange-500"
+        />
+        Nexto sedang menyiapkan workspace…
+      </div>
     </div>
+  );
+}
+
+// ================================================================
+// HELPERS
+// ================================================================
+function getDayPart() {
+  const hour = new Date().getHours();
+
+  if (hour < 11) return "morning";
+  if (hour < 15) return "afternoon";
+  if (hour < 18) return "afternoon";
+  return "evening";
+}
+
+function getTabDescription(tab) {
+  const descriptions = {
+    leads: "Kelola dan prioritaskan seluruh prospek kamu.",
+    generateleads: "Temukan prospek baru dengan bantuan AI.",
+    deal: "Pantau opportunity dan transaksi yang sedang berjalan.",
+    visitfollowup: "Atur visit, follow-up, dan aktivitas customer.",
+    kompetitor: "Simpan intelligence tentang kompetitor.",
+    komunitas: "Terhubung dengan komunitas sesama sales.",
+    advisor: "Minta Nexto membantu menganalisis pipeline kamu.",
+    settings: "Atur profile, pipeline, organisasi, dan preferensi.",
+  };
+
+  return (
+    descriptions[tab] ||
+    "Semua aktivitas sales kamu dalam satu workspace."
   );
 }
