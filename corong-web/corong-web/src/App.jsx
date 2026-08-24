@@ -1,7 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
-
 import Auth from "./Auth";
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
@@ -13,7 +12,6 @@ import Nex from "./tabs/Nex";
 import Advisor from "./tabs/Advisor";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
-
 import {
   LayoutDashboard,
   Users,
@@ -21,6 +19,7 @@ import {
   CalendarCheck,
   Swords,
   Lightbulb,
+  Bot,
   Settings as SettingsIcon,
   Loader2,
   LogOut,
@@ -29,25 +28,7 @@ import {
   Camera,
   Mail,
   Sparkles,
-  Search,
-  Bell,
-  ChevronDown,
-  Plus,
-  TrendingUp,
-  Target,
-  CalendarDays,
-  CircleDollarSign,
-  Menu,
-  X,
-  Zap,
-  Bot,
-  MapPin,
-  ArrowUpRight,
 } from "lucide-react";
-
-/* ================================================================
-   NEXTO BRAND
-================================================================ */
 
 export function NextoBadge({ size = 36 }) {
   return (
@@ -61,7 +42,6 @@ export function NextoBadge({ size = 36 }) {
         d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z"
         fill="#f97316"
       />
-
       <path
         d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z"
         fill="#9a3412"
@@ -70,15 +50,15 @@ export function NextoBadge({ size = 36 }) {
   );
 }
 
-/* ================================================================
-   DUMMY DATA
-================================================================ */
-
+// ---- DATA DUMMY buat preview tab Premium (user Free) ----
+// Ngasal doang - biar user Free liat gambaran "beneran kepake" bukan tab kosong.
+// Gak pernah disimpen ke database, murni buat ditampilin doang.
 const today = new Date().toISOString().slice(0, 10);
-
 const tomorrow = new Date(
   Date.now() + 86400000
-).toISOString().slice(0, 10);
+)
+  .toISOString()
+  .slice(0, 10);
 
 const DUMMY_LEADS = [
   {
@@ -93,14 +73,15 @@ const DUMMY_LEADS = [
     email: "budi@sinarabadi.co.id",
     visit_date: today,
     visit_meet: "Budi Santoso",
-    visit_agenda: "Presentasi produk & harga penawaran",
+    visit_agenda:
+      "Presentasi produk & harga penawaran",
     last_contact: "2026-08-20",
-    next_action: "Follow up hasil presentasi minggu lalu",
+    next_action:
+      "Follow up hasil presentasi minggu lalu",
     latitude: null,
     longitude: null,
     source: "manual",
   },
-
   {
     id: "dummy-2",
     name: "CV Karya Plastindo",
@@ -115,12 +96,12 @@ const DUMMY_LEADS = [
     visit_meet: "Sari Wulandari",
     visit_agenda: "Trial sample produk",
     last_contact: "2026-08-18",
-    next_action: "Kirim sample ke pabrik",
+    next_action:
+      "Kirim sample ke pabrik",
     latitude: null,
     longitude: null,
     source: "manual",
   },
-
   {
     id: "dummy-3",
     name: "PT Maju Bersama Kimia",
@@ -149,7 +130,6 @@ const DUMMY_DEAL_TX = [
     tonnage_unit: "ton",
     chemical: "PVC Resin K67",
   },
-
   {
     id: "dd-2",
     lead_id: "dummy-2",
@@ -166,9 +146,11 @@ const DUMMY_COMPETITORS = [
   {
     id: "dc-1",
     name: "PT Kompetitor Jaya",
-    background: "Pemain lama di area Jabodetabek",
+    background:
+      "Pemain lama di area Jabodetabek",
     product: "PVC Compound",
-    notes: "Harga agresif tapi servis lambat",
+    notes:
+      "Harga agresif tapi servis lambat",
     usages: [
       {
         id: "u1",
@@ -179,64 +161,55 @@ const DUMMY_COMPETITORS = [
       },
     ],
   },
-
   {
     id: "dc-2",
     name: "CV Rival Chemical",
-    background: "Fokus segmen kabel listrik",
+    background:
+      "Fokus segmen kabel listrik",
     product: "Kabel Compound",
-    notes: "Kuat di after-sales support",
+    notes:
+      "Kuat di after-sales support",
     usages: [],
   },
 ];
-
-/* ================================================================
-   NAVIGATION
-================================================================ */
 
 const NAV = [
   {
     key: "dashboard",
     label: "Dashboard",
-    short: "Home",
+    short: "Beranda",
     icon: LayoutDashboard,
   },
-
   {
     key: "leads",
     label: "Leads",
     short: "Leads",
     icon: Users,
   },
-
   {
     key: "generateleads",
     label: "Generate Leads",
-    short: "Generate",
+    short: "Cari Lead",
     icon: Sparkles,
   },
-
   {
     key: "deal",
     label: "Deal",
     short: "Deal",
     icon: Trophy,
   },
-
   {
     key: "visitfollowup",
     label: "Visit & Follow-up",
     short: "Visit",
     icon: CalendarCheck,
   },
-
   {
     key: "kompetitor",
     label: "Kompetitor",
     short: "Rival",
     icon: Swords,
   },
-
   {
     key: "komunitas",
     label: "Nex",
@@ -244,98 +217,92 @@ const NAV = [
     icon: Users2,
     special: true,
   },
-
   {
     key: "advisor",
     label: "AI Advisor",
     short: "AI",
     icon: Lightbulb,
   },
-
   {
     key: "settings",
     label: "Pengaturan",
-    short: "Settings",
+    short: "Lainnya",
     icon: SettingsIcon,
   },
 ];
 
-/* ================================================================
-   CONFIG
-================================================================ */
-
 function ConfigScreen() {
   return (
-    <div className="min-h-screen bg-[#07080a] text-white flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-[#101216] border border-white/[0.08] rounded-[28px] shadow-2xl p-7">
-        <div className="mb-5">
-          <NextoBadge size={52} />
+    <div
+      className="min-h-screen flex items-center justify-center p-4 text-white"
+      style={{
+        background: `
+          radial-gradient(
+            circle at 50% 10%,
+            rgba(130, 55, 10, 0.30) 0%,
+            rgba(55, 25, 8, 0.18) 30%,
+            transparent 60%
+          ),
+          #19100A
+        `,
+      }}
+    >
+      <div className="max-w-md bg-[#21130a] border border-orange-500/15 rounded-3xl shadow-2xl p-7">
+        <div className="mb-4">
+          <NextoBadge size={48} />
         </div>
 
         <h1 className="text-lg font-bold mb-2">
           Sambungin ke Supabase dulu
         </h1>
 
-        <p className="text-sm text-slate-400 mb-4">
+        <p className="text-sm text-orange-100/50 mb-3">
           Buat file{" "}
-          <code className="bg-white/[0.06] px-1.5 py-0.5 rounded">
+          <code className="bg-black/30 px-1 rounded">
             .env
           </code>{" "}
-          di root project:
+          di root project (salin dari{" "}
+          <code className="bg-black/30 px-1 rounded">
+            .env.example
+          </code>
+          ), isi:
         </p>
 
-        <pre className="text-xs bg-black/50 text-slate-200 border border-white/[0.06] rounded-2xl p-4 overflow-x-auto">
+        <pre className="text-xs bg-black/50 text-orange-50 rounded-xl p-3 overflow-x-auto">
 {`VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...`}
         </pre>
 
-        <p className="text-xs text-slate-500 mt-4">
-          Ambil dari Supabase → Project Settings → API.
-          Setelah itu restart npm run dev.
+        <p className="text-xs text-orange-100/40 mt-3">
+          Ambil dari Supabase → Project Settings →
+          API. Terus restart{" "}
+          <code className="bg-black/30 px-1 rounded">
+            npm run dev
+          </code>
+          .
         </p>
       </div>
     </div>
   );
 }
 
-/* ================================================================
-   MAIN APP
-================================================================ */
-
 export default function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-
   const [tab, setTab] = useState("dashboard");
-
   const [stages, setStages] = useState([]);
   const [settings, setSettings] = useState({
     sales_names: [],
   });
-
   const [leads, setLeads] = useState([]);
-  const [dealTransactions, setDealTransactions] = useState([]);
-  const [competitors, setCompetitors] = useState([]);
-
+  const [dealTransactions, setDealTransactions] =
+    useState([]);
+  const [competitors, setCompetitors] =
+    useState([]);
   const [org, setOrg] = useState(null);
-
   const [joinCode, setJoinCode] = useState("");
   const [joinBusy, setJoinBusy] = useState(false);
   const [joinMsg, setJoinMsg] = useState("");
-
-  const [editLead, setEditLead] = useState(null);
-
-  const [loading, setLoading] = useState(true);
-
-  /* --------------------------------------------------------------
-     MOBILE SIDEBAR
-  -------------------------------------------------------------- */
-
-  const [mobileMenu, setMobileMenu] = useState(false);
-
-  /* --------------------------------------------------------------
-     INVITE
-  -------------------------------------------------------------- */
 
   const joinWithCode = async () => {
     if (!joinCode.trim()) return;
@@ -344,27 +311,31 @@ export default function App() {
     setJoinMsg("");
 
     try {
-      const res = await db.redeemInviteCode(
-        joinCode.trim()
-      );
+      const res =
+        await db.redeemInviteCode(
+          joinCode.trim()
+        );
 
       setJoinMsg(
         `✅ Gabung ke ${res.org_name}! Semua fitur Enterprise sekarang kebuka.`
       );
 
       setJoinCode("");
-
       await reload();
     } catch (e) {
-      setJoinMsg("Gagal: " + e.message);
+      setJoinMsg(
+        "Gagal: " + e.message
+      );
     } finally {
       setJoinBusy(false);
     }
   };
 
-  /* --------------------------------------------------------------
-     AUTH
-  -------------------------------------------------------------- */
+  const [editLead, setEditLead] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(true);
 
   useEffect(() => {
     if (!isConfigured) {
@@ -372,24 +343,25 @@ export default function App() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setAuthReady(true);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+        setAuthReady(true);
+      });
 
     const {
       data: sub,
-    } = supabase.auth.onAuthStateChange((_e, s) => {
-      db.clearOrgCache();
-      setSession(s);
-    });
+    } = supabase.auth.onAuthStateChange(
+      (_e, s) => {
+        db.clearOrgCache();
+        setSession(s);
+      }
+    );
 
-    return () => sub.subscription.unsubscribe();
+    return () =>
+      sub.subscription.unsubscribe();
   }, []);
-
-  /* --------------------------------------------------------------
-     DATA RELOAD
-  -------------------------------------------------------------- */
 
   const reload = async () => {
     setLoading(true);
@@ -409,6 +381,8 @@ export default function App() {
         db.getDealTransactions(),
       ]);
 
+      // Akun baru (belum pernah setup pipeline sama sekali)
+      // otomatis kasih pipeline default.
       if (st.length === 0) {
         try {
           await db.initDefaultStages();
@@ -419,7 +393,9 @@ export default function App() {
       }
 
       try {
-        setOrg(await db.getMyOrg());
+        setOrg(
+          await db.getMyOrg()
+        );
       } catch (e) {
         console.error(e);
       }
@@ -436,10 +412,7 @@ export default function App() {
     }
   };
 
-  /* --------------------------------------------------------------
-     SILENT RELOAD
-  -------------------------------------------------------------- */
-
+  // Reload diem-diem tanpa loading spinner.
   const silentReload = async () => {
     try {
       const [
@@ -466,16 +439,16 @@ export default function App() {
     }
   };
 
-  /* --------------------------------------------------------------
-     SESSION CHANGE
-  -------------------------------------------------------------- */
-
   const prevUserId = useRef(null);
 
   useEffect(() => {
-    const uid = session?.user?.id || null;
+    const uid =
+      session?.user?.id || null;
 
-    if (uid && uid !== prevUserId.current) {
+    if (
+      uid &&
+      uid !== prevUserId.current
+    ) {
       prevUserId.current = uid;
       reload();
     } else if (!uid) {
@@ -483,20 +456,25 @@ export default function App() {
     }
   }, [session]);
 
-  /* --------------------------------------------------------------
-     VISIBILITY REFRESH
-  -------------------------------------------------------------- */
-
+  // Kalau tab ditinggal lebih dari 5 menit
+  // lalu dibuka lagi, sync data.
   useEffect(() => {
     let hiddenAt = null;
 
     const onVisibility = () => {
       if (document.hidden) {
         hiddenAt = Date.now();
-      } else if (hiddenAt && session) {
-        const awayMs = Date.now() - hiddenAt;
+      } else if (
+        hiddenAt &&
+        session
+      ) {
+        const awayMs =
+          Date.now() - hiddenAt;
 
-        if (awayMs > 5 * 60 * 1000) {
+        if (
+          awayMs >
+          5 * 60 * 1000
+        ) {
           silentReload();
         }
 
@@ -516,16 +494,21 @@ export default function App() {
       );
   }, [session]);
 
-  /* --------------------------------------------------------------
-     PULL TO REFRESH
-  -------------------------------------------------------------- */
+  // Pull-to-refresh
+  const [pullVisual, setPullVisual] =
+    useState(0);
 
-  const [pullVisual, setPullVisual] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] =
+    useState(false);
 
-  const pullDistanceRef = useRef(0);
-  const touchStartY = useRef(0);
-  const pulling = useRef(false);
+  const pullDistanceRef =
+    useRef(0);
+
+  const touchStartY =
+    useRef(0);
+
+  const pulling =
+    useRef(false);
 
   useEffect(() => {
     if (!session) return;
@@ -543,7 +526,8 @@ export default function App() {
     };
 
     const onTouchMove = (e) => {
-      if (!pulling.current) return;
+      if (!pulling.current)
+        return;
 
       const delta =
         e.touches[0].clientY -
@@ -558,7 +542,9 @@ export default function App() {
           90
         );
 
-        pullDistanceRef.current = d;
+        pullDistanceRef.current =
+          d;
+
         setPullVisual(d);
       } else {
         pulling.current = false;
@@ -567,24 +553,25 @@ export default function App() {
       }
     };
 
-    const onTouchEnd = async () => {
-      if (!pulling.current) return;
+    const onTouchEnd =
+      async () => {
+        if (!pulling.current)
+          return;
 
-      pulling.current = false;
+        pulling.current = false;
 
-      const d = pullDistanceRef.current;
+        const d =
+          pullDistanceRef.current;
 
-      pullDistanceRef.current = 0;
-      setPullVisual(0);
+        pullDistanceRef.current = 0;
+        setPullVisual(0);
 
-      if (d > 60) {
-        setRefreshing(true);
-
-        await silentReload();
-
-        setRefreshing(false);
-      }
-    };
+        if (d > 60) {
+          setRefreshing(true);
+          await silentReload();
+          setRefreshing(false);
+        }
+      };
 
     document.addEventListener(
       "touchstart",
@@ -619,28 +606,21 @@ export default function App() {
         onTouchEnd
       );
     };
-  }, [session, refreshing]);
+  }, [
+    session,
+    refreshing,
+  ]);
 
-  /* --------------------------------------------------------------
-     EARLY STATES
-  -------------------------------------------------------------- */
-
-  if (!isConfigured) {
+  if (!isConfigured)
     return <ConfigScreen />;
-  }
 
-  if (!authReady) {
+  if (!authReady)
     return <Splash />;
-  }
 
-  if (!session) {
+  if (!session)
     return <Auth />;
-  }
 
-  /* --------------------------------------------------------------
-     PLAN
-  -------------------------------------------------------------- */
-
+  // ---- SISTEM 2 TIPE (FREE / PREMIUM) ----
   const isPremium =
     settings.plan === "premium" ||
     org?.plan === "enterprise";
@@ -650,16 +630,17 @@ export default function App() {
     "leads",
   ];
 
-  const stageList = stages.length
-    ? stages
-    : [
-        {
-          key: "prospek",
-          label: "Prospek",
-          hex: "#94a3b8",
-          type: "normal",
-        },
-      ];
+  const stageList =
+    stages.length
+      ? stages
+      : [
+          {
+            key: "prospek",
+            label: "Prospek",
+            hex: "#94a3b8",
+            type: "normal",
+          },
+        ];
 
   const effectiveTab = tab;
 
@@ -668,525 +649,490 @@ export default function App() {
     !isPremium &&
     !FREE_TABS.includes(key);
 
-  const currentNav =
-    NAV.find(
-      (n) => n.key === effectiveTab
-    ) || NAV[0];
-
-  /* --------------------------------------------------------------
-     RENDER
-  -------------------------------------------------------------- */
-
   return (
-    <div className="min-h-screen bg-[#07080a] text-white flex overflow-hidden">
+    <div
+      className="min-h-screen text-white flex relative overflow-hidden"
+      style={{
+        background: `
+          radial-gradient(
+            circle at 50% 8%,
+            rgba(120, 52, 10, 0.30) 0%,
+            rgba(68, 30, 9, 0.20) 22%,
+            rgba(30, 18, 11, 0.08) 42%,
+            transparent 65%
+          ),
+          radial-gradient(
+            circle at 85% 40%,
+            rgba(105, 45, 8, 0.12) 0%,
+            transparent 45%
+          ),
+          radial-gradient(
+            circle at 10% 70%,
+            rgba(90, 38, 8, 0.10) 0%,
+            transparent 45%
+          ),
+          #19100A
+        `,
+      }}
+    >
       {/* ============================================================
-          GLOBAL STYLE
+          NEXTO AMBIENT BACKGROUND
+          Terinspirasi langsung dari visual robot yang lo kirim.
       ============================================================ */}
 
-      <style>{`
-        @keyframes nextoGlow {
-          0%, 100% {
-            opacity: .55;
-            transform: scale(1);
-          }
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        {/* Center warm glow */}
+        <div
+          className="
+            absolute
+            left-1/2
+            top-[-80px]
+            -translate-x-1/2
+            w-[760px]
+            h-[560px]
+            rounded-full
+            blur-[120px]
+          "
+          style={{
+            background:
+              "radial-gradient(circle, rgba(150,65,12,.34) 0%, rgba(75,32,8,.16) 38%, transparent 72%)",
+          }}
+        />
 
-          50% {
-            opacity: 1;
-            transform: scale(1.08);
-          }
-        }
+        {/* Top orange light */}
+        <div
+          className="
+            absolute
+            -top-[180px]
+            left-[30%]
+            w-[560px]
+            h-[420px]
+            rounded-full
+            blur-[130px]
+          "
+          style={{
+            background:
+              "rgba(180,75,10,.11)",
+          }}
+        />
 
-        @keyframes nextoPulse {
-          0%, 100% {
-            box-shadow: 0 0 0 0 rgba(249,115,22,.15);
-          }
+        {/* Right ambient light */}
+        <div
+          className="
+            absolute
+            right-[-220px]
+            top-[22%]
+            w-[520px]
+            h-[520px]
+            rounded-full
+            blur-[150px]
+          "
+          style={{
+            background:
+              "rgba(120,48,8,.09)",
+          }}
+        />
 
-          50% {
-            box-shadow: 0 0 0 8px rgba(249,115,22,0);
-          }
-        }
+        {/* Bottom ambient */}
+        <div
+          className="
+            absolute
+            left-[20%]
+            bottom-[-280px]
+            w-[650px]
+            h-[420px]
+            rounded-full
+            blur-[150px]
+          "
+          style={{
+            background:
+              "rgba(85,35,8,.09)",
+          }}
+        />
 
-        @keyframes nextoFloat {
-          0%, 100% {
-            transform: translateY(0);
-          }
+        {/* Futuristic grid */}
+        <div
+          className="absolute inset-0 opacity-[0.045]"
+          style={{
+            backgroundImage: `
+              linear-gradient(
+                rgba(255,255,255,.11) 1px,
+                transparent 1px
+              ),
+              linear-gradient(
+                90deg,
+                rgba(255,255,255,.11) 1px,
+                transparent 1px
+              )
+            `,
+            backgroundSize:
+              "48px 48px",
+            maskImage:
+              "radial-gradient(circle at center, black 0%, transparent 78%)",
+            WebkitMaskImage:
+              "radial-gradient(circle at center, black 0%, transparent 78%)",
+          }}
+        />
 
-          50% {
-            transform: translateY(-3px);
-          }
-        }
+        {/* Large orbital ring */}
+        <div
+          className="
+            absolute
+            left-1/2
+            top-[60px]
+            -translate-x-1/2
+            w-[680px]
+            h-[680px]
+            rounded-full
+            border
+            border-orange-500/[0.025]
+          "
+        />
 
-        .nexto-grid {
-          background-image:
-            linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
-          background-size: 42px 42px;
-        }
+        {/* Second orbital ring */}
+        <div
+          className="
+            absolute
+            left-1/2
+            top-[115px]
+            -translate-x-1/2
+            w-[560px]
+            h-[560px]
+            rounded-full
+            border
+            border-orange-500/[0.022]
+          "
+        />
 
-        .nexto-glow {
-          animation: nextoGlow 4s ease-in-out infinite;
-        }
-
-        .nexto-float {
-          animation: nextoFloat 4s ease-in-out infinite;
-        }
-
-        .nexto-pulse {
-          animation: nextoPulse 2.4s ease-in-out infinite;
-        }
-
-        .nexto-scrollbar::-webkit-scrollbar {
-          width: 5px;
-          height: 5px;
-        }
-
-        .nexto-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .nexto-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,.08);
-          border-radius: 999px;
-        }
-
-        .nexto-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(249,115,22,.35);
-        }
-      `}</style>
+        {/* Third orbital ring */}
+        <div
+          className="
+            absolute
+            left-1/2
+            top-[175px]
+            -translate-x-1/2
+            w-[440px]
+            h-[440px]
+            rounded-full
+            border
+            border-orange-500/[0.018]
+          "
+        />
+      </div>
 
       {/* ============================================================
-          DESKTOP SIDEBAR
+          PULL TO REFRESH
       ============================================================ */}
 
-      <aside className="hidden md:flex w-[250px] shrink-0 h-screen sticky top-0 flex-col bg-[#0b0c0f] border-r border-white/[0.055] relative z-30">
-        {/* glow */}
-        <div className="absolute top-[-120px] left-[-100px] w-[260px] h-[260px] bg-orange-600/10 blur-[100px] pointer-events-none" />
-
-        {/* LOGO */}
-        <div className="relative h-[78px] px-5 flex items-center border-b border-white/[0.055]">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-xl bg-orange-500/20 blur-xl" />
-
-              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-800 flex items-center justify-center shadow-[0_8px_25px_-8px_rgba(249,115,22,.7)]">
-                <NextoBadge size={27} />
-              </div>
-            </div>
-
-            <div>
-              <div className="font-bold text-[16px] tracking-[-0.02em]">
-                Nexto
-              </div>
-
-              <div className="text-[8px] uppercase tracking-[0.18em] text-slate-600">
-                Sales OS
-              </div>
-            </div>
-          </div>
-
-          <div className="ml-auto">
-            <ProfileAvatar
-              settings={settings}
-              session={session}
-              org={org}
-              onChanged={reload}
-              size={31}
-              align="left"
-              dark
+      {(pullVisual > 0 ||
+        refreshing) && (
+        <div
+          className="
+            md:hidden
+            fixed
+            top-0
+            inset-x-0
+            z-50
+            flex
+            items-start
+            justify-center
+            pointer-events-none
+            transition-[height]
+            duration-150
+          "
+          style={{
+            height: refreshing
+              ? 56
+              : pullVisual,
+          }}
+        >
+          <div className="bg-[#28170c] border border-orange-500/20 rounded-full p-2 shadow-[0_10px_30px_rgba(0,0,0,.5)] mt-2">
+            <Loader2
+              size={18}
+              className="text-orange-500"
+              style={
+                refreshing
+                  ? {
+                      animation:
+                        "spin 0.8s linear infinite",
+                    }
+                  : {
+                      transform: `rotate(${
+                        pullVisual * 3
+                      }deg)`,
+                    }
+              }
             />
           </div>
-        </div>
-
-        {/* WORKSPACE */}
-        <div className="px-4 pt-5 pb-2">
-          <div className="flex items-center justify-between px-2 mb-2">
-            <span className="text-[8px] uppercase tracking-[0.18em] font-bold text-slate-600">
-              Workspace
-            </span>
-
-            <span className="text-[8px] text-emerald-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Online
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 rounded-xl bg-white/[0.035] border border-white/[0.055] px-3 py-2.5">
-            <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center">
-              <Zap size={13} className="text-orange-400" />
-            </div>
-
-            <div className="min-w-0">
-              <div className="text-[10px] font-semibold truncate">
-                {org?.name || "My Sales Workspace"}
-              </div>
-
-              <div className="text-[8px] text-slate-600">
-                {isPremium
-                  ? "Premium workspace"
-                  : "Free workspace"}
-              </div>
-            </div>
-
-            <ChevronDown
-              size={13}
-              className="ml-auto text-slate-600"
-            />
-          </div>
-        </div>
-
-        {/* NAV */}
-        <nav className="relative flex-1 px-3 py-3 overflow-y-auto nexto-scrollbar">
-          <div className="px-2 mb-2 text-[8px] uppercase tracking-[0.18em] font-bold text-slate-600">
-            Main menu
-          </div>
-
-          <div className="space-y-1">
-            {NAV.map((n) => {
-              const I = n.icon;
-              const active =
-                effectiveTab === n.key;
-
-              const locked =
-                isLocked(n.key);
-
-              return (
-                <button
-                  key={n.key}
-                  onClick={() => {
-                    setTab(n.key);
-                    setMobileMenu(false);
-                  }}
-                  className={`
-                    group relative w-full flex items-center gap-3
-                    px-3 py-2.5 rounded-xl
-                    text-[11px] transition-all duration-200
-                    ${
-                      active
-                        ? n.special
-                          ? "bg-gradient-to-r from-violet-600/20 to-fuchsia-600/10 text-violet-300 border border-violet-500/20"
-                          : "bg-orange-500/[0.11] text-orange-400 border border-orange-500/20 shadow-[0_8px_25px_-15px_rgba(249,115,22,.65)]"
-                        : locked
-                        ? "text-slate-600 hover:bg-white/[0.025]"
-                        : "text-slate-400 hover:bg-white/[0.035] hover:text-white"
-                    }
-                  `}
-                >
-                  {active && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 rounded-full bg-orange-500 shadow-[0_0_12px_#f97316]" />
-                  )}
-
-                  <I
-                    size={15}
-                    strokeWidth={
-                      active ? 2.4 : 1.8
-                    }
-                    className={
-                      active
-                        ? n.special
-                          ? "text-violet-400"
-                          : "text-orange-400"
-                        : ""
-                    }
-                  />
-
-                  <span className="flex-1 text-left">
-                    {n.label}
-                  </span>
-
-                  {n.key === "advisor" &&
-                    !locked && (
-                      <span className="text-[7px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/10">
-                        AI
-                      </span>
-                    )}
-
-                  {locked && (
-                    <Lock
-                      size={11}
-                      className="text-slate-700"
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* AI COMMAND CARD */}
-          <div className="mt-7 mx-1 rounded-2xl border border-orange-500/15 bg-gradient-to-br from-orange-500/[0.09] to-transparent p-3.5 relative overflow-hidden">
-            <div className="absolute right-[-25px] top-[-25px] w-20 h-20 rounded-full bg-orange-500/10 blur-2xl" />
-
-            <div className="relative flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-orange-500/15 flex items-center justify-center">
-                <Bot size={14} className="text-orange-400" />
-              </div>
-
-              <div>
-                <div className="text-[9px] font-bold">
-                  Nexto AI
-                </div>
-
-                <div className="text-[7px] text-slate-600">
-                  Sales copilot
-                </div>
-              </div>
-
-              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            </div>
-
-            <p className="relative text-[8px] leading-4 text-slate-500">
-              “Siapa yang harus gue follow-up hari ini?”
-            </p>
-          </div>
-        </nav>
-
-        {/* USER / LOGOUT */}
-        <div className="p-3 border-t border-white/[0.055]">
-          <button
-            onClick={() =>
-              supabase.auth.signOut()
-            }
-            className="w-full px-3 py-2.5 rounded-xl bg-white/[0.025] hover:bg-white/[0.055] text-[10px] text-slate-500 hover:text-white flex items-center gap-2 transition-colors"
-          >
-            <LogOut size={13} />
-            Keluar
-          </button>
-        </div>
-      </aside>
-
-      {/* ============================================================
-          MOBILE MENU
-      ============================================================ */}
-
-      {mobileMenu && (
-        <div className="md:hidden fixed inset-0 z-[100]">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() =>
-              setMobileMenu(false)
-            }
-          />
-
-          <aside className="relative w-[280px] h-full bg-[#0b0c0f] border-r border-white/[0.07] p-4 shadow-2xl">
-            <div className="flex items-center justify-between mb-7">
-              <div className="flex items-center gap-2.5">
-                <NextoBadge size={32} />
-
-                <div>
-                  <div className="font-bold text-sm">
-                    Nexto
-                  </div>
-
-                  <div className="text-[7px] uppercase tracking-widest text-slate-600">
-                    Sales OS
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() =>
-                  setMobileMenu(false)
-                }
-                className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              {NAV.map((n) => {
-                const I = n.icon;
-                const active =
-                  effectiveTab === n.key;
-                const locked =
-                  isLocked(n.key);
-
-                return (
-                  <button
-                    key={n.key}
-                    onClick={() => {
-                      setTab(n.key);
-                      setMobileMenu(false);
-                    }}
-                    className={`
-                      w-full flex items-center gap-3
-                      px-3 py-3 rounded-xl text-xs
-                      ${
-                        active
-                          ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                          : locked
-                          ? "text-slate-700"
-                          : "text-slate-400"
-                      }
-                    `}
-                  >
-                    <I size={16} />
-
-                    <span className="flex-1 text-left">
-                      {n.label}
-                    </span>
-
-                    {locked && (
-                      <Lock size={11} />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
         </div>
       )}
 
       {/* ============================================================
-          MAIN AREA
+          SIDEBAR
       ============================================================ */}
 
-      <div className="flex-1 min-w-0 flex flex-col relative bg-[#090a0c]">
-        {/* background glow */}
-        <div className="absolute pointer-events-none inset-0 overflow-hidden">
-          <div className="absolute top-[-180px] right-[5%] w-[450px] h-[450px] rounded-full bg-orange-600/[0.055] blur-[130px]" />
+      <aside
+        className="
+          hidden
+          md:flex
+          flex-col
+          w-60
+          text-white
+          sticky
+          top-0
+          h-screen
+          shrink-0
+          relative
+          z-20
+          border-r
+          border-orange-500/[0.07]
+        "
+        style={{
+          background: `
+            linear-gradient(
+              180deg,
+              rgba(28,17,10,.98) 0%,
+              rgba(20,13,9,.98) 100%
+            )
+          `,
+        }}
+      >
+        {/* Sidebar ambient */}
+        <div className="absolute top-[-100px] left-[-100px] w-[260px] h-[260px] rounded-full bg-orange-600/[0.07] blur-[100px] pointer-events-none" />
 
-          <div className="absolute bottom-[-250px] left-[20%] w-[500px] h-[500px] rounded-full bg-blue-600/[0.025] blur-[150px]" />
+        <div className="relative px-5 py-6 flex items-center gap-2.5 border-b border-orange-500/[0.06]">
+          <div className="relative">
+            <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full" />
+
+            <div className="relative">
+              <NextoBadge size={36} />
+            </div>
+          </div>
+
+          <div className="leading-tight flex-1">
+            <div className="font-bold tracking-tight text-[15px]">
+              Nexto
+            </div>
+
+            <div className="text-[7px] uppercase tracking-[0.2em] text-orange-500/40 mt-0.5">
+              Sales OS
+            </div>
+          </div>
+
+          <ProfileAvatar
+            settings={settings}
+            session={session}
+            org={org}
+            onChanged={reload}
+            size={32}
+            align="left"
+          />
         </div>
 
-        {/* GRID */}
-        <div className="absolute inset-0 nexto-grid pointer-events-none opacity-30" />
+        <nav className="relative flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
+          {NAV.map((n) => {
+            const I = n.icon;
+            const active =
+              effectiveTab === n.key;
 
-        {/* ==========================================================
-            TOPBAR
-        ========================================================== */}
+            const locked =
+              isLocked(n.key);
 
-        <header className="relative z-30 h-[72px] shrink-0 border-b border-white/[0.055] bg-[#090a0c]/85 backdrop-blur-xl">
-          <div className="h-full px-4 md:px-7 flex items-center gap-3">
-            {/* mobile menu */}
-            <button
-              onClick={() =>
-                setMobileMenu(true)
-              }
-              className="md:hidden w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.05] flex items-center justify-center text-slate-400"
-            >
-              <Menu size={17} />
-            </button>
+            const cls = locked
+              ? "text-orange-100/25 hover:bg-orange-500/[0.025] cursor-pointer"
+              : n.special
+              ? active
+                ? "bg-gradient-to-r from-violet-600/80 to-fuchsia-600/70 text-white font-semibold shadow-lg shadow-violet-900/30"
+                : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200"
+              : active
+              ? "bg-orange-600/90 text-white font-semibold shadow-lg shadow-orange-900/30"
+              : "text-orange-100/55 hover:bg-orange-500/[0.05] hover:text-white";
 
-            {/* mobile logo */}
-            <div className="md:hidden flex items-center gap-2">
-              <NextoBadge size={27} />
+            return (
+              <button
+                key={n.key}
+                onClick={() =>
+                  setTab(n.key)
+                }
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm transition-all duration-150 ${cls}`}
+              >
+                <I
+                  size={17}
+                  strokeWidth={
+                    active ? 2.5 : 2
+                  }
+                />
 
-              <span className="font-bold text-sm">
-                Nexto
-              </span>
-            </div>
+                <span className="flex-1 text-left">
+                  {n.label}
+                </span>
 
-            {/* page title */}
-            <div className="hidden md:block">
-              <div className="text-[8px] uppercase tracking-[0.18em] text-slate-600 mb-0.5">
-                Workspace
+                {locked && (
+                  <Lock
+                    size={13}
+                    className="shrink-0"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <button
+          onClick={() =>
+            supabase.auth.signOut()
+          }
+          className="
+            relative
+            m-3
+            px-4
+            py-2.5
+            rounded-2xl
+            bg-orange-500/[0.035]
+            border
+            border-orange-500/[0.05]
+            text-xs
+            text-orange-100/45
+            hover:bg-orange-500/[0.08]
+            hover:text-white
+            flex
+            items-center
+            gap-2
+            transition-colors
+          "
+        >
+          <LogOut size={14} />
+          Keluar
+        </button>
+      </aside>
+
+      {/* ============================================================
+          MAIN
+      ============================================================ */}
+
+      <div className="relative z-10 flex-1 min-w-0 flex flex-col">
+        {/* ============================================================
+            MOBILE HEADER
+        ============================================================ */}
+
+        <header
+          className="
+            md:hidden
+            sticky
+            top-0
+            z-30
+            backdrop-blur-xl
+            border-b
+            border-orange-500/[0.07]
+          "
+          style={{
+            background:
+              "rgba(25,16,10,.86)",
+          }}
+        >
+          <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center gap-2.5">
+            <NextoBadge size={32} />
+
+            <div className="leading-tight flex-1">
+              <div className="font-bold tracking-tight text-sm">
+                Nexto ·{" "}
+                <span className="text-orange-100/40 font-medium">
+                  {
+                    NAV.find(
+                      (n) =>
+                        n.key ===
+                        effectiveTab
+                    )?.label
+                  }
+                </span>
               </div>
-
-              <div className="font-semibold text-[14px]">
-                {currentNav.label}
-              </div>
             </div>
 
-            {/* search */}
-            <div className="hidden sm:flex ml-6 w-[260px] h-9 rounded-xl bg-white/[0.035] border border-white/[0.055] items-center px-3 gap-2">
-              <Search
-                size={14}
-                className="text-slate-600"
-              />
-
-              <input
-                className="flex-1 bg-transparent outline-none text-[10px] text-white placeholder:text-slate-700"
-                placeholder="Search leads, companies..."
-              />
-
-              <span className="text-[7px] text-slate-700 border border-white/[0.05] rounded px-1.5 py-0.5">
-                /
-              </span>
-            </div>
-
-            <div className="flex-1" />
-
-            {/* AI button */}
-            <button
-              onClick={() => setTab("advisor")}
-              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-xl border border-orange-500/20 bg-orange-500/[0.06] text-orange-400 hover:bg-orange-500/[0.1] transition-colors"
-            >
-              <Sparkles size={13} />
-
-              <span className="text-[9px] font-semibold">
-                Ask Nexto
-              </span>
-            </button>
-
-            {/* notification */}
-            <button className="relative w-9 h-9 rounded-xl bg-white/[0.035] border border-white/[0.055] flex items-center justify-center text-slate-500 hover:text-white transition-colors">
-              <Bell size={15} />
-
-              <span className="absolute right-[8px] top-[7px] w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_7px_#f97316]" />
-            </button>
-
-            {/* profile */}
             <ProfileAvatar
               settings={settings}
               session={session}
               org={org}
               onChanged={reload}
-              size={34}
-              dark
+              size={32}
             />
           </div>
         </header>
 
-        {/* ==========================================================
-            CONTENT
-        ========================================================== */}
+        {/* ============================================================
+            MAIN CONTENT
+        ============================================================ */}
 
-        <main className="relative flex-1 overflow-y-auto nexto-scrollbar">
-          <div className="max-w-[1450px] mx-auto p-4 md:p-6 lg:p-7 pb-28">
-            {/* ======================================================
-                FREE PLAN BANNER
-            ====================================================== */}
+        <main className="relative flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto pb-32">
+          {/* Subtle content glow */}
+          <div className="pointer-events-none absolute top-[-100px] left-1/2 -translate-x-1/2 w-[500px] h-[250px] rounded-full bg-orange-600/[0.025] blur-[100px]" />
 
-            {!loading && !isPremium && (
-              <div className="mb-5 rounded-2xl border border-orange-500/15 bg-gradient-to-r from-orange-500/[0.07] to-transparent px-4 py-3">
-                <div className="flex flex-col md:flex-row md:items-center gap-3">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-8 h-8 shrink-0 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                      <Zap
-                        size={14}
-                        className="text-orange-400"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="text-[10px] font-semibold text-white">
-                        Kamu sekarang di paket Free
-                      </div>
-
-                      <div className="text-[8px] text-slate-500 mt-0.5">
-                        Dashboard & Leads aktif.
-                        Upgrade untuk membuka AI,
-                        Calendar, Telegram, Visit &
-                        semua fitur premium.
-                      </div>
-                    </div>
-                  </div>
+          {!loading &&
+            !isPremium && (
+              <div
+                className="
+                  relative
+                  mb-4
+                  border
+                  border-orange-500/20
+                  rounded-2xl
+                  px-4
+                  py-3
+                  space-y-2.5
+                "
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(89,39,9,.28), rgba(35,20,10,.55))",
+                }}
+              >
+                <div className="flex items-center justify-between gap-2 text-xs text-orange-100/70">
+                  <span>
+                    Kamu sekarang di paket{" "}
+                    <b className="text-orange-300">
+                      Free
+                    </b>{" "}
+                    (Dashboard &amp; Leads
+                    doang). Upgrade ke Premium
+                    (Rp149rb/bulan) buat buka
+                    semua fitur + bot Telegram +
+                    Calendar + AI.
+                  </span>
 
                   <a
                     href="https://subscription.myr.id/m/nexto-premium-88379/"
                     target="_blank"
                     rel="noreferrer"
-                    className="shrink-0 px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[9px] font-semibold text-center shadow-[0_8px_20px_-10px_rgba(249,115,22,.8)]"
+                    className="shrink-0 underline font-medium text-orange-400"
                   >
-                    Upgrade Premium
+                    Upgrade
                   </a>
                 </div>
 
-                <div className="mt-3 pt-3 border-t border-orange-500/10">
+                <div className="border-t border-orange-500/10 pt-2.5">
+                  <p className="text-[11px] text-orange-200/50 mb-1.5">
+                    Atau punya kode undangan
+                    dari tim (bos kamu udah
+                    Enterprise)? Masukin di sini,
+                    gratis buat kamu:
+                  </p>
+
                   <div className="flex gap-2">
                     <input
-                      className="flex-1 max-w-[260px] px-3 py-2 text-[9px] border border-orange-500/15 rounded-xl uppercase bg-black/20 text-white outline-none focus:border-orange-500/40 placeholder:text-slate-700"
-                      placeholder="KODE UNDANGAN"
+                      className="
+                        flex-1
+                        px-3
+                        py-1.5
+                        text-xs
+                        border
+                        border-orange-500/20
+                        rounded-lg
+                        uppercase
+                        bg-black/20
+                        text-orange-50
+                        placeholder:text-orange-100/20
+                        focus:outline-none
+                        focus:border-orange-500/40
+                      "
+                      placeholder="MASUKIN KODE"
                       value={joinCode}
                       onChange={(e) =>
                         setJoinCode(
@@ -1197,9 +1143,20 @@ export default function App() {
                     />
 
                     <button
-                      onClick={joinWithCode}
+                      onClick={
+                        joinWithCode
+                      }
                       disabled={joinBusy}
-                      className="text-[9px] bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl px-4 font-semibold"
+                      className="
+                        text-xs
+                        bg-orange-600
+                        hover:bg-orange-700
+                        disabled:opacity-60
+                        text-white
+                        rounded-lg
+                        px-3
+                        font-medium
+                      "
                     >
                       {joinBusy
                         ? "..."
@@ -1209,8 +1166,10 @@ export default function App() {
 
                   {joinMsg && (
                     <p
-                      className={`text-[8px] mt-2 ${
-                        joinMsg.startsWith("Gagal")
+                      className={`text-[11px] mt-1.5 ${
+                        joinMsg.startsWith(
+                          "Gagal"
+                        )
                           ? "text-rose-400"
                           : "text-emerald-400"
                       }`}
@@ -1222,242 +1181,207 @@ export default function App() {
               </div>
             )}
 
-            {/* ======================================================
-                QUICK KPI STRIP
-            ====================================================== */}
-
-            {effectiveTab === "dashboard" &&
-              !loading && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-                  <QuickMetric
-                    icon={<Users size={14} />}
-                    label="Total Leads"
-                    value={leads.length}
-                    change="+12.5%"
-                    positive
-                  />
-
-                  <QuickMetric
-                    icon={
-                      <Target size={14} />
-                    }
-                    label="Active Pipeline"
-                    value={
-                      leads.filter(
-                        (l) =>
-                          l.stage_key !== "deal"
-                      ).length
-                    }
-                    change="+8.2%"
-                    positive
-                  />
-
-                  <QuickMetric
-                    icon={
-                      <CircleDollarSign
-                        size={14}
-                      />
-                    }
-                    label="Deals"
-                    value={
-                      dealTransactions.length
-                    }
-                    change="+18.4%"
-                    positive
-                  />
-
-                  <QuickMetric
-                    icon={
-                      <CalendarDays
-                        size={14}
-                      />
-                    }
-                    label="Upcoming Visit"
-                    value={
-                      leads.filter(
-                        (l) => l.visit_date
-                      ).length
-                    }
-                    change="Today"
-                    positive
-                  />
-                </div>
+          {loading ? (
+            <Splash inline />
+          ) : (
+            <>
+              {effectiveTab ===
+                "dashboard" && (
+                <Dashboard
+                  leads={leads}
+                  stages={stageList}
+                  dealTransactions={
+                    dealTransactions
+                  }
+                  onGo={setTab}
+                />
               )}
 
-            {/* ======================================================
-                TAB CONTENT
-            ====================================================== */}
+              {effectiveTab ===
+                "leads" && (
+                <Leads
+                  leads={leads}
+                  stages={stageList}
+                  settings={settings}
+                  onChanged={reload}
+                />
+              )}
 
-            {loading ? (
-              <Splash inline />
-            ) : (
-              <div className="nexto-app-content">
-                {effectiveTab ===
-                  "dashboard" && (
-                  <Dashboard
-                    leads={leads}
+              {effectiveTab ===
+                "generateleads" && (
+                <PreviewLock
+                  locked={isLocked(
+                    "generateleads"
+                  )}
+                >
+                  <GenerateLeads
                     stages={stageList}
-                    dealTransactions={
-                      dealTransactions
-                    }
-                    onGo={setTab}
-                  />
-                )}
-
-                {effectiveTab === "leads" && (
-                  <Leads
-                    leads={leads}
-                    stages={stageList}
-                    settings={settings}
                     onChanged={reload}
                   />
-                )}
+                </PreviewLock>
+              )}
 
-                {effectiveTab ===
-                  "generateleads" && (
-                  <PreviewLock
-                    locked={isLocked(
-                      "generateleads"
-                    )}
-                  >
-                    <GenerateLeads
-                      stages={stageList}
-                      onChanged={reload}
-                    />
-                  </PreviewLock>
-                )}
+              {effectiveTab === "deal" && (
+                <PreviewLock
+                  locked={isLocked(
+                    "deal"
+                  )}
+                >
+                  <Deal
+                    leads={
+                      isLocked("deal")
+                        ? DUMMY_LEADS
+                        : leads
+                    }
+                    stages={stageList}
+                    dealTransactions={
+                      isLocked("deal")
+                        ? DUMMY_DEAL_TX
+                        : dealTransactions
+                    }
+                    onEdit={setEditLead}
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
 
-                {effectiveTab === "deal" && (
-                  <PreviewLock
-                    locked={isLocked("deal")}
-                  >
-                    <Deal
-                      leads={
-                        isLocked("deal")
-                          ? DUMMY_LEADS
-                          : leads
-                      }
-                      stages={stageList}
-                      dealTransactions={
-                        isLocked("deal")
-                          ? DUMMY_DEAL_TX
-                          : dealTransactions
-                      }
-                      onEdit={setEditLead}
-                      onChanged={reload}
-                    />
-                  </PreviewLock>
-                )}
+              {effectiveTab ===
+                "visitfollowup" && (
+                <PreviewLock
+                  locked={isLocked(
+                    "visitfollowup"
+                  )}
+                >
+                  <VisitFollowup
+                    leads={
+                      isLocked(
+                        "visitfollowup"
+                      )
+                        ? DUMMY_LEADS
+                        : leads
+                    }
+                    onEdit={setEditLead}
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
 
-                {effectiveTab ===
-                  "visitfollowup" && (
-                  <PreviewLock
-                    locked={isLocked(
-                      "visitfollowup"
-                    )}
-                  >
-                    <VisitFollowup
-                      leads={
-                        isLocked(
-                          "visitfollowup"
-                        )
-                          ? DUMMY_LEADS
-                          : leads
-                      }
-                      onEdit={setEditLead}
-                      onChanged={reload}
-                    />
-                  </PreviewLock>
-                )}
+              {effectiveTab ===
+                "kompetitor" && (
+                <PreviewLock
+                  locked={isLocked(
+                    "kompetitor"
+                  )}
+                >
+                  <Kompetitor
+                    competitors={
+                      isLocked(
+                        "kompetitor"
+                      )
+                        ? DUMMY_COMPETITORS
+                        : competitors
+                    }
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
 
-                {effectiveTab ===
-                  "kompetitor" && (
-                  <PreviewLock
-                    locked={isLocked(
-                      "kompetitor"
-                    )}
-                  >
-                    <Kompetitor
-                      competitors={
-                        isLocked(
-                          "kompetitor"
-                        )
-                          ? DUMMY_COMPETITORS
-                          : competitors
-                      }
-                      onChanged={reload}
-                    />
-                  </PreviewLock>
-                )}
-
-                {effectiveTab ===
-                  "komunitas" && (
-                  <PreviewLock
-                    locked={isLocked(
+              {effectiveTab ===
+                "komunitas" && (
+                <PreviewLock
+                  locked={isLocked(
+                    "komunitas"
+                  )}
+                >
+                  <Nex
+                    dummy={isLocked(
                       "komunitas"
                     )}
-                  >
-                    <Nex
-                      dummy={isLocked(
-                        "komunitas"
-                      )}
-                    />
-                  </PreviewLock>
-                )}
+                  />
+                </PreviewLock>
+              )}
 
-                {effectiveTab === "advisor" && (
-                  <PreviewLock
-                    locked={isLocked(
+              {effectiveTab ===
+                "advisor" && (
+                <PreviewLock
+                  locked={isLocked(
+                    "advisor"
+                  )}
+                >
+                  <Advisor
+                    leads={
+                      isLocked("advisor")
+                        ? DUMMY_LEADS
+                        : leads
+                    }
+                    stages={stageList}
+                    onOpen={setEditLead}
+                    dummy={isLocked(
                       "advisor"
                     )}
-                  >
-                    <Advisor
-                      leads={
-                        isLocked("advisor")
-                          ? DUMMY_LEADS
-                          : leads
-                      }
-                      stages={stageList}
-                      onOpen={setEditLead}
-                      dummy={isLocked(
-                        "advisor"
-                      )}
-                    />
-                  </PreviewLock>
-                )}
+                  />
+                </PreviewLock>
+              )}
 
-                {effectiveTab ===
-                  "settings" && (
-                  <PreviewLock
-                    locked={isLocked(
-                      "settings"
-                    )}
-                  >
-                    <SettingsTab
-                      settings={settings}
-                      stages={stageList}
-                      leads={leads}
-                      onChanged={reload}
-                    />
-                  </PreviewLock>
-                )}
-              </div>
-            )}
-          </div>
+              {effectiveTab ===
+                "settings" && (
+                <PreviewLock
+                  locked={isLocked(
+                    "settings"
+                  )}
+                >
+                  <SettingsTab
+                    settings={settings}
+                    stages={stageList}
+                    leads={leads}
+                    onChanged={reload}
+                  />
+                </PreviewLock>
+              )}
+            </>
+          )}
         </main>
 
-        {/* ==========================================================
+        {/* ============================================================
             MOBILE BOTTOM NAV
-        ========================================================== */}
+        ============================================================ */}
 
         <nav className="md:hidden fixed bottom-3 inset-x-3 z-40">
-          <div className="max-w-lg mx-auto flex items-center gap-1 px-1.5 py-2 bg-[#111216]/90 backdrop-blur-2xl rounded-[22px] shadow-[0_12px_40px_-10px_rgba(0,0,0,.8)] border border-white/[0.08]">
-            {NAV.slice(0, 5).map((n) => {
+          <div
+            className="
+              max-w-lg
+              mx-auto
+              flex
+              justify-around
+              px-1.5
+              py-2
+              rounded-[26px]
+              shadow-[0_8px_32px_-6px_rgba(0,0,0,0.65)]
+              border
+              border-orange-500/[0.08]
+              backdrop-blur-xl
+            "
+            style={{
+              background:
+                "rgba(31,18,10,.92)",
+            }}
+          >
+            {NAV.map((n) => {
               const I = n.icon;
               const active =
                 effectiveTab === n.key;
               const locked =
                 isLocked(n.key);
+
+              const cls = locked
+                ? "text-orange-100/20"
+                : n.special
+                ? active
+                  ? "text-violet-400 bg-violet-500/10"
+                  : "text-violet-400"
+                : active
+                ? "text-orange-400 bg-orange-500/10"
+                : "text-orange-100/35";
 
               return (
                 <button
@@ -1465,47 +1389,28 @@ export default function App() {
                   onClick={() =>
                     setTab(n.key)
                   }
-                  className={`
-                    relative flex flex-col items-center justify-center gap-1 flex-1 py-2 rounded-xl
-                    ${
-                      active
-                        ? "text-orange-400 bg-orange-500/[0.08]"
-                        : locked
-                        ? "text-slate-700"
-                        : "text-slate-500"
-                    }
-                  `}
+                  className={`relative flex flex-col items-center gap-0.5 flex-1 py-1.5 rounded-2xl transition-colors ${cls}`}
                 >
                   <I
-                    size={17}
+                    size={19}
                     strokeWidth={
-                      active ? 2.5 : 1.8
+                      active ? 2.5 : 2
                     }
                   />
 
-                  <span className="text-[7px] font-medium leading-none">
+                  <span className="text-[9px] font-medium leading-none truncate max-w-full mt-0.5">
                     {n.short}
                   </span>
 
-                  {active && (
-                    <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-orange-500 shadow-[0_0_7px_#f97316]" />
+                  {locked && (
+                    <Lock
+                      size={9}
+                      className="absolute top-0.5 right-2"
+                    />
                   )}
                 </button>
               );
             })}
-
-            <button
-              onClick={() =>
-                setMobileMenu(true)
-              }
-              className="flex flex-col items-center justify-center gap-1 flex-1 py-2 rounded-xl text-slate-500"
-            >
-              <Menu size={17} />
-
-              <span className="text-[7px] font-medium">
-                More
-              </span>
-            </button>
           </div>
         </nav>
       </div>
@@ -1532,55 +1437,9 @@ export default function App() {
   );
 }
 
-/* ================================================================
-   QUICK METRIC
-================================================================ */
-
-function QuickMetric({
-  icon,
-  label,
-  value,
-  change,
-  positive,
-}) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.055] bg-[#101114]/90 px-4 py-3.5 group hover:border-orange-500/15 transition-colors">
-      <div className="absolute right-[-25px] top-[-25px] w-20 h-20 rounded-full bg-orange-500/[0.035] blur-2xl group-hover:bg-orange-500/[0.07] transition-colors" />
-
-      <div className="relative flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl bg-white/[0.035] border border-white/[0.05] flex items-center justify-center text-orange-400">
-          {icon}
-        </div>
-
-        <div className="min-w-0">
-          <div className="text-[8px] uppercase tracking-[0.13em] text-slate-600 font-bold">
-            {label}
-          </div>
-
-          <div className="flex items-end gap-2 mt-0.5">
-            <span className="text-[18px] font-bold tracking-tight">
-              {value}
-            </span>
-
-            <span
-              className={`text-[7px] font-semibold mb-1 ${
-                positive
-                  ? "text-emerald-400"
-                  : "text-rose-400"
-              }`}
-            >
-              {change}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ================================================================
-   PREMIUM LOCK
-================================================================ */
+// ================================================================
+// PREMIUM PREVIEW LOCK
+// ================================================================
 
 function PreviewLock({
   locked,
@@ -1590,46 +1449,54 @@ function PreviewLock({
 
   return (
     <div className="relative">
-      <div className="mb-3 rounded-2xl border border-orange-500/15 bg-orange-500/[0.06] text-orange-300 px-4 py-3 flex items-center gap-3">
-        <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center">
-          <Lock size={13} />
-        </div>
+      <div
+        className="
+          mb-3
+          text-white
+          text-xs
+          rounded-2xl
+          px-4
+          py-2.5
+          flex
+          items-center
+          gap-2
+          border
+          border-orange-500/10
+        "
+        style={{
+          background:
+            "rgba(45,25,12,.82)",
+        }}
+      >
+        <Lock
+          size={13}
+          className="shrink-0 text-orange-400"
+        />
 
-        <div className="flex-1">
-          <div className="text-[9px] font-semibold">
-            Premium Feature
-          </div>
-
-          <div className="text-[8px] text-orange-400/60 mt-0.5">
-            Mode preview — upgrade untuk menggunakan
-            fitur ini.
-          </div>
-        </div>
-
-        <span className="text-[7px] uppercase tracking-widest text-orange-500 border border-orange-500/20 rounded-full px-2 py-1">
-          Premium
+        <span className="text-orange-100/60">
+          Mode lihat-lihat doang - upgrade ke
+          Premium buat bisa nambah/ubah data di
+          sini.
         </span>
       </div>
 
       <div
         onClick={() =>
           alert(
-            "Ini fitur Premium bro — upgrade ke Premium Rp149rb/bulan untuk menggunakan fitur ini."
+            "Ini fitur Premium bro - di paket Free cuma bisa dilihat doang, gak bisa diubah. Upgrade dulu (Rp149rb/bulan) buat bisa pake fiturnya."
           )
         }
-        className="absolute inset-0 top-14 z-20 cursor-pointer"
+        className="absolute inset-0 top-11 z-20 cursor-pointer"
       />
 
-      <div className="opacity-75">
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
 
-/* ================================================================
-   PROFILE
-================================================================ */
+// ================================================================
+// PROFILE AVATAR
+// ================================================================
 
 function ProfileAvatar({
   settings,
@@ -1638,7 +1505,6 @@ function ProfileAvatar({
   onChanged,
   size = 36,
   align = "right",
-  dark = false,
 }) {
   const [open, setOpen] =
     useState(false);
@@ -1678,22 +1544,16 @@ function ProfileAvatar({
     org?.plan === "enterprise"
       ? {
           label: "Enterprise",
-          cls: dark
-            ? "bg-violet-500/10 text-violet-400 border-violet-500/15"
-            : "bg-violet-100 text-violet-700",
+          cls: "bg-violet-500/10 text-violet-300 border border-violet-500/10",
         }
       : settings.plan === "premium"
       ? {
           label: "Premium",
-          cls: dark
-            ? "bg-orange-500/10 text-orange-400 border-orange-500/15"
-            : "bg-orange-100 text-orange-700",
+          cls: "bg-orange-500/10 text-orange-300 border border-orange-500/10",
         }
       : {
           label: "Free",
-          cls: dark
-            ? "bg-white/[0.04] text-slate-500 border-white/[0.06]"
-            : "bg-slate-100 text-slate-500",
+          cls: "bg-white/[0.05] text-orange-100/40 border border-orange-500/[0.06]",
         };
 
   const handleFile = async (
@@ -1755,12 +1615,20 @@ function ProfileAvatar({
           setOpen((v) => !v)
         }
         className="
-          shrink-0 rounded-full overflow-hidden
-          bg-gradient-to-br from-orange-400 to-orange-800
-          text-white flex items-center justify-center
+          shrink-0
+          rounded-full
+          overflow-hidden
+          ring-2
+          ring-orange-500/20
+          bg-gradient-to-br
+          from-orange-400
+          to-orange-800
+          text-white
+          flex
+          items-center
+          justify-center
           font-semibold
-          ring-2 ring-orange-500/20
-          shadow-[0_4px_15px_-5px_rgba(249,115,22,.45)]
+          shadow-[0_2px_12px_-1px_rgba(249,115,22,.4)]
         "
         style={{
           width: size,
@@ -1770,7 +1638,9 @@ function ProfileAvatar({
       >
         {settings.avatar_url ? (
           <img
-            src={settings.avatar_url}
+            src={
+              settings.avatar_url
+            }
             alt=""
             className="w-full h-full object-cover"
           />
@@ -1797,23 +1667,22 @@ function ProfileAvatar({
                   ? "left-0"
                   : "right-0"
               }
-              top-full mt-2.5
+              top-full
+              mt-2.5
               w-72
-              ${
-                dark
-                  ? "bg-[#111216] border-white/[0.08] text-white"
-                  : "bg-white border-slate-100 text-slate-900"
-              }
+              bg-[#21140b]
               rounded-[24px]
-              shadow-[0_20px_60px_-15px_rgba(0,0,0,.7)]
-              z-50 overflow-hidden border
+              shadow-[0_16px_50px_-8px_rgba(0,0,0,.7)]
+              z-50
+              overflow-hidden
+              border
+              border-orange-500/[0.12]
             `}
           >
             {!editing ? (
               <>
-                {/* PROFILE HEADER */}
                 <div className="h-16 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-900 relative">
-                  <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-800 text-white flex items-center justify-center font-bold text-2xl ring-4 ring-[#111216] shadow-xl">
+                  <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-800 text-white flex items-center justify-center font-bold text-2xl ring-4 ring-[#21140b] shadow-md">
                     {settings.avatar_url ? (
                       <img
                         src={
@@ -1828,29 +1697,32 @@ function ProfileAvatar({
                   </div>
                 </div>
 
-                <div className="pt-9 pb-5 px-5">
+                <div className="pt-9 pb-4 px-5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-bold text-[14px] truncate">
+                    <div className="font-bold text-[15px] text-orange-50 truncate">
                       {settings.community_display_name ||
                         "Belum ada nama"}
                     </div>
 
                     <span
-                      className={`shrink-0 text-[8px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 border ${planInfo.cls}`}
+                      className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 ${planInfo.cls}`}
                     >
                       {planInfo.label}
                     </span>
                   </div>
 
                   {settings.job_title && (
-                    <span className="inline-block mt-2 text-[8px] font-semibold uppercase tracking-wide bg-white/[0.04] text-slate-500 border border-white/[0.05] rounded-full px-2.5 py-1">
+                    <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-white/[0.05] text-orange-100/45 rounded-full px-2.5 py-1">
                       {settings.job_title}
                     </span>
                   )}
 
                   {email && (
-                    <div className="flex items-center gap-1.5 mt-3 text-[9px] text-slate-600">
-                      <Mail size={10} />
+                    <div className="flex items-center gap-1.5 mt-3 text-xs text-orange-100/35">
+                      <Mail
+                        size={11}
+                        className="shrink-0"
+                      />
 
                       <span className="truncate">
                         {email}
@@ -1862,7 +1734,7 @@ function ProfileAvatar({
                     onClick={() =>
                       setEditing(true)
                     }
-                    className="w-full mt-4 text-[9px] bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-2.5 font-semibold transition-colors"
+                    className="w-full mt-4 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded-xl py-2.5 font-medium transition-colors"
                   >
                     Edit Profil
                   </button>
@@ -1890,8 +1762,8 @@ function ProfileAvatar({
                     )}
                   </div>
 
-                  <span className="text-[9px] text-orange-400 font-medium flex items-center gap-1">
-                    <Camera size={12} />
+                  <span className="text-xs text-orange-400 font-medium flex items-center gap-1">
+                    <Camera size={13} />
                     Ganti foto
                   </span>
 
@@ -1902,17 +1774,32 @@ function ProfileAvatar({
                     onChange={
                       handleFile
                     }
-                    disabled={uploading}
+                    disabled={
+                      uploading
+                    }
                   />
                 </label>
 
-                <label className="block mb-3">
-                  <span className="text-[9px] font-medium text-slate-600">
+                <label className="block mb-2.5">
+                  <span className="text-[11px] font-medium text-orange-100/35">
                     Nama
                   </span>
 
                   <input
-                    className="w-full mt-1 px-3 py-2.5 text-xs text-white bg-white/[0.03] border border-white/[0.07] rounded-xl focus:outline-none focus:border-orange-500/40"
+                    className="
+                      w-full
+                      mt-1
+                      px-3
+                      py-2
+                      text-sm
+                      text-orange-50
+                      bg-black/20
+                      border
+                      border-orange-500/[0.12]
+                      rounded-xl
+                      focus:outline-none
+                      focus:border-orange-500/40
+                    "
                     value={name}
                     onChange={(e) =>
                       setName(
@@ -1923,12 +1810,25 @@ function ProfileAvatar({
                 </label>
 
                 <label className="block mb-4">
-                  <span className="text-[9px] font-medium text-slate-600">
+                  <span className="text-[11px] font-medium text-orange-100/35">
                     Jabatan
                   </span>
 
                   <input
-                    className="w-full mt-1 px-3 py-2.5 text-xs text-white bg-white/[0.03] border border-white/[0.07] rounded-xl focus:outline-none focus:border-orange-500/40"
+                    className="
+                      w-full
+                      mt-1
+                      px-3
+                      py-2
+                      text-sm
+                      text-orange-50
+                      bg-black/20
+                      border
+                      border-orange-500/[0.12]
+                      rounded-xl
+                      focus:outline-none
+                      focus:border-orange-500/40
+                    "
                     placeholder="Sales Executive"
                     value={jobTitle}
                     onChange={(e) =>
@@ -1944,7 +1844,17 @@ function ProfileAvatar({
                     onClick={() =>
                       setEditing(false)
                     }
-                    className="flex-1 text-[9px] text-slate-500 border border-white/[0.07] rounded-xl py-2.5 hover:bg-white/[0.04] font-medium"
+                    className="
+                      flex-1
+                      text-xs
+                      text-orange-100/45
+                      border
+                      border-orange-500/[0.12]
+                      rounded-xl
+                      py-2.5
+                      hover:bg-orange-500/[0.05]
+                      font-medium
+                    "
                   >
                     Batal
                   </button>
@@ -1954,7 +1864,17 @@ function ProfileAvatar({
                       saveProfile
                     }
                     disabled={saving}
-                    className="flex-1 text-[9px] bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl py-2.5 font-semibold"
+                    className="
+                      flex-1
+                      text-xs
+                      bg-orange-600
+                      hover:bg-orange-700
+                      disabled:opacity-60
+                      text-white
+                      rounded-xl
+                      py-2.5
+                      font-medium
+                    "
                   >
                     {saving
                       ? "..."
@@ -1970,9 +1890,9 @@ function ProfileAvatar({
   );
 }
 
-/* ================================================================
-   SPLASH
-================================================================ */
+// ================================================================
+// SPLASH
+// ================================================================
 
 function Splash({ inline }) {
   return (
@@ -1980,31 +1900,37 @@ function Splash({ inline }) {
       className={`
         ${
           inline
-            ? "min-h-[420px]"
+            ? "py-20"
             : "min-h-screen"
         }
-        bg-transparent
-        flex flex-col
+        flex
+        flex-col
         items-center
         justify-center
         gap-3
       `}
+      style={{
+        background:
+          "transparent",
+      }}
     >
-      <div className="relative">
-        <div className="absolute inset-0 rounded-2xl bg-orange-500/20 blur-2xl" />
-
-        <div className="relative nexto-pulse">
-          <NextoBadge size={48} />
-        </div>
+      <div
+        className="animate-pulse"
+        style={{
+          filter:
+            "drop-shadow(0 0 18px rgba(249,115,22,.35))",
+        }}
+      >
+        <NextoBadge size={48} />
       </div>
 
-      <div className="text-slate-600 text-[10px] flex items-center gap-2">
+      <div className="text-orange-100/35 text-sm flex items-center gap-1.5">
         <Loader2
-          size={12}
+          size={13}
           className="animate-spin text-orange-500"
         />
 
-        Memuat workspace...
+        Memuat…
       </div>
     </div>
   );
