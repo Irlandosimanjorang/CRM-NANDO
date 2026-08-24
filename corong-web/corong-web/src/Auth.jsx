@@ -26,7 +26,27 @@ import {
   Pencil,
   CheckCircle2,
 } from "lucide-react";
-import { NextoBadge } from "./App";
+function NextoBadge({ size = 36 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      className="shrink-0"
+      aria-hidden="true"
+    >
+      <path
+        d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z"
+        fill="#f97316"
+      />
+      <path
+        d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z"
+        fill="#9a3412"
+      />
+    </svg>
+  );
+}
+
 
 const CAPABILITIES = [
   {
