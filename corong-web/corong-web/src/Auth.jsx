@@ -1,2166 +1,1767 @@
-Pasted text(2).txt
-Document
-bro gua mau tampilan landing page atau tampilan awal nexto di buat seperti ui ux promax
-Videos2026-08-24_194714_690.mp4
-File
-gua mau lu buat ktk gini bukan merubah semuanya bro.  jadi bentuknya lebih bagus coba lu buat sendiri pake kemampuan lu.
-Edit
-Edit
-Videos2026-08-24_194714_690(1).mp4
-File
-gua hanya butuh lu redesign gambar yang ada di dalam komputer in idan isinya tetap sama
-
-Nah, sekarang gue paham 100% bro. Yang mau gue redesign cuma UI yang tampil di layar laptop pada video itu — isi/fungsi/tulisan tetap sama, nggak mengubah landing page secara keseluruhan, nggak nambah section lain.
-
-Tapi karena yang lo kirim berupa video, gue perlu targetnya dalam bentuk screenshot/frame gambar supaya bisa gue edit presisi.
-
-Upload screenshot layar laptopnya (cukup bagian halaman Nexto yang sekarang), lalu gue langsung redesign bagian itu dengan style modern, futuristic, robot/AI, sementara semua isi dan teks tetap sama.
-
-Edit
-Pasted text(3).txt
-Document
-bro gua pengen lu redesign ui tampilan dari crm nexto buat sesuai dengan ui ux promax seperti lu mendesign landing page nexto
-Edit
-
-Nah bro, ini baru konsep yang menurut gue pas banget buat Nexto. Gue nggak mau chatbot-nya cuma jadi kotak chat biasa.
-
-Gue mau chatbot jadi “otak/pusat”, lalu tiga fungsi utama bercabang dari dia:
-
-                         ┌──────────────────────┐
-                         │  📅 GOOGLE CALENDAR  │
-                         │  Set Visit Otomatis   │
-                         └──────────▲───────────┘
-                                    │
-                                    │
-              ┌─────────────────────┴─────────────────────┐
-              │                                           │
-              │            🤖 NEXTO AI CHATBOT            │
-              │                                           │
-              │       "Apa yang mau kamu kerjakan?"      │
-              │                                           │
-              └───────────────┬───────────────┬───────────┘
-                              │               │
-                              ▼               ▼
-                 ┌─────────────────┐   ┌──────────────────┐
-                 │ 🎙 PROGRESS      │   │ ✏️ EDIT CRM AI   │
-                 │ Voice / Text     │   │ AI yang kerjain  │
-                 └─────────────────┘   └──────────────────┘
-
-Visual konsepnya gue bikin seperti ini:
-
-6
-Yang paling penting: dia bergerak
-
-Bukan gambar statis.
-
-Di landing page nanti gue bikin:
-
-1. Robot/chatbot di tengah melakukan idle animation
-
-Robot sedikit floating:
-
-↑ ↓ ↑ ↓
-
-dengan ring/orbit orange yang bergerak.
-
-2. Connection lines hidup
-
-Dari chatbot menuju:
-
-📅 Calendar
-🎙 Progress
-✏️ CRM
-
-Garisnya seperti ada energy pulse yang bergerak dari pusat ke masing-masing fungsi.
-
-3. Chat bubble muncul bergantian
-
-Contoh:
-
-👤 “Besok jam 10 visit PT ABC.”
-
-↓
-
-🤖 “Siap. Visit sudah dibuat.”
-
-↓
-
-Google Calendar card muncul:
-
-10:00 — Visit PT ABC
-✅ Added to Google Calendar
-
-Kemudian reset.
-
-Lalu:
-
-🎙 “Hari ini gue visit PT ABC…”
-
-↓
-
-🤖 “Progress hari ini sudah diperbarui.”
-
-Kemudian CRM card berubah.
-
-Lalu:
-
-👤 “Update PT ABC jadi Negosiasi.”
-
-↓
-
-🤖 “Done. CRM sudah diperbarui.”
-
-Jadi orang yang lihat landing page langsung ngerti: oh shit, chatbot ini benar-benar mengerjakan sesuatu.
-
-Dan secara produk, gue mau semuanya satu engine
-
-Bukan 3 fitur yang berdiri sendiri.
-
-Misalnya user bilang:
-
-“Besok jam 10 gue visit PT ABC, mereka minta sample. Tolong jadwalin.”
-
-Nexto melakukan:
-
-CHAT
- ↓
-AI memahami intent
- ↓
-Cari PT ABC
- ↓
-Update CRM
-    ├─ visit_date
-    ├─ visit_agenda
-    └─ next_action
- ↓
-Google Calendar
- ↓
-Create event
- ↓
-Response
-
-Jadi satu command → beberapa sistem bekerja.
-
-Begitu juga:
-
-“Hari ini gue udah visit PT ABC. Mereka tertarik, tapi minta harga baru minggu depan.”
-
-Nexto:
-
-Voice / Text
-      ↓
-Speech-to-text (kalau voice)
-      ↓
-AI memahami isi
-      ↓
-PT ABC ditemukan
-      ↓
-CRM UPDATE
- ├─ last contact
- ├─ status
- ├─ notes
- └─ next action
-      ↓
-FOLLOW-UP
-      ↓
-AI response
-
-Ini yang menurut gue bakal bikin Nexto beda dari CRM biasa.
-
-Tapi ada satu hal penting
-
-Untuk landing page, gue akan bikin ini sebagai interactive product demonstration.
-
-Artinya visitor bisa mencoba:
-
-“Besok jam 10 visit PT ABC.”
-
-lalu Nexto menjawab secara demo.
-
-Jangan langsung menghubungkan chatbot publik ke CRM/Google Calendar asli.
-
-Karena orang random yang buka nexto.site belum authenticated. Kita nggak mau chatbot publik bisa menyentuh database atau Calendar user.
-
-Setelah login:
-
-chatbot yang sama → benar-benar menjalankan action.
-
-Jadi arsitekturnya:
-
-                 NEXTO CHAT ENGINE
-                        │
-              ┌─────────┴─────────┐
-              │                   │
-         LANDING DEMO          LOGGED USER
-              │                   │
-        Simulated actions       Real actions
-                                  │
-                 ┌────────────────┼───────────────┐
-                 │                │               │
-                 ▼                ▼               ▼
-              CRM DB       Google Calendar    Voice/Text
-
-Dan ini nyambung banget dengan sistem yang sudah lo punya sekarang, karena Nexto lo sudah punya Google Calendar OAuth, Telegram command parsing, voice transcription, CRM update, dan AI Advisor.
-
-Jadi kita sebenarnya nggak perlu bikin Nexto dari nol. Kita bikin Chat Engine sebagai pusat orchestration, lalu connector yang sudah ada kita satukan di belakangnya.
-
-Nama konsepnya:
-NEXT0 AI SALES ENGINE
-
-You talk. Nexto works.
-
-Menurut gue ini jauh lebih kuat daripada positioning:
-
-“CRM dengan chatbot.”
-
-Karena yang kita jual adalah:
-
-“Sales cukup ngomong ke Nexto. Nexto yang mengerjakan CRM-nya.”
-
-Dan visual yang gue buat tadi bisa kita jadikan hero interactive section di landing page, bukan sekadar gambar.
-
-Edit
-bro tampilan apps jsx gua pengen seperti ini yang lu buat. jadi keren bangett bro gass buatin dan copy full code kesini
-bro bagian background di app jsx di buat warnanya seperti background gambar yang gua lampirkan ini
-bro gua oengen lu hapus semua heder yang ada di setiap tab dari dashboard sampe pengaturan. 
-
-Iya bro, sekarang gue nangkep masalahnya. Yang mau lo hapus itu bukan sidebar/mobile header, tapi header internal di setiap tab yang kelihatan seperti:
-
-Workspace / Leads
-SALES WORKSPACE
-Leads
-Kelola dan prioritaskan seluruh prospek kamu.
-
-Dan pola yang sama muncul lagi di Generate Leads, Deal, sampai Pengaturan.
-
-Gue setuju dihapus semua. Karena sekarang Nexto sudah punya navigation utama di sidebar, header internal itu jadi redundant dan bikin ruang atas kebuang. Screenshot lo memang menunjukkan header tersebut berulang di setiap halaman.
-
-Tapi gue nggak mau kasih full App.jsx palsu lagi, bro. Header yang lo tunjuk itu berada di masing-masing component tab, bukan di App.jsx. App.jsx memang hanya memanggil <Dashboard />, <Leads />, <GenerateLeads />, <Deal />, <VisitFollowup />, <Kompetitor />, <Advisor />, dan <SettingsTab />.
-
-Jadi kalau gue cuma kasih App.jsx, header-nya tetap muncul.
-
-Yang harus kita lakukan
-
-Kita hapus bagian header dari:
-
-src/tabs/Dashboard.jsx
-src/tabs/Leads.jsx
-src/tabs/GenerateLeads.jsx
-src/tabs/Deal.jsx
-src/tabs/VisitFollowup.jsx
-src/tabs/Kompetitor.jsx
-src/tabs/Nex.jsx
-src/tabs/Advisor.jsx
-src/tabs/Settings.jsx
-
-Tapi isi/functionality di bawah header jangan disentuh.
-
-Hasil akhirnya:
-
-┌─────────────────────────────────────────────────────────┐
-│ Nexto                              Profile               │
-├──────────────┬──────────────────────────────────────────┤
-│ Dashboard    │                                          │
-│ Leads        │   [langsung masuk ke isi Dashboard]     │
-│ Generate     │                                          │
-│ Deal         │   KPI / Pipeline / Activity              │
-│ Visit        │                                          │
-│ Kompetitor   │                                          │
-│ Nex          │                                          │
-│ AI Advisor   │                                          │
-│ Pengaturan   │                                          │
-└──────────────┴──────────────────────────────────────────┘
-
-Jadi nggak ada lagi:
-
-Workspace / Leads
-
-● SALES WORKSPACE
-
-Leads
-
-Kelola dan prioritaskan...
-
-Dan juga nggak ada lagi versi Generate Leads / Deal / Settings-nya.
-
-Ini jauh lebih cocok dengan arah desain yang tadi kita sepakati: clean, compact, readable, premium.
-
-Gue perlu source masing-masing src/tabs/*.jsx yang sekarang dipakai supaya gue bisa kasih full code per file yang benar-benar aman dipaste, bukan nebak-nebak dan berisiko ngerusak logic. Saat ini source yang tersedia di file context menunjukkan struktur pemanggilan tab dan beberapa source lama, tetapi belum memberi full isi versi terbaru semua tab.
-
-Kalau lo upload/paste folder src/tabs atau file-file tab tersebut, gue bisa langsung balikin full code tiap file, tinggal paste ke GitHub satu-satu.
-
-Bro, bisa. Tapi source full yang ada sekarang cuma App.jsx, dan header yang lo tunjuk di screenshot bukan berada di App.jsx—App cuma me-render masing-masing tab (Dashboard, Leads, GenerateLeads, Deal, VisitFollowup, Kompetitor, Nex, Advisor, Settings).
-
-Jadi kalau gue copy full App.jsx dan bilang itu sudah menghapus header, bohong—header bakal tetap muncul.
-
-Yang gue butuhin cuma source full:
-
-src/tabs/Dashboard.jsx
-src/tabs/Leads.jsx
-src/tabs/GenerateLeads.jsx
-src/tabs/Deal.jsx
-src/tabs/VisitFollowup.jsx
-src/tabs/Kompetitor.jsx
-src/tabs/Nex.jsx
-src/tabs/Advisor.jsx
-src/tabs/Settings.jsx
-
-Setelah itu gue bisa kasih full code masing-masing file yang sudah dibersihkan, bukan potongan kode.
-
-Targetnya persis:
-
-Workspace / Leads          ❌ HAPUS
-● SALES WORKSPACE          ❌ HAPUS
-Leads                      ❌ HAPUS
-Kelola dan prioritaskan... ❌ HAPUS
-
-↓ langsung ↓
-
-[isi utama Leads]
-
-Sidebar + mobile navigation + profile tetap ada. Struktur navigation utama memang sudah di App.jsx.
-
-Kalau lo paste/upload folder tabs-nya, gue langsung copy full code + hapus semua header tersebut di semua tab.
-
-Pasted markdown.md
-File
-ini
-
-Nah ini file yang lo kirim. Gue sudah redesign khusus bagian App.jsx-nya: mobile header + desktop top bar + header “Sales Workspace / Leads / Deal / dll” gue hapus, jadi area utama langsung masuk ke konten tab. Header yang tadi bikin tampilan tiap tab seperti screenshot memang berasal dari blok tersebut.
-
-Yang tetap gue pertahankan:
-
-Sidebar kiri desktop
-Bottom navigation mobile
-Profile/avatar
-Premium banner
-Semua tab & logic database
-Preview lock
-Lead modal
-Pull-to-refresh
-Supabase/auth
-Semua fungsi existing
-
-Yang gue hapus:
-
-Workspace / Leads
-Workspace / Generate Leads
-Workspace / Deal
-Nexto + nama tab mobile header
-SALES WORKSPACE
-Judul besar Leads / Generate Leads / Deal / ...
-Deskripsi di bawah judul
-
-Ini full App.jsx yang sudah dibersihkan:
-
-import { useEffect, useState, useRef } from "react";
-import { supabase, isConfigured } from "./lib/supabaseClient";
-import * as db from "./lib/db";
-import Auth from "./Auth";
-import Dashboard from "./tabs/Dashboard";
-import Leads from "./tabs/Leads";
-import GenerateLeads from "./tabs/GenerateLeads";
-import Deal from "./tabs/Deal";
-import VisitFollowup from "./tabs/VisitFollowup";
-import Kompetitor from "./tabs/Kompetitor";
-import Nex from "./tabs/Nex";
-import Advisor from "./tabs/Advisor";
-import SettingsTab from "./tabs/Settings";
-import LeadModal from "./components/LeadModal";
+import { useState } from "react";
+import { supabase } from "./lib/supabaseClient";
 import {
-  LayoutDashboard,
-  Users,
-  Trophy,
-  CalendarCheck,
-  Swords,
-  Lightbulb,
-  Settings as SettingsIcon,
   Loader2,
-  LogOut,
-  Users2,
-  Lock,
-  Camera,
-  Mail,
-  Sparkles,
+  ArrowRight,
   ArrowUpRight,
+  Check,
+  ChevronDown,
+  Sparkles,
+  BrainCircuit,
+  Target,
+  MessageSquare,
+  Clock3,
+  TrendingUp,
+  MapPin,
+  Calendar,
+  Mic,
+  Send,
+  Users,
   Zap,
+  CircleCheck,
+  AlertTriangle,
+  Play,
+  X,
+  Bot,
+  MessageCircle,
+  Paperclip,
+  Volume2,
 } from "lucide-react";
+import { NextoBadge } from "./App";
 
-export function NextoBadge({ size = 36 }) {
+const CAPABILITIES = [
+  {
+    icon: Target,
+    title: "Know what to do",
+    desc: "AI memprioritaskan lead dan opportunity yang paling layak dikejar sekarang.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Know what to say",
+    desc: "Pahami konteks customer dan bantu sales menyiapkan respons yang lebih tepat.",
+  },
+  {
+    icon: Clock3,
+    title: "Never miss a follow-up",
+    desc: "Nexto mengingat commitment, jadwal, buying signal, dan opportunity yang mulai stagnan.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Find more revenue",
+    desc: "Temukan peluang reorder, upsell, dormant customer, dan deal yang berisiko hilang.",
+  },
+];
+
+const SUPPORTING_FEATURES = [
+  {
+    icon: Sparkles,
+    title: "AI Advisor",
+    desc: "Rekomendasi lead potensial dan prioritas follow-up.",
+  },
+  {
+    icon: Send,
+    title: "Telegram Agent",
+    desc: "Update CRM langsung lewat chat atau voice note.",
+  },
+  {
+    icon: MapPin,
+    title: "GPS Check-in",
+    desc: "Catat kunjungan dan validasi lokasi sales.",
+  },
+  {
+    icon: Mic,
+    title: "Meeting Intelligence",
+    desc: "Ubah hasil meeting menjadi catatan dan next action.",
+  },
+  {
+    icon: Calendar,
+    title: "Google Calendar",
+    desc: "Sinkronkan jadwal visit dan meeting otomatis.",
+  },
+  {
+    icon: Users,
+    title: "Lead Management",
+    desc: "Kelola seluruh prospek dalam satu tempat.",
+  },
+];
+
+const INDUSTRIES = [
+  {
+    label: "PROPERTY",
+    flow: "Lead → Viewing → Negotiation → Closing",
+  },
+  {
+    label: "AUTOMOTIVE",
+    flow: "Lead → Test Drive → Financing → Closing",
+  },
+  {
+    label: "B2B",
+    flow: "Lead → Meeting → Trial → Quotation → PO",
+  },
+  {
+    label: "SAAS",
+    flow: "Lead → Demo → Trial → Proposal → Closing",
+  },
+];
+
+const FREE_FEATURES = [
+  "Dashboard",
+  "Kelola Leads",
+];
+
+const PREMIUM_FEATURES = [
+  "Semua fitur di paket Free",
+  "Deal & tracking transaksi",
+  "Visit & Follow-up + Check-in GPS",
+  "Rekam Meeting otomatis",
+  "Analisa Kompetitor",
+  "AI Advisor harian",
+  "Bot Telegram (agent aktif)",
+  "Sinkron Google Calendar",
+  "Nex — komunitas sesama sales",
+];
+
+const FAQS = [
+  {
+    q: "Nexto itu CRM untuk industri apa?",
+    a: "Nexto dibuat sebagai sales engine yang fleksibel untuk berbagai industri. Property, automotive, B2B, SaaS, insurance, education, dan tim sales lainnya bisa menyesuaikan proses penjualannya.",
+  },
+  {
+    q: "Apa bedanya Nexto dengan CRM biasa?",
+    a: "CRM biasa banyak berfungsi sebagai tempat menyimpan data. Nexto dirancang untuk terus mendorong sales ke next best action — siapa yang perlu dihubungi, apa yang harus dilakukan, dan apa langkah berikutnya.",
+  },
+  {
+    q: "Paket Free-nya kayak gimana?",
+    a: "Free bisa dipakai selamanya dengan akses Dashboard dan Leads. Cocok untuk mulai merapikan data prospek sebelum menggunakan fitur sales intelligence yang lebih lengkap.",
+  },
+  {
+    q: "Bisa berhenti kapan aja?",
+    a: "Bisa. Tidak ada kontrak jangka panjang. Kamu bisa berhenti atau upgrade kapan saja.",
+  },
+  {
+    q: "Data saya aman?",
+    a: "Data setiap organisasi dipisahkan berdasarkan akun dan permission yang berlaku. Akses data mengikuti struktur organisasi dan role pengguna.",
+  },
+];
+
+function SectionLabel({ children }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      className="shrink-0"
-    >
-      <path
-        d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z"
-        fill="#f97316"
-      />
-
-      <path
-        d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z"
-        fill="#9a3412"
-      />
-    </svg>
+    <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">
+      <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+      {children}
+    </div>
   );
 }
 
-// ================================================================
-// DATA DUMMY UNTUK PREVIEW PREMIUM
-// ================================================================
-
-const today = new Date().toISOString().slice(0, 10);
-
-const tomorrow = new Date(
-  Date.now() + 86400000
-).toISOString().slice(0, 10);
-
-const DUMMY_LEADS = [
-  {
-    id: "dummy-1",
-    name: "PT Sinar Abadi Plastik",
-    category: "Resin & Compound",
-    stage_key: "presentasi",
-    city: "Tangerang",
-    key_person: "Budi Santoso",
-    key_person_title: "Purchasing Manager",
-    phone: "0812xxxxxx01",
-    email: "budi@sinarabadi.co.id",
-    visit_date: today,
-    visit_meet: "Budi Santoso",
-    visit_agenda: "Presentasi produk & harga penawaran",
-    last_contact: "2026-08-20",
-    next_action: "Follow up hasil presentasi minggu lalu",
-    latitude: null,
-    longitude: null,
-    source: "manual",
-  },
-
-  {
-    id: "dummy-2",
-    name: "CV Karya Plastindo",
-    category: "Pipa & Fitting",
-    stage_key: "negosiasi",
-    city: "Bekasi",
-    key_person: "Sari Wulandari",
-    key_person_title: "Direktur",
-    phone: "0812xxxxxx02",
-    email: "sari@karyaplastindo.id",
-    visit_date: tomorrow,
-    visit_meet: "Sari Wulandari",
-    visit_agenda: "Trial sample produk",
-    last_contact: "2026-08-18",
-    next_action: "Kirim sample ke pabrik",
-    latitude: null,
-    longitude: null,
-    source: "manual",
-  },
-
-  {
-    id: "dummy-3",
-    name: "PT Maju Bersama Kimia",
-    category: "Kabel Listrik",
-    stage_key: "deal",
-    city: "Surabaya",
-    key_person: "Ahmad Fauzi",
-    key_person_title: "Owner",
-    phone: "0812xxxxxx03",
-    email: "ahmad@majubersama.co.id",
-    last_contact: "2026-08-15",
-    latitude: null,
-    longitude: null,
-    source: "telegram",
-  },
-];
-
-const DUMMY_DEAL_TX = [
-  {
-    id: "dd-1",
-    lead_id: "dummy-3",
-    lead_name: "PT Maju Bersama Kimia",
-    deal_date: "2026-08-15",
-    deal_value: 45000000,
-    tonnage: 5,
-    tonnage_unit: "ton",
-    chemical: "PVC Resin K67",
-  },
-
-  {
-    id: "dd-2",
-    lead_id: "dummy-2",
-    lead_name: "CV Karya Plastindo",
-    deal_date: "2026-08-10",
-    deal_value: 28000000,
-    tonnage: 3,
-    tonnage_unit: "ton",
-    chemical: "Calcium Zinc Stabilizer",
-  },
-];
-
-const DUMMY_COMPETITORS = [
-  {
-    id: "dc-1",
-    name: "PT Kompetitor Jaya",
-    background: "Pemain lama di area Jabodetabek",
-    product: "PVC Compound",
-    notes: "Harga agresif tapi servis lambat",
-
-    usages: [
-      {
-        id: "u1",
-        company: "PT ABC Plastik",
-        product: "Compound X",
-        price: "Rp15.000/kg",
-        quantity: "2 ton/bulan",
-      },
-    ],
-  },
-
-  {
-    id: "dc-2",
-    name: "CV Rival Chemical",
-    background: "Fokus segmen kabel listrik",
-    product: "Kabel Compound",
-    notes: "Kuat di after-sales support",
-    usages: [],
-  },
-];
-
-// ================================================================
-// NAVIGATION
-// ================================================================
-
-const NAV = [
-  {
-    key: "dashboard",
-    label: "Dashboard",
-    short: "Home",
-    icon: LayoutDashboard,
-  },
-
-  {
-    key: "leads",
-    label: "Leads",
-    short: "Leads",
-    icon: Users,
-  },
-
-  {
-    key: "generateleads",
-    label: "Generate Leads",
-    short: "Cari Lead",
-    icon: Sparkles,
-  },
-
-  {
-    key: "deal",
-    label: "Deal",
-    short: "Deal",
-    icon: Trophy,
-  },
-
-  {
-    key: "visitfollowup",
-    label: "Visit & Follow-up",
-    short: "Visit",
-    icon: CalendarCheck,
-  },
-
-  {
-    key: "kompetitor",
-    label: "Kompetitor",
-    short: "Rival",
-    icon: Swords,
-  },
-
-  {
-    key: "komunitas",
-    label: "Nex",
-    short: "Nex",
-    icon: Users2,
-    special: true,
-  },
-
-  {
-    key: "advisor",
-    label: "AI Advisor",
-    short: "AI",
-    icon: Lightbulb,
-    ai: true,
-  },
-
-  {
-    key: "settings",
-    label: "Pengaturan",
-    short: "More",
-    icon: SettingsIcon,
-  },
-];
-
-// ================================================================
-// CONFIG SCREEN
-// ================================================================
-
-function ConfigScreen() {
+function ProductMockup() {
   return (
-    <div className="min-h-screen bg-[#f7f8fa] flex items-center justify-center p-4">
-      <div className="max-w-md bg-white border border-slate-200/80 rounded-[28px] shadow-[0_20px_60px_-25px_rgba(15,23,42,0.18)] p-7">
-        <div className="mb-4">
-          <NextoBadge size={48} />
+    <div className="relative mx-auto w-full max-w-[650px]">
+      <div className="absolute -inset-10 rounded-[60px] bg-orange-500/10 blur-3xl" />
+
+      <div className="relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_35px_100px_-30px_rgba(15,23,42,0.32)]">
+        <div className="flex h-11 items-center justify-between border-b border-slate-100 bg-white px-4">
+          <div className="flex items-center gap-2">
+            <NextoBadge size={23} />
+            <span className="text-[11px] font-bold tracking-tight text-slate-900">
+              Nexto
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full bg-slate-200" />
+            <div className="h-2 w-2 rounded-full bg-slate-200" />
+            <div className="h-2 w-2 rounded-full bg-slate-200" />
+          </div>
         </div>
 
-        <h1 className="text-lg font-bold mb-2 text-slate-950">
-          Sambungin ke Supabase dulu
-        </h1>
+        <div className="grid min-h-[420px] grid-cols-[150px_1fr] bg-slate-50">
+          <div className="hidden border-r border-slate-100 bg-white p-4 sm:block">
+            <div className="mb-6 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-300">
+              Workspace
+            </div>
 
-        <p className="text-sm text-slate-500 mb-3">
-          Buat file{" "}
-          <code className="bg-slate-100 px-1 rounded">
-            .env
-          </code>{" "}
-          di root project (salin dari{" "}
-          <code className="bg-slate-100 px-1 rounded">
-            .env.example
-          </code>
-          ), isi:
-        </p>
+            <div className="space-y-1.5">
+              {["Today", "Leads", "Deals", "Visits", "AI Advisor"].map(
+                (item, index) => (
+                  <div
+                    key={item}
+                    className={`rounded-lg px-3 py-2 text-[10px] font-medium ${
+                      index === 0
+                        ? "bg-orange-50 text-orange-700"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {item}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
 
-        <pre className="text-xs bg-slate-950 text-slate-100 rounded-xl p-3 overflow-x-auto">
-          VITE_SUPABASE_URL=...
-          {"\n"}
-          VITE_SUPABASE_ANON_KEY=...
-        </pre>
+          <div className="p-4 sm:p-5">
+            <div className="mb-5 flex items-end justify-between">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-orange-500">
+                  Sales command center
+                </div>
+                <div className="mt-1 text-lg font-bold tracking-tight text-slate-900">
+                  Good morning, Nando 👋
+                </div>
+                <div className="mt-1 text-[10px] text-slate-400">
+                  5 actions need your attention.
+                </div>
+              </div>
 
-        <p className="text-xs text-slate-400 mt-3">
-          Ambil dari Supabase → Project Settings → API. Terus
-          restart{" "}
-          <code className="bg-slate-100 px-1 rounded">
-            npm run dev
-          </code>
-          .
-        </p>
+              <div className="hidden rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[9px] text-slate-400 sm:block">
+                Today
+              </div>
+            </div>
+
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-[10px] font-bold text-slate-700">
+                Next best actions
+              </div>
+              <div className="text-[9px] text-slate-400">AI prioritized</div>
+            </div>
+
+            <div className="space-y-2.5">
+              <div className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                    <Zap size={14} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-900">
+                          Call PT ABC
+                        </div>
+                        <div className="mt-0.5 text-[9px] text-slate-400">
+                          Rp180M opportunity
+                        </div>
+                      </div>
+
+                      <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[8px] font-bold text-orange-600">
+                        HIGH
+                      </span>
+                    </div>
+
+                    <div className="mt-2 text-[9px] leading-relaxed text-slate-500">
+                      Quotation dikirim 3 hari lalu. Customer belum merespons.
+                    </div>
+
+                    <div className="mt-2.5 flex gap-1.5">
+                      <button className="rounded-md bg-slate-900 px-2.5 py-1.5 text-[8px] font-semibold text-white">
+                        Call
+                      </button>
+                      <button className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[8px] font-semibold text-slate-600">
+                        WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                    <MapPin size={14} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-900">
+                          Visit PT XYZ
+                        </div>
+                        <div className="mt-0.5 text-[9px] text-slate-400">
+                          1.2 km away
+                        </div>
+                      </div>
+
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[8px] font-bold text-emerald-600">
+                        REORDER
+                      </span>
+                    </div>
+
+                    <div className="mt-2 text-[9px] leading-relaxed text-slate-500">
+                      Customer biasanya order setiap 30 hari. Hari ini hari ke-29.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <MessageSquare size={14} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-900">
+                          Follow up Sarah
+                        </div>
+                        <div className="mt-0.5 text-[9px] text-slate-400">
+                          High buying intent
+                        </div>
+                      </div>
+
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-bold text-blue-600">
+                        TODAY
+                      </span>
+                    </div>
+
+                    <div className="mt-2 text-[9px] leading-relaxed text-slate-500">
+                      Customer bertanya harga kemarin.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-200 py-2.5 text-[8px] font-medium text-slate-400">
+              <Sparkles size={11} className="text-orange-500" />
+              AI terus mencari langkah berikutnya
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// ================================================================
-// APP
-// ================================================================
+function LoopVisual() {
+  const nodes = [
+    { label: "Customer Signal", active: false },
+    { label: "AI Understands", active: true },
+    { label: "Next Best Action", active: true },
+    { label: "Sales Action", active: false },
+    { label: "Customer Response", active: false },
+    { label: "Next Action", active: true },
+  ];
 
-export default function App() {
-  const [session, setSession] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [tab, setTab] = useState("dashboard");
+  return (
+    <div className="mx-auto w-full max-w-4xl">
+      <div className="relative rounded-[30px] border border-slate-800 bg-[#0b0d10] p-5 shadow-[0_35px_100px_-35px_rgba(0,0,0,0.5)] sm:p-8">
+        <div className="absolute inset-x-10 top-1/2 h-32 -translate-y-1/2 rounded-full bg-orange-500/10 blur-3xl" />
 
-  const [stages, setStages] = useState([]);
-  const [settings, setSettings] = useState({
-    sales_names: [],
-  });
+        <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {nodes.map((node, index) => (
+            <div key={node.label} className="relative">
+              <div
+                className={`rounded-2xl border p-4 transition ${
+                  node.active
+                    ? "border-orange-500/40 bg-orange-500/[0.08]"
+                    : "border-white/[0.08] bg-white/[0.03]"
+                }`}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <div
+                    className={`h-2 w-2 rounded-full ${
+                      node.active ? "bg-orange-400" : "bg-slate-600"
+                    }`}
+                  />
+                  <span className="text-[8px] font-medium text-slate-600">
+                    0{index + 1}
+                  </span>
+                </div>
 
-  const [leads, setLeads] = useState([]);
-  const [dealTransactions, setDealTransactions] = useState([]);
-  const [competitors, setCompetitors] = useState([]);
-  const [org, setOrg] = useState(null);
+                <div className="text-[10px] font-semibold leading-relaxed text-white sm:text-[11px]">
+                  {node.label}
+                </div>
+              </div>
 
-  const [joinCode, setJoinCode] = useState("");
-  const [joinBusy, setJoinBusy] = useState(false);
-  const [joinMsg, setJoinMsg] = useState("");
+              {index < nodes.length - 1 && (
+                <div className="absolute -right-2 top-1/2 z-10 hidden h-px w-4 bg-orange-500/40 sm:block" />
+              )}
+            </div>
+          ))}
+        </div>
 
-  const [editLead, setEditLead] = useState(null);
-  const [loading, setLoading] = useState(true);
+        <div className="relative mt-5 flex items-center justify-center gap-2 text-[9px] font-medium text-slate-500">
+          <div className="h-px w-10 bg-orange-500/30" />
+          The loop keeps moving
+          <div className="h-px w-10 bg-orange-500/30" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  // ==============================================================
-  // JOIN ENTERPRISE
-  // ==============================================================
+function CopilotMockup() {
+  return (
+    <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_80px_-35px_rgba(15,23,42,0.3)]">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+            <BrainCircuit size={18} />
+          </div>
 
-  const joinWithCode = async () => {
-    if (!joinCode.trim()) return;
+          <div>
+            <div className="text-[11px] font-bold text-slate-900">
+              Nexto AI
+            </div>
+            <div className="text-[9px] text-emerald-600">
+              Sales copilot active
+            </div>
+          </div>
+        </div>
 
-    setJoinBusy(true);
-    setJoinMsg("");
+        <div className="rounded-full bg-emerald-50 px-2.5 py-1 text-[8px] font-bold text-emerald-600">
+          ONLINE
+        </div>
+      </div>
 
-    try {
-      const res = await db.redeemInviteCode(
-        joinCode.trim()
-      );
+      <div className="space-y-4 bg-slate-50 p-5 sm:p-7">
+        <div className="ml-auto max-w-[82%] rounded-2xl rounded-br-md bg-slate-900 px-4 py-3 text-[10px] leading-relaxed text-white">
+          Siapa yang harus gue follow up hari ini?
+        </div>
 
-      setJoinMsg(
-        `✅ Gabung ke ${res.org_name}! Semua fitur Enterprise sekarang kebuka.`
-      );
+        <div className="max-w-[90%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-4">
+          <div className="mb-3 text-[10px] leading-relaxed text-slate-600">
+            Gue menemukan <strong className="text-slate-900">4 opportunity</strong>{" "}
+            yang paling penting buat lo hari ini.
+          </div>
 
-      setJoinCode("");
+          <div className="space-y-2">
+            {[
+              ["01", "PT ABC", "87% closing probability"],
+              ["02", "PT XYZ", "Reorder expected"],
+              ["03", "Sarah", "High buying intent"],
+              ["04", "PT DEF", "Deal at risk"],
+            ].map(([num, name, reason]) => (
+              <div
+                key={name}
+                className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3"
+              >
+                <span className="text-[8px] font-bold text-orange-500">
+                  {num}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-bold text-slate-900">
+                    {name}
+                  </div>
+                  <div className="mt-0.5 text-[8px] text-slate-400">
+                    {reason}
+                  </div>
+                </div>
+                <ArrowUpRight size={13} className="text-slate-300" />
+              </div>
+            ))}
+          </div>
 
-      await reload();
-    } catch (e) {
-      setJoinMsg("Gagal: " + e.message);
-    } finally {
-      setJoinBusy(false);
-    }
+          <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-[9px] font-bold text-white">
+            <Sparkles size={12} />
+            Prepare all follow-ups
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-3 text-[8px] text-slate-400">
+        <CircleCheck size={11} className="text-emerald-500" />
+        AI recommendations are based on your sales context
+      </div>
+    </div>
+  );
+}
+
+
+function RobotChatbot() {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      from: "bot",
+      text: "Hi. Gue Nexto. Mau gue bantu cari follow-up terbaik hari ini?",
+    },
+  ]);
+
+  const suggestions = [
+    "Siapa yang harus gue follow up?",
+    "Deal mana yang berisiko?",
+    "Update CRM gue",
+  ];
+
+  const sendMessage = (text = input) => {
+    const value = text.trim();
+    if (!value) return;
+
+    setMessages((prev) => [
+      ...prev,
+      { from: "user", text: value },
+      {
+        from: "bot",
+        text:
+          value.toLowerCase().includes("follow") ||
+          value.toLowerCase().includes("siapa")
+            ? "Gue menemukan 4 opportunity penting. PT ABC paling urgent karena quotation sudah 3 hari belum direspons."
+            : value.toLowerCase().includes("deal")
+              ? "Ada 1 deal yang mulai berisiko: PT DEF. Gue sarankan follow-up hari ini sebelum opportunity-nya dingin."
+              : "Done. Di versi live, perintah ini akan diteruskan ke AI Agent Nexto untuk membaca dan memperbarui CRM kamu.",
+      },
+    ]);
+    setInput("");
   };
 
-  // ==============================================================
-  // AUTH
-  // ==============================================================
+  return (
+    <>
+      <div className="relative mx-auto w-full max-w-[760px]">
+        <div className="absolute inset-0 rounded-[50px] bg-orange-500/[0.10] blur-3xl" />
+        <div className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-orange-500/20" />
+        <div className="absolute left-1/2 top-1/2 h-[285px] w-[285px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-orange-500/15" />
 
-  useEffect(() => {
-    if (!isConfigured) {
-      setAuthReady(true);
-      return;
-    }
+        <div className="relative min-h-[540px] overflow-hidden rounded-[36px] border border-orange-500/10 bg-[#090a0c] shadow-[0_35px_100px_-30px_rgba(15,23,42,0.5)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,rgba(249,115,22,0.12),transparent_30%),linear-gradient(135deg,rgba(249,115,22,0.06),transparent_35%)]" />
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setAuthReady(true);
-    });
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
 
-    const { data: sub } =
-      supabase.auth.onAuthStateChange((_e, s) => {
-        db.clearOrgCache();
-        setSession(s);
-      });
+          {/* Robot */}
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open Nexto AI chat"
+            className="group absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 outline-none"
+          >
+            <div className="absolute inset-[-48px] rounded-full bg-orange-500/10 blur-2xl transition group-hover:bg-orange-500/20" />
 
-    return () =>
-      sub.subscription.unsubscribe();
-  }, []);
+            <div className="relative h-[230px] w-[230px] rounded-[74px] border border-slate-300/40 bg-gradient-to-br from-slate-200 via-slate-400 to-slate-700 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8),0_0_60px_rgba(249,115,22,0.15)] transition duration-300 group-hover:scale-[1.03]">
+              <div className="absolute -left-4 top-[82px] h-16 w-8 rounded-full border border-slate-400/50 bg-slate-700 shadow-lg" />
+              <div className="absolute -right-4 top-[82px] h-16 w-8 rounded-full border border-slate-400/50 bg-slate-700 shadow-lg" />
 
-  // ==============================================================
-  // RELOAD DATA
-  // ==============================================================
+              <div className="absolute left-1/2 top-[73px] h-[82px] w-[164px] -translate-x-1/2 rounded-[42px] border border-orange-500/20 bg-[#17120f] shadow-[inset_0_0_35px_rgba(249,115,22,0.05)]">
+                <span className="absolute left-[45px] top-[31px] h-3 w-3 rounded-full bg-orange-400 shadow-[0_0_16px_rgba(251,146,60,0.85)]" />
+                <span className="absolute right-[45px] top-[31px] h-3 w-3 rounded-full bg-orange-400 shadow-[0_0_16px_rgba(251,146,60,0.85)]" />
+                <span className="absolute left-1/2 top-[45px] h-1 w-12 -translate-x-1/2 rounded-full bg-orange-500/80" />
+              </div>
 
-  const reload = async () => {
+              <div className="absolute bottom-[27px] left-1/2 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-2xl border border-orange-400/30 bg-orange-500/10">
+                <NextoBadge size={29} />
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-orange-400">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-400" />
+              Ask Nexto AI
+            </div>
+          </button>
+
+          {/* Connection lines */}
+          <div className="pointer-events-none absolute left-[18%] top-[51%] hidden h-px w-[27%] origin-left -rotate-[18deg] bg-gradient-to-r from-orange-500/60 to-transparent md:block" />
+          <div className="pointer-events-none absolute right-[18%] top-[51%] hidden h-px w-[27%] origin-right rotate-[18deg] bg-gradient-to-l from-orange-500/60 to-transparent md:block" />
+
+          {/* Visit card */}
+          <div className="absolute left-5 top-5 hidden w-[205px] rounded-[22px] border border-white/[0.08] bg-[#0d0f12]/95 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.8)] md:block">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400">
+                <Calendar size={18} />
+              </div>
+              <div>
+                <div className="text-[7px] font-bold tracking-[0.18em] text-orange-400">01 · NEXTO AI</div>
+                <div className="mt-1 text-[13px] font-bold text-white">Setting Visit</div>
+                <div className="mt-1 text-[8px] font-semibold text-orange-400">Google Calendar</div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-[8px] leading-4 text-slate-500">
+              Cukup bilang kapan dan siapa yang mau kamu visit. Nexto otomatis membuat jadwal.
+            </p>
+
+            <div className="mt-3 rounded-xl border border-white/[0.07] bg-black/20 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[7px] uppercase tracking-[0.12em] text-slate-500">VISIT BARU</span>
+                <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[7px] font-bold text-emerald-400">● Synced</span>
+              </div>
+              <div className="mt-3 flex gap-3">
+                <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.07] px-3 py-2 text-center">
+                  <div className="text-[7px] font-bold text-orange-400">BESOK</div>
+                  <div className="mt-1 text-lg font-bold text-white">10</div>
+                </div>
+                <div>
+                  <div className="text-[9px] font-bold text-white">PT Sinar Abadi</div>
+                  <div className="mt-1 text-[8px] text-slate-500">10:00 — 11:00</div>
+                  <div className="mt-1 text-[8px] text-orange-400">Google Calendar</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CRM card */}
+          <div className="absolute right-5 top-5 hidden w-[215px] rounded-[22px] border border-orange-500/20 bg-[#120f0d]/95 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.8)] md:block">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400">
+                <MessageSquare size={18} />
+              </div>
+              <div>
+                <div className="text-[7px] font-bold tracking-[0.18em] text-orange-400">03 · NEXTO AI</div>
+                <div className="mt-1 text-[13px] font-bold text-white">Edit CRM</div>
+                <div className="mt-1 text-[8px] font-semibold text-orange-400">AI yang Kerjain</div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-orange-500/20 bg-orange-500/[0.05] p-3">
+              <div className="text-[7px] font-bold uppercase tracking-[0.12em] text-orange-400">PERINTAH</div>
+              <div className="mt-2 text-[9px] leading-4 text-slate-300">
+                “Update PT Maju Bersama jadi Negosiasi.”
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-xl border border-white/[0.07] bg-black/20 p-3">
+              <div className="flex items-center gap-2">
+                <CircleCheck size={13} className="text-emerald-400" />
+                <span className="text-[9px] font-bold text-white">CRM berhasil diperbarui</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-[8px] text-slate-500">PT Maju Bersama</span>
+                <span className="rounded-full bg-orange-500/10 px-2 py-1 text-[7px] font-bold text-orange-400">Negosiasi</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Voice/update card */}
+          <div className="absolute bottom-5 left-1/2 hidden w-[390px] -translate-x-1/2 rounded-[22px] border border-orange-500/15 bg-[#120f0d]/95 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.8)] md:block">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-orange-400">
+                <Mic size={18} />
+              </div>
+              <div>
+                <div className="text-[7px] font-bold tracking-[0.18em] text-orange-400">02 · NEXTO AI</div>
+                <div className="mt-1 text-[13px] font-bold text-white">Update Progress</div>
+                <div className="mt-1 text-[8px] font-semibold text-orange-400">Voice & Text</div>
+              </div>
+            </div>
+            <p className="mt-4 text-[8px] leading-4 text-slate-500">
+              Lagi di jalan? Tinggal ngomong. Lagi bisa mengetik? Chat. Nexto memahami dan menyimpan progress ke CRM.
+            </p>
+          </div>
+
+          {/* Bot notification */}
+          <div className="absolute left-1/2 top-[31%] z-10 hidden w-[285px] -translate-x-1/2 rounded-[20px] border border-orange-500/30 bg-[#151210]/95 px-4 py-3 shadow-[0_18px_50px_-20px_rgba(249,115,22,0.35)] sm:block">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-400">
+                <Bot size={14} />
+              </div>
+              <div>
+                <div className="text-[7px] font-bold text-orange-400">NEXTO AI</div>
+                <div className="mt-1 text-[9px] font-semibold text-white">Done. Data CRM sudah diperbarui.</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-3 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-orange-400 shadow-[0_0_20px_rgba(251,146,60,0.9)]" />
+        </div>
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:items-center">
+          <div className="w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0d10] text-white shadow-[0_35px_100px_-25px_rgba(0,0,0,0.75)]">
+            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10">
+                  <NextoBadge size={28} />
+                </div>
+                <div>
+                  <div className="text-[12px] font-bold">Nexto AI</div>
+                  <div className="flex items-center gap-1.5 text-[8px] text-emerald-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    Sales agent online
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.06] hover:text-white"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="max-h-[52vh] space-y-3 overflow-y-auto bg-[#090a0c] p-4">
+              {messages.map((message, index) => (
+                <div
+                  key={`${message.from}-${index}`}
+                  className={`flex ${message.from === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[84%] rounded-2xl px-3.5 py-3 text-[10px] leading-5 ${
+                      message.from === "user"
+                        ? "rounded-br-md bg-orange-600 text-white"
+                        : "rounded-bl-md border border-white/[0.07] bg-white/[0.04] text-slate-300"
+                    }`}
+                  >
+                    {message.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-white/[0.07] p-4">
+              <div className="mb-3 flex gap-2 overflow-x-auto">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => sendMessage(suggestion)}
+                    className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[8px] text-slate-400 hover:border-orange-500/30 hover:text-orange-300"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] p-1.5">
+                <button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.05] hover:text-white">
+                  <Paperclip size={14} />
+                </button>
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") sendMessage();
+                  }}
+                  placeholder="Tanya Nexto..."
+                  className="min-w-0 flex-1 bg-transparent px-1 text-[10px] text-white outline-none placeholder:text-slate-600"
+                />
+                <button
+                  type="button"
+                  onClick={() => sendMessage()}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-600 text-white hover:bg-orange-500"
+                >
+                  <Send size={13} />
+                </button>
+              </div>
+
+              <div className="mt-2 flex items-center justify-center gap-1.5 text-[7px] text-slate-600">
+                <Volume2 size={10} />
+                Demo AI — belum terhubung ke agent production.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export default function Auth() {
+  const [mode, setMode] = useState("signin");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [openFaq, setOpenFaq] = useState(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  const submit = async () => {
+    setMsg("");
     setLoading(true);
 
     try {
-      let [st, se, ls, comp, dt] =
-        await Promise.all([
-          db.getStages(),
-          db.getSettings(),
-          db.getLeads(),
-          db.getCompetitors(),
-          db.getDealTransactions(),
-        ]);
+      if (mode === "signin") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password: pw,
+        });
 
-      if (st.length === 0) {
-        try {
-          await db.initDefaultStages();
-          st = await db.getStages();
-        } catch (e) {
-          console.error(e);
-        }
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password: pw,
+        });
+
+        if (error) throw error;
+
+        setMsg(
+          "Akun dibuat. Cek email buat verifikasi (kalau confirm email aktif), lalu masuk."
+        );
       }
-
-      try {
-        setOrg(await db.getMyOrg());
-      } catch (e) {
-        console.error(e);
-      }
-
-      setStages(st);
-      setSettings(se);
-      setLeads(ls);
-      setCompetitors(comp);
-      setDealTransactions(dt);
     } catch (e) {
-      console.error(e);
+      setMsg(e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ==============================================================
-  // SILENT RELOAD
-  // ==============================================================
+  const goToSignup = () => {
+    setMode("signup");
+    setMsg("");
 
-  const silentReload = async () => {
-    try {
-      const [st, se, ls, comp, dt] =
-        await Promise.all([
-          db.getStages(),
-          db.getSettings(),
-          db.getLeads(),
-          db.getCompetitors(),
-          db.getDealTransactions(),
-        ]);
-
-      setStages(st);
-      setSettings(se);
-      setLeads(ls);
-      setCompetitors(comp);
-      setDealTransactions(dt);
-    } catch (e) {
-      console.error(e);
-    }
+    setTimeout(() => {
+      document.getElementById("daftar")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
   };
 
-  // ==============================================================
-  // SESSION CHANGE
-  // ==============================================================
+  const goToSignin = () => {
+    setMode("signin");
+    setMsg("");
 
-  const prevUserId = useRef(null);
-
-  useEffect(() => {
-    const uid = session?.user?.id || null;
-
-    if (
-      uid &&
-      uid !== prevUserId.current
-    ) {
-      prevUserId.current = uid;
-      reload();
-    } else if (!uid) {
-      prevUserId.current = null;
-    }
-  }, [session]);
-
-  // ==============================================================
-  // AUTO REFRESH AFTER TAB IS LEFT
-  // ==============================================================
-
-  useEffect(() => {
-    let hiddenAt = null;
-
-    const onVisibility = () => {
-      if (document.hidden) {
-        hiddenAt = Date.now();
-      } else if (hiddenAt && session) {
-        const awayMs =
-          Date.now() - hiddenAt;
-
-        if (
-          awayMs >
-          5 * 60 * 1000
-        ) {
-          silentReload();
-        }
-
-        hiddenAt = null;
-      }
-    };
-
-    document.addEventListener(
-      "visibilitychange",
-      onVisibility
-    );
-
-    return () =>
-      document.removeEventListener(
-        "visibilitychange",
-        onVisibility
-      );
-  }, [session]);
-
-  // ==============================================================
-  // MOBILE PULL REFRESH
-  // ==============================================================
-
-  const [pullVisual, setPullVisual] =
-    useState(0);
-
-  const [refreshing, setRefreshing] =
-    useState(false);
-
-  const pullDistanceRef =
-    useRef(0);
-
-  const touchStartY =
-    useRef(0);
-
-  const pulling =
-    useRef(false);
-
-  useEffect(() => {
-    if (!session) return;
-
-    const onTouchStart = (e) => {
-      if (
-        window.scrollY === 0 &&
-        !refreshing
-      ) {
-        touchStartY.current =
-          e.touches[0].clientY;
-
-        pulling.current = true;
-      }
-    };
-
-    const onTouchMove = (e) => {
-      if (!pulling.current) return;
-
-      const delta =
-        e.touches[0].clientY -
-        touchStartY.current;
-
-      if (
-        delta > 0 &&
-        window.scrollY === 0
-      ) {
-        const d = Math.min(
-          delta * 0.5,
-          90
-        );
-
-        pullDistanceRef.current = d;
-        setPullVisual(d);
-      } else {
-        pulling.current = false;
-        pullDistanceRef.current = 0;
-        setPullVisual(0);
-      }
-    };
-
-    const onTouchEnd = async () => {
-      if (!pulling.current) return;
-
-      pulling.current = false;
-
-      const d =
-        pullDistanceRef.current;
-
-      pullDistanceRef.current = 0;
-      setPullVisual(0);
-
-      if (d > 60) {
-        setRefreshing(true);
-
-        await silentReload();
-
-        setRefreshing(false);
-      }
-    };
-
-    document.addEventListener(
-      "touchstart",
-      onTouchStart,
-      {
-        passive: true,
-      }
-    );
-
-    document.addEventListener(
-      "touchmove",
-      onTouchMove,
-      {
-        passive: true,
-      }
-    );
-
-    document.addEventListener(
-      "touchend",
-      onTouchEnd
-    );
-
-    return () => {
-      document.removeEventListener(
-        "touchstart",
-        onTouchStart
-      );
-
-      document.removeEventListener(
-        "touchmove",
-        onTouchMove
-      );
-
-      document.removeEventListener(
-        "touchend",
-        onTouchEnd
-      );
-    };
-  }, [session, refreshing]);
-
-  // ==============================================================
-  // INITIAL STATES
-  // ==============================================================
-
-  if (!isConfigured)
-    return <ConfigScreen />;
-
-  if (!authReady)
-    return <Splash />;
-
-  if (!session)
-    return <Auth />;
-
-  // ==============================================================
-  // PLAN
-  // ==============================================================
-
-  const isPremium =
-    settings.plan === "premium" ||
-    org?.plan === "enterprise";
-
-  const FREE_TABS = [
-    "dashboard",
-    "leads",
-  ];
-
-  const stageList =
-    stages.length
-      ? stages
-      : [
-          {
-            key: "prospek",
-            label: "Prospek",
-            hex: "#94a3b8",
-            type: "normal",
-          },
-        ];
-
-  const effectiveTab = tab;
-
-  const isLocked = (key) =>
-    !loading &&
-    !isPremium &&
-    !FREE_TABS.includes(key);
-
-  // ==============================================================
-  // NAVIGATION
-  // ==============================================================
-
-  const goTo = (key) => {
-    setTab(key);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    setTimeout(() => {
+      document.getElementById("daftar")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
   };
-
-  // ==============================================================
-  // MAIN UI
-  // ==============================================================
 
   return (
-    <div className="min-h-screen bg-[#f6f7f9] text-slate-900 flex selection:bg-orange-100 selection:text-orange-900">
-
+    <div className="min-h-screen overflow-x-hidden bg-white text-slate-900 selection:bg-orange-100 selection:text-orange-900">
       {/* =========================================================
-          MOBILE PULL REFRESH
+          NAVIGATION
       ========================================================== */}
-
-      {(pullVisual > 0 || refreshing) && (
-        <div
-          className="md:hidden fixed top-0 inset-x-0 z-[80] flex items-start justify-center pointer-events-none transition-[height] duration-150"
-          style={{
-            height: refreshing
-              ? 56
-              : pullVisual,
-          }}
-        >
-          <div className="bg-white rounded-full p-2 shadow-[0_8px_25px_-8px_rgba(15,23,42,0.3)] mt-2 border border-slate-100">
-            <Loader2
-              size={18}
-              className="text-orange-500"
-              style={
-                refreshing
-                  ? {
-                      animation:
-                        "spin 0.8s linear infinite",
-                    }
-                  : {
-                      transform: `rotate(${pullVisual * 3}deg)`,
-                    }
-              }
-            />
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================
-          DESKTOP SIDEBAR
-      ========================================================== */}
-
-      <aside className="hidden md:flex flex-col w-[248px] bg-[#0b0d10] text-white sticky top-0 h-screen shrink-0 border-r border-white/[0.04]">
-
-        <div className="px-5 pt-5 pb-5">
-          <div className="flex items-center gap-3">
-
-            <div className="relative">
-              <div className="absolute inset-0 rounded-xl bg-orange-500/20 blur-lg" />
-
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05] border border-white/[0.08]">
-                <NextoBadge size={28} />
-              </div>
+      <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 sm:px-7 lg:px-10">
+          <a href="#" className="flex items-center gap-2.5">
+            <NextoBadge size={32} />
+            <div className="text-[17px] font-bold tracking-[-0.03em] text-slate-950">
+              Nexto
             </div>
+          </a>
 
-            <div className="flex-1 leading-tight">
-              <div className="font-bold tracking-[-0.03em] text-[16px]">
-                Nexto
-              </div>
+          <nav className="hidden items-center gap-7 md:flex">
+            <a
+              href="#cara-kerja"
+              className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
+            >
+              Cara Kerja
+            </a>
+            <a
+              href="#fitur"
+              className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
+            >
+              Fitur
+            </a>
+            <a
+              href="#industri"
+              className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
+            >
+              Industri
+            </a>
+            <a
+              href="#harga"
+              className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
+            >
+              Harga
+            </a>
+          </nav>
 
-              <div className="text-[8px] uppercase tracking-[0.18em] text-slate-600 mt-0.5">
-                Sales Intelligence
-              </div>
-            </div>
+          <div className="hidden items-center gap-2.5 md:flex">
+            <button
+              onClick={goToSignin}
+              className="px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:text-slate-950"
+            >
+              Masuk
+            </button>
 
-            <ProfileAvatar
-              settings={settings}
-              session={session}
-              org={org}
-              onChanged={reload}
-              size={32}
-              align="left"
-            />
-
-          </div>
-        </div>
-
-        <div className="px-6 pb-2 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-700">
-          Workspace
-        </div>
-
-        <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto scrollbar-none">
-
-          {NAV.map((n) => {
-            const I = n.icon;
-            const active =
-              effectiveTab === n.key;
-
-            const locked =
-              isLocked(n.key);
-
-            let cls = "";
-
-            if (locked) {
-              cls =
-                "text-slate-600 hover:bg-white/[0.025] cursor-pointer";
-            } else if (n.special) {
-              cls = active
-                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-[0_8px_25px_-10px_rgba(139,92,246,0.8)]"
-                : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200";
-            } else if (n.ai) {
-              cls = active
-                ? "bg-orange-500/10 text-orange-300 font-semibold border border-orange-500/15"
-                : "text-orange-400/80 hover:bg-orange-500/[0.07] hover:text-orange-300";
-            } else {
-              cls = active
-                ? "bg-white/[0.08] text-white font-semibold shadow-inner"
-                : "text-slate-400 hover:bg-white/[0.045] hover:text-slate-200";
-            }
-
-            return (
-              <button
-                key={n.key}
-                onClick={() =>
-                  goTo(n.key)
-                }
-                className={`group relative w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[12px] transition-all duration-150 ${cls}`}
-              >
-
-                {active &&
-                  !locked &&
-                  !n.special && (
-                    <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-orange-500" />
-                  )}
-
-                <I
-                  size={16}
-                  strokeWidth={
-                    active ? 2.5 : 1.8
-                  }
-                  className={
-                    n.ai
-                      ? "text-orange-400"
-                      : active
-                      ? "text-white"
-                      : "text-slate-500 group-hover:text-slate-300"
-                  }
-                />
-
-                <span className="flex-1 text-left">
-                  {n.label}
-                </span>
-
-                {n.ai && (
-                  <span className="rounded-full bg-orange-500/10 px-1.5 py-0.5 text-[7px] font-bold text-orange-400">
-                    AI
-                  </span>
-                )}
-
-                {locked && (
-                  <Lock
-                    size={11}
-                    className="shrink-0 text-slate-700"
-                  />
-                )}
-
-              </button>
-            );
-          })}
-
-        </nav>
-
-        <div className="p-3">
-
-          <div className="mb-2 rounded-xl border border-white/[0.05] bg-white/[0.025] px-3 py-2.5">
-
-            <div className="flex items-center gap-2">
-
-              <div
-                className={`h-1.5 w-1.5 rounded-full ${
-                  isPremium
-                    ? "bg-emerald-400"
-                    : "bg-slate-500"
-                }`}
-              />
-
-              <span className="text-[9px] font-medium text-slate-400">
-                {org?.plan ===
-                "enterprise"
-                  ? "Enterprise workspace"
-                  : settings.plan ===
-                    "premium"
-                  ? "Premium workspace"
-                  : "Free workspace"}
-              </span>
-
-            </div>
+            <button
+              onClick={goToSignup}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
+            >
+              Mulai Gratis
+              <ArrowRight size={13} />
+            </button>
           </div>
 
           <button
-            onClick={() =>
-              supabase.auth.signOut()
-            }
-            className="w-full px-3.5 py-2.5 rounded-xl text-[10px] text-slate-500 hover:bg-white/[0.05] hover:text-slate-300 flex items-center gap-2 transition-colors"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 md:hidden"
+            aria-label="Menu"
           >
-            <LogOut size={13} />
-            Keluar
+            {showMobileMenu ? <X size={17} /> : <span className="text-lg">☰</span>}
           </button>
-
         </div>
-      </aside>
+
+        {showMobileMenu && (
+          <div className="border-t border-slate-100 bg-white px-5 py-4 md:hidden">
+            <div className="mx-auto flex max-w-7xl flex-col gap-1">
+              {[
+                ["#cara-kerja", "Cara Kerja"],
+                ["#fitur", "Fitur"],
+                ["#industri", "Industri"],
+                ["#harga", "Harga"],
+              ].map(([href, label]) => (
+                <a
+                  key={href}
+                  href={href}
+                  onClick={() => setShowMobileMenu(false)}
+                  className="rounded-xl px-3 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  {label}
+                </a>
+              ))}
+
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  goToSignup();
+                }}
+                className="mt-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white"
+              >
+                Mulai Gratis
+              </button>
+            </div>
+          </div>
+        )}
+      </header>
 
       {/* =========================================================
-          MAIN AREA
+          HERO
       ========================================================== */}
+      <main>
+        <section className="relative overflow-hidden bg-[#fbfaf8]">
+          <div className="absolute left-[-180px] top-[-180px] h-[500px] w-[500px] rounded-full bg-orange-200/20 blur-3xl" />
+          <div className="absolute bottom-[-250px] right-[-150px] h-[550px] w-[550px] rounded-full bg-orange-100/30 blur-3xl" />
 
-      <div className="flex-1 min-w-0 flex flex-col">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-7 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:px-10 lg:py-24">
+            <div>
+              <SectionLabel>AI Sales Operating System</SectionLabel>
 
-        {/* =======================================================
-            NO GLOBAL HEADER
-            Tab langsung dimulai dari content.
-        ======================================================== */}
+              <h1 className="mt-5 max-w-[620px] text-[42px] font-bold leading-[1.02] tracking-[-0.055em] text-slate-950 sm:text-[58px] lg:text-[66px]">
+                Stop managing leads.
+                <span className="block text-orange-600">
+                  Start closing deals.
+                </span>
+              </h1>
 
-        <main className="flex-1 p-3 sm:p-4 md:p-6 max-w-[1180px] w-full mx-auto pb-28 md:pb-10">
+              <p className="mt-6 max-w-[570px] text-[15px] leading-7 text-slate-500 sm:text-[16px]">
+                Nexto membantu sales tahu{" "}
+                <strong className="font-semibold text-slate-800">
+                  siapa yang harus dihubungi, apa yang harus dilakukan,
+                </strong>{" "}
+                dan apa langkah berikutnya — tanpa harus terus-terusan mikir
+                dan update CRM.
+              </p>
 
-          {/* =====================================================
-              FREE PLAN BANNER
-          ====================================================== */}
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={goToSignup}
+                  className="group inline-flex items-center gap-2.5 rounded-xl bg-slate-950 px-5 py-3.5 text-[12px] font-bold text-white shadow-[0_12px_30px_-12px_rgba(15,23,42,0.5)] transition hover:-translate-y-0.5 hover:bg-slate-800"
+                >
+                  Mulai Gratis
+                  <ArrowRight
+                    size={14}
+                    className="transition group-hover:translate-x-0.5"
+                  />
+                </button>
 
-          {!loading &&
-            !isPremium && (
-              <div className="mb-5 overflow-hidden rounded-[18px] border border-orange-200/80 bg-gradient-to-r from-orange-50 via-white to-orange-50/50">
+                <a
+                  href="#cara-kerja"
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-[12px] font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <Play size={12} />
+                  Lihat cara kerja
+                </a>
+              </div>
 
-                <div className="px-4 py-3.5">
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-medium text-slate-400">
+                <span className="flex items-center gap-1.5">
+                  <CircleCheck size={12} className="text-emerald-500" />
+                  Mulai gratis
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CircleCheck size={12} className="text-emerald-500" />
+                  Tanpa setup ribet
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CircleCheck size={12} className="text-emerald-500" />
+                  Untuk semua industri
+                </span>
+              </div>
+            </div>
 
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="lg:pl-2">
+              <RobotChatbot />
+              <div className="mt-3 flex items-center justify-center gap-2 text-[9px] font-medium text-slate-400">
+                <MessageCircle size={11} className="text-orange-500" />
+                Klik robot untuk mencoba demo Nexto AI
+              </div>
+            </div>
+          </div>
+        </section>
 
-                    <div className="flex items-start gap-3">
+        {/* =========================================================
+            TRUST STRIP
+        ========================================================== */}
+        <section className="border-y border-slate-100 bg-white">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-5 py-5 text-center sm:px-7 lg:px-10">
+            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-300">
+              Built for modern sales teams
+            </span>
+            <span className="hidden h-3 w-px bg-slate-200 sm:block" />
+            <span className="text-[10px] font-medium text-slate-400">
+              Lead management
+            </span>
+            <span className="text-[10px] font-medium text-slate-400">
+              AI recommendations
+            </span>
+            <span className="text-[10px] font-medium text-slate-400">
+              Sales activity
+            </span>
+            <span className="text-[10px] font-medium text-slate-400">
+              Customer intelligence
+            </span>
+          </div>
+        </section>
 
-                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
-                        <Zap size={13} />
+        {/* =========================================================
+            PROBLEM
+        ========================================================== */}
+        <section className="bg-white px-5 py-20 sm:px-7 sm:py-24 lg:px-10">
+          <div className="mx-auto max-w-7xl">
+            <div className="max-w-3xl">
+              <SectionLabel>The old way</SectionLabel>
+
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[46px]">
+                CRM kamu menyimpan banyak data.
+                <span className="block text-slate-400">
+                  Tapi siapa yang bilang sales harus ngapain?
+                </span>
+              </h2>
+            </div>
+
+            <div className="mt-12 grid gap-4 md:grid-cols-3">
+              {[
+                {
+                  number: "01",
+                  title: "Terlalu banyak lead",
+                  desc: "Sales punya ratusan prospek tapi tidak tahu mana yang paling penting untuk dikejar hari ini.",
+                },
+                {
+                  number: "02",
+                  title: "Follow-up sering hilang",
+                  desc: "Customer bilang “minggu depan”, quotation sudah dikirim, tapi akhirnya tidak ada yang follow-up.",
+                },
+                {
+                  number: "03",
+                  title: "Terlalu banyak admin",
+                  desc: "Waktu sales habis untuk input CRM, padahal seharusnya digunakan untuk menjual.",
+                },
+              ].map((item) => (
+                <div
+                  key={item.number}
+                  className="rounded-[22px] border border-slate-200 bg-slate-50 p-6"
+                >
+                  <div className="mb-10 text-[10px] font-bold tracking-[0.15em] text-orange-500">
+                    {item.number}
+                  </div>
+
+                  <div className="text-[16px] font-bold tracking-tight text-slate-900">
+                    {item.title}
+                  </div>
+
+                  <p className="mt-2 text-[12px] leading-6 text-slate-500">
+                    {item.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            LOOP ENGINE
+        ========================================================== */}
+        <section
+          id="cara-kerja"
+          className="overflow-hidden bg-[#080a0d] px-5 py-20 text-white sm:px-7 sm:py-28 lg:px-10"
+        >
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400">
+                <Sparkles size={12} />
+                The Nexto Loop
+              </div>
+
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] sm:text-[48px]">
+                Your sales should
+                <span className="block text-orange-400">
+                  never get stuck.
+                </span>
+              </h2>
+
+              <p className="mt-5 text-[13px] leading-6 text-slate-400 sm:text-[14px]">
+                Setiap interaksi menghasilkan signal baru. Nexto membaca
+                signal tersebut dan membantu sales menentukan langkah terbaik
+                berikutnya.
+              </p>
+            </div>
+
+            <div className="mt-12">
+              <LoopVisual />
+            </div>
+
+            <div className="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-3">
+              {[
+                ["01", "Signal", "Customer melakukan sesuatu."],
+                ["02", "Decision", "AI memahami konteksnya."],
+                ["03", "Action", "Sales tahu harus melakukan apa."],
+              ].map(([num, title, desc]) => (
+                <div
+                  key={num}
+                  className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"
+                >
+                  <div className="text-[9px] font-bold tracking-[0.16em] text-orange-400">
+                    {num}
+                  </div>
+                  <div className="mt-3 text-[12px] font-bold text-white">
+                    {title}
+                  </div>
+                  <div className="mt-1 text-[10px] leading-5 text-slate-500">
+                    {desc}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            NEXT BEST ACTION
+        ========================================================== */}
+        <section className="bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
+          <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.85fr_1.15fr]">
+            <div>
+              <SectionLabel>Next Best Action</SectionLabel>
+
+              <h2 className="mt-4 max-w-xl text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[48px]">
+                Jangan buka CRM untuk mencari pekerjaan.
+                <span className="block text-slate-400">
+                  Buka Nexto untuk tahu pekerjaanmu.
+                </span>
+              </h2>
+
+              <p className="mt-5 max-w-lg text-[13px] leading-6 text-slate-500">
+                Nexto memprioritaskan opportunity berdasarkan konteks,
+                aktivitas, intent, nilai deal, waktu, dan signal customer.
+              </p>
+
+              <div className="mt-7 space-y-3">
+                {[
+                  "Siapa yang paling layak dihubungi?",
+                  "Opportunity mana yang mulai berisiko?",
+                  "Customer mana yang kemungkinan reorder?",
+                  "Apa action paling penting hari ini?",
+                ].map((text) => (
+                  <div
+                    key={text}
+                    className="flex items-center gap-3 text-[12px] font-medium text-slate-700"
+                  >
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                      <Check size={12} />
+                    </div>
+                    {text}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <ProductMockup />
+          </div>
+        </section>
+
+        {/* =========================================================
+            AI COPILOT
+        ========================================================== */}
+        <section className="bg-white px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
+          <div className="mx-auto max-w-7xl">
+            <div className="grid items-center gap-12 lg:grid-cols-[1fr_0.95fr]">
+              <CopilotMockup />
+
+              <div>
+                <SectionLabel>AI Sales Copilot</SectionLabel>
+
+                <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[46px]">
+                  Punya AI sales manager
+                  <span className="block text-orange-600">
+                    di sampingmu.
+                  </span>
+                </h2>
+
+                <p className="mt-5 max-w-xl text-[13px] leading-6 text-slate-500">
+                  Tanyakan apa pun tentang pipeline kamu. Nexto membaca data
+                  sales dan mengubahnya menjadi rekomendasi yang bisa langsung
+                  dikerjakan.
+                </p>
+
+                <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                  {[
+                    "“Siapa yang harus gue follow up?”",
+                    "“Deal mana yang berisiko?”",
+                    "“Kenapa pipeline gue turun?”",
+                    "“Customer mana yang mau reorder?”",
+                  ].map((question) => (
+                    <div
+                      key={question}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] font-medium text-slate-600"
+                    >
+                      {question}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            CAPABILITIES
+        ========================================================== */}
+        <section id="fitur" className="bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
+          <div className="mx-auto max-w-7xl">
+            <div className="max-w-2xl">
+              <SectionLabel>Sales intelligence</SectionLabel>
+
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[48px]">
+                Bukan sekadar lebih banyak fitur.
+                <span className="block text-slate-400">
+                  Lebih sedikit hal yang harus dipikirkan sales.
+                </span>
+              </h2>
+            </div>
+
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {CAPABILITIES.map((item, index) => {
+                const Icon = item.icon;
+
+                return (
+                  <div
+                    key={item.title}
+                    className="group rounded-[24px] border border-slate-200 bg-white p-6 transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_20px_50px_-30px_rgba(234,88,12,0.35)]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white transition group-hover:bg-orange-600">
+                        <Icon size={17} />
+                      </div>
+
+                      <span className="text-[9px] font-bold text-slate-300">
+                        0{index + 1}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-7 text-[14px] font-bold tracking-tight text-slate-900">
+                      {item.title}
+                    </h3>
+
+                    <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                      {item.desc}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-12 border-t border-slate-200 pt-10">
+              <div className="mb-5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                And it already works with your daily sales workflow
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {SUPPORTING_FEATURES.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <div
+                      key={item.title}
+                      className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                        <Icon size={14} />
                       </div>
 
                       <div>
-
-                        <div className="text-[10px] font-bold text-orange-900">
-                          Kamu sedang menggunakan paket Free
+                        <div className="text-[11px] font-bold text-slate-900">
+                          {item.title}
                         </div>
-
-                        <div className="mt-1 max-w-2xl text-[9px] leading-4 text-orange-700/70">
-                          Dashboard & Leads tersedia.
-                          Upgrade ke Premium untuk
-                          membuka AI, Bot Telegram,
-                          Calendar, Visit, Deal,
-                          Kompetitor, dan fitur sales
-                          lainnya.
+                        <div className="mt-1 text-[9px] leading-4 text-slate-400">
+                          {item.desc}
                         </div>
-
                       </div>
                     </div>
-
-                    <a
-                      href="https://subscription.myr.id/m/nexto-premium-88379/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-orange-600 px-3.5 py-2 text-[9px] font-bold text-white transition hover:bg-orange-700"
-                    >
-                      Upgrade Rp149rb/bulan
-                      <ArrowUpRight size={11} />
-                    </a>
-
-                  </div>
-
-                  <div className="mt-3 border-t border-orange-200/60 pt-3">
-
-                    <p className="mb-2 text-[9px] font-medium text-orange-700/70">
-                      Punya kode undangan dari tim Enterprise?
-                      Gabung gratis.
-                    </p>
-
-                    <div className="flex gap-2">
-
-                      <input
-                        className="min-w-0 flex-1 rounded-lg border border-orange-200 bg-white px-3 py-2 text-[10px] uppercase text-slate-800 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                        placeholder="MASUKIN KODE"
-                        value={joinCode}
-                        onChange={(e) =>
-                          setJoinCode(
-                            e.target.value.toUpperCase()
-                          )
-                        }
-                        maxLength={6}
-                      />
-
-                      <button
-                        onClick={
-                          joinWithCode
-                        }
-                        disabled={joinBusy}
-                        className="rounded-lg bg-orange-600 px-3.5 text-[9px] font-semibold text-white hover:bg-orange-700 disabled:opacity-60"
-                      >
-                        {joinBusy
-                          ? "..."
-                          : "Gabung"}
-                      </button>
-
-                    </div>
-
-                    {joinMsg && (
-                      <p
-                        className={`mt-1.5 text-[9px] ${
-                          joinMsg.startsWith(
-                            "Gagal"
-                          )
-                            ? "text-rose-600"
-                            : "text-emerald-700"
-                        }`}
-                      >
-                        {joinMsg}
-                      </p>
-                    )}
-
-                  </div>
-                </div>
+                  );
+                })}
               </div>
-            )}
-
-          {/* =====================================================
-              TAB CONTENT
-              LANGSUNG TANPA PAGE HEADER
-          ====================================================== */}
-
-          {loading ? (
-            <Splash inline />
-          ) : (
-            <>
-
-              {/* ==================================================
-                  DASHBOARD
-              =================================================== */}
-
-              {effectiveTab ===
-                "dashboard" && (
-                <Dashboard
-                  leads={leads}
-                  stages={stageList}
-                  dealTransactions={
-                    dealTransactions
-                  }
-                  onGo={setTab}
-                />
-              )}
-
-              {/* ==================================================
-                  LEADS
-              =================================================== */}
-
-              {effectiveTab ===
-                "leads" && (
-                <Leads
-                  leads={leads}
-                  stages={stageList}
-                  settings={settings}
-                  onChanged={reload}
-                />
-              )}
-
-              {/* ==================================================
-                  GENERATE LEADS
-              =================================================== */}
-
-              {effectiveTab ===
-                "generateleads" && (
-                <PreviewLock
-                  locked={isLocked(
-                    "generateleads"
-                  )}
-                >
-                  <GenerateLeads
-                    stages={stageList}
-                    onChanged={reload}
-                  />
-                </PreviewLock>
-              )}
-
-              {/* ==================================================
-                  DEAL
-              =================================================== */}
-
-              {effectiveTab ===
-                "deal" && (
-                <PreviewLock
-                  locked={isLocked(
-                    "deal"
-                  )}
-                >
-                  <Deal
-                    leads={
-                      isLocked("deal")
-                        ? DUMMY_LEADS
-                        : leads
-                    }
-                    stages={stageList}
-                    dealTransactions={
-                      isLocked("deal")
-                        ? DUMMY_DEAL_TX
-                        : dealTransactions
-                    }
-                    onEdit={setEditLead}
-                    onChanged={reload}
-                  />
-                </PreviewLock>
-              )}
-
-              {/* ==================================================
-                  VISIT & FOLLOW UP
-              =================================================== */}
-
-              {effectiveTab ===
-                "visitfollowup" && (
-                <PreviewLock
-                  locked={isLocked(
-                    "visitfollowup"
-                  )}
-                >
-                  <VisitFollowup
-                    leads={
-                      isLocked(
-                        "visitfollowup"
-                      )
-                        ? DUMMY_LEADS
-                        : leads
-                    }
-                    onEdit={setEditLead}
-                    onChanged={reload}
-                  />
-                </PreviewLock>
-              )}
-
-              {/* ==================================================
-                  KOMPETITOR
-              =================================================== */}
-
-              {effectiveTab ===
-                "kompetitor" && (
-                <PreviewLock
-                  locked={isLocked(
-                    "kompetitor"
-                  )}
-                >
-                  <Kompetitor
-                    competitors={
-                      isLocked(
-                        "kompetitor"
-                      )
-                        ? DUMMY_COMPETITORS
-                        : competitors
-                    }
-                    onChanged={reload}
-                  />
-                </PreviewLock>
-              )}
-
-              {/* ==================================================
-                  NEX
-              =================================================== */}
-
-              {effectiveTab ===
-                "komunitas" && (
-                <PreviewLock
-                  locked={isLocked(
-                    "komunitas"
-                  )}
-                >
-                  <Nex
-                    dummy={isLocked(
-                      "komunitas"
-                    )}
-                  />
-                </PreviewLock>
-              )}
-
-              {/* ==================================================
-                  AI ADVISOR
-              =================================================== */}
-
-              {effectiveTab ===
-                "advisor" && (
-                <PreviewLock
-                  locked={isLocked(
-                    "advisor"
-                  )}
-                >
-                  <Advisor
-                    leads={
-                      isLocked(
-                        "advisor"
-                      )
-                        ? DUMMY_LEADS
-                        : leads
-                    }
-                    stages={stageList}
-                    onOpen={
-                      setEditLead
-                    }
-                    dummy={isLocked(
-                      "advisor"
-                    )}
-                  />
-                </PreviewLock>
-              )}
-
-              {/* ==================================================
-                  SETTINGS
-              =================================================== */}
-
-              {effectiveTab ===
-                "settings" && (
-                <PreviewLock
-                  locked={isLocked(
-                    "settings"
-                  )}
-                >
-                  <SettingsTab
-                    settings={settings}
-                    stages={stageList}
-                    leads={leads}
-                    onChanged={reload}
-                  />
-                </PreviewLock>
-              )}
-
-            </>
-          )}
-
-        </main>
-
-        {/* =======================================================
-            MOBILE BOTTOM NAV
-        ======================================================== */}
-
-        <nav className="md:hidden fixed bottom-3 inset-x-3 z-40">
-
-          <div className="max-w-lg mx-auto flex items-center gap-1 px-1.5 py-1.5 bg-[#0b0d10]/95 backdrop-blur-2xl rounded-[22px] shadow-[0_15px_45px_-10px_rgba(15,23,42,0.35)] border border-white/[0.08]">
-
-            {NAV.map((n) => {
-              const I = n.icon;
-
-              const active =
-                effectiveTab === n.key;
-
-              const locked =
-                isLocked(n.key);
-
-              let cls = "";
-
-              if (locked) {
-                cls =
-                  "text-slate-600";
-              } else if (
-                n.special
-              ) {
-                cls = active
-                  ? "text-violet-300 bg-violet-500/15"
-                  : "text-violet-400";
-              } else if (n.ai) {
-                cls = active
-                  ? "text-orange-400 bg-orange-500/10"
-                  : "text-orange-500";
-              } else {
-                cls = active
-                  ? "text-white bg-white/[0.09]"
-                  : "text-slate-500";
-              }
-
-              return (
-                <button
-                  key={n.key}
-                  onClick={() =>
-                    goTo(n.key)
-                  }
-                  className={`relative flex flex-col items-center gap-1 flex-1 py-2 rounded-2xl transition-colors ${cls}`}
-                >
-
-                  <I
-                    size={17}
-                    strokeWidth={
-                      active
-                        ? 2.5
-                        : 1.8
-                    }
-                  />
-
-                  <span className="text-[7px] font-medium leading-none truncate max-w-full">
-                    {n.short}
-                  </span>
-
-                  {locked && (
-                    <Lock
-                      size={7}
-                      className="absolute top-1 right-2 text-slate-700"
-                    />
-                  )}
-
-                </button>
-              );
-            })}
-
+            </div>
           </div>
-        </nav>
+        </section>
 
-      </div>
+        {/* =========================================================
+            UNIVERSAL INDUSTRIES
+        ========================================================== */}
+        <section
+          id="industri"
+          className="bg-white px-5 py-20 sm:px-7 sm:py-28 lg:px-10"
+        >
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <SectionLabel>Universal sales engine</SectionLabel>
 
-      {/* =========================================================
-          EDIT LEAD
-      ========================================================== */}
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[48px]">
+                One sales engine.
+                <span className="block text-orange-600">Any industry.</span>
+              </h2>
 
-      {editLead && (
-        <LeadModal
-          lead={editLead}
-          stages={stageList}
-          settings={settings}
-          onClose={() =>
-            setEditLead(null)
-          }
-          onSaved={() => {
-            setEditLead(null);
-            reload();
-          }}
-        />
-      )}
+              <p className="mt-5 text-[13px] leading-6 text-slate-500">
+                Fundamental sales problem-nya sama. Nexto menyesuaikan konteks
+                dan proses penjualan perusahaan kamu.
+              </p>
+            </div>
 
-    </div>
-  );
-}
+            <div className="mt-12 grid gap-4 sm:grid-cols-2">
+              {INDUSTRIES.map((industry, index) => (
+                <div
+                  key={industry.label}
+                  className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-[#fbfaf8] p-6 transition hover:border-orange-200"
+                >
+                  <div className="absolute right-[-40px] top-[-40px] h-32 w-32 rounded-full bg-orange-100/50 blur-2xl transition group-hover:bg-orange-200/60" />
 
-// ================================================================
-// PREMIUM LOCK
-// ================================================================
-
-function PreviewLock({
-  locked,
-  children,
-}) {
-  if (!locked) return children;
-
-  return (
-    <div className="relative">
-
-      <div className="mb-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-[#0b0d10] px-4 py-2.5 text-[9px] text-slate-300 shadow-sm">
-
-        <Lock
-          size={12}
-          className="shrink-0 text-orange-400"
-        />
-
-        <span className="flex-1">
-          Mode preview — upgrade ke Premium
-          untuk menggunakan fitur ini.
-        </span>
-
-        <span className="hidden sm:block rounded-full bg-orange-500/10 px-2 py-1 text-[7px] font-bold uppercase tracking-wide text-orange-400">
-          Premium
-        </span>
-
-      </div>
-
-      <div
-        onClick={() =>
-          alert(
-            "Ini fitur Premium bro — di paket Free cuma bisa dilihat doang. Upgrade dulu (Rp149rb/bulan) buat pake fiturnya."
-          )
-        }
-        className="absolute inset-0 top-11 z-20 cursor-pointer"
-      />
-
-      <div className="opacity-[0.82]">
-        {children}
-      </div>
-
-    </div>
-  );
-}
-
-// ================================================================
-// PROFILE AVATAR
-// ================================================================
-
-function ProfileAvatar({
-  settings,
-  session,
-  org,
-  onChanged,
-  size = 36,
-  align = "right",
-}) {
-  const [open, setOpen] =
-    useState(false);
-
-  const [editing, setEditing] =
-    useState(false);
-
-  const [jobTitle, setJobTitle] =
-    useState(
-      settings.job_title || ""
-    );
-
-  const [name, setName] =
-    useState(
-      settings.community_display_name ||
-        ""
-    );
-
-  const [uploading, setUploading] =
-    useState(false);
-
-  const [saving, setSaving] =
-    useState(false);
-
-  const initial = (
-    settings.community_display_name ||
-    session?.user?.email ||
-    "?"
-  )
-    .charAt(0)
-    .toUpperCase();
-
-  const email =
-    session?.user?.email || "";
-
-  const planInfo =
-    org?.plan === "enterprise"
-      ? {
-          label: "Enterprise",
-          cls:
-            "bg-violet-100 text-violet-700",
-        }
-      : settings.plan === "premium"
-      ? {
-          label: "Premium",
-          cls:
-            "bg-orange-100 text-orange-700",
-        }
-      : {
-          label: "Free",
-          cls:
-            "bg-slate-100 text-slate-500",
-        };
-
-  // ==============================================================
-  // UPLOAD AVATAR
-  // ==============================================================
-
-  const handleFile = async (e) => {
-    const file =
-      e.target.files?.[0];
-
-    if (!file) return;
-
-    setUploading(true);
-
-    try {
-      const url =
-        await db.uploadAvatar(file);
-
-      await db.saveMyProfile({
-        avatar_url: url,
-      });
-
-      onChanged();
-    } catch (err) {
-      alert(
-        "Gagal upload foto: " +
-          err.message
-      );
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // ==============================================================
-  // SAVE PROFILE
-  // ==============================================================
-
-  const saveProfile = async () => {
-    setSaving(true);
-
-    try {
-      await db.saveMyProfile({
-        job_title: jobTitle,
-        name,
-      });
-
-      onChanged();
-
-      setEditing(false);
-    } catch (err) {
-      alert(
-        "Gagal simpan: " +
-          err.message
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ==============================================================
-  // PROFILE UI
-  // ==============================================================
-
-  return (
-    <div className="relative">
-
-      <button
-        onClick={() =>
-          setOpen((v) => !v)
-        }
-        className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_10px_-1px_rgba(0,0,0,0.25)]"
-        style={{
-          width: size,
-          height: size,
-          fontSize: size * 0.4,
-        }}
-      >
-        {settings.avatar_url ? (
-          <img
-            src={
-              settings.avatar_url
-            }
-            alt=""
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          initial
-        )}
-      </button>
-
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => {
-              setOpen(false);
-              setEditing(false);
-            }}
-          />
-
-          <div
-            className={`absolute ${
-              align === "left"
-                ? "left-0"
-                : "right-0"
-            } top-full mt-2.5 w-72 bg-white rounded-[24px] shadow-[0_20px_55px_-12px_rgba(15,23,42,0.3)] z-50 overflow-hidden border border-slate-100`}
-          >
-
-            {!editing ? (
-              <>
-                <div className="h-16 bg-gradient-to-br from-[#17191d] via-[#101215] to-orange-950 relative">
-
-                  <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-1 text-[7px] font-bold uppercase tracking-wide text-white/70">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    Online
-                  </div>
-
-                  <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-2xl ring-4 ring-white shadow-md">
-
-                    {settings.avatar_url ? (
-                      <img
-                        src={
-                          settings.avatar_url
-                        }
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      initial
-                    )}
-
-                  </div>
-                </div>
-
-                <div className="pt-9 pb-4 px-5">
-
-                  <div className="flex items-center justify-between gap-2">
-
-                    <div className="font-bold text-[15px] text-slate-900 truncate">
-                      {settings.community_display_name ||
-                        "Belum ada nama"}
-                    </div>
-
-                    <span
-                      className={`shrink-0 text-[9px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 ${planInfo.cls}`}
-                    >
-                      {planInfo.label}
-                    </span>
-
-                  </div>
-
-                  {settings.job_title && (
-                    <span className="inline-block mt-1.5 text-[9px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2.5 py-1">
-                      {settings.job_title}
-                    </span>
-                  )}
-
-                  {email && (
-                    <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-400">
-                      <Mail
-                        size={11}
-                        className="shrink-0"
-                      />
-
-                      <span className="truncate">
-                        {email}
+                  <div className="relative">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] font-bold tracking-[0.16em] text-orange-600">
+                        {industry.label}
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-300">
+                        0{index + 1}
                       </span>
                     </div>
-                  )}
 
-                  <button
-                    onClick={() =>
-                      setEditing(true)
-                    }
-                    className="w-full mt-4 text-[10px] bg-slate-950 hover:bg-slate-800 text-white rounded-xl py-2.5 font-semibold transition-colors"
-                  >
-                    Edit Profil
-                  </button>
+                    <div className="mt-8 text-[13px] font-semibold tracking-tight text-slate-800 sm:text-[14px]">
+                      {industry.flow}
+                    </div>
 
+                    <div className="mt-4 flex items-center gap-2 text-[9px] font-medium text-slate-400">
+                      <CircleCheck size={12} className="text-emerald-500" />
+                      Powered by the same sales engine
+                    </div>
+                  </div>
                 </div>
-              </>
-            ) : (
+              ))}
+            </div>
 
-              <div className="p-5">
+            <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
+              <div className="text-[12px] font-bold text-slate-800">
+                Different industries. Same fundamental sales problem.
+              </div>
+              <div className="mt-1 text-[10px] leading-5 text-slate-400">
+                Lead → Understand → Contact → Offer → Follow-up → Negotiate →
+                Close → Repeat.
+              </div>
+            </div>
+          </div>
+        </section>
 
-                <label className="flex items-center gap-3 mb-4 cursor-pointer">
+        {/* =========================================================
+            BEFORE / AFTER
+        ========================================================== */}
+        <section className="bg-[#080a0d] px-5 py-20 text-white sm:px-7 sm:py-28 lg:px-10">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <SectionLabel>From data to action</SectionLabel>
 
-                  <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-xl shrink-0 ring-2 ring-orange-100">
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] sm:text-[48px]">
+                CRM data is useful.
+                <span className="block text-orange-400">
+                  Actionable CRM is better.
+                </span>
+              </h2>
+            </div>
 
-                    {uploading ? (
-                      <Loader2
-                        size={18}
-                        className="animate-spin"
+            <div className="mt-12 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-[26px] border border-white/[0.08] bg-white/[0.03] p-7">
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                  Without Nexto
+                </div>
+
+                <div className="mt-7 space-y-4">
+                  {[
+                    "327 leads",
+                    "Sales buka CRM",
+                    "“Siapa yang harus gue hubungi?”",
+                    "Scroll dan cari-cari",
+                    "Follow-up terlambat",
+                    "Opportunity hilang",
+                  ].map((text, index) => (
+                    <div key={text} className="flex items-center gap-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.06] text-[9px] font-bold text-slate-600">
+                        {index + 1}
+                      </div>
+                      <div className="text-[11px] text-slate-400">{text}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[26px] border border-orange-500/20 bg-orange-500/[0.05] p-7">
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-400">
+                  With Nexto
+                </div>
+
+                <div className="mt-7 space-y-4">
+                  {[
+                    "327 leads",
+                    "AI menganalisis",
+                    "Top 5 actions",
+                    "Sales langsung bertindak",
+                    "Customer merespons",
+                    "Next action otomatis terbentuk",
+                  ].map((text, index) => (
+                    <div key={text} className="flex items-center gap-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500/10 text-orange-400">
+                        <Check size={12} />
+                      </div>
+                      <div className="text-[11px] text-slate-300">{text}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-7 flex items-center gap-2 text-[9px] font-semibold text-orange-400">
+                  <Sparkles size={11} />
+                  The loop keeps moving.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            PRICING
+        ========================================================== */}
+        <section
+          id="harga"
+          className="bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10"
+        >
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <SectionLabel>Simple pricing</SectionLabel>
+
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[46px]">
+                Mulai gratis.
+                <span className="block text-slate-400">
+                  Upgrade saat sales kamu siap.
+                </span>
+              </h2>
+            </div>
+
+            <div className="mx-auto mt-12 grid max-w-4xl gap-4 md:grid-cols-2">
+              <div className="rounded-[26px] border border-slate-200 bg-white p-7">
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                  Free
+                </div>
+
+                <div className="mt-3 flex items-end gap-1">
+                  <span className="text-[42px] font-bold tracking-[-0.05em] text-slate-950">
+                    Rp0
+                  </span>
+                </div>
+
+                <div className="mt-1 text-[10px] text-slate-400">
+                  Selamanya gratis
+                </div>
+
+                <div className="my-7 h-px bg-slate-100" />
+
+                <ul className="space-y-3">
+                  {FREE_FEATURES.map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-center gap-2.5 text-[11px] text-slate-600"
+                    >
+                      <Check
+                        size={13}
+                        className="shrink-0 text-emerald-500"
                       />
-                    ) : settings.avatar_url ? (
-                      <img
-                        src={
-                          settings.avatar_url
-                        }
-                        alt=""
-                        className="w-full h-full object-cover"
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={goToSignup}
+                  className="mt-8 w-full rounded-xl border border-slate-200 py-3 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Mulai Gratis
+                </button>
+              </div>
+
+              <div className="relative overflow-hidden rounded-[26px] border border-orange-300 bg-white p-7 shadow-[0_25px_70px_-35px_rgba(234,88,12,0.4)]">
+                <div className="absolute right-5 top-5 rounded-full bg-orange-50 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.12em] text-orange-600">
+                  Recommended
+                </div>
+
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-600">
+                  Premium
+                </div>
+
+                <div className="mt-3 flex items-end gap-1">
+                  <span className="text-[42px] font-bold tracking-[-0.05em] text-slate-950">
+                    Rp149rb
+                  </span>
+                  <span className="mb-1.5 text-[10px] text-slate-400">
+                    /bulan
+                  </span>
+                </div>
+
+                <div className="mt-1 text-[10px] text-slate-400">
+                  Akses semua fitur
+                </div>
+
+                <div className="my-7 h-px bg-slate-100" />
+
+                <ul className="space-y-3">
+                  {PREMIUM_FEATURES.map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-center gap-2.5 text-[11px] text-slate-600"
+                    >
+                      <Check
+                        size={13}
+                        className="shrink-0 text-emerald-500"
                       />
-                    ) : (
-                      initial
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={goToSignup}
+                  className="mt-8 w-full rounded-xl bg-orange-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-orange-700"
+                >
+                  Upgrade ke Premium
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            FAQ
+        ========================================================== */}
+        <section className="bg-white px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
+          <div className="mx-auto max-w-3xl">
+            <div className="text-center">
+              <SectionLabel>FAQ</SectionLabel>
+
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[44px]">
+                Yang sering ditanyain.
+              </h2>
+            </div>
+
+            <div className="mt-10 space-y-2.5">
+              {FAQS.map((faq, index) => {
+                const isOpen = openFaq === index;
+
+                return (
+                  <div
+                    key={faq.q}
+                    className={`overflow-hidden rounded-2xl border transition ${
+                      isOpen
+                        ? "border-orange-200 bg-orange-50/30"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <button
+                      onClick={() => setOpenFaq(isOpen ? null : index)}
+                      className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                    >
+                      <span className="text-[12px] font-bold text-slate-800">
+                        {faq.q}
+                      </span>
+
+                      <ChevronDown
+                        size={15}
+                        className={`shrink-0 text-slate-400 transition ${
+                          isOpen ? "rotate-180 text-orange-600" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <div className="border-t border-slate-100 px-5 pb-5 pt-3 text-[11px] leading-6 text-slate-500">
+                        {faq.a}
+                      </div>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
 
+        {/* =========================================================
+            FINAL CTA + AUTH
+        ========================================================== */}
+        <section
+          id="daftar"
+          className="bg-[#080a0d] px-5 py-20 text-white sm:px-7 sm:py-28 lg:px-10"
+        >
+          <div className="mx-auto max-w-7xl">
+            <div className="grid items-center gap-12 lg:grid-cols-[1fr_390px]">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-orange-400">
+                  <Sparkles size={11} />
+                  Start your next sales loop
+                </div>
+
+                <h2 className="mt-6 max-w-2xl text-[38px] font-bold leading-[1.05] tracking-[-0.05em] sm:text-[54px]">
+                  Your next deal is already somewhere in your pipeline.
+                  <span className="block text-orange-400">
+                    Let Nexto find it.
+                  </span>
+                </h2>
+
+                <p className="mt-5 max-w-xl text-[13px] leading-6 text-slate-400">
+                  Mulai gratis dan biarkan Nexto membantu sales kamu tahu
+                  apa yang harus dilakukan berikutnya.
+                </p>
+
+                <div className="mt-7 flex flex-wrap gap-4 text-[10px] text-slate-500">
+                  <span className="flex items-center gap-2">
+                    <CircleCheck size={12} className="text-emerald-500" />
+                    Free plan
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <CircleCheck size={12} className="text-emerald-500" />
+                    Multi-industry
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <CircleCheck size={12} className="text-emerald-500" />
+                    AI-powered
+                  </span>
+                </div>
+              </div>
+
+              <div className="scroll-mt-24">
+                <div className="rounded-[28px] border border-white/[0.09] bg-white/[0.04] p-6 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.8)] sm:p-7">
+                  <div className="mb-6 flex items-center gap-2.5">
+                    <NextoBadge size={34} />
+                    <div>
+                      <div className="text-[13px] font-bold text-white">
+                        Nexto
+                      </div>
+                      <div className="text-[8px] text-slate-500">
+                        Sales Loop Engine
+                      </div>
+                    </div>
                   </div>
 
-                  <span className="text-[10px] text-orange-600 font-semibold flex items-center gap-1">
-                    <Camera
-                      size={13}
-                    />
-                    Ganti foto
-                  </span>
+                  <div className="mb-5">
+                    <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-orange-400">
+                      {mode === "signin" ? "Welcome back" : "Start free"}
+                    </div>
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={
-                      handleFile
-                    }
-                    disabled={
-                      uploading
-                    }
-                  />
+                    <h3 className="mt-2 text-[22px] font-bold tracking-tight text-white">
+                      {mode === "signin"
+                        ? "Masuk ke Nexto"
+                        : "Buat akun Nexto"}
+                    </h3>
 
-                </label>
+                    <p className="mt-1 text-[10px] leading-5 text-slate-500">
+                      {mode === "signin"
+                        ? "Lanjutkan mengelola sales loop kamu."
+                        : "Gratis buat mulai. Upgrade kapan kamu siap."}
+                    </p>
+                  </div>
 
-                <label className="block mb-2.5">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
+                        EMAIL
+                      </label>
+                      <input
+                        type="email"
+                        className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
+                        placeholder="nama@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
 
-                  <span className="text-[10px] font-medium text-slate-400">
-                    Nama
-                  </span>
+                    <div>
+                      <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
+                        PASSWORD
+                      </label>
+                      <input
+                        type="password"
+                        className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
+                        placeholder="••••••••"
+                        value={pw}
+                        onChange={(e) => setPw(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && submit()
+                        }
+                      />
+                    </div>
 
-                  <input
-                    className="w-full mt-1 px-3 py-2.5 text-[11px] text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                    value={name}
-                    onChange={(e) =>
-                      setName(
-                        e.target.value
-                      )
-                    }
-                  />
+                    {msg && (
+                      <div className="flex gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-[9px] leading-5 text-rose-300">
+                        <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                        <span>{msg}</span>
+                      </div>
+                    )}
 
-                </label>
+                    <button
+                      onClick={submit}
+                      disabled={loading}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-3 text-[11px] font-bold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {loading && (
+                        <Loader2 size={14} className="animate-spin" />
+                      )}
+                      {mode === "signin"
+                        ? "Masuk ke Nexto"
+                        : "Buat Akun Gratis"}
+                      {!loading && <ArrowRight size={13} />}
+                    </button>
 
-                <label className="block mb-4">
+                    <button
+                      onClick={() => {
+                        setMode(mode === "signin" ? "signup" : "signin");
+                        setMsg("");
+                      }}
+                      className="w-full py-2 text-[9px] font-medium text-slate-500 transition hover:text-white"
+                    >
+                      {mode === "signin"
+                        ? "Belum punya akun? Daftar gratis"
+                        : "Sudah punya akun? Masuk"}
+                    </button>
+                  </div>
 
-                  <span className="text-[10px] font-medium text-slate-400">
-                    Jabatan
-                  </span>
-
-                  <input
-                    className="w-full mt-1 px-3 py-2.5 text-[11px] text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-                    placeholder="Sales Executive"
-                    value={jobTitle}
-                    onChange={(e) =>
-                      setJobTitle(
-                        e.target.value
-                      )
-                    }
-                  />
-
-                </label>
-
-                <div className="flex gap-2">
-
-                  <button
-                    onClick={() =>
-                      setEditing(false)
-                    }
-                    className="flex-1 text-[10px] text-slate-700 border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium"
-                  >
-                    Batal
-                  </button>
-
-                  <button
-                    onClick={saveProfile}
-                    disabled={saving}
-                    className="flex-1 text-[10px] bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2.5 font-medium"
-                  >
-                    {saving
-                      ? "..."
-                      : "Simpan"}
-                  </button>
-
+                  <div className="mt-5 border-t border-white/[0.06] pt-4 text-center text-[8px] leading-4 text-slate-600">
+                    Dengan membuat akun, kamu setuju menggunakan Nexto sesuai
+                    ketentuan layanan yang berlaku.
+                  </div>
                 </div>
-
               </div>
-            )}
-
+            </div>
           </div>
-        </>
-      )}
+        </section>
+      </main>
 
-    </div>
-  );
-}
+      {/* =========================================================
+          FOOTER
+      ========================================================== */}
+      <footer className="border-t border-white/[0.06] bg-[#080a0d] px-5 pb-8 text-white sm:px-7 lg:px-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 border-t border-white/[0.06] pt-7 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <NextoBadge size={23} />
+            <div>
+              <div className="text-[11px] font-bold text-white">Nexto</div>
+              <div className="text-[8px] text-slate-600">
+                Sales Loop Engine
+              </div>
+            </div>
+          </div>
 
-// ================================================================
-// LOADING / SPLASH
-// ================================================================
-
-function Splash({
-  inline,
-}) {
-  return (
-    <div
-      className={`${
-        inline
-          ? "py-24"
-          : "min-h-screen"
-      } bg-transparent flex flex-col items-center justify-center gap-4`}
-    >
-
-      <div className="relative">
-
-        <div className="absolute inset-0 rounded-2xl bg-orange-500/20 blur-xl animate-pulse" />
-
-        <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0b0d10] shadow-[0_15px_40px_-12px_rgba(15,23,42,0.3)]">
-          <NextoBadge size={38} />
+          <div className="text-[9px] text-slate-600">
+            © {new Date().getFullYear()} Nexto. Built for modern sales teams.
+          </div>
         </div>
-
-      </div>
-
-      <div className="text-slate-400 text-[10px] flex items-center gap-1.5">
-
-        <Loader2
-          size={12}
-          className="animate-spin text-orange-500"
-        />
-
-        Nexto sedang menyiapkan workspace…
-
-      </div>
-
+      </footer>
     </div>
   );
 }
-
-Paste ini menggantikan App.jsx lo.
-
-Hasilnya nanti struktur desktop jadi:
-
-┌───────────────┬──────────────────────────────────────┐
-│               │                                      │
-│    NEXTО      │                                      │
-│               │        [ CONTENT TAB ]               │
-│ Dashboard     │                                      │
-│ Leads         │                                      │
-│ Generate      │                                      │
-│ Deal          │                                      │
-│ Visit         │                                      │
-│ Kompetitor    │                                      │
-│ Nex           │                                      │
-│ AI Advisor    │                                      │
-│ Pengaturan    │                                      │
-│               │                                      │
-└───────────────┴──────────────────────────────────────┘
-
-Jadi nggak ada lagi bar Workspace / Leads di atas dan nggak ada lagi ● SALES WORKSPACE → Leads → deskripsi. Konten tab langsung mulai dari atas.
-
-Catatan penting: kalau setelah ini masih muncul tulisan Leads / Generate Leads / Deal di dalam halaman, berarti itu header yang berada di file tab masing-masing (Dashboard.jsx, Leads.jsx, dst.), bukan dari App.jsx. Source yang lo kirim sekarang memang menunjukkan App sebagai parent yang me-render semua tab tersebut.
-
-Pasted text(4).txt
-Document
-bro gua mau landing page exto balik seperti code yang gua lampirkan dan lu tambahkan robot chatbot itu ke dalam landing page
-
-Nah bro, gue balikin landing page berdasarkan code yang lo lampirin, bukan gue rombak jadi desain baru. Struktur, section, pricing, FAQ, auth, navigation, dan copy existing tetap dipertahankan.
-
-Yang gue tambahin adalah robot Nexto AI seperti visual yang lo kasih:
-
-Robot 3D-style di tengah hero
-Orange glowing ring / aura
-Card Setting Visit
-Card Edit CRM
-Card Update Progress — Voice & Text
-Notification “Done. Data CRM sudah diperbarui.”
-Klik robot → chatbot Nexto AI kebuka
-Ada quick prompt:
-“Siapa yang harus gue follow up?”
-“Deal mana yang berisiko?”
-“Update CRM gue”
-Bisa ketik pertanyaan sendiri
-Responsive untuk mobile
-Existing landing page section lainnya tetap ada, termasuk AI Copilot, fitur, industri, pricing, FAQ, dan auth. Struktur tersebut memang sudah ada di source asli lo.
-
-File hasilnya:
-
-Download Auth.jsx — Landing Page + Nexto Robot Chatbot
-
-Satu hal: chatbot yang gue pasang sekarang frontend demo, jadi belum benar-benar mengubah database/CRM. Gue sengaja bikin begitu supaya landing page-nya langsung jalan tanpa merusak Supabase yang sekarang. Auth existing tetap menggunakan supabase.auth.signInWithPassword dan signUp.
-
-Kalau nanti kita sambungkan ke AI Agent Nexto beneran, robot yang sama bisa jadi pintu masuk ke agent: user tinggal bilang “update PT ABC jadi negosiasi”, “siapa yang harus gue visit besok?”, “follow up semua lead yang panas”, dll. 
-
-Auth_with_Nexto_Robot_Chatbot.jsx
-Code
