@@ -68,6 +68,51 @@ function NextoLogo({ width = 90, className = "" }) {
 }
 
 
+function NextoHeaderBrand() {
+  return (
+    <a
+      href="#"
+      className="group flex items-center gap-2.5"
+      aria-label="Nexto"
+    >
+      {/* NEXTO logo: dark/black presentation with white letters + orange X */}
+      <span className="flex h-9 items-center rounded-[10px] border border-slate-800 bg-[#08090b] px-2.5 shadow-[0_6px_20px_-10px_rgba(15,23,42,0.5)]">
+        <img
+          src={NEXTO_LOGO_SRC}
+          alt="Nexto"
+          className="block h-[25px] w-auto object-contain"
+        />
+      </span>
+
+      {/* Header-only Nexto AI robot head */}
+      <span
+        className="relative flex h-9 w-9 items-center justify-center rounded-[11px] border border-orange-500/30 bg-[#111214] shadow-[0_0_24px_-8px_rgba(249,115,22,0.7)] transition-transform duration-200 group-hover:scale-105"
+        title="Nexto AI"
+      >
+        {/* ears */}
+        <span className="absolute -left-[3px] top-[13px] h-[12px] w-[4px] rounded-full bg-slate-600" />
+        <span className="absolute -right-[3px] top-[13px] h-[12px] w-[4px] rounded-full bg-slate-600" />
+
+        {/* head */}
+        <span className="relative h-[27px] w-[28px] rounded-[10px] border border-slate-300/50 bg-gradient-to-br from-slate-200 via-slate-400 to-slate-700 shadow-[0_5px_15px_-7px_rgba(0,0,0,0.9)]">
+          {/* visor */}
+          <span className="absolute left-[4px] right-[4px] top-[7px] h-[10px] rounded-full border border-orange-500/20 bg-[#08090b]">
+            <span className="absolute left-[6px] top-[3px] h-[3px] w-[3px] rounded-full bg-orange-400 shadow-[0_0_7px_rgba(251,146,60,0.9)]" />
+            <span className="absolute right-[6px] top-[3px] h-[3px] w-[3px] rounded-full bg-orange-400 shadow-[0_0_7px_rgba(251,146,60,0.9)]" />
+          </span>
+
+          {/* small Nexto mark */}
+          <span className="absolute bottom-[3px] left-1/2 h-[4px] w-[4px] -translate-x-1/2 rotate-45 rounded-[1px] bg-orange-500" />
+        </span>
+
+        {/* live indicator */}
+        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-[#111214] bg-emerald-400" />
+      </span>
+    </a>
+  );
+}
+
+
 const CAPABILITIES = [
   {
     icon: Target,
@@ -1235,9 +1280,7 @@ export default function Auth() {
       ========================================================== */}
       <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 sm:px-7 lg:px-10">
-          <a href="#" className="flex items-center">
-            <NextoLogo width={92} />
-          </a>
+          <NextoHeaderBrand />
 
           <nav className="hidden items-center gap-7 md:flex">
             <a
