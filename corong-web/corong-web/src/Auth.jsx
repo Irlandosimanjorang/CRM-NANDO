@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import {
   Loader2,
@@ -23,9 +23,8 @@ import {
   Play,
   X,
   Bot,
-  MessageCircle,
-  Paperclip,
-  Volume2,
+  Pencil,
+  CheckCircle2,
 } from "lucide-react";
 import { NextoBadge } from "./App";
 
@@ -143,6 +142,669 @@ const FAQS = [
     a: "Data setiap organisasi dipisahkan berdasarkan akun dan permission yang berlaku. Akses data mengikuti struktur organisasi dan role pengguna.",
   },
 ];
+
+const AI_DEMO_STATES = [
+  {
+    type: "calendar",
+    user: "Besok jam 10 visit PT Sinar Abadi.",
+    ai: "Siap. Visit sudah dibuat.",
+    status: "Google Calendar diperbarui",
+    detail: "Besok • 10:00 — PT Sinar Abadi",
+  },
+  {
+    type: "progress",
+    user: "Hari ini gue visit 4 customer. PT ABC interested, PT XYZ minta sample.",
+    ai: "Progress hari ini sudah diperbarui.",
+    status: "Progress tersimpan ke CRM",
+    detail: "4 visit • 1 interested • 1 sample request",
+  },
+  {
+    type: "crm",
+    user: "Update PT Maju Bersama jadi Negosiasi.",
+    ai: "Done. Data CRM sudah diperbarui.",
+    status: "CRM berhasil di-edit",
+    detail: "PT Maju Bersama → Negosiasi",
+  },
+];
+
+function NextoAISalesEngine() {
+  const [active, setActive] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIsTyping(true);
+
+      setTimeout(() => {
+        setActive((prev) => (prev + 1) % AI_DEMO_STATES.length);
+        setIsTyping(false);
+      }, 650);
+    }, 4200);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const current = AI_DEMO_STATES[active];
+
+  const setDemo = (index) => {
+    if (index === active) return;
+
+    setIsTyping(true);
+
+    setTimeout(() => {
+      setActive(index);
+      setIsTyping(false);
+    }, 400);
+  };
+
+  return (
+    <section
+      id="ai-engine"
+      className="relative overflow-hidden text-white"
+      style={{
+        background:
+          "radial-gradient(circle at 50% 42%, #24150b 0%, #0d0b09 34%, #050505 72%)",
+      }}
+    >
+      {/* Background grid */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.12]">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(249,115,22,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(249,115,22,0.18) 1px, transparent 1px)",
+            backgroundSize: "55px 55px",
+            maskImage:
+              "radial-gradient(circle at center, black 0%, transparent 75%)",
+            WebkitMaskImage:
+              "radial-gradient(circle at center, black 0%, transparent 75%)",
+          }}
+        />
+      </div>
+
+      {/* Ambient glows */}
+      <div className="absolute left-1/2 top-[45%] -translate-x-1/2 w-[480px] h-[480px] rounded-full bg-orange-600/10 blur-[120px] pointer-events-none" />
+      <div className="absolute left-[8%] top-[25%] w-[220px] h-[220px] rounded-full bg-orange-500/5 blur-[100px] pointer-events-none" />
+      <div className="absolute right-[8%] top-[25%] w-[220px] h-[220px] rounded-full bg-orange-500/5 blur-[100px] pointer-events-none" />
+
+      <div className="relative max-w-6xl mx-auto px-4 md:px-6 py-20 md:py-28">
+        {/* Section heading */}
+        <div className="text-center max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/[0.07] px-3.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.08)]">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-400" />
+            </span>
+            NEXTO AI SALES ENGINE
+          </div>
+
+          <h2 className="mt-5 text-3xl md:text-5xl font-bold tracking-[-0.045em] leading-[1.05]">
+            Kamu cukup{" "}
+            <span className="text-orange-500">ngomong.</span>
+            <br />
+            Nexto yang kerja.
+          </h2>
+
+          <p className="mt-5 text-sm md:text-base leading-7 text-stone-400 max-w-2xl mx-auto">
+            Chatbot Nexto menjadi pusat kendali sales kamu. Satu chat bisa
+            mengatur visit, memperbarui progress, dan mengedit CRM tanpa harus
+            buka satu-satu.
+          </p>
+        </div>
+
+        {/* =========================================================
+            ENGINE AREA
+        ========================================================== */}
+        <div className="relative mt-14 md:mt-20 min-h-[760px] md:min-h-[680px]">
+          {/* Desktop connection lines */}
+          <div className="hidden md:block absolute inset-0 pointer-events-none">
+            {/* left line */}
+            <div className="absolute left-[25%] top-[38%] w-[18%] h-px bg-gradient-to-r from-transparent via-orange-500 to-orange-400 rotate-[-18deg] origin-right opacity-70">
+              <div className="energy-dot energy-left" />
+            </div>
+
+            {/* right line */}
+            <div className="absolute right-[25%] top-[38%] w-[18%] h-px bg-gradient-to-l from-transparent via-orange-500 to-orange-400 rotate-[18deg] origin-left opacity-70">
+              <div className="energy-dot energy-right" />
+            </div>
+
+            {/* bottom line */}
+            <div className="absolute left-1/2 top-[61%] h-[15%] w-px -translate-x-1/2 bg-gradient-to-b from-orange-500 via-orange-400 to-transparent opacity-70">
+              <div className="energy-dot energy-down" />
+            </div>
+          </div>
+
+          {/* =======================================================
+              LEFT — CALENDAR
+          ======================================================== */}
+          <div className="engine-card absolute left-0 top-[5%] md:w-[29%] w-full md:max-w-none">
+            <EngineCard
+              active={active === 0}
+              number="01"
+              icon={<Calendar size={19} />}
+              title="Setting Visit"
+              accent="Google Calendar"
+              description="Cukup bilang kapan dan siapa yang mau kamu visit. Nexto otomatis membuat jadwal dan menyinkronkannya ke Google Calendar."
+            >
+              <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/30 p-3">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[7px] uppercase tracking-widest text-slate-500">
+                    Visit baru
+                  </span>
+
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[7px] font-semibold text-emerald-400">
+                    <CheckCircle2 size={9} />
+                    Synced
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-orange-500/10 border border-orange-500/20">
+                    <span className="text-[7px] uppercase text-orange-400">
+                      BESOK
+                    </span>
+                    <span className="text-base font-bold text-white">
+                      10
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] font-semibold text-white">
+                      PT Sinar Abadi
+                    </div>
+                    <div className="mt-1 text-[8px] text-slate-500">
+                      10:00 — 11:00
+                    </div>
+                    <div className="mt-1 text-[8px] text-orange-400">
+                      Google Calendar
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </EngineCard>
+          </div>
+
+          {/* =======================================================
+              RIGHT — CRM
+          ======================================================== */}
+          <div className="engine-card absolute right-0 top-[5%] md:w-[29%] w-full md:max-w-none mt-[510px] md:mt-0">
+            <EngineCard
+              active={active === 2}
+              number="03"
+              icon={<Pencil size={19} />}
+              title="Edit CRM"
+              accent="AI yang Kerjain"
+              description="Update status, edit lead, ubah next action, tambah catatan — cukup perintah lewat chat."
+            >
+              <div className="mt-4 space-y-2.5">
+                <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.06] p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle
+                      size={11}
+                      className="text-orange-400"
+                    />
+                    <span className="text-[7px] uppercase tracking-widest text-orange-400">
+                      Perintah
+                    </span>
+                  </div>
+
+                  <p className="text-[9px] leading-4 text-slate-300">
+                    “Update PT Maju Bersama jadi Negosiasi.”
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/[0.08] bg-black/30 p-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2
+                      size={12}
+                      className="text-emerald-400"
+                    />
+
+                    <span className="text-[9px] font-semibold text-white">
+                      CRM berhasil diperbarui
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between text-[8px]">
+                    <span className="text-slate-500">
+                      PT Maju Bersama
+                    </span>
+
+                    <span className="rounded-full bg-orange-500/10 px-2 py-1 text-orange-400">
+                      Negosiasi
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </EngineCard>
+          </div>
+
+          {/* =======================================================
+              CENTER ROBOT
+          ======================================================== */}
+          <div className="absolute left-1/2 top-[27%] md:top-[21%] -translate-x-1/2 z-20">
+            <div className="relative flex h-[270px] w-[270px] items-center justify-center md:h-[320px] md:w-[320px]">
+              {/* outer rotating ring */}
+              <div className="absolute inset-0 rounded-full border border-orange-500/20 animate-spin-slow" />
+
+              <div className="absolute inset-[18px] rounded-full border border-orange-500/10 animate-spin-reverse" />
+
+              <div className="absolute inset-[38px] rounded-full border border-dashed border-orange-400/20 animate-spin-slow" />
+
+              {/* orbital particles */}
+              <div className="absolute inset-0 animate-spin-slow">
+                <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-orange-400 shadow-[0_0_15px_#fb923c]" />
+                <span className="absolute right-2 top-1/2 h-1.5 w-1.5 rounded-full bg-orange-300 shadow-[0_0_12px_#fb923c]" />
+                <span className="absolute bottom-5 left-[20%] h-1.5 w-1.5 rounded-full bg-orange-500 shadow-[0_0_12px_#fb923c]" />
+              </div>
+
+              {/* glow */}
+              <div className="absolute h-44 w-44 md:h-52 md:w-52 rounded-full bg-orange-500/20 blur-[55px] animate-pulse" />
+
+              {/* robot core */}
+              <div className="robot-float relative h-36 w-36 md:h-44 md:w-44 rounded-[38%] border border-orange-400/30 bg-gradient-to-br from-slate-200 via-slate-400 to-slate-800 shadow-[0_0_60px_rgba(249,115,22,0.28)]">
+                <div className="absolute inset-[7px] rounded-[35%] bg-gradient-to-br from-[#d9dee5] via-[#8e969f] to-[#252a30]" />
+
+                {/* face visor */}
+                <div className="absolute left-[15%] right-[15%] top-[28%] h-[30%] rounded-[28px] bg-[#080a0c] border border-orange-400/30 shadow-[inset_0_0_30px_rgba(249,115,22,0.12)]">
+                  <div className="absolute left-[24%] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-orange-400 shadow-[0_0_15px_#fb923c] animate-pulse" />
+
+                  <div className="absolute right-[24%] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-orange-400 shadow-[0_0_15px_#fb923c] animate-pulse" />
+
+                  <div className="absolute left-1/2 bottom-[20%] h-[2px] w-7 -translate-x-1/2 rounded-full bg-orange-400/70" />
+                </div>
+
+                {/* Nexto mark */}
+                <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500/10 border border-orange-400/20">
+                  <NextoBadge size={22} />
+                </div>
+
+                {/* ears */}
+                <div className="absolute -left-3 top-[37%] h-12 w-5 rounded-full border border-orange-400/20 bg-slate-700" />
+                <div className="absolute -right-3 top-[37%] h-12 w-5 rounded-full border border-orange-400/20 bg-slate-700" />
+              </div>
+
+              {/* floating chat bubble */}
+              <div className="absolute -top-7 left-1/2 w-[235px] -translate-x-1/2 translate-x-[20%] rounded-2xl border border-orange-400/30 bg-[#111214]/90 px-3.5 py-2.5 shadow-[0_15px_40px_-15px_rgba(249,115,22,0.45)] backdrop-blur-xl">
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15">
+                    <Bot size={11} className="text-orange-400" />
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="text-[7px] uppercase tracking-widest text-orange-400">
+                      Nexto AI
+                    </div>
+
+                    <div className="mt-1 text-[9px] leading-4 text-white">
+                      {isTyping
+                        ? "Nexto sedang bekerja..."
+                        : current.ai}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* =======================================================
+              BOTTOM — PROGRESS
+          ======================================================== */}
+          <div className="engine-card absolute left-1/2 bottom-0 md:bottom-[2%] -translate-x-1/2 w-full md:w-[40%]">
+            <EngineCard
+              active={active === 1}
+              number="02"
+              icon={<Mic size={19} />}
+              title="Update Progress"
+              accent="Voice & Text"
+              description="Lagi di jalan? Tinggal ngomong. Lagi bisa mengetik? Chat. Nexto memahami dan menyimpan progress ke CRM."
+            >
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-white/[0.08] bg-black/30 p-3">
+                  <div className="flex items-center gap-2 text-[8px] text-slate-500">
+                    <Mic size={11} className="text-orange-400" />
+                    Voice
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-center">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-500/10 border border-orange-500/20">
+                      <Mic
+                        size={17}
+                        className="text-orange-400 animate-pulse"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-center text-[8px] text-slate-500">
+                    “Ketemu Pak Budi…”
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/[0.08] bg-black/30 p-3">
+                  <div className="flex items-center gap-2 text-[8px] text-slate-500">
+                    <MessageCircle
+                      size={11}
+                      className="text-orange-400"
+                    />
+                    Text
+                  </div>
+
+                  <div className="mt-3 rounded-lg bg-orange-500/[0.06] border border-orange-500/10 px-2.5 py-2 text-[8px] leading-4 text-slate-300">
+                    {current.type === "progress"
+                      ? current.user
+                      : "Hari ini visit 4 customer..."}
+                  </div>
+
+                  <div className="mt-2 text-[8px] text-emerald-400">
+                    ✓ Saved to CRM
+                  </div>
+                </div>
+              </div>
+            </EngineCard>
+          </div>
+
+          {/* Mobile connector / central label */}
+          <div className="md:hidden absolute top-[43%] left-1/2 -translate-x-1/2 z-10">
+            <div className="flex items-center gap-2 rounded-full border border-orange-500/20 bg-[#0c0b09]/90 px-3 py-1.5 text-[7px] uppercase tracking-[0.18em] text-orange-400 backdrop-blur">
+              <Zap size={9} />
+              Nexto Engine
+            </div>
+          </div>
+        </div>
+
+        {/* =========================================================
+            LIVE DEMO SWITCHER
+        ========================================================== */}
+        <div className="mx-auto mt-8 max-w-2xl">
+          <div className="rounded-[22px] border border-white/[0.08] bg-white/[0.025] p-2 backdrop-blur-xl">
+            <div className="grid grid-cols-3 gap-1">
+              <DemoButton
+                active={active === 0}
+                icon={<Calendar size={13} />}
+                label="Atur Visit"
+                onClick={() => setDemo(0)}
+              />
+
+              <DemoButton
+                active={active === 1}
+                icon={<Mic size={13} />}
+                label="Update Progress"
+                onClick={() => setDemo(1)}
+              />
+
+              <DemoButton
+                active={active === 2}
+                icon={<Pencil size={13} />}
+                label="Edit CRM"
+                onClick={() => setDemo(2)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* integration strip */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <IntegrationBadge label="Nexto CRM" />
+          <span className="text-slate-700">—</span>
+          <IntegrationBadge label="Google Calendar" />
+          <span className="text-slate-700">—</span>
+          <IntegrationBadge label="Voice AI" />
+          <span className="text-slate-700">—</span>
+          <IntegrationBadge label="AI Assistant" />
+        </div>
+
+        {/* final statement */}
+        <div className="mt-10 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.05] px-3.5 py-2 text-[9px] text-emerald-400">
+            <CheckCircle2 size={12} />
+            Satu percakapan → semua aktivitas sales terhubung
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        .animate-spin-slow {
+          animation: nextoSpin 18s linear infinite;
+        }
+
+        .animate-spin-reverse {
+          animation: nextoSpinReverse 24s linear infinite;
+        }
+
+        .robot-float {
+          animation: robotFloat 3.8s ease-in-out infinite;
+        }
+
+        .energy-dot {
+          position: absolute;
+          width: 7px;
+          height: 7px;
+          border-radius: 999px;
+          background: #fb923c;
+          box-shadow:
+            0 0 8px #fb923c,
+            0 0 18px rgba(249,115,22,0.8);
+        }
+
+        .energy-left {
+          right: 0;
+          top: -3px;
+          animation: energyLeft 2.4s linear infinite;
+        }
+
+        .energy-right {
+          left: 0;
+          top: -3px;
+          animation: energyRight 2.4s linear infinite;
+        }
+
+        .energy-down {
+          left: -3px;
+          top: 0;
+          animation: energyDown 2.2s linear infinite;
+        }
+
+        @keyframes nextoSpin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes nextoSpinReverse {
+          from {
+            transform: rotate(360deg);
+          }
+          to {
+            transform: rotate(0deg);
+          }
+        }
+
+        @keyframes robotFloat {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-9px);
+          }
+        }
+
+        @keyframes energyLeft {
+          0% {
+            transform: translateX(0);
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+          }
+          85% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(-170px);
+            opacity: 0;
+          }
+        }
+
+        @keyframes energyRight {
+          0% {
+            transform: translateX(0);
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+          }
+          85% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(170px);
+            opacity: 0;
+          }
+        }
+
+        @keyframes energyDown {
+          0% {
+            transform: translateY(0);
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+          }
+          85% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(120px);
+            opacity: 0;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .engine-card {
+            position: relative !important;
+            left: auto !important;
+            right: auto !important;
+            top: auto !important;
+            bottom: auto !important;
+            transform: none !important;
+            margin-top: 0 !important;
+            margin-bottom: 18px !important;
+          }
+
+          .engine-card:nth-child(1) {
+            margin-bottom: 350px !important;
+          }
+
+          .engine-card:nth-child(2) {
+            margin-bottom: 18px !important;
+          }
+
+          .engine-card:nth-child(3) {
+            margin-bottom: 18px !important;
+          }
+
+          .engine-card:nth-child(4) {
+            margin-top: 0 !important;
+          }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+function EngineCard({
+  number,
+  icon,
+  title,
+  accent,
+  description,
+  active,
+  children,
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[26px] border p-5 md:p-5 backdrop-blur-xl transition-all duration-700 ${
+        active
+          ? "border-orange-500/50 bg-orange-500/[0.055] shadow-[0_0_50px_-18px_rgba(249,115,22,0.65)]"
+          : "border-white/[0.08] bg-[#0d0d0e]/85"
+      }`}
+    >
+      {/* active glow */}
+      <div
+        className={`absolute -right-16 -top-16 h-32 w-32 rounded-full bg-orange-500/10 blur-3xl transition-opacity duration-700 ${
+          active ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      <div className="relative">
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all ${
+              active
+                ? "border-orange-500/30 bg-orange-500/15 text-orange-400"
+                : "border-white/[0.08] bg-white/[0.03] text-orange-500"
+            }`}
+          >
+            {icon}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[7px] font-bold tracking-[0.18em] text-orange-500">
+                {number}
+              </span>
+
+              <span className="text-[7px] uppercase tracking-[0.18em] text-slate-600">
+                Nexto AI
+              </span>
+            </div>
+
+            <h3 className="mt-1 text-[15px] font-bold tracking-tight text-white">
+              {title}
+            </h3>
+
+            <div className="mt-0.5 text-[9px] font-semibold text-orange-400">
+              {accent}
+            </div>
+          </div>
+        </div>
+
+        <p className="relative mt-3 text-[9px] leading-4 text-slate-500">
+          {description}
+        </p>
+
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DemoButton({ active, icon, label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center justify-center gap-2 rounded-[15px] px-3 py-2.5 text-[8px] font-semibold transition-all ${
+        active
+          ? "bg-orange-500 text-white shadow-[0_5px_20px_-8px_rgba(249,115,22,0.8)]"
+          : "text-slate-500 hover:bg-white/[0.04] hover:text-slate-300"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function IntegrationBadge({ label }) {
+  return (
+    <div className="rounded-full border border-white/[0.07] bg-white/[0.025] px-3 py-1.5 text-[8px] font-medium text-slate-500">
+      {label}
+    </div>
+  );
+}
 
 function SectionLabel({ children }) {
   return (
@@ -468,284 +1130,6 @@ function CopilotMockup() {
   );
 }
 
-
-function RobotChatbot() {
-  const [open, setOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      from: "bot",
-      text: "Hi. Gue Nexto. Mau gue bantu cari follow-up terbaik hari ini?",
-    },
-  ]);
-
-  const suggestions = [
-    "Siapa yang harus gue follow up?",
-    "Deal mana yang berisiko?",
-    "Update CRM gue",
-  ];
-
-  const sendMessage = (text = input) => {
-    const value = text.trim();
-    if (!value) return;
-
-    setMessages((prev) => [
-      ...prev,
-      { from: "user", text: value },
-      {
-        from: "bot",
-        text:
-          value.toLowerCase().includes("follow") ||
-          value.toLowerCase().includes("siapa")
-            ? "Gue menemukan 4 opportunity penting. PT ABC paling urgent karena quotation sudah 3 hari belum direspons."
-            : value.toLowerCase().includes("deal")
-              ? "Ada 1 deal yang mulai berisiko: PT DEF. Gue sarankan follow-up hari ini sebelum opportunity-nya dingin."
-              : "Done. Di versi live, perintah ini akan diteruskan ke AI Agent Nexto untuk membaca dan memperbarui CRM kamu.",
-      },
-    ]);
-    setInput("");
-  };
-
-  return (
-    <>
-      <div className="relative mx-auto w-full max-w-[760px]">
-        <div className="absolute inset-0 rounded-[50px] bg-orange-500/[0.10] blur-3xl" />
-        <div className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-orange-500/20" />
-        <div className="absolute left-1/2 top-1/2 h-[285px] w-[285px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-orange-500/15" />
-
-        <div className="relative min-h-[540px] overflow-hidden rounded-[36px] border border-orange-500/10 bg-[#090a0c] shadow-[0_35px_100px_-30px_rgba(15,23,42,0.5)]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,rgba(249,115,22,0.12),transparent_30%),linear-gradient(135deg,rgba(249,115,22,0.06),transparent_35%)]" />
-
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
-
-          {/* Robot */}
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="Open Nexto AI chat"
-            className="group absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 outline-none"
-          >
-            <div className="absolute inset-[-48px] rounded-full bg-orange-500/10 blur-2xl transition group-hover:bg-orange-500/20" />
-
-            <div className="relative h-[230px] w-[230px] rounded-[74px] border border-slate-300/40 bg-gradient-to-br from-slate-200 via-slate-400 to-slate-700 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8),0_0_60px_rgba(249,115,22,0.15)] transition duration-300 group-hover:scale-[1.03]">
-              <div className="absolute -left-4 top-[82px] h-16 w-8 rounded-full border border-slate-400/50 bg-slate-700 shadow-lg" />
-              <div className="absolute -right-4 top-[82px] h-16 w-8 rounded-full border border-slate-400/50 bg-slate-700 shadow-lg" />
-
-              <div className="absolute left-1/2 top-[73px] h-[82px] w-[164px] -translate-x-1/2 rounded-[42px] border border-orange-500/20 bg-[#17120f] shadow-[inset_0_0_35px_rgba(249,115,22,0.05)]">
-                <span className="absolute left-[45px] top-[31px] h-3 w-3 rounded-full bg-orange-400 shadow-[0_0_16px_rgba(251,146,60,0.85)]" />
-                <span className="absolute right-[45px] top-[31px] h-3 w-3 rounded-full bg-orange-400 shadow-[0_0_16px_rgba(251,146,60,0.85)]" />
-                <span className="absolute left-1/2 top-[45px] h-1 w-12 -translate-x-1/2 rounded-full bg-orange-500/80" />
-              </div>
-
-              <div className="absolute bottom-[27px] left-1/2 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-2xl border border-orange-400/30 bg-orange-500/10">
-                <NextoBadge size={29} />
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-orange-400">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-orange-400" />
-              Ask Nexto AI
-            </div>
-          </button>
-
-          {/* Connection lines */}
-          <div className="pointer-events-none absolute left-[18%] top-[51%] hidden h-px w-[27%] origin-left -rotate-[18deg] bg-gradient-to-r from-orange-500/60 to-transparent md:block" />
-          <div className="pointer-events-none absolute right-[18%] top-[51%] hidden h-px w-[27%] origin-right rotate-[18deg] bg-gradient-to-l from-orange-500/60 to-transparent md:block" />
-
-          {/* Visit card */}
-          <div className="absolute left-5 top-5 hidden w-[205px] rounded-[22px] border border-white/[0.08] bg-[#0d0f12]/95 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.8)] md:block">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400">
-                <Calendar size={18} />
-              </div>
-              <div>
-                <div className="text-[7px] font-bold tracking-[0.18em] text-orange-400">01 · NEXTO AI</div>
-                <div className="mt-1 text-[13px] font-bold text-white">Setting Visit</div>
-                <div className="mt-1 text-[8px] font-semibold text-orange-400">Google Calendar</div>
-              </div>
-            </div>
-
-            <p className="mt-4 text-[8px] leading-4 text-slate-500">
-              Cukup bilang kapan dan siapa yang mau kamu visit. Nexto otomatis membuat jadwal.
-            </p>
-
-            <div className="mt-3 rounded-xl border border-white/[0.07] bg-black/20 p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[7px] uppercase tracking-[0.12em] text-slate-500">VISIT BARU</span>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[7px] font-bold text-emerald-400">● Synced</span>
-              </div>
-              <div className="mt-3 flex gap-3">
-                <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.07] px-3 py-2 text-center">
-                  <div className="text-[7px] font-bold text-orange-400">BESOK</div>
-                  <div className="mt-1 text-lg font-bold text-white">10</div>
-                </div>
-                <div>
-                  <div className="text-[9px] font-bold text-white">PT Sinar Abadi</div>
-                  <div className="mt-1 text-[8px] text-slate-500">10:00 — 11:00</div>
-                  <div className="mt-1 text-[8px] text-orange-400">Google Calendar</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CRM card */}
-          <div className="absolute right-5 top-5 hidden w-[215px] rounded-[22px] border border-orange-500/20 bg-[#120f0d]/95 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.8)] md:block">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400">
-                <MessageSquare size={18} />
-              </div>
-              <div>
-                <div className="text-[7px] font-bold tracking-[0.18em] text-orange-400">03 · NEXTO AI</div>
-                <div className="mt-1 text-[13px] font-bold text-white">Edit CRM</div>
-                <div className="mt-1 text-[8px] font-semibold text-orange-400">AI yang Kerjain</div>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-orange-500/20 bg-orange-500/[0.05] p-3">
-              <div className="text-[7px] font-bold uppercase tracking-[0.12em] text-orange-400">PERINTAH</div>
-              <div className="mt-2 text-[9px] leading-4 text-slate-300">
-                “Update PT Maju Bersama jadi Negosiasi.”
-              </div>
-            </div>
-
-            <div className="mt-3 rounded-xl border border-white/[0.07] bg-black/20 p-3">
-              <div className="flex items-center gap-2">
-                <CircleCheck size={13} className="text-emerald-400" />
-                <span className="text-[9px] font-bold text-white">CRM berhasil diperbarui</span>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-[8px] text-slate-500">PT Maju Bersama</span>
-                <span className="rounded-full bg-orange-500/10 px-2 py-1 text-[7px] font-bold text-orange-400">Negosiasi</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Voice/update card */}
-          <div className="absolute bottom-5 left-1/2 hidden w-[390px] -translate-x-1/2 rounded-[22px] border border-orange-500/15 bg-[#120f0d]/95 p-4 shadow-[0_20px_60px_-25px_rgba(0,0,0,0.8)] md:block">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-orange-400">
-                <Mic size={18} />
-              </div>
-              <div>
-                <div className="text-[7px] font-bold tracking-[0.18em] text-orange-400">02 · NEXTO AI</div>
-                <div className="mt-1 text-[13px] font-bold text-white">Update Progress</div>
-                <div className="mt-1 text-[8px] font-semibold text-orange-400">Voice & Text</div>
-              </div>
-            </div>
-            <p className="mt-4 text-[8px] leading-4 text-slate-500">
-              Lagi di jalan? Tinggal ngomong. Lagi bisa mengetik? Chat. Nexto memahami dan menyimpan progress ke CRM.
-            </p>
-          </div>
-
-          {/* Bot notification */}
-          <div className="absolute left-1/2 top-[31%] z-10 hidden w-[285px] -translate-x-1/2 rounded-[20px] border border-orange-500/30 bg-[#151210]/95 px-4 py-3 shadow-[0_18px_50px_-20px_rgba(249,115,22,0.35)] sm:block">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-400">
-                <Bot size={14} />
-              </div>
-              <div>
-                <div className="text-[7px] font-bold text-orange-400">NEXTO AI</div>
-                <div className="mt-1 text-[9px] font-semibold text-white">Done. Data CRM sudah diperbarui.</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="absolute bottom-3 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-orange-400 shadow-[0_0_20px_rgba(251,146,60,0.9)]" />
-        </div>
-      </div>
-
-      {open && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:items-center">
-          <div className="w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0d10] text-white shadow-[0_35px_100px_-25px_rgba(0,0,0,0.75)]">
-            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10">
-                  <NextoBadge size={28} />
-                </div>
-                <div>
-                  <div className="text-[12px] font-bold">Nexto AI</div>
-                  <div className="flex items-center gap-1.5 text-[8px] text-emerald-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    Sales agent online
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.06] hover:text-white"
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            <div className="max-h-[52vh] space-y-3 overflow-y-auto bg-[#090a0c] p-4">
-              {messages.map((message, index) => (
-                <div
-                  key={`${message.from}-${index}`}
-                  className={`flex ${message.from === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[84%] rounded-2xl px-3.5 py-3 text-[10px] leading-5 ${
-                      message.from === "user"
-                        ? "rounded-br-md bg-orange-600 text-white"
-                        : "rounded-bl-md border border-white/[0.07] bg-white/[0.04] text-slate-300"
-                    }`}
-                  >
-                    {message.text}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-white/[0.07] p-4">
-              <div className="mb-3 flex gap-2 overflow-x-auto">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => sendMessage(suggestion)}
-                    className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[8px] text-slate-400 hover:border-orange-500/30 hover:text-orange-300"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] p-1.5">
-                <button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.05] hover:text-white">
-                  <Paperclip size={14} />
-                </button>
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") sendMessage();
-                  }}
-                  placeholder="Tanya Nexto..."
-                  className="min-w-0 flex-1 bg-transparent px-1 text-[10px] text-white outline-none placeholder:text-slate-600"
-                />
-                <button
-                  type="button"
-                  onClick={() => sendMessage()}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-600 text-white hover:bg-orange-500"
-                >
-                  <Send size={13} />
-                </button>
-              </div>
-
-              <div className="mt-2 flex items-center justify-center gap-1.5 text-[7px] text-slate-600">
-                <Volume2 size={10} />
-                Demo AI — belum terhubung ke agent production.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
 export default function Auth() {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
@@ -976,14 +1360,16 @@ export default function Auth() {
             </div>
 
             <div className="lg:pl-2">
-              <RobotChatbot />
-              <div className="mt-3 flex items-center justify-center gap-2 text-[9px] font-medium text-slate-400">
-                <MessageCircle size={11} className="text-orange-500" />
-                Klik robot untuk mencoba demo Nexto AI
-              </div>
+              <ProductMockup />
             </div>
           </div>
         </section>
+
+        {/* =========================================================
+            NEXTO AI SALES ENGINE
+            TAMBAHAN — LANDING PAGE EXISTING TETAP
+        ========================================================== */}
+        <NextoAISalesEngine />
 
         {/* =========================================================
             TRUST STRIP
