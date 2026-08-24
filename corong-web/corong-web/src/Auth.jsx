@@ -27,26 +27,19 @@ import {
   CheckCircle2,  MessageCircle,
 
 } from "lucide-react";
-function NextoBadge({ size = 36 }) {
+const NEXTO_LOGO_SRC = "/nexto-logo.png";
+
+function NextoLogo({ width = 90, className = "" }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      className="shrink-0"
-      aria-hidden="true"
-    >
-      <path
-        d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z"
-        fill="#f97316"
-      />
-      <path
-        d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z"
-        fill="#9a3412"
-      />
-    </svg>
+    <img
+      src={NEXTO_LOGO_SRC}
+      alt="Nexto"
+      width={width}
+      className={`block h-auto shrink-0 object-contain ${className}`}
+    />
   );
 }
+
 
 
 const CAPABILITIES = [
@@ -435,10 +428,7 @@ function NextoAISalesEngine() {
                   <div className="absolute left-1/2 bottom-[20%] h-[2px] w-7 -translate-x-1/2 rounded-full bg-orange-400/70" />
                 </div>
 
-                {/* Nexto mark */}
-                <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500/10 border border-orange-400/20">
-                  <NextoBadge size={22} />
-                </div>
+                {/* Nexto logo mark removed — the new wordmark is used across the landing page. */}
 
                 {/* ears */}
                 <div className="absolute -left-3 top-[37%] h-12 w-5 rounded-full border border-orange-400/20 bg-slate-700" />
@@ -843,11 +833,8 @@ function ProductMockup() {
 
       <div className="relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_35px_100px_-30px_rgba(15,23,42,0.32)]">
         <div className="flex h-11 items-center justify-between border-b border-slate-100 bg-white px-4">
-          <div className="flex items-center gap-2">
-            <NextoBadge size={23} />
-            <span className="text-[11px] font-bold tracking-tight text-slate-900">
-              Nexto
-            </span>
+          <div className="flex items-center">
+            <NextoLogo width={78} />
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -1222,11 +1209,8 @@ export default function Auth() {
       ========================================================== */}
       <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 sm:px-7 lg:px-10">
-          <a href="#" className="flex items-center gap-2.5">
-            <NextoBadge size={32} />
-            <div className="text-[17px] font-bold tracking-[-0.03em] text-slate-950">
-              Nexto
-            </div>
+          <a href="#" className="flex items-center">
+            <NextoLogo width={92} />
           </a>
 
           <nav className="hidden items-center gap-7 md:flex">
@@ -2044,12 +2028,9 @@ export default function Auth() {
 
               <div className="scroll-mt-24">
                 <div className="rounded-[28px] border border-white/[0.09] bg-white/[0.04] p-6 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.8)] sm:p-7">
-                  <div className="mb-6 flex items-center gap-2.5">
-                    <NextoBadge size={34} />
-                    <div>
-                      <div className="text-[13px] font-bold text-white">
-                        Nexto
-                      </div>
+                  <div className="mb-6 flex items-center justify-between gap-3">
+                    <NextoLogo width={108} />
+                    <div className="text-right">
                       <div className="text-[8px] text-slate-500">
                         Sales Loop Engine
                       </div>
@@ -2154,13 +2135,10 @@ export default function Auth() {
       ========================================================== */}
       <footer className="border-t border-white/[0.06] bg-[#080a0d] px-5 pb-8 text-white sm:px-7 lg:px-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 border-t border-white/[0.06] pt-7 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <NextoBadge size={23} />
-            <div>
-              <div className="text-[11px] font-bold text-white">Nexto</div>
-              <div className="text-[8px] text-slate-600">
-                Sales Loop Engine
-              </div>
+          <div className="flex items-center gap-3">
+            <NextoLogo width={82} />
+            <div className="text-[8px] text-slate-600">
+              Sales Loop Engine
             </div>
           </div>
 
