@@ -166,7 +166,17 @@ export async function dismissGeneratedLead(id) {
 // ---- KIRIM EMAIL KE LEAD ----
 export async function sendLeadEmail({ lead_id, to_email, to_name, subject, body, sender_name }) {
   const { data, error } = await supabase.functions.invoke("send-lead-email", { body: { lead_id, to_email, to_name, subject, body, sender_name } });
-  if (error) throw error;
+  if (error) {
+    // supabase.functions.invoke() ngasih pesan generik doang kalau function-nya
+    // return status non-2xx - alasan ASLI-nya (dari body JSON yang kita kirim)
+    // ada di error.context (Response object), harus dibaca manual.
+    try {
+      const errBody = await error.context.json();
+      throw new Error(errBody.error || error.message);
+    } catch (_) {
+      throw new Error(error.message || "Gagal kirim email");
+    }
+  }
   if (data?.error) throw new Error(data.error);
   return data;
 }
