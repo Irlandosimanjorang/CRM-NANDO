@@ -73,6 +73,7 @@ VITE_SUPABASE_ANON_KEY=...</pre>
 }
 
 export default function App() {
+  const [saving, setSaving] = useState(false);
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [tab, setTab] = useState("dashboard");
@@ -365,7 +366,7 @@ export default function App() {
 
         <div className="px-4 pb-3">
           <div className="mb-2 flex items-center gap-2 rounded-xl px-3 py-2 text-[10px] text-slate-500">
-            {saving ? <><Loader2 size={12} className="animate-spin text-orange-400" /> Menyimpan perubahan…</> : <><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Semua perubahan tersimpan</>}
+            <><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Semua data tersimpan</>
           </div>
           <button
             onClick={() => supabase.auth.signOut()}
