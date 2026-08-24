@@ -24,7 +24,8 @@ import {
   X,
   Bot,
   Pencil,
-  CheckCircle2,
+  CheckCircle2,  MessageCircle,
+
 } from "lucide-react";
 function NextoBadge({ size = 36 }) {
   return (
