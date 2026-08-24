@@ -31,19 +31,41 @@ const NEXTO_LOGO_SRC = "/nexto-logo.png";
 
 function NextoLogo({ width = 90, className = "" }) {
   return (
-    <img
-      src={NEXTO_LOGO_SRC}
-      alt="Nexto"
-      width={width}
-      className={`block h-auto shrink-0 object-contain ${className}`}
-      style={{
-        filter:
-          "contrast(1.35) brightness(0.72) drop-shadow(0 1px 2px rgba(15, 23, 42, 0.12))",
-      }}
-    />
+    <div
+      className={`relative shrink-0 ${className}`}
+      style={{ width, lineHeight: 0 }}
+      aria-label="Nexto"
+      role="img"
+    >
+      {/* Base: N, E, T, O menjadi hitam */}
+      <img
+        src={NEXTO_LOGO_SRC}
+        alt=""
+        aria-hidden="true"
+        width={width}
+        className="block h-auto w-full object-contain"
+        style={{
+          filter:
+            "brightness(0) contrast(1.15) drop-shadow(0 1px 1px rgba(15, 23, 42, 0.08))",
+        }}
+      />
+
+      {/* Overlay: pertahankan X orange dari logo asli */}
+      <img
+        src={NEXTO_LOGO_SRC}
+        alt=""
+        aria-hidden="true"
+        width={width}
+        className="pointer-events-none absolute inset-0 block h-full w-full object-contain"
+        style={{
+          clipPath: "polygon(42% 0%, 60% 0%, 60% 100%, 42% 100%)",
+          WebkitClipPath:
+            "polygon(42% 0%, 60% 0%, 60% 100%, 42% 100%)",
+        }}
+      />
+    </div>
   );
 }
-
 
 
 const CAPABILITIES = [
