@@ -29,18 +29,32 @@ import {
 } from "lucide-react";
 const NEXTO_LOGO_SRC = "/nexto-logo.png";
 
-function NextoLogo({ width = 150, className = "" }) {
+function NextoWordmark({ width = 108, className = "" }) {
+  return (
+    <img
+      src={NEXTO_LOGO_SRC}
+      alt="Nexto"
+      width={width}
+      className={`block h-auto w-auto object-contain ${className}`}
+    />
+  );
+}
+
+function NextoHeaderLogo({ width = 150, className = "" }) {
+  const robotSize = Math.max(28, Math.min(34, width * 0.22));
+  const wordmarkWidth = Math.max(82, width - robotSize - 12);
+
   return (
     <div
       className={`flex items-center ${className}`}
       style={{ width, lineHeight: 0 }}
-      aria-label="Nexto"
+      aria-label="Nexto AI"
       role="img"
     >
-      {/* AI robot head — intentionally placed BEFORE the NEXTO wordmark */}
+      {/* Robot AI — HEADER ONLY */}
       <div
         className="relative mr-2.5 flex shrink-0 items-center justify-center"
-        style={{ width: Math.max(30, width * 0.19), height: Math.max(30, width * 0.19) }}
+        style={{ width: robotSize, height: robotSize }}
         aria-hidden="true"
       >
         <div
@@ -95,22 +109,45 @@ function NextoLogo({ width = 150, className = "" }) {
         />
       </div>
 
-      {/* Transparent wordmark: X stays orange, other letters use the dark/light
-          asset as supplied. No black rectangle/background is added. */}
-      <img
-        src={NEXTO_LOGO_SRC}
-        alt=""
-        aria-hidden="true"
-        className="block h-auto w-auto object-contain"
+      {/* HEADER ONLY:
+          N / E / T / O = black
+          X = orange
+          No black rectangle/background. */}
+      <div
+        className="relative shrink-0"
         style={{
-          width: Math.max(92, width * 0.78),
-          maxWidth: "calc(100% - 40px)",
+          width: wordmarkWidth,
+          lineHeight: 0,
         }}
-      />
+      >
+        {/* Base layer: force all letters to black */}
+        <img
+          src={NEXTO_LOGO_SRC}
+          alt=""
+          aria-hidden="true"
+          className="block h-auto w-full object-contain"
+          style={{
+            filter:
+              "brightness(0) contrast(1.12) drop-shadow(0 1px 1px rgba(15,23,42,.08))",
+          }}
+        />
+
+        {/* Orange X overlay — this layer is ONLY for the X */}
+        <img
+          src={NEXTO_LOGO_SRC}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 block h-full w-full object-contain"
+          style={{
+            clipPath: "polygon(39% 0%, 61% 0%, 61% 100%, 39% 100%)",
+            WebkitClipPath:
+              "polygon(39% 0%, 61% 0%, 61% 100%, 39% 100%)",
+          }}
+        />
+      </div>
     </div>
   );
 }
-
 
 function NextoDarkWordmark({ width = 108, className = "" }) {
   return (
@@ -120,7 +157,7 @@ function NextoDarkWordmark({ width = 108, className = "" }) {
       aria-label="Nexto"
       role="img"
     >
-      {/* Base: make the complete wordmark white */}
+      {/* Base: N / E / T / O white */}
       <img
         src={NEXTO_LOGO_SRC}
         alt=""
@@ -132,7 +169,7 @@ function NextoDarkWordmark({ width = 108, className = "" }) {
         }}
       />
 
-      {/* Overlay: preserve the orange X from the original asset */}
+      {/* Keep the X orange */}
       <img
         src={NEXTO_LOGO_SRC}
         alt=""
@@ -941,7 +978,7 @@ function ProductMockup() {
       <div className="relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_35px_100px_-30px_rgba(15,23,42,0.32)]">
         <div className="flex h-11 items-center justify-between border-b border-slate-100 bg-white px-4">
           <div className="flex items-center">
-            <NextoLogo width={78} />
+            <NextoWordmark width={78} />
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -1317,7 +1354,7 @@ export default function Auth() {
       <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 sm:px-7 lg:px-10">
           <a href="#" className="flex items-center">
-            <NextoLogo width={92} />
+            <NextoHeaderLogo width={150} />
           </a>
 
           <nav className="hidden items-center gap-7 md:flex">
