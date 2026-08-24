@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
 import Auth from "./Auth";
@@ -19,7 +19,6 @@ import {
   CalendarCheck,
   Swords,
   Lightbulb,
-  Bot,
   Settings as SettingsIcon,
   Loader2,
   LogOut,
@@ -28,14 +27,8 @@ import {
   Camera,
   Mail,
   Sparkles,
-  Search,
-  Bell,
-  ChevronRight,
-  Command,
   ArrowUpRight,
   Zap,
-  CircleCheck,
-  X,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -275,9 +268,6 @@ export default function App() {
   const [editLead, setEditLead] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const joinWithCode = async () => {
     if (!joinCode.trim()) return;
 
@@ -483,7 +473,6 @@ export default function App() {
   if (!authReady) return <Splash />;
   if (!session) return <Auth />;
 
-  // ---- SISTEM 2 TIPE (FREE / PREMIUM) ----
   const isPremium =
     settings.plan === "premium" || org?.plan === "enterprise";
 
@@ -516,13 +505,6 @@ export default function App() {
 
   const goTo = (key) => {
     setTab(key);
-    setMobileMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const openAI = () => {
-    setTab("advisor");
-    setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -556,11 +538,11 @@ export default function App() {
           DESKTOP SIDEBAR
       ========================================================== */}
       <aside className="hidden md:flex flex-col w-[248px] bg-[#0b0d10] text-white sticky top-0 h-screen shrink-0 border-r border-white/[0.04]">
-        {/* Logo */}
-        <div className="px-5 pt-5 pb-4">
+        <div className="px-5 pt-5 pb-5">
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="absolute inset-0 rounded-xl bg-orange-500/20 blur-lg" />
+
               <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05] border border-white/[0.08]">
                 <NextoBadge size={28} />
               </div>
@@ -570,6 +552,7 @@ export default function App() {
               <div className="font-bold tracking-[-0.03em] text-[16px]">
                 Nexto
               </div>
+
               <div className="text-[8px] uppercase tracking-[0.18em] text-slate-600 mt-0.5">
                 Sales Intelligence
               </div>
@@ -586,42 +569,10 @@ export default function App() {
           </div>
         </div>
 
-        {/* AI Command Button */}
-        <div className="px-4 pb-4">
-          <button
-            onClick={openAI}
-            className="group relative w-full overflow-hidden rounded-2xl border border-orange-500/20 bg-orange-500/[0.07] px-3.5 py-3 text-left transition-all hover:border-orange-500/35 hover:bg-orange-500/[0.11]"
-          >
-            <div className="absolute -right-5 -top-5 h-16 w-16 rounded-full bg-orange-500/10 blur-xl transition group-hover:bg-orange-500/20" />
-
-            <div className="relative flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500/15 text-orange-400">
-                <Sparkles size={15} />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] font-bold text-white">
-                  Ask Nexto
-                </div>
-                <div className="mt-0.5 text-[8px] text-slate-500">
-                  Tanya apa saja tentang sales kamu
-                </div>
-              </div>
-
-              <ArrowUpRight
-                size={13}
-                className="text-orange-500 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-              />
-            </div>
-          </button>
-        </div>
-
-        {/* Section label */}
         <div className="px-6 pb-2 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-700">
           Workspace
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto scrollbar-none">
           {NAV.map((n) => {
             const I = n.icon;
@@ -685,7 +636,6 @@ export default function App() {
           })}
         </nav>
 
-        {/* Sidebar footer */}
         <div className="p-3">
           <div className="mb-2 rounded-xl border border-white/[0.05] bg-white/[0.025] px-3 py-2.5">
             <div className="flex items-center gap-2">
@@ -738,13 +688,6 @@ export default function App() {
               </div>
             </div>
 
-            <button
-              onClick={openAI}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600 border border-orange-100"
-            >
-              <Sparkles size={15} />
-            </button>
-
             <ProfileAvatar
               settings={settings}
               session={session}
@@ -759,54 +702,20 @@ export default function App() {
             DESKTOP TOP BAR
         ======================================================== */}
         <header className="hidden md:flex h-[72px] shrink-0 items-center border-b border-slate-200/70 bg-white/80 backdrop-blur-xl px-7">
-          <div className="max-w-[1180px] w-full mx-auto flex items-center gap-5">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-medium text-slate-400">
-                  Workspace
-                </span>
+          <div className="max-w-[1180px] w-full mx-auto flex items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-medium text-slate-400">
+                Workspace
+              </span>
 
-                <ChevronRight size={11} className="text-slate-300" />
+              <span className="text-slate-300 text-[10px]">
+                /
+              </span>
 
-                <span className="text-[10px] font-semibold text-slate-700">
-                  {currentNav.label}
-                </span>
-              </div>
+              <span className="text-[10px] font-semibold text-slate-700">
+                {currentNav.label}
+              </span>
             </div>
-
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="group flex w-[230px] items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-left transition hover:border-slate-300 hover:bg-white"
-            >
-              <Search size={14} className="text-slate-400" />
-
-              <span className="flex-1 text-[10px] text-slate-400">
-                Cari di Nexto...
-              </span>
-
-              <span className="flex items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[8px] font-medium text-slate-400">
-                <Command size={8} />
-                K
-              </span>
-            </button>
-
-            <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-slate-700 transition">
-              <Bell size={15} />
-
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-orange-500 ring-2 ring-white" />
-            </button>
-
-            <button
-              onClick={openAI}
-              className="group flex items-center gap-2 rounded-xl bg-slate-950 px-3.5 py-2.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-slate-800"
-            >
-              <Sparkles size={12} className="text-orange-400" />
-              Ask Nexto
-              <ArrowUpRight
-                size={11}
-                className="text-slate-500 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-              />
-            </button>
           </div>
         </header>
 
@@ -814,7 +723,6 @@ export default function App() {
             CONTENT
         ======================================================== */}
         <main className="flex-1 p-3 sm:p-4 md:p-6 max-w-[1180px] w-full mx-auto pb-28 md:pb-10">
-          {/* Free plan banner */}
           {!loading && !isPremium && (
             <div className="mb-5 overflow-hidden rounded-[18px] border border-orange-200/80 bg-gradient-to-r from-orange-50 via-white to-orange-50/50">
               <div className="px-4 py-3.5">
@@ -889,46 +797,30 @@ export default function App() {
             </div>
           )}
 
-          {/* Page intro / command strip */}
           {!loading && (
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+            <div className="mb-5 flex flex-col gap-1">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
 
-                  <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-orange-600">
-                    Sales workspace
-                  </span>
-                </div>
-
-                <h1 className="text-[22px] font-bold tracking-[-0.04em] text-slate-950 sm:text-[26px]">
-                  {effectiveTab === "dashboard"
-                    ? `Good ${getDayPart()}, ${firstName}.`
-                    : currentNav.label}
-                </h1>
-
-                <p className="mt-1 text-[10px] text-slate-400">
-                  {effectiveTab === "dashboard"
-                    ? "Ini yang perlu kamu tahu tentang sales kamu hari ini."
-                    : getTabDescription(effectiveTab)}
-                </p>
+                <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-orange-600">
+                  Sales workspace
+                </span>
               </div>
 
-              <button
-                onClick={openAI}
-                className="group inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[9px] font-semibold text-slate-600 shadow-sm transition hover:border-orange-200 hover:text-orange-600 sm:self-auto"
-              >
-                <Sparkles size={12} className="text-orange-500" />
-                Tanya Nexto
-                <ChevronRight
-                  size={11}
-                  className="text-slate-300 transition group-hover:translate-x-0.5"
-                />
-              </button>
+              <h1 className="text-[22px] font-bold tracking-[-0.04em] text-slate-950 sm:text-[26px]">
+                {effectiveTab === "dashboard"
+                  ? `Good ${getDayPart()}, ${firstName}.`
+                  : currentNav.label}
+              </h1>
+
+              <p className="mt-1 text-[10px] text-slate-400">
+                {effectiveTab === "dashboard"
+                  ? "Ini yang perlu kamu tahu tentang sales kamu hari ini."
+                  : getTabDescription(effectiveTab)}
+              </p>
             </div>
           )}
 
-          {/* Content */}
           {loading ? (
             <Splash inline />
           ) : (
@@ -1085,69 +977,6 @@ export default function App() {
           </div>
         </nav>
       </div>
-
-      {/* =========================================================
-          SEARCH OVERLAY
-      ========================================================== */}
-      {searchOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-[90] bg-slate-950/30 backdrop-blur-sm"
-            onClick={() => setSearchOpen(false)}
-          />
-
-          <div className="fixed left-1/2 top-[12vh] z-[100] w-[calc(100%-32px)] max-w-xl -translate-x-1/2 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_30px_90px_-25px_rgba(15,23,42,0.35)]">
-            <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-              <Search size={16} className="text-slate-400" />
-
-              <input
-                autoFocus
-                className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                placeholder="Cari lead, deal, customer..."
-              />
-
-              <button
-                onClick={() => setSearchOpen(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400 hover:text-slate-700"
-              >
-                <X size={13} />
-              </button>
-            </div>
-
-            <div className="p-4">
-              <div className="mb-3 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                Quick access
-              </div>
-
-              <button
-                onClick={() => {
-                  setSearchOpen(false);
-                  openAI();
-                }}
-                className="group flex w-full items-center gap-3 rounded-xl border border-orange-100 bg-orange-50/60 p-3 text-left transition hover:bg-orange-50"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
-                  <Sparkles size={14} />
-                </div>
-
-                <div className="flex-1">
-                  <div className="text-[10px] font-bold text-slate-800">
-                    Tanya Nexto AI
-                  </div>
-                  <div className="mt-0.5 text-[8px] text-slate-400">
-                    Minta Nexto menganalisis sales kamu
-                  </div>
-                </div>
-
-                <ArrowUpRight
-                  size={12}
-                  className="text-orange-500"
-                />
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* =========================================================
           EDIT LEAD
