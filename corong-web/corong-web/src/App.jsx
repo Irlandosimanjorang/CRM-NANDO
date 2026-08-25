@@ -478,7 +478,7 @@ export default function App() {
           {loading ? <Splash inline /> : (
             <>
               {effectiveTab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} onGo={setTab} />}
-              {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} onChanged={reload} />}
+              {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} onChanged={reload} />}
               {effectiveTab === "generateleads" && <PreviewLock locked={isLocked("generateleads")}><GenerateLeads stages={stageList} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
@@ -514,7 +514,7 @@ export default function App() {
         </nav>
       </div>
 
-      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} />}
+      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} />}
     </div>
   );
 }
