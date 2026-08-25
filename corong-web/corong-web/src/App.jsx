@@ -332,7 +332,7 @@ export default function App() {
       )}
 
       {/* DESKTOP SIDEBAR */}
-      <aside className="nexto-sidebar hidden md:flex flex-col w-[248px] sticky top-0 h-screen shrink-0 text-white border-r border-white/[0.06]">
+      <aside className="nexto-sidebar hidden md:flex flex-col w-[248px] fixed top-0 left-0 h-screen z-30 text-white border-r border-white/[0.06]">
         <div className="px-4 pt-4 pb-3">
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3 shadow-[0_12px_30px_-22px_rgba(0,0,0,.9)]">
             <div className="flex flex-col gap-1.5">
@@ -414,7 +414,7 @@ export default function App() {
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow">
+      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow md:ml-[248px]">
         <div className="nexto-grid pointer-events-none absolute inset-x-0 top-0 h-72 opacity-70" />
 
         {/* MOBILE TOPBAR */}
