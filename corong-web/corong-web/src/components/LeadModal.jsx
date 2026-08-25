@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
-import { CATEGORIES, COMPANY_TYPES, fmtDate, todayISO } from "../lib/helpers";
-import { getFieldLabel, isFieldHidden, getCustomFieldSlots } from "../lib/industryTemplates";
+import { COMPANY_TYPES, fmtDate, todayISO } from "../lib/helpers";
+import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories } from "../lib/industryTemplates";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
@@ -73,6 +73,7 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
   const lbl = (field, fallback) => getFieldLabel(industry, field, fallback);
   const hidden = (field) => isFieldHidden(industry, field);
   const customSlots = getCustomFieldSlots(industry);
+  const categories = getCategories(industry);
 
   // ---- KIRIM EMAIL ----
   const [showEmail, setShowEmail] = useState(false);
@@ -154,9 +155,9 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg">{lead.id ? "Edit Lead" : "Tambah Lead"}</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
         <div className="space-y-3">
-          <Field label="Nama perusahaan *"><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
+          <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Kategori"><select className={inp} value={f.category || CATEGORIES[0]} onChange={(e) => set("category", e.target.value)}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
+            <Field label="Kategori"><select className={inp} value={f.category || categories[0]} onChange={(e) => set("category", e.target.value)}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
             {!hidden("company_type") && (
               <Field label={lbl("company_type", "Tipe perusahaan")}><select className={inp} value={f.company_type || ""} onChange={(e) => set("company_type", e.target.value)}>{COMPANY_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
             )}
