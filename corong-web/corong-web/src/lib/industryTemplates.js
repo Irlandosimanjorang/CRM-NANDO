@@ -32,6 +32,7 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Tonase",
     },
     hiddenFields: [],
+    customFieldLabels: {},
     aiContext: "Bisnis ini distribusi/manufaktur PVC dan bahan kimia industri. Istilah relevan: tonase, resin, kompon, purchasing manager, trader vs manufacturer.",
   },
 
@@ -55,6 +56,10 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Unit",
     },
     hiddenFields: ["company_type"],
+    customFieldLabels: {
+      custom_field_1: "Warna diminati",
+      custom_field_2: "Cara bayar (Cash/Kredit)",
+    },
     aiContext: "Bisnis ini dealer kendaraan (mobil/motor). Istilah relevan: test drive, unit, tipe/varian, DP, cicilan, trade-in.",
   },
 
@@ -78,6 +83,10 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Budget (Rp)",
     },
     hiddenFields: ["company_type"],
+    customFieldLabels: {
+      custom_field_1: "Luas tanah/bangunan (m²)",
+      custom_field_2: "Tipe sertifikat",
+    },
     aiContext: "Bisnis ini agen/developer properti. Istilah relevan: viewing, booking fee, KPR, tipe unit, luas tanah/bangunan.",
   },
 
@@ -100,6 +109,9 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Qty",
     },
     hiddenFields: [],
+    customFieldLabels: {
+      custom_field_1: "Frekuensi order",
+    },
     aiContext: "Bisnis ini B2B umum (distributor/trading). Istilah relevan: quotation, PO, sample, reorder.",
   },
 
@@ -122,6 +134,10 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Premi (Rp)",
     },
     hiddenFields: ["company_type"],
+    customFieldLabels: {
+      custom_field_1: "Tanggal jatuh tempo premi",
+      custom_field_2: "Jenis polis",
+    },
     aiContext: "Bisnis ini agen asuransi/financial services. Istilah relevan: premi, polis, konsultasi kebutuhan, renewal.",
   },
 
@@ -144,6 +160,10 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Qty (karton/pcs)",
     },
     hiddenFields: [],
+    customFieldLabels: {
+      custom_field_1: "Area distribusi",
+      custom_field_2: "Jumlah outlet",
+    },
     aiContext: "Bisnis ini distribusi retail/FMCG. Istilah relevan: outlet, karton, distributor area, repeat order.",
   },
 };
@@ -162,4 +182,16 @@ export function getFieldLabel(industryKey, fieldName, fallback) {
 export function isFieldHidden(industryKey, fieldName) {
   const tpl = getIndustryTemplate(industryKey);
   return (tpl.hiddenFields || []).includes(fieldName);
+}
+
+// 3 slot field bebas (custom_field_1/2/3 di tabel leads) - tiap template industri
+// bisa "ngasih nama" ke slot ini (misal Property: "Luas tanah"). Kalau template
+// gak ngedefinisiin nama buat slot tertentu, slot itu disembunyiin di form -
+// biar gak keliatan "field kosong gak jelas" pas industri gak butuh semuanya.
+export function getCustomFieldSlots(industryKey) {
+  const tpl = getIndustryTemplate(industryKey);
+  const labels = tpl.customFieldLabels || {};
+  return ["custom_field_1", "custom_field_2", "custom_field_3"]
+    .filter((key) => labels[key])
+    .map((key) => ({ key, label: labels[key] }));
 }
