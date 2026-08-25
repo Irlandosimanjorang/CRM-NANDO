@@ -265,6 +265,10 @@ export async function upsertLead(lead) {
     website: lead.website || "", sales_owner: lead.sales_owner || "", background: lead.background || "",
     chemical: lead.chemical || "", priority: lead.priority || "", next_action: lead.next_action || "",
     tonnage_unit: lead.tonnage_unit || "ton",
+    // 3 slot field bebas - namanya ditentuin per industri (lihat customFieldLabels
+    // di industryTemplates.js), kolom fisiknya generic biar gak perlu migrasi tiap
+    // ada industri baru.
+    custom_field_1: lead.custom_field_1 || "", custom_field_2: lead.custom_field_2 || "", custom_field_3: lead.custom_field_3 || "",
     visit_date: lead.visit_date || null, visit_meet: lead.visit_meet || "", visit_agenda: lead.visit_agenda || "",
     deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
     last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
