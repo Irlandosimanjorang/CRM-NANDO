@@ -201,6 +201,29 @@ export async function draftFollowup(leadId, channel) {
   return data;
 }
 
+// ---- OUTCOME MEMORY - dicatet pas lead ditutup Menang/Kalah, dipake AI
+// Advisor besok-besok buat belajar pola "apa yang biasanya berhasil/gagal"
+// di bisnis org ini (nutup loop Context->Decision->Action->Memory->Decision). ----
+export async function saveOutcome(leadId, { result, reason_category, reason, ai_generated }) {
+  const outcome = { result, reason_category: reason_category || "", reason: reason || "", ai_generated: !!ai_generated, recorded_at: new Date().toISOString() };
+  const { error } = await supabase.from("leads").update({ outcome }).eq("id", leadId);
+  if (error) throw error;
+  return outcome;
+}
+
+// AI nebak alasan menang/kalah dari progress notes - on-demand, cuma jalan
+// pas user klik tombolnya (biar males isi manual bisa tetep kecatet).
+export async function guessOutcomeReason(leadId, result) {
+  const { data, error } = await supabase.functions.invoke("guess-outcome-reason", { body: { lead_id: leadId, result } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal nebak alasan");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // ---- STAGES ----
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");
@@ -278,6 +301,10 @@ export async function upsertLead(lead) {
     product: lead.product || "", city: lead.city || "", province: lead.province || "",
     website: lead.website || "", sales_owner: lead.sales_owner || "", background: lead.background || "",
     chemical: lead.chemical || "", priority: lead.priority || "", next_action: lead.next_action || "",
+    // Tanggal terstruktur "diminta nunggu sampai" - beda dari next_action (teks
+    // bebas). Dipake reminder/AI Advisor buat DIEM dulu sampai tanggal ini lewat,
+    // biar gak nge-nudge lead yang customernya udah eksplisit minta waktu.
+    wait_until: lead.wait_until || null,
     tonnage_unit: lead.tonnage_unit || "ton",
     // 5 slot field bebas - namanya ditentuin per industri (lihat customFieldLabels
     // di industryTemplates.js), kolom fisiknya generic biar gak perlu migrasi tiap
