@@ -26,7 +26,13 @@ export const daysSince = (iso) => { if (!iso) return null; const d = Math.floor(
 export const stageMeta = (stages, key) => stages.find((s) => s.key === key) || (stages[0] || { label: "—", hex: "#94a3b8" });
 export const chipStyle = (hex) => ({ color: hex, borderColor: hex, backgroundColor: hex + "14" });
 export const prioMeta = (v) => PRIORITIES.find((p) => p.v === v) || null;
-export const typeBadge = (t) => (t === "Manufacturer" ? "M" : t === "Trader" ? "T" : t === "Both" ? "M&T" : "");
+export const typeBadge = (t) => {
+  if (!t) return "";
+  if (t === "Manufacturer") return "M";
+  if (t === "Trader") return "T";
+  if (t === "Both") return "M&T";
+  return t; // industri lain (Automotive/Property/Asuransi): tampilin apa adanya, misal "Fleet" atau "Korporat"
+};
 
 export const waLink = (phone) => {
   if (!phone) return "";
