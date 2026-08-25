@@ -1032,7 +1032,7 @@ function AiEngineLoopSection() {
   const nodesWithAngle = ENGINE_NODES.map((n, i) => ({ ...n, angle: -90 + i * 90 })); // mulai dari atas, muter searah jarum jam
 
   return (
-    <section className="relative overflow-hidden bg-[#05070c] px-5 py-24 text-white sm:px-7 sm:py-32 lg:px-10">
+    <section id="cara-kerja" className="relative overflow-hidden bg-[#05070c] px-5 py-24 text-white sm:px-7 sm:py-32 lg:px-10">
       <style>{`
         @keyframes nexto-flow-pulse {
           0% { top: -8%; opacity: 0; }
@@ -1836,63 +1836,6 @@ export default function Auth() {
         </section>
 
         {/* =========================================================
-            LOOP ENGINE
-        ========================================================== */}
-        <section
-          id="cara-kerja"
-          className="overflow-hidden bg-[#080a0d] px-5 py-20 text-white sm:px-7 sm:py-28 lg:px-10"
-        >
-          <div className="mx-auto max-w-7xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400">
-                <Sparkles size={12} />
-                The Nexto Loop
-              </div>
-
-              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] sm:text-[48px]">
-                Your sales should
-                <span className="block text-orange-400">
-                  never get stuck.
-                </span>
-              </h2>
-
-              <p className="mt-5 text-[13px] leading-6 text-slate-400 sm:text-[14px]">
-                Setiap interaksi menghasilkan signal baru. Nexto membaca
-                signal tersebut dan membantu sales menentukan langkah terbaik
-                berikutnya.
-              </p>
-            </div>
-
-            <div className="mt-12">
-              <LoopVisual />
-            </div>
-
-            <div className="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-3">
-              {[
-                ["01", "Signal", "Customer melakukan sesuatu."],
-                ["02", "Decision", "AI memahami konteksnya."],
-                ["03", "Action", "Sales tahu harus melakukan apa."],
-              ].map(([num, title, desc]) => (
-                <div
-                  key={num}
-                  className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"
-                >
-                  <div className="text-[9px] font-bold tracking-[0.16em] text-orange-400">
-                    {num}
-                  </div>
-                  <div className="mt-3 text-[12px] font-bold text-white">
-                    {title}
-                  </div>
-                  <div className="mt-1 text-[10px] leading-5 text-slate-500">
-                    {desc}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* =========================================================
             NEXT BEST ACTION
         ========================================================== */}
         <section className="bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
@@ -2062,6 +2005,15 @@ export default function Auth() {
         </section>
 
         {/* =========================================================
+            NEXTO AI ENGINE LOOPS - section sendiri, gak digabung sama
+            section lain. Ditaro tepat di bawah section fitur (yang ada
+            kartu Telegram Agent-nya) - diagram signature nunjukin gimana
+            engine-nya beneran jalan (Context -> Decision -> Action ->
+            Memory -> loop).
+        ========================================================== */}
+        <AiEngineLoopSection />
+
+        {/* =========================================================
             UNIVERSAL INDUSTRIES
         ========================================================== */}
         <section
@@ -2171,13 +2123,6 @@ export default function Auth() {
             </div>
           </div>
         </section>
-
-        {/* =========================================================
-            NEXTO AI ENGINE LOOPS - section sendiri, gak digabung sama
-            section lain. Diagram signature nunjukin gimana engine-nya
-            beneran jalan (Context -> Decision -> Action -> Memory -> loop).
-        ========================================================== */}
-        <AiEngineLoopSection />
 
         {/* =========================================================
             BEFORE / AFTER
