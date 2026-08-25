@@ -63,10 +63,12 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Unit",
     },
     categories: ["Mobil Baru", "Mobil Bekas", "Motor Baru", "Motor Bekas", "Spare Part", "Aksesoris", "Lainnya"],
-    hiddenFields: ["company_type"],
+    hiddenFields: ["company_type", "location", "key_person", "key_person_title", "website"],
     customFieldLabels: {
-      custom_field_1: "Warna diminati",
-      custom_field_2: "Cara bayar (Cash/Kredit)",
+      custom_field_1: "Nilai tukar tambah (trade-in)",
+      custom_field_2: "Budget DP / cicilan per bulan",
+      custom_field_3: "Cara bayar (Cash/Kredit)",
+      custom_field_4: "Warna diminati",
     },
     aiContext: "Bisnis ini dealer kendaraan (mobil/motor). Istilah relevan: test drive, unit, tipe/varian, DP, cicilan, trade-in.",
   },
@@ -92,12 +94,14 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Budget (Rp)",
     },
     categories: ["Rumah Tapak", "Apartemen", "Ruko / Rukan", "Tanah Kavling", "Gudang / Pabrik", "Lainnya"],
-    hiddenFields: ["company_type"],
+    hiddenFields: ["company_type", "location", "key_person", "key_person_title", "website"],
     customFieldLabels: {
       custom_field_1: "Luas tanah/bangunan (m²)",
-      custom_field_2: "Tipe sertifikat",
+      custom_field_2: "Status pembiayaan (Cash/KPR)",
+      custom_field_3: "Timeline (kapan mau beli/pindah)",
+      custom_field_4: "Tipe sertifikat",
     },
-    aiContext: "Bisnis ini agen/developer properti. Istilah relevan: viewing, booking fee, KPR, tipe unit, luas tanah/bangunan.",
+    aiContext: "Bisnis ini agen/developer properti. Istilah relevan: viewing, booking fee, KPR, tipe unit, luas tanah/bangunan, timeline pembelian.",
   },
 
   b2b_general: {
@@ -123,6 +127,7 @@ export const INDUSTRY_TEMPLATES = {
     hiddenFields: [],
     customFieldLabels: {
       custom_field_1: "Frekuensi order",
+      custom_field_2: "Metode pembayaran (Cash/Termin)",
     },
     aiContext: "Bisnis ini B2B umum (distributor/trading). Istilah relevan: quotation, PO, sample, reorder.",
   },
@@ -147,12 +152,14 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Premi (Rp)",
     },
     categories: ["Asuransi Jiwa", "Asuransi Kesehatan", "Asuransi Umum", "Asuransi Pendidikan", "Investasi", "Lainnya"],
-    hiddenFields: ["company_type"],
+    hiddenFields: ["company_type", "location", "key_person", "key_person_title", "website"],
     customFieldLabels: {
-      custom_field_1: "Tanggal jatuh tempo premi",
-      custom_field_2: "Jenis polis",
+      custom_field_1: "Nilai pertanggungan (coverage)",
+      custom_field_2: "Tanggal jatuh tempo premi",
+      custom_field_3: "Ahli waris (beneficiary)",
+      custom_field_4: "Jenis polis",
     },
-    aiContext: "Bisnis ini agen asuransi/financial services. Istilah relevan: premi, polis, konsultasi kebutuhan, renewal.",
+    aiContext: "Bisnis ini agen asuransi/financial services. Istilah relevan: premi, polis, nilai pertanggungan, ahli waris, konsultasi kebutuhan, renewal.",
   },
 
   retail_fmcg: {
@@ -171,14 +178,16 @@ export const INDUSTRY_TEMPLATES = {
       name: "Nama outlet / toko",
       product: "Produk diminati",
       company_type: "Tipe outlet",
-      key_person_title: "Jabatan",
+      key_person: "Nama pemilik",
+      key_person_title: "Peran / Sebagai",
       quantity: "Qty (karton/pcs)",
     },
     categories: ["Makanan & Minuman", "Perawatan Diri", "Rumah Tangga", "Elektronik Ringan", "Lainnya"],
-    hiddenFields: [],
+    hiddenFields: ["website"],
     customFieldLabels: {
       custom_field_1: "Area distribusi",
       custom_field_2: "Jumlah outlet",
+      custom_field_3: "Rata-rata nilai order",
     },
     aiContext: "Bisnis ini distribusi retail/FMCG. Istilah relevan: outlet, karton, distributor area, repeat order.",
   },
@@ -212,7 +221,7 @@ export function isFieldHidden(industryKey, fieldName) {
 export function getCustomFieldSlots(industryKey) {
   const tpl = getIndustryTemplate(industryKey);
   const labels = tpl.customFieldLabels || {};
-  return ["custom_field_1", "custom_field_2", "custom_field_3"]
+  return ["custom_field_1", "custom_field_2", "custom_field_3", "custom_field_4", "custom_field_5"]
     .filter((key) => labels[key])
     .map((key) => ({ key, label: labels[key] }));
 }
