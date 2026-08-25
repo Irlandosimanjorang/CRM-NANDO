@@ -3,6 +3,7 @@ import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Cal
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
+import RecycleBinModal from "../components/RecycleBinModal";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
@@ -22,6 +23,7 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
   const [showCleanup, setShowCleanup] = useState(false);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
@@ -293,6 +295,14 @@ export default function Settings({ settings, stages, leads, onChanged }) {
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Trash2 size={15} className="text-slate-400" /> Recycle Bin</h3>
+        <p className="text-xs text-slate-500 mb-3">Lead yang kehapus (manual atau otomatis dari bot) kesimpen di sini dulu, bisa dibalikin kapan aja sebelum di-hapus permanen.</p>
+        <button onClick={() => setShowRecycleBin(true)} className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+          <Trash2 size={15} /> Buka Recycle Bin
+        </button>
+      </div>
+
+      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Send size={15} className="text-sky-500" /> Telegram Bot</h3>
         <p className="text-xs text-slate-500 mb-3">Sambungin akun Telegram kamu buat tambah lead, jadwalin visit, dan catat progress langsung dari chat.</p>
         {tgLoading ? (
@@ -372,6 +382,7 @@ export default function Settings({ settings, stages, leads, onChanged }) {
       </div>
 
       {showCleanup && <DataCleanupModal leads={leads} stages={stages} onClose={() => setShowCleanup(false)} onChanged={onChanged} />}
+      {showRecycleBin && <RecycleBinModal onClose={() => setShowRecycleBin(false)} onChanged={onChanged} />}
     </div>
   );
 }
