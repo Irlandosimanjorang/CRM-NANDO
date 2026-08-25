@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
 import Auth from "./Auth";
@@ -334,12 +335,22 @@ export default function App() {
       <aside className="nexto-sidebar hidden md:flex flex-col w-[248px] sticky top-0 h-screen shrink-0 text-white border-r border-white/[0.06]">
         <div className="px-4 pt-4 pb-3">
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3 shadow-[0_12px_30px_-22px_rgba(0,0,0,.9)]">
-            <div className="flex items-center gap-2.5">
-              <NextoRobotHead size={38} />
-
-              <div className="min-w-0 flex-1">
-                <NextoDarkWordmark width={78} />
-                <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2.5">
+                <NextoRobotHead size={30} />
+                <NextoDarkWordmark width={70} />
+                <ProfileAvatar
+                  settings={settings}
+                  session={session}
+                  org={org}
+                  onChanged={reload}
+                  size={34}
+                  align="left"
+                  className="ml-auto"
+                />
+              </div>
+              <div className="pl-[38px] min-w-0">
+                <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Sales OS
                 </div>
                 {org?.industry && (
@@ -348,15 +359,6 @@ export default function App() {
                   </div>
                 )}
               </div>
-
-              <ProfileAvatar
-                settings={settings}
-                session={session}
-                org={org}
-                onChanged={reload}
-                size={34}
-                align="left"
-              />
             </div>
           </div>
         </div>
@@ -543,13 +545,22 @@ function PreviewLock({ locked, children }) {
 
 // Avatar bulat pojok kanan atas (kayak Gmail/Notion) - klik buka kartu profil
 // isinya foto, jabatan, email, dan tombol edit.
-function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "right" }) {
+// Kartu dropdown-nya di-render via portal (createPortal ke document.body) -
+// PENTING karena kalau dipanggil di dalam sidebar yang position:sticky,
+// sidebar itu otomatis bikin "stacking context" sendiri yang ngekurung
+// z-index di dalamnya, jadi kartu ini gak akan pernah bisa nutupin konten
+// utama di sebelahnya walau z-index-nya udah paling tinggi sekalipun.
+// Portal ngebypass masalah itu total - kartu ini render langsung di root document.
+function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "right", className = "" }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [jobTitle, setJobTitle] = useState(settings.job_title || "");
   const [name, setName] = useState(settings.community_display_name || "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
+  const CARD_WIDTH = 288; // w-72
 
   const initial = (settings.community_display_name || session?.user?.email || "?").charAt(0).toUpperCase();
   const email = session?.user?.email || "";
@@ -558,6 +569,16 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
     : settings.plan === "premium"
     ? { label: "Premium", cls: "bg-orange-100 text-orange-700" }
     : { label: "Free", cls: "bg-slate-100 text-slate-500" };
+
+  const toggleOpen = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const rawLeft = align === "left" ? rect.left : rect.right - CARD_WIDTH;
+      const clampedLeft = Math.max(12, Math.min(rawLeft, window.innerWidth - CARD_WIDTH - 12));
+      setPos({ top: rect.bottom + 10, left: clampedLeft });
+    }
+    setOpen((v) => !v);
+  };
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -581,65 +602,70 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
     finally { setSaving(false); }
   };
 
+  const card = (
+    <>
+      <div className="fixed inset-0 z-[999] bg-slate-900/25 backdrop-blur-[1px]" onClick={() => { setOpen(false); setEditing(false); }} />
+      <div
+        className="fixed w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-[1000] overflow-hidden border border-slate-100"
+        style={{ top: pos.top, left: pos.left }}
+      >
+        {!editing ? (
+          <>
+            {/* Header gradient band + avatar nongol - pola kartu profil app mobile */}
+            <div className="h-16 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800 relative">
+              <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-2xl ring-4 ring-white shadow-md">
+                {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+              </div>
+            </div>
+            <div className="pt-9 pb-4 px-5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-bold text-[15px] text-slate-900 truncate">{settings.community_display_name || "Belum ada nama"}</div>
+                <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 ${planInfo.cls}`}>{planInfo.label}</span>
+              </div>
+              {settings.job_title && (
+                <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2.5 py-1">{settings.job_title}</span>
+              )}
+              {email && (
+                <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
+                  <Mail size={11} className="shrink-0" /><span className="truncate">{email}</span>
+                </div>
+              )}
+              <button onClick={() => setEditing(true)} className="w-full mt-4 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 font-medium transition-colors">Edit Profil</button>
+            </div>
+          </>
+        ) : (
+          <div className="p-5">
+            <label className="flex items-center gap-3 mb-4 cursor-pointer">
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-xl shrink-0 ring-2 ring-orange-100">
+                {uploading ? <Loader2 size={18} className="animate-spin" /> : settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+              </div>
+              <span className="text-xs text-orange-600 font-medium flex items-center gap-1"><Camera size={13} /> Ganti foto</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+            </label>
+            <label className="block mb-2.5">
+              <span className="text-[11px] font-medium text-slate-400">Nama</span>
+              <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
+            <label className="block mb-4">
+              <span className="text-[11px] font-medium text-slate-400">Jabatan</span>
+              <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Sales Executive" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+            </label>
+            <div className="flex gap-2">
+              <button onClick={() => setEditing(false)} className="flex-1 text-xs text-slate-700 border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium">Batal</button>
+              <button onClick={saveProfile} disabled={saving} className="flex-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2.5 font-medium">{saving ? "..." : "Simpan"}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+
   return (
-    <div className="relative">
-      <button onClick={() => setOpen((v) => !v)} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+    <div className={`relative ${className}`}>
+      <button ref={btnRef} onClick={toggleOpen} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
         {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[1px]" onClick={() => { setOpen(false); setEditing(false); }} />
-          <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full mt-2.5 w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-50 overflow-hidden border border-slate-100`}>
-            {!editing ? (
-              <>
-                {/* Header gradient band + avatar nongol - pola kartu profil app mobile */}
-                <div className="h-16 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800 relative">
-                  <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-2xl ring-4 ring-white shadow-md">
-                    {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
-                  </div>
-                </div>
-                <div className="pt-9 pb-4 px-5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-bold text-[15px] text-slate-900 truncate">{settings.community_display_name || "Belum ada nama"}</div>
-                    <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 ${planInfo.cls}`}>{planInfo.label}</span>
-                  </div>
-                  {settings.job_title && (
-                    <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2.5 py-1">{settings.job_title}</span>
-                  )}
-                  {email && (
-                    <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
-                      <Mail size={11} className="shrink-0" /><span className="truncate">{email}</span>
-                    </div>
-                  )}
-                  <button onClick={() => setEditing(true)} className="w-full mt-4 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 font-medium transition-colors">Edit Profil</button>
-                </div>
-              </>
-            ) : (
-              <div className="p-5">
-                <label className="flex items-center gap-3 mb-4 cursor-pointer">
-                  <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-xl shrink-0 ring-2 ring-orange-100">
-                    {uploading ? <Loader2 size={18} className="animate-spin" /> : settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
-                  </div>
-                  <span className="text-xs text-orange-600 font-medium flex items-center gap-1"><Camera size={13} /> Ganti foto</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
-                </label>
-                <label className="block mb-2.5">
-                  <span className="text-[11px] font-medium text-slate-400">Nama</span>
-                  <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={name} onChange={(e) => setName(e.target.value)} />
-                </label>
-                <label className="block mb-4">
-                  <span className="text-[11px] font-medium text-slate-400">Jabatan</span>
-                  <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="Sales Executive" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-                </label>
-                <div className="flex gap-2">
-                  <button onClick={() => setEditing(false)} className="flex-1 text-xs text-slate-700 border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 font-medium">Batal</button>
-                  <button onClick={saveProfile} disabled={saving} className="flex-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2.5 font-medium">{saving ? "..." : "Simpan"}</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+      {open && createPortal(card, document.body)}
     </div>
   );
 }
