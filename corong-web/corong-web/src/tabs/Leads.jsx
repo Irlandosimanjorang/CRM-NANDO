@@ -1,11 +1,12 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy, MapPin, CheckCircle2 } from "lucide-react";
+import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy, MapPin, CheckCircle2, Sparkles, LayoutGrid, Rows3, Phone } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
+import AiDraftPopup from "../components/AiDraftPopup";
 import { getFieldLabel, getCategories, isFieldHidden, getCustomFieldSlots, getCompanyTypeOptions } from "../lib/industryTemplates";
 
 const val = (row, keys) => {
@@ -42,7 +43,17 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
   const [busy, setBusy] = useState(false);
   const [showDup, setShowDup] = useState(false);
   const [progressPopup, setProgressPopup] = useState(null); // { lead, rect }
+  const [draftPopup, setDraftPopup] = useState(null); // { lead, rect }
   const [checkedInToday, setCheckedInToday] = useState(new Set());
+  // Toggle Tabel <-> Kartu - pilihan terakhir kesimpen di browser (localStorage)
+  // biar gak perlu milih ulang tiap buka app.
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem("nexto-leads-view") || "table"; } catch (_) { return "table"; }
+  });
+  const setViewModePersist = (mode) => {
+    setViewMode(mode);
+    try { localStorage.setItem("nexto-leads-view", mode); } catch (_) {}
+  };
   const titleLabel = getFieldLabel(industry, "key_person_title", "Jabatan");
   const keyPersonLabel = getFieldLabel(industry, "key_person", "Key Person");
   const productLabel = getFieldLabel(industry, "product", "Produk");
@@ -211,6 +222,10 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
           {showTypeFilter && (
             <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option>{companyTypeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select>
           )}
+          <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden shrink-0">
+            <button onClick={() => setViewModePersist("table")} title="Tampilan tabel" className={`p-2 transition-colors ${viewMode === "table" ? "bg-orange-600 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}><Rows3 size={15} /></button>
+            <button onClick={() => setViewModePersist("cards")} title="Tampilan kartu" className={`p-2 transition-colors ${viewMode === "cards" ? "bg-orange-600 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}><LayoutGrid size={15} /></button>
+          </div>
           <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={14} /> Lead</button>
         </div>
 
@@ -222,6 +237,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
         </div>
       </div>
 
+      {viewMode === "table" ? (
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] overflow-auto" style={{ maxHeight: "calc(100vh - 160px)" }}>
         <table className="text-sm" style={{ minWidth: "1700px", width: "100%" }}>
           <thead className="text-slate-400 text-[11px] uppercase tracking-wider">
@@ -239,6 +255,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                 <th key={slot.key} className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: 160, width: 160, position: "sticky", top: 0, zIndex: 15 }}>{slot.label}</th>
               ))}
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.progress, width: colWidths.progress, position: "sticky", top: 0, zIndex: 15 }}>Progress Harian<ColResizeHandle colKey="progress" /></th>
+              <th className="text-center px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: "90px", position: "sticky", top: 0, zIndex: 15 }}>AI Draft</th>
               <th className="px-3 py-2 bg-slate-50" style={{ minWidth: "80px", position: "sticky", top: 0, zIndex: 15 }}></th>
             </tr>
           </thead>
@@ -307,6 +324,15 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                     </div>
                   ) : <span className="text-slate-300">—</span>}
                 </td>
+                <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={(e) => setDraftPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() })}
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg px-2 py-1.5 transition-colors"
+                    title="Bikin draft follow-up (AI)"
+                  >
+                    <Sparkles size={11} /> Draft
+                  </button>
+                </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => setEdit(c)} className="text-slate-400 hover:text-blue-600 p-1"><Pencil size={15} /></button>
                   <button onClick={() => del(c.id)} className="text-slate-400 hover:text-rose-600 p-1"><Trash2 size={15} /></button>
@@ -316,6 +342,52 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
         </table>
         {filtered.length === 0 && <div className="p-8 text-center text-sm text-slate-400">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
       </div>
+      ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {filtered.map((c) => {
+          const sm = stageMeta(stages, c.stage_key);
+          const wa = waLink(c.phone);
+          return (
+            <div
+              key={c.id}
+              onClick={() => setEdit(c)}
+              className="bg-white border border-slate-100 rounded-3xl shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 cursor-pointer hover:border-orange-200 hover:-translate-y-0.5 transition-all"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                    <span className="truncate">{c.name}</span>
+                    {typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600 shrink-0">{typeBadge(c.company_type)}</span>}
+                    {isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white shrink-0">NEW</span>}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 truncate">{c.category || "—"}</div>
+                </div>
+                {c.verified ? <ShieldCheck size={14} className="text-emerald-500 shrink-0" /> : <ShieldAlert size={14} className="text-slate-300 shrink-0" />}
+              </div>
+
+              <span className="inline-block mt-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full border" style={chipStyle(sm.hex)}>{sm.label}</span>
+
+              <div className="mt-3 space-y-1.5 text-xs text-slate-600">
+                <div className="flex items-center gap-1.5 truncate"><MapPin size={12} className="text-slate-300 shrink-0" /> {c.city || "—"}</div>
+                {c.product && <div className="truncate"><span className="text-slate-400">{productLabel}:</span> {c.product}</div>}
+                {!hideKeyPerson && c.key_person && <div className="truncate"><span className="text-slate-400">{keyPersonLabel}:</span> {c.key_person}</div>}
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                {c.phone && (wa ? <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone}><Phone size={13} /></a> : <span className="p-1.5 text-slate-300" title={c.phone}><Phone size={13} /></span>)}
+                {c.email && <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50" title={c.email}><Mail size={13} /></a>}
+                <button onClick={(e) => setDraftPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() })} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50" title="Draft follow-up (AI)"><Sparkles size={13} /></button>
+                <div className="ml-auto flex items-center gap-0.5">
+                  <button onClick={() => setEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"><Pencil size={13} /></button>
+                  <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 size={13} /></button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-3xl">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
+      </div>
+      )}
 
       {progressPopup && progressPopup.lead.progressLog && progressPopup.lead.progressLog.length > 0 && (
         <div
@@ -349,6 +421,14 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
       )}
 
       {edit && <LeadModal lead={edit} stages={stages} settings={settings} industry={industry} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
+      {draftPopup && (
+        <AiDraftPopup
+          lead={draftPopup.lead}
+          rect={draftPopup.rect}
+          onClose={() => setDraftPopup(null)}
+          onSent={onChanged}
+        />
+      )}
       {showDup && <DuplicateModal leads={leads} onClose={() => setShowDup(false)} onChanged={onChanged} />}
     </div>
   );
