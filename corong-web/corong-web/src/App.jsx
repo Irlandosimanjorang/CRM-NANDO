@@ -12,6 +12,7 @@ import Nex from "./tabs/Nex";
 import Advisor from "./tabs/Advisor";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
+import IndustryPicker from "./components/IndustryPicker";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
@@ -112,16 +113,35 @@ export default function App() {
   const reload = async () => {
     setLoading(true);
     try {
+      let myOrg = null;
+      try { myOrg = await db.getMyOrg(); } catch (e) { console.error(e); }
+      setOrg(myOrg);
       let [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
       // Akun baru (belum pernah setup pipeline sama sekali) - otomatis kasih
       // pipeline default biar gak kosong melompong abis daftar sendiri.
-      if (st.length === 0) {
+      // TAPI kalau org-nya belum pernah milih industri (industry masih null),
+      // tunda dulu - biar IndustryPicker yang munculin pilihan, baru abis dipilih
+      // pipeline-nya di-seed sesuai template industri itu (lihat handlePickIndustry).
+      if (st.length === 0 && myOrg?.industry) {
         try { await db.initDefaultStages(); st = await db.getStages(); } catch (e) { console.error(e); }
       }
-      try { setOrg(await db.getMyOrg()); } catch (e) { console.error(e); }
       setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+
+  const [pickingIndustry, setPickingIndustry] = useState(false);
+  const handlePickIndustry = async (industryKey) => {
+    setPickingIndustry(true);
+    try {
+      await db.setOrgIndustry(industryKey);
+      await db.initDefaultStages();
+      await reload();
+    } catch (e) {
+      alert("Gagal simpan pilihan industri: " + e.message);
+    } finally {
+      setPickingIndustry(false);
+    }
   };
 
   // Reload diem-diem (TANPA nyalain loading spinner) - dipakai buat nyegerin data
@@ -220,6 +240,10 @@ export default function App() {
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
   if (!session) return <Auth />;
+  // Org baru yang belum pernah milih industri bisnisnya - tampilin picker dulu
+  // sebelum masuk ke dashboard. Org lama (industry udah keisi lewat SQL backfill)
+  // gak bakal pernah kena kondisi ini.
+  if (org && !org.industry) return <IndustryPicker onSelect={handlePickIndustry} busy={pickingIndustry} />;
 
   // ---- SISTEM 2 TIPE (FREE / PREMIUM) ----
   // Gak ada trial otomatis - daftar langsung dapet Free (Dashboard & Leads doang).
