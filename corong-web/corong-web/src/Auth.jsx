@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
+import IndustryDemo from "./tabs/IndustryDemo";
 import {
   Loader2,
   ArrowRight,
@@ -1892,6 +1893,20 @@ export default function Auth() {
                 Lead → Understand → Contact → Offer → Follow-up → Negotiate →
                 Close → Repeat.
               </div>
+            </div>
+
+            {/* Demo interaktif - klik industri, langsung kelihatan pipeline,
+                field, dan contoh lead yang bakal dipakai. */}
+            <div className="mt-14">
+              <div className="mx-auto max-w-2xl text-center mb-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-600">
+                  Coba sendiri
+                </div>
+                <h3 className="mt-2 text-[20px] font-bold tracking-[-0.02em] text-slate-950 sm:text-[24px]">
+                  Klik industri kamu, lihat langsung isinya
+                </h3>
+              </div>
+              <IndustryDemo />
             </div>
           </div>
         </section>
