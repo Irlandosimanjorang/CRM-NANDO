@@ -10,6 +10,28 @@ const ACTION_ICON = {
 };
 const URGENCY_META = { high: { label: "High", hex: "#e11d48" }, medium: { label: "Medium", hex: "#d97706" }, low: { label: "Low", hex: "#64748b" } };
 
+// Angka statistik "ngitung naik" dari 0 ke nilai asli pas pertama kali kereveal
+// - detail kecil yang bikin dashboard kerasa lebih modern/premium.
+function CountUp({ value, suffix = "", duration = 700 }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    if (value === null || value === undefined) return;
+    let raf;
+    const start = performance.now();
+    const from = 0;
+    const tick = (now) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out-cubic
+      setDisplay(Math.round(from + (value - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+  if (value === null || value === undefined) return "—";
+  return `${display}${suffix}`;
+}
+
 const isMobileDevice = () => typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 // Kunci localStorage buat nandain "audio Good Morning udah pernah diputer hari
@@ -147,27 +169,33 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
       )}
 
       {revealed && (
-        <div className="animate-[fadeInUp_0.35s_ease-out]">
-          <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-          <p className="text-[11px] text-slate-400 mt-3">Here's your CRM summary for today.</p>
+        <div className="nexto-reveal">
+          <style>{`
+            @keyframes revealUp {
+              from { opacity: 0; transform: translateY(10px) scale(0.98); }
+              to { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            .nexto-reveal-item { opacity: 0; animation: revealUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+          `}</style>
+          <p className="nexto-reveal-item text-[11px] text-slate-400 mt-3" style={{ animationDelay: "0ms" }}>Here's your CRM summary for today.</p>
 
-          <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="nexto-reveal-item grid grid-cols-3 gap-2 mt-3" style={{ animationDelay: "60ms" }}>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-              <div className="text-lg font-bold font-mono">{stats.total_active ?? "—"}</div>
+              <div className="text-lg font-bold font-mono"><CountUp value={stats.total_active} /></div>
               <div className="text-[9px] text-slate-400 mt-0.5">Active leads</div>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-              <div className="text-lg font-bold font-mono text-rose-400">{stats.overdue_followup ?? "—"}</div>
+              <div className="text-lg font-bold font-mono text-rose-400"><CountUp value={stats.overdue_followup} /></div>
               <div className="text-[9px] text-slate-400 mt-0.5">Overdue follow-ups</div>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-              <div className="text-lg font-bold font-mono text-emerald-400">{stats.win_rate !== null && stats.win_rate !== undefined ? `${stats.win_rate}%` : "—"}</div>
+              <div className="text-lg font-bold font-mono text-emerald-400">{stats.win_rate !== null && stats.win_rate !== undefined ? <CountUp value={stats.win_rate} suffix="%" /> : "—"}</div>
               <div className="text-[9px] text-slate-400 mt-0.5">Win rate</div>
             </div>
           </div>
 
           {stats.waiting_count > 0 && (
-            <div className="mt-2 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-xl px-3 py-2">⏸️ {stats.waiting_count} lead lagi ditunggu (customer minta waktu) - gak di-nudge sampai tanggalnya lewat.</div>
+            <div className="nexto-reveal-item mt-2 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-xl px-3 py-2" style={{ animationDelay: "110ms" }}>⏸️ {stats.waiting_count} lead lagi ditunggu (customer minta waktu) - gak di-nudge sampai tanggalnya lewat.</div>
           )}
 
           {topRecs.length > 0 && (
@@ -180,7 +208,8 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
                   <button
                     key={i}
                     onClick={() => lead && onOpenLead && onOpenLead(lead)}
-                    className="w-full text-left flex items-start gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 transition-colors"
+                    className="nexto-reveal-item w-full text-left flex items-start gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 transition-colors hover:border-orange-400/30"
+                    style={{ animationDelay: `${160 + i * 90}ms` }}
                   >
                     <span className="w-7 h-7 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5"><Icon size={13} /></span>
                     <div className="min-w-0 flex-1">
@@ -196,7 +225,11 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
             </div>
           )}
 
-          <button onClick={() => onGo("advisor")} className="w-full mt-4 text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors rounded-2xl py-2.5 text-center">
+          <button
+            onClick={() => onGo("advisor")}
+            className="nexto-reveal-item w-full mt-4 text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors rounded-2xl py-2.5 text-center"
+            style={{ animationDelay: `${160 + topRecs.length * 90 + 60}ms` }}
+          >
             View all recommendations →
           </button>
         </div>
