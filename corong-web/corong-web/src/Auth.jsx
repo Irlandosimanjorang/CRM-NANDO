@@ -1052,7 +1052,12 @@ function AiEngineLoopSection() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        .nexto-orbit-dot-1 { offset-path: content-box; animation: nexto-orbit-1 7s linear infinite; }
+        @keyframes nexto-spoke-travel {
+          0% { left: 0%; opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { left: 100%; opacity: 0; }
+        }
       `}</style>
 
       {/* Grid + glow background - lebar penuh, kesan "zoomed out" */}
@@ -1109,8 +1114,10 @@ function AiEngineLoopSection() {
           }}
         />
 
-        {/* Garis spoke dari inti ke tiap node */}
-        {nodesWithAngle.map((n) => {
+        {/* Garis spoke dari inti ke tiap node - garis-nya "hidup", ada titik
+            cahaya yang ngalir terus dari robot ke tiap engine, delay beda-beda
+            per node biar keliatan organik (bukan gerak barengan kaku). */}
+        {nodesWithAngle.map((n, i) => {
           const rad = (n.angle * Math.PI) / 180;
           const x2 = RADIUS * Math.cos(rad);
           const y2 = RADIUS * Math.sin(rad);
@@ -1120,8 +1127,18 @@ function AiEngineLoopSection() {
             <div
               key={`spoke-${n.key}`}
               className="absolute left-1/2 top-1/2 h-px origin-left"
-              style={{ width: len, background: `linear-gradient(90deg, ${n.color}55, transparent)`, transform: `rotate(${rot}deg)` }}
-            />
+              style={{ width: len, background: `linear-gradient(90deg, ${n.color}66, ${n.color}22)`, transform: `rotate(${rot}deg)` }}
+            >
+              <span
+                className="absolute top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
+                style={{
+                  background: n.color,
+                  boxShadow: `0 0 10px 3px ${n.color}bb`,
+                  animation: `nexto-spoke-travel 2.8s ease-in-out infinite`,
+                  animationDelay: `${i * 0.45}s`,
+                }}
+              />
+            </div>
           );
         })}
 
@@ -1376,64 +1393,6 @@ function ProductMockup() {
               AI terus mencari langkah berikutnya
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LoopVisual() {
-  const nodes = [
-    { label: "Customer Signal", active: false },
-    { label: "AI Understands", active: true },
-    { label: "Next Best Action", active: true },
-    { label: "Sales Action", active: false },
-    { label: "Customer Response", active: false },
-    { label: "Next Action", active: true },
-  ];
-
-  return (
-    <div className="mx-auto w-full max-w-4xl">
-      <div className="relative rounded-[30px] border border-slate-800 bg-[#0b0d10] p-5 shadow-[0_35px_100px_-35px_rgba(0,0,0,0.5)] sm:p-8">
-        <div className="absolute inset-x-10 top-1/2 h-32 -translate-y-1/2 rounded-full bg-orange-500/10 blur-3xl" />
-
-        <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {nodes.map((node, index) => (
-            <div key={node.label} className="relative">
-              <div
-                className={`rounded-2xl border p-4 transition ${
-                  node.active
-                    ? "border-orange-500/40 bg-orange-500/[0.08]"
-                    : "border-white/[0.08] bg-white/[0.03]"
-                }`}
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      node.active ? "bg-orange-400" : "bg-slate-600"
-                    }`}
-                  />
-                  <span className="text-[8px] font-medium text-slate-600">
-                    0{index + 1}
-                  </span>
-                </div>
-
-                <div className="text-[10px] font-semibold leading-relaxed text-white sm:text-[11px]">
-                  {node.label}
-                </div>
-              </div>
-
-              {index < nodes.length - 1 && (
-                <div className="absolute -right-2 top-1/2 z-10 hidden h-px w-4 bg-orange-500/40 sm:block" />
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="relative mt-5 flex items-center justify-center gap-2 text-[9px] font-medium text-slate-500">
-          <div className="h-px w-10 bg-orange-500/30" />
-          The loop keeps moving
-          <div className="h-px w-10 bg-orange-500/30" />
         </div>
       </div>
     </div>
@@ -2120,79 +2079,6 @@ export default function Auth() {
                   <IndustryDemo />
                 </div>
               )}
-            </div>
-          </div>
-        </section>
-
-        {/* =========================================================
-            BEFORE / AFTER
-        ========================================================== */}
-        <section className="bg-[#080a0d] px-5 py-20 text-white sm:px-7 sm:py-28 lg:px-10">
-          <div className="mx-auto max-w-7xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <SectionLabel>From data to action</SectionLabel>
-
-              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] sm:text-[48px]">
-                CRM data is useful.
-                <span className="block text-orange-400">
-                  Actionable CRM is better.
-                </span>
-              </h2>
-            </div>
-
-            <div className="mt-12 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-[26px] border border-white/[0.08] bg-white/[0.03] p-7">
-                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                  Without Nexto
-                </div>
-
-                <div className="mt-7 space-y-4">
-                  {[
-                    "327 leads",
-                    "Sales buka CRM",
-                    "“Siapa yang harus gue hubungi?”",
-                    "Scroll dan cari-cari",
-                    "Follow-up terlambat",
-                    "Opportunity hilang",
-                  ].map((text, index) => (
-                    <div key={text} className="flex items-center gap-3">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.06] text-[9px] font-bold text-slate-600">
-                        {index + 1}
-                      </div>
-                      <div className="text-[11px] text-slate-400">{text}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-[26px] border border-orange-500/20 bg-orange-500/[0.05] p-7">
-                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-400">
-                  With Nexto
-                </div>
-
-                <div className="mt-7 space-y-4">
-                  {[
-                    "327 leads",
-                    "AI menganalisis",
-                    "Top 5 actions",
-                    "Sales langsung bertindak",
-                    "Customer merespons",
-                    "Next action otomatis terbentuk",
-                  ].map((text, index) => (
-                    <div key={text} className="flex items-center gap-3">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500/10 text-orange-400">
-                        <Check size={12} />
-                      </div>
-                      <div className="text-[11px] text-slate-300">{text}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-7 flex items-center gap-2 text-[9px] font-semibold text-orange-400">
-                  <Sparkles size={11} />
-                  The loop keeps moving.
-                </div>
-              </div>
             </div>
           </div>
         </section>
