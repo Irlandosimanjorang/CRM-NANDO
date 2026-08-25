@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Loader2, Volume2 } from "lucide-react";
+import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Loader2, Volume2, Zap } from "lucide-react";
 import * as db from "../lib/db";
 import { todayISO, fmtRp } from "../lib/helpers";
 import { NextoRobotHead } from "../Auth";
+import AiDraftPopup from "../components/AiDraftPopup";
+
+// Mapping action_type -> channel draft yang paling relevan. Action_type yang
+// gak ada di sini (Call, Visit, Jadwalkan Meeting, Tunggu, Eskalasi, Closing)
+// gak ada draft otomatisnya - "Handle Now" buat itu langsung buka lead-nya aja.
+const ACTION_TYPE_TO_CHANNEL = {
+  WhatsApp: "whatsapp",
+  "Follow-up": "whatsapp",
+  "Kirim Penawaran": "email",
+};
 
 const ACTION_ICON = {
   Call: Phone, WhatsApp: MessageCircle, Visit: MapPin, "Kirim Penawaran": FileText,
@@ -53,6 +63,7 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
   const [audioPhase, setAudioPhase] = useState("idle"); // idle | playing | needs-tap | done
   const [revealed, setRevealed] = useState(false);
   const [listenUsed, setListenUsed] = useState(false);
+  const [draftPopup, setDraftPopup] = useState(null); // { lead, rect, channel }
   const audioRef = useRef(null);
   const revealTimerRef = useRef(null);
 
@@ -204,22 +215,32 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
                 const Icon = ACTION_ICON[r.action_type] || Clock;
                 const um = URGENCY_META[r.urgency] || URGENCY_META.low;
                 const lead = (leads || []).find((l) => l.id === r.id);
+                const draftChannel = ACTION_TYPE_TO_CHANNEL[r.action_type];
                 return (
-                  <button
+                  <div
                     key={i}
-                    onClick={() => lead && onOpenLead && onOpenLead(lead)}
-                    className="nexto-reveal-item w-full text-left flex items-start gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 transition-colors hover:border-orange-400/30"
+                    className="nexto-reveal-item flex items-start gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 transition-colors hover:border-orange-400/30"
                     style={{ animationDelay: `${160 + i * 90}ms` }}
                   >
-                    <span className="w-7 h-7 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5"><Icon size={13} /></span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[12px] font-semibold truncate">{r.name}</span>
-                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: um.hex }}>{um.label}</span>
+                    <button onClick={() => lead && onOpenLead && onOpenLead(lead)} className="flex items-start gap-2.5 text-left min-w-0 flex-1">
+                      <span className="w-7 h-7 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5"><Icon size={13} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[12px] font-semibold truncate">{r.name}</span>
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: um.hex }}>{um.label}</span>
+                        </div>
+                        <div className="text-[10.5px] text-slate-400 mt-0.5 line-clamp-1">{r.action}</div>
                       </div>
-                      <div className="text-[10.5px] text-slate-400 mt-0.5 line-clamp-1">{r.action}</div>
-                    </div>
-                  </button>
+                    </button>
+                    {lead && draftChannel && (
+                      <button
+                        onClick={(e) => setDraftPopup({ lead, rect: e.currentTarget.getBoundingClientRect(), channel: draftChannel })}
+                        className="shrink-0 flex items-center gap-1 text-[10px] font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-2.5 py-1.5 transition-colors mt-0.5"
+                      >
+                        <Zap size={11} /> Handle Now
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -233,6 +254,16 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
             View all recommendations →
           </button>
         </div>
+      )}
+
+      {draftPopup && (
+        <AiDraftPopup
+          lead={draftPopup.lead}
+          rect={draftPopup.rect}
+          initialChannel={draftPopup.channel}
+          onClose={() => setDraftPopup(null)}
+          onSent={() => {}}
+        />
       )}
     </div>
   );
