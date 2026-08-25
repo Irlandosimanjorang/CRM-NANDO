@@ -6,6 +6,7 @@ import * as db from "../lib/db";
 import { CATEGORIES, stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
+import { getFieldLabel } from "../lib/industryTemplates";
 
 const val = (row, keys) => {
   const lk = Object.keys(row);
@@ -33,7 +34,7 @@ function findProgressMatch(c, q) {
   return hit || null;
 }
 
-export default function Leads({ leads, stages, settings, onChanged }) {
+export default function Leads({ leads, stages, settings, industry, onChanged }) {
   const [q, setQ] = useState("");
   const [fCat, setFCat] = useState("");
   const [fType, setFType] = useState("");
@@ -42,6 +43,8 @@ export default function Leads({ leads, stages, settings, onChanged }) {
   const [showDup, setShowDup] = useState(false);
   const [progressPopup, setProgressPopup] = useState(null); // { lead, rect }
   const [checkedInToday, setCheckedInToday] = useState(new Set());
+  const titleLabel = getFieldLabel(industry, "key_person_title", "Jabatan");
+  const productLabel = getFieldLabel(industry, "product", "Produk");
 
   const loadCheckedInToday = () => {
     db.getTodayCheckedInLeadIds().then((ids) => setCheckedInToday(new Set(ids))).catch(() => {});
@@ -215,11 +218,11 @@ export default function Leads({ leads, stages, settings, onChanged }) {
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.city, width: colWidths.city, position: "sticky", top: 0, zIndex: 15 }}>Kota<ColResizeHandle colKey="city" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.location, width: colWidths.location, position: "sticky", top: 0, zIndex: 15 }}>Lokasi<ColResizeHandle colKey="location" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.keyPerson, width: colWidths.keyPerson, position: "sticky", top: 0, zIndex: 15 }}>Key Person<ColResizeHandle colKey="keyPerson" /></th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.title, width: colWidths.title, position: "sticky", top: 0, zIndex: 15 }}>Jabatan<ColResizeHandle colKey="title" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.title, width: colWidths.title, position: "sticky", top: 0, zIndex: 15 }}>{titleLabel}<ColResizeHandle colKey="title" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.email, width: colWidths.email, position: "sticky", top: 0, zIndex: 15 }}>Email<ColResizeHandle colKey="email" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.phone, width: colWidths.phone, position: "sticky", top: 0, zIndex: 15 }}>Telepon / WA<ColResizeHandle colKey="phone" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.website, width: colWidths.website, position: "sticky", top: 0, zIndex: 15 }}>Website<ColResizeHandle colKey="website" /></th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.product, width: colWidths.product, position: "sticky", top: 0, zIndex: 15 }}>Produk<ColResizeHandle colKey="product" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.product, width: colWidths.product, position: "sticky", top: 0, zIndex: 15 }}>{productLabel}<ColResizeHandle colKey="product" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.progress, width: colWidths.progress, position: "sticky", top: 0, zIndex: 15 }}>Progress Harian<ColResizeHandle colKey="progress" /></th>
               <th className="px-3 py-2 bg-slate-50" style={{ minWidth: "80px", position: "sticky", top: 0, zIndex: 15 }}></th>
             </tr>
@@ -325,7 +328,7 @@ export default function Leads({ leads, stages, settings, onChanged }) {
         </div>
       )}
 
-      {edit && <LeadModal lead={edit} stages={stages} settings={settings} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
+      {edit && <LeadModal lead={edit} stages={stages} settings={settings} industry={industry} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
       {showDup && <DuplicateModal leads={leads} onClose={() => setShowDup(false)} onChanged={onChanged} />}
     </div>
   );
