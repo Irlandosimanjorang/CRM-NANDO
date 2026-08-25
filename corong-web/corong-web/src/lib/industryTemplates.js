@@ -26,11 +26,17 @@ export const INDUSTRY_TEMPLATES = {
       { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
     ],
     fieldLabels: {
+      name: "Perusahaan",
       product: "Produk",
       company_type: "Tipe perusahaan",
       key_person_title: "Jabatan",
       quantity: "Tonase",
     },
+    categories: [
+      "Resin & Compound", "Pipa & Fitting", "Kabel Listrik", "Flooring / Sheet / Film",
+      "Roofing / Ceiling / Profil", "Kulit Sintetis & Vinyl", "Selang Fleksibel",
+      "Packaging & Botol", "Produk Konstruksi", "Lainnya",
+    ],
     hiddenFields: [],
     customFieldLabels: {},
     aiContext: "Bisnis ini distribusi/manufaktur PVC dan bahan kimia industri. Istilah relevan: tonase, resin, kompon, purchasing manager, trader vs manufacturer.",
@@ -50,11 +56,13 @@ export const INDUSTRY_TEMPLATES = {
       { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
     ],
     fieldLabels: {
+      name: "Nama calon pembeli",
       product: "Model kendaraan diminati",
       company_type: "Sumber pembeli",
       key_person_title: "Jabatan / Peran",
       quantity: "Unit",
     },
+    categories: ["Mobil Baru", "Mobil Bekas", "Motor Baru", "Motor Bekas", "Spare Part", "Aksesoris", "Lainnya"],
     hiddenFields: ["company_type"],
     customFieldLabels: {
       custom_field_1: "Warna diminati",
@@ -77,11 +85,13 @@ export const INDUSTRY_TEMPLATES = {
       { key: "lost", label: "Batal / Lost", hex: "#f43f5e", type: "lost" },
     ],
     fieldLabels: {
+      name: "Nama calon pembeli",
       product: "Tipe properti diminati",
       company_type: "Status pembeli",
       key_person_title: "Jabatan / Peran",
       quantity: "Budget (Rp)",
     },
+    categories: ["Rumah Tapak", "Apartemen", "Ruko / Rukan", "Tanah Kavling", "Gudang / Pabrik", "Lainnya"],
     hiddenFields: ["company_type"],
     customFieldLabels: {
       custom_field_1: "Luas tanah/bangunan (m²)",
@@ -103,11 +113,13 @@ export const INDUSTRY_TEMPLATES = {
       { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
     ],
     fieldLabels: {
+      name: "Perusahaan",
       product: "Produk / Jasa",
       company_type: "Tipe perusahaan",
       key_person_title: "Jabatan",
       quantity: "Qty",
     },
+    categories: ["Bahan Baku", "Barang Jadi", "Jasa", "Peralatan", "Lainnya"],
     hiddenFields: [],
     customFieldLabels: {
       custom_field_1: "Frekuensi order",
@@ -128,11 +140,13 @@ export const INDUSTRY_TEMPLATES = {
       { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
     ],
     fieldLabels: {
+      name: "Nama nasabah",
       product: "Produk diminati",
       company_type: "Tipe nasabah",
       key_person_title: "Jabatan / Peran",
       quantity: "Premi (Rp)",
     },
+    categories: ["Asuransi Jiwa", "Asuransi Kesehatan", "Asuransi Umum", "Asuransi Pendidikan", "Investasi", "Lainnya"],
     hiddenFields: ["company_type"],
     customFieldLabels: {
       custom_field_1: "Tanggal jatuh tempo premi",
@@ -154,11 +168,13 @@ export const INDUSTRY_TEMPLATES = {
       { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
     ],
     fieldLabels: {
+      name: "Nama outlet / toko",
       product: "Produk diminati",
       company_type: "Tipe outlet",
       key_person_title: "Jabatan",
       quantity: "Qty (karton/pcs)",
     },
+    categories: ["Makanan & Minuman", "Perawatan Diri", "Rumah Tangga", "Elektronik Ringan", "Lainnya"],
     hiddenFields: [],
     customFieldLabels: {
       custom_field_1: "Area distribusi",
@@ -177,6 +193,11 @@ export function getIndustryTemplate(industryKey) {
 export function getFieldLabel(industryKey, fieldName, fallback) {
   const tpl = getIndustryTemplate(industryKey);
   return (tpl.fieldLabels && tpl.fieldLabels[fieldName]) || fallback;
+}
+
+export function getCategories(industryKey) {
+  const tpl = getIndustryTemplate(industryKey);
+  return tpl.categories || INDUSTRY_TEMPLATES[DEFAULT_INDUSTRY].categories;
 }
 
 export function isFieldHidden(industryKey, fieldName) {
