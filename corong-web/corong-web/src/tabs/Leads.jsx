@@ -6,7 +6,7 @@ import * as db from "../lib/db";
 import { stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
-import { getFieldLabel, getCategories, isFieldHidden, getCustomFieldSlots } from "../lib/industryTemplates";
+import { getFieldLabel, getCategories, isFieldHidden, getCustomFieldSlots, getCompanyTypeOptions } from "../lib/industryTemplates";
 
 const val = (row, keys) => {
   const lk = Object.keys(row);
@@ -54,6 +54,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
   const customSlots = getCustomFieldSlots(industry);
   const categories = getCategories(industry);
   const showTypeFilter = !isFieldHidden(industry, "company_type");
+  const companyTypeOptions = getCompanyTypeOptions(industry).filter((t) => t.v);
 
   const loadCheckedInToday = () => {
     db.getTodayCheckedInLeadIds().then((ids) => setCheckedInToday(new Set(ids))).catch(() => {});
@@ -208,7 +209,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
           <div className="relative flex-1 min-w-40"><Search size={14} className="absolute left-2.5 top-2 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
           <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua kategori</option>{categories.map((c) => <option key={c}>{c}</option>)}</select>
           {showTypeFilter && (
-            <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
+            <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option>{companyTypeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select>
           )}
           <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={14} /> Lead</button>
         </div>
