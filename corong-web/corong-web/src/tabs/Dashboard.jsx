@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Loader2, Volume2 } from "lucide-react";
 import * as db from "../lib/db";
 import { todayISO, fmtRp } from "../lib/helpers";
+import { NextoRobotHead } from "../Auth";
 
 const ACTION_ICON = {
   Call: Phone, WhatsApp: MessageCircle, Visit: MapPin, "Kirim Penawaran": FileText,
@@ -9,11 +10,20 @@ const ACTION_ICON = {
 };
 const URGENCY_META = { high: { label: "High", hex: "#e11d48" }, medium: { label: "Medium", hex: "#d97706" }, low: { label: "Low", hex: "#64748b" } };
 
+const isMobileDevice = () => typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 // "Good Morning" card - reads the AI digest that ALREADY RAN this morning (cron
-// at 8am, Mon-Fri), never triggers a new AI call on open - purely displays what's
-// already stored, so it's FREE every time the dashboard is opened.
+// at 8am, Mon-Fri), never triggers a new AI call OR new voice generation on open
+// - purely plays/displays what's already stored, so it's FREE every time the
+// dashboard is opened. Robot "talks" the greeting first (audio pre-generated
+// server-side); stats & recommendations only reveal once the audio finishes -
+// with a safety timeout so the card never gets stuck if audio fails/is blocked.
 function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
   const [state, setState] = useState({ status: "loading", run: null });
+  const [audioPhase, setAudioPhase] = useState("idle"); // idle | playing | needs-tap | done
+  const [revealed, setRevealed] = useState(false);
+  const audioRef = useRef(null);
+  const revealTimerRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
@@ -22,6 +32,51 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
       .catch(() => { if (alive) setState({ status: "empty", run: null }); });
     return () => { alive = false; };
   }, []);
+
+  const reveal = () => {
+    if (revealTimerRef.current) { clearTimeout(revealTimerRef.current); revealTimerRef.current = null; }
+    setRevealed(true);
+    setAudioPhase("done");
+  };
+
+  // Pas data digest udah siap: coba muter audio (langsung di HP, tunggu tap di
+  // browser desktop) - dan pasang jaring pengaman biar kartu gak nyangkut
+  // nunggu audio kalau gagal/gak ada.
+  useEffect(() => {
+    if (state.status !== "ready") return;
+    const audioUrl = state.run?.audio_url;
+    if (!audioUrl) {
+      // Gak ada audio (misal TTS gagal pas generate) - langsung tampilin abis jeda kecil.
+      revealTimerRef.current = setTimeout(reveal, 700);
+      return () => clearTimeout(revealTimerRef.current);
+    }
+
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    audio.addEventListener("ended", reveal);
+    audio.addEventListener("error", reveal);
+    // Jaring pengaman - kalau dalam 8 detik audio gak selesai-selesai (atau
+    // gak kunjung mulai), tetep tampilin biar user gak nunggu kelamaan.
+    revealTimerRef.current = setTimeout(reveal, 8000);
+
+    if (isMobileDevice()) {
+      audio.play().then(() => setAudioPhase("playing")).catch(() => setAudioPhase("needs-tap"));
+    } else {
+      setAudioPhase("needs-tap");
+    }
+
+    return () => {
+      clearTimeout(revealTimerRef.current);
+      audio.pause();
+      audio.removeEventListener("ended", reveal);
+      audio.removeEventListener("error", reveal);
+    };
+  }, [state.status, state.run]);
+
+  const playNow = () => {
+    if (!audioRef.current) return;
+    audioRef.current.play().then(() => setAudioPhase("playing")).catch(() => reveal());
+  };
 
   const hour = new Date().getHours();
   const greeting = hour < 11 ? "Good morning" : hour < 15 ? "Good afternoon" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -47,56 +102,82 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
   const { run } = state;
   const stats = run.stats || {};
   const topRecs = (run.recs || []).slice(0, 3);
+  const isSpeaking = audioPhase === "playing";
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-[28px] shadow-[0_8px_30px_-10px_rgba(15,23,42,0.4)] p-5 text-white">
-      <div className="flex items-center gap-2 text-sm font-semibold"><Sun size={16} className="text-orange-400" /> {greeting}{name ? `, Mr ${name}` : ""}</div>
-      <p className="text-[11px] text-slate-400 mt-1">Here's your CRM summary for today.</p>
-
-      <div className="grid grid-cols-3 gap-2 mt-4">
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-          <div className="text-lg font-bold font-mono">{stats.total_active ?? "—"}</div>
-          <div className="text-[9px] text-slate-400 mt-0.5">Active leads</div>
+    <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-[28px] shadow-[0_8px_30px_-10px_rgba(15,23,42,0.4)] p-5 text-white overflow-hidden">
+      <div className="flex items-center gap-3">
+        <NextoRobotHead size={44} speaking={isSpeaking} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-sm font-semibold"><Sun size={15} className="text-orange-400 shrink-0" /> <span className="truncate">{greeting}{name ? `, Mr ${name}` : ""}</span></div>
+          {!revealed && (
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              {audioPhase === "needs-tap" ? "Tap to hear today's briefing" : isSpeaking ? "Speaking…" : "Here's your recommendation for today"}
+            </div>
+          )}
         </div>
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-          <div className="text-lg font-bold font-mono text-rose-400">{stats.overdue_followup ?? "—"}</div>
-          <div className="text-[9px] text-slate-400 mt-0.5">Overdue follow-ups</div>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-          <div className="text-lg font-bold font-mono text-emerald-400">{stats.win_rate !== null && stats.win_rate !== undefined ? `${stats.win_rate}%` : "—"}</div>
-          <div className="text-[9px] text-slate-400 mt-0.5">Win rate</div>
-        </div>
+        {audioPhase === "needs-tap" && !revealed && (
+          <button onClick={playNow} className="shrink-0 flex items-center gap-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 transition-colors rounded-full px-3.5 py-2">
+            <Volume2 size={13} /> Listen
+          </button>
+        )}
       </div>
 
-      {topRecs.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {topRecs.map((r, i) => {
-            const Icon = ACTION_ICON[r.action_type] || Clock;
-            const um = URGENCY_META[r.urgency] || URGENCY_META.low;
-            const lead = (leads || []).find((l) => l.id === r.id);
-            return (
-              <button
-                key={i}
-                onClick={() => lead && onOpenLead && onOpenLead(lead)}
-                className="w-full text-left flex items-start gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 transition-colors"
-              >
-                <span className="w-7 h-7 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5"><Icon size={13} /></span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[12px] font-semibold truncate">{r.name}</span>
-                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: um.hex }}>{um.label}</span>
-                  </div>
-                  <div className="text-[10.5px] text-slate-400 mt-0.5 line-clamp-1">{r.action}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+      {!revealed && audioPhase !== "needs-tap" && (
+        <button onClick={reveal} className="text-[10px] text-slate-500 hover:text-slate-300 mt-3">Skip →</button>
       )}
 
-      <button onClick={() => onGo("advisor")} className="w-full mt-4 text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors rounded-2xl py-2.5 text-center">
-        View all recommendations →
-      </button>
+      {revealed && (
+        <div className="animate-[fadeInUp_0.35s_ease-out]">
+          <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+          <p className="text-[11px] text-slate-400 mt-3">Here's your CRM summary for today.</p>
+
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
+              <div className="text-lg font-bold font-mono">{stats.total_active ?? "—"}</div>
+              <div className="text-[9px] text-slate-400 mt-0.5">Active leads</div>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
+              <div className="text-lg font-bold font-mono text-rose-400">{stats.overdue_followup ?? "—"}</div>
+              <div className="text-[9px] text-slate-400 mt-0.5">Overdue follow-ups</div>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
+              <div className="text-lg font-bold font-mono text-emerald-400">{stats.win_rate !== null && stats.win_rate !== undefined ? `${stats.win_rate}%` : "—"}</div>
+              <div className="text-[9px] text-slate-400 mt-0.5">Win rate</div>
+            </div>
+          </div>
+
+          {topRecs.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {topRecs.map((r, i) => {
+                const Icon = ACTION_ICON[r.action_type] || Clock;
+                const um = URGENCY_META[r.urgency] || URGENCY_META.low;
+                const lead = (leads || []).find((l) => l.id === r.id);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => lead && onOpenLead && onOpenLead(lead)}
+                    className="w-full text-left flex items-start gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 transition-colors"
+                  >
+                    <span className="w-7 h-7 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5"><Icon size={13} /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[12px] font-semibold truncate">{r.name}</span>
+                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: um.hex }}>{um.label}</span>
+                      </div>
+                      <div className="text-[10.5px] text-slate-400 mt-0.5 line-clamp-1">{r.action}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <button onClick={() => onGo("advisor")} className="w-full mt-4 text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors rounded-2xl py-2.5 text-center">
+            View all recommendations →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
