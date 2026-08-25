@@ -40,7 +40,68 @@ function NextoWordmark({ width = 108, className = "" }) {
   );
 }
 
-function NextoHeaderLogo({ width = 150, className = "" }) {
+export function NextoRobotHead({ size = 32, className = "" }) {
+  return (
+    <div
+      className={`relative flex shrink-0 items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+    >
+      <div
+        className="absolute rounded-[28%] border"
+        style={{
+          inset: "8%",
+          background:
+            "linear-gradient(145deg, #f3f5f7 0%, #cbd2da 48%, #9aa5b2 100%)",
+          borderColor: "#7f8b98",
+          boxShadow:
+            "0 3px 8px rgba(15,23,42,.14), inset 0 1px 1px rgba(255,255,255,.9)",
+        }}
+      />
+      <div
+        className="absolute flex items-center justify-center rounded-full"
+        style={{
+          width: "58%",
+          height: "30%",
+          background: "#171717",
+          boxShadow: "inset 0 1px 3px rgba(0,0,0,.35)",
+        }}
+      >
+        <span
+          className="mr-1 rounded-full"
+          style={{
+            width: "10%",
+            height: "24%",
+            background: "#f97316",
+            boxShadow: "0 0 5px rgba(249,115,22,.7)",
+          }}
+        />
+        <span
+          className="rounded-full"
+          style={{
+            width: "10%",
+            height: "24%",
+            background: "#f97316",
+            boxShadow: "0 0 5px rgba(249,115,22,.7)",
+          }}
+        />
+      </div>
+      <span
+        className="absolute rounded-full"
+        style={{
+          width: "11%",
+          height: "11%",
+          right: "9%",
+          top: "5%",
+          background: "#22c55e",
+          boxShadow: "0 0 0 2px white, 0 0 7px rgba(34,197,94,.55)",
+        }}
+      />
+    </div>
+  );
+}
+
+export function NextoHeaderLogo({ width = 150, className = "" }) {
   const robotSize = Math.max(28, Math.min(34, width * 0.22));
   const wordmarkWidth = Math.max(82, width - robotSize - 12);
 
@@ -52,62 +113,7 @@ function NextoHeaderLogo({ width = 150, className = "" }) {
       role="img"
     >
       {/* Robot AI — HEADER ONLY */}
-      <div
-        className="relative mr-2.5 flex shrink-0 items-center justify-center"
-        style={{ width: robotSize, height: robotSize }}
-        aria-hidden="true"
-      >
-        <div
-          className="absolute rounded-[28%] border"
-          style={{
-            inset: "8%",
-            background:
-              "linear-gradient(145deg, #f3f5f7 0%, #cbd2da 48%, #9aa5b2 100%)",
-            borderColor: "#7f8b98",
-            boxShadow:
-              "0 3px 8px rgba(15,23,42,.14), inset 0 1px 1px rgba(255,255,255,.9)",
-          }}
-        />
-        <div
-          className="absolute flex items-center justify-center rounded-full"
-          style={{
-            width: "58%",
-            height: "30%",
-            background: "#171717",
-            boxShadow: "inset 0 1px 3px rgba(0,0,0,.35)",
-          }}
-        >
-          <span
-            className="mr-1 rounded-full"
-            style={{
-              width: "10%",
-              height: "24%",
-              background: "#f97316",
-              boxShadow: "0 0 5px rgba(249,115,22,.7)",
-            }}
-          />
-          <span
-            className="rounded-full"
-            style={{
-              width: "10%",
-              height: "24%",
-              background: "#f97316",
-              boxShadow: "0 0 5px rgba(249,115,22,.7)",
-            }}
-          />
-        </div>
-        <span
-          className="absolute rounded-full"
-          style={{
-            width: "11%",
-            height: "11%",
-            right: "9%",
-            top: "5%",
-            background: "#22c55e",
-            boxShadow: "0 0 0 2px white, 0 0 7px rgba(34,197,94,.55)",
-          }}
-        />
-      </div>
+      <NextoRobotHead size={robotSize} className="mr-2.5" />
 
       {/* HEADER ONLY:
           N / E / T / O = black
@@ -149,7 +155,7 @@ function NextoHeaderLogo({ width = 150, className = "" }) {
   );
 }
 
-function NextoDarkWordmark({ width = 108, className = "" }) {
+export function NextoDarkWordmark({ width = 108, className = "" }) {
   return (
     <div
       className={`relative inline-block shrink-0 ${className}`}
