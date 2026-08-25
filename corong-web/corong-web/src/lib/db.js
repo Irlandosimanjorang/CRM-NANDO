@@ -488,6 +488,16 @@ export async function getAdvisorHistory() {
   return data || [];
 }
 
+// Ambil hasil digest HARI INI doang - dipake buat kartu "Good Morning" di
+// Dashboard. Balikin null kalau belum ada (misal weekend, atau cron belum
+// jalan) - biar UI bisa nampilin state kosong yang jelas, bukan error.
+export async function getTodayAdvisorRun() {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase.from("advisor_runs").select("*").eq("run_date", today).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
 // ---- BACKUP / EXPORT SEMUA DATA ----
 export async function exportAllData() {
   const [leadsRes, compRes, stagesRes, settingsRes, advisorRes] = await Promise.all([
