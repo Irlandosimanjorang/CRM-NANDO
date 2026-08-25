@@ -41,13 +41,21 @@ function NextoWordmark({ width = 108, className = "" }) {
   );
 }
 
-export function NextoRobotHead({ size = 32, className = "" }) {
+export function NextoRobotHead({ size = 32, className = "", speaking = false }) {
   return (
     <div
       className={`relative flex shrink-0 items-center justify-center ${className}`}
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
+      {speaking && (
+        <style>{`
+          @keyframes nexto-talk-bar {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1.15); }
+          }
+        `}</style>
+      )}
       <div
         className="absolute rounded-[28%] border"
         style={{
@@ -75,6 +83,8 @@ export function NextoRobotHead({ size = 32, className = "" }) {
             height: "24%",
             background: "#f97316",
             boxShadow: "0 0 5px rgba(249,115,22,.7)",
+            animation: speaking ? "nexto-talk-bar 0.42s ease-in-out infinite" : "none",
+            animationDelay: speaking ? "0.08s" : "0s",
           }}
         />
         <span
@@ -84,6 +94,7 @@ export function NextoRobotHead({ size = 32, className = "" }) {
             height: "24%",
             background: "#f97316",
             boxShadow: "0 0 5px rgba(249,115,22,.7)",
+            animation: speaking ? "nexto-talk-bar 0.42s ease-in-out infinite" : "none",
           }}
         />
       </div>
