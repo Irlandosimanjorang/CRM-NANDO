@@ -679,9 +679,31 @@ function NextoAISalesEngine() {
             Satu percakapan → semua aktivitas sales terhubung
           </div>
         </div>
+
+        {/* =========================================================
+            JEMBATAN NARASI ke section "NEXTO AI Engine Loops" di bawah -
+            nyambungin secara cerita ("ini yang kamu liat" -> "ini yang
+            jalan di baliknya"), bukan garis yang motong 2 section beda.
+        ========================================================== */}
+        <div className="mt-16 flex flex-col items-center gap-3 text-center">
+          <p className="max-w-xs text-[11px] leading-relaxed text-slate-500">
+            Itu yang kamu liat & ajak ngobrol.
+            <span className="block text-white font-medium">Ini yang jalan di baliknya.</span>
+          </p>
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/[0.06]"
+            style={{ animation: "nexto-bridge-bounce 1.8s ease-in-out infinite" }}
+          >
+            <ChevronDown size={14} className="text-orange-400" />
+          </span>
+        </div>
       </div>
 
       <style>{`
+        @keyframes nexto-bridge-bounce {
+          0%, 100% { transform: translateY(0); opacity: 0.6; }
+          50% { transform: translateY(6px); opacity: 1; }
+        }
         .animate-spin-slow {
           animation: nextoSpin 18s linear infinite;
         }
@@ -976,7 +998,7 @@ function AiEngineLoopSection() {
   const nodesWithAngle = ENGINE_NODES.map((n, i) => ({ ...n, angle: -90 + i * 90 })); // mulai dari atas, muter searah jarum jam
 
   return (
-    <section id="cara-kerja" className="relative overflow-hidden bg-[#05070c] px-5 py-24 text-white sm:px-7 sm:py-32 lg:px-10">
+    <section id="cara-kerja" className="relative overflow-hidden bg-[#05070c] px-5 pb-24 pt-10 text-white sm:px-7 sm:pb-32 sm:pt-14 lg:px-10">
       <style>{`
         @keyframes nexto-flow-pulse {
           0% { top: -8%; opacity: 0; }
@@ -1574,30 +1596,6 @@ export default function Auth() {
             TAMBAHAN — LANDING PAGE EXISTING TETAP
         ========================================================== */}
         <NextoAISalesEngine />
-
-        {/* =========================================================
-            TRUST STRIP
-        ========================================================== */}
-        <section className="border-y border-slate-100 bg-white">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-5 py-5 text-center sm:px-7 lg:px-10">
-            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-300">
-              Built for modern sales teams
-            </span>
-            <span className="hidden h-3 w-px bg-slate-200 sm:block" />
-            <span className="text-[10px] font-medium text-slate-400">
-              Lead management
-            </span>
-            <span className="text-[10px] font-medium text-slate-400">
-              AI recommendations
-            </span>
-            <span className="text-[10px] font-medium text-slate-400">
-              Sales activity
-            </span>
-            <span className="text-[10px] font-medium text-slate-400">
-              Customer intelligence
-            </span>
-          </div>
-        </section>
 
         {/* =========================================================
             NEXTO AI ENGINE LOOPS - section sendiri, gak digabung sama
