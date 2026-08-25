@@ -12,6 +12,8 @@
 // LABEL yang ditampilin di UI, lewat fieldLabels di bawah.
 // ============================================================
 
+import { COMPANY_TYPES } from "./helpers";
+
 export const INDUSTRY_TEMPLATES = {
   pvc_chemical: {
     key: "pvc_chemical",
@@ -58,12 +60,15 @@ export const INDUSTRY_TEMPLATES = {
     fieldLabels: {
       name: "Nama calon pembeli",
       product: "Model kendaraan diminati",
-      company_type: "Sumber pembeli",
+      company_type: "Tipe pembeli",
       key_person_title: "Jabatan / Peran",
       quantity: "Unit",
     },
     categories: ["Mobil Baru", "Mobil Bekas", "Motor Baru", "Motor Bekas", "Spare Part", "Aksesoris", "Lainnya"],
-    hiddenFields: ["company_type", "location", "key_person", "key_person_title", "website"],
+    companyTypeOptions: [
+      { v: "", label: "—" }, { v: "Individu", label: "Individu" }, { v: "Fleet", label: "Fleet / Perusahaan" },
+    ],
+    hiddenFields: ["location", "key_person", "key_person_title", "website"],
     customFieldLabels: {
       custom_field_1: "Nilai tukar tambah (trade-in)",
       custom_field_2: "Budget DP / cicilan per bulan",
@@ -94,7 +99,10 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Budget (Rp)",
     },
     categories: ["Rumah Tapak", "Apartemen", "Ruko / Rukan", "Tanah Kavling", "Gudang / Pabrik", "Lainnya"],
-    hiddenFields: ["company_type", "location", "key_person", "key_person_title", "website"],
+    companyTypeOptions: [
+      { v: "", label: "—" }, { v: "Individu", label: "Individu" }, { v: "Investor", label: "Investor" }, { v: "Korporat", label: "Korporat / Badan Usaha" },
+    ],
+    hiddenFields: ["location", "key_person", "key_person_title", "website"],
     customFieldLabels: {
       custom_field_1: "Luas tanah/bangunan (m²)",
       custom_field_2: "Status pembiayaan (Cash/KPR)",
@@ -152,7 +160,10 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Premi (Rp)",
     },
     categories: ["Asuransi Jiwa", "Asuransi Kesehatan", "Asuransi Umum", "Asuransi Pendidikan", "Investasi", "Lainnya"],
-    hiddenFields: ["company_type", "location", "key_person", "key_person_title", "website"],
+    companyTypeOptions: [
+      { v: "", label: "—" }, { v: "Perorangan", label: "Perorangan" }, { v: "Korporat", label: "Perusahaan / Korporat" },
+    ],
+    hiddenFields: ["location", "key_person", "key_person_title", "website"],
     customFieldLabels: {
       custom_field_1: "Nilai pertanggungan (coverage)",
       custom_field_2: "Tanggal jatuh tempo premi",
@@ -183,7 +194,7 @@ export const INDUSTRY_TEMPLATES = {
       quantity: "Qty (karton/pcs)",
     },
     categories: ["Makanan & Minuman", "Perawatan Diri", "Rumah Tangga", "Elektronik Ringan", "Lainnya"],
-    hiddenFields: ["website"],
+    hiddenFields: ["company_type", "website"],
     customFieldLabels: {
       custom_field_1: "Area distribusi",
       custom_field_2: "Jumlah outlet",
@@ -207,6 +218,15 @@ export function getFieldLabel(industryKey, fieldName, fallback) {
 export function getCategories(industryKey) {
   const tpl = getIndustryTemplate(industryKey);
   return tpl.categories || INDUSTRY_TEMPLATES[DEFAULT_INDUSTRY].categories;
+}
+
+// Pilihan dropdown "Tipe perusahaan" juga dinamis per industri - PVC & B2B Umum
+// pakai Manufacturer/Trader/Both (COMPANY_TYPES bawaan), industri lain (Automotive,
+// Property, Asuransi) punya pilihan sendiri karena leadnya bisa perorangan ATAU
+// korporat, bukan cuma salah satu.
+export function getCompanyTypeOptions(industryKey) {
+  const tpl = getIndustryTemplate(industryKey);
+  return tpl.companyTypeOptions || COMPANY_TYPES;
 }
 
 export function isFieldHidden(industryKey, fieldName) {
