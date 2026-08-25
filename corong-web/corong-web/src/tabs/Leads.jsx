@@ -6,7 +6,7 @@ import * as db from "../lib/db";
 import { stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
-import { getFieldLabel, getCategories, isFieldHidden } from "../lib/industryTemplates";
+import { getFieldLabel, getCategories, isFieldHidden, getCustomFieldSlots } from "../lib/industryTemplates";
 
 const val = (row, keys) => {
   const lk = Object.keys(row);
@@ -44,8 +44,14 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
   const [progressPopup, setProgressPopup] = useState(null); // { lead, rect }
   const [checkedInToday, setCheckedInToday] = useState(new Set());
   const titleLabel = getFieldLabel(industry, "key_person_title", "Jabatan");
+  const keyPersonLabel = getFieldLabel(industry, "key_person", "Key Person");
   const productLabel = getFieldLabel(industry, "product", "Produk");
   const nameLabel = getFieldLabel(industry, "name", "Perusahaan");
+  const hideLocation = isFieldHidden(industry, "location");
+  const hideKeyPerson = isFieldHidden(industry, "key_person");
+  const hideTitle = isFieldHidden(industry, "key_person_title");
+  const hideWebsite = isFieldHidden(industry, "website");
+  const customSlots = getCustomFieldSlots(industry);
   const categories = getCategories(industry);
   const showTypeFilter = !isFieldHidden(industry, "company_type");
 
@@ -221,13 +227,16 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
             <tr>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.name, width: colWidths.name, position: "sticky", left: 0, top: 0, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>{nameLabel}<ColResizeHandle colKey="name" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.city, width: colWidths.city, position: "sticky", top: 0, zIndex: 15 }}>Kota<ColResizeHandle colKey="city" /></th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.location, width: colWidths.location, position: "sticky", top: 0, zIndex: 15 }}>Lokasi<ColResizeHandle colKey="location" /></th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.keyPerson, width: colWidths.keyPerson, position: "sticky", top: 0, zIndex: 15 }}>Key Person<ColResizeHandle colKey="keyPerson" /></th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.title, width: colWidths.title, position: "sticky", top: 0, zIndex: 15 }}>{titleLabel}<ColResizeHandle colKey="title" /></th>
+              {!hideLocation && <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.location, width: colWidths.location, position: "sticky", top: 0, zIndex: 15 }}>Lokasi<ColResizeHandle colKey="location" /></th>}
+              {!hideKeyPerson && <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.keyPerson, width: colWidths.keyPerson, position: "sticky", top: 0, zIndex: 15 }}>{keyPersonLabel}<ColResizeHandle colKey="keyPerson" /></th>}
+              {!hideTitle && <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.title, width: colWidths.title, position: "sticky", top: 0, zIndex: 15 }}>{titleLabel}<ColResizeHandle colKey="title" /></th>}
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.email, width: colWidths.email, position: "sticky", top: 0, zIndex: 15 }}>Email<ColResizeHandle colKey="email" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.phone, width: colWidths.phone, position: "sticky", top: 0, zIndex: 15 }}>Telepon / WA<ColResizeHandle colKey="phone" /></th>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.website, width: colWidths.website, position: "sticky", top: 0, zIndex: 15 }}>Website<ColResizeHandle colKey="website" /></th>
+              {!hideWebsite && <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.website, width: colWidths.website, position: "sticky", top: 0, zIndex: 15 }}>Website<ColResizeHandle colKey="website" /></th>}
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.product, width: colWidths.product, position: "sticky", top: 0, zIndex: 15 }}>{productLabel}<ColResizeHandle colKey="product" /></th>
+              {customSlots.map((slot) => (
+                <th key={slot.key} className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: 160, width: 160, position: "sticky", top: 0, zIndex: 15 }}>{slot.label}</th>
+              ))}
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.progress, width: colWidths.progress, position: "sticky", top: 0, zIndex: 15 }}>Progress Harian<ColResizeHandle colKey="progress" /></th>
               <th className="px-3 py-2 bg-slate-50" style={{ minWidth: "80px", position: "sticky", top: 0, zIndex: 15 }}></th>
             </tr>
@@ -253,28 +262,33 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs text-slate-600">{c.city || "—"}</td>
-                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-1.5">
-                    {checkedInToday.has(c.id) ? (
-                      <span className="text-xs border border-blue-300 text-blue-700 bg-blue-50 rounded-lg px-2 py-1 flex items-center gap-1 whitespace-nowrap font-medium">
-                        <CheckCircle2 size={12} /> Check-in hari ini
-                      </span>
-                    ) : c.latitude ? (
-                      <span className="text-[11px] text-slate-400">Lokasi tersimpan</span>
-                    ) : (
-                      <span className="text-[11px] text-slate-300">Belum ada lokasi</span>
-                    )}
-                    {c.latitude && (
-                      <a href={`https://maps.google.com/?q=${c.latitude},${c.longitude}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Lihat di peta" className="text-slate-400 hover:text-emerald-600 shrink-0"><ExternalLink size={13} /></a>
-                    )}
-                  </div>
-                </td>
-                <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>
-                <td className="px-3 py-2 text-xs text-slate-600">{c.key_person_title || "—"}</td>
+                {!hideLocation && (
+                  <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5">
+                      {checkedInToday.has(c.id) ? (
+                        <span className="text-xs border border-blue-300 text-blue-700 bg-blue-50 rounded-lg px-2 py-1 flex items-center gap-1 whitespace-nowrap font-medium">
+                          <CheckCircle2 size={12} /> Check-in hari ini
+                        </span>
+                      ) : c.latitude ? (
+                        <span className="text-[11px] text-slate-400">Lokasi tersimpan</span>
+                      ) : (
+                        <span className="text-[11px] text-slate-300">Belum ada lokasi</span>
+                      )}
+                      {c.latitude && (
+                        <a href={`https://maps.google.com/?q=${c.latitude},${c.longitude}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Lihat di peta" className="text-slate-400 hover:text-emerald-600 shrink-0"><ExternalLink size={13} /></a>
+                      )}
+                    </div>
+                  </td>
+                )}
+                {!hideKeyPerson && <td className="px-3 py-2 text-xs text-slate-600">{c.key_person || "—"}</td>}
+                {!hideTitle && <td className="px-3 py-2 text-xs text-slate-600">{c.key_person_title || "—"}</td>}
                 <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{c.email ? <a href={`mailto:${c.email}`} className="text-blue-600 hover:underline break-all">{c.email}</a> : <span className="text-slate-300">—</span>}</td>
                 <td className="px-3 py-2 text-xs whitespace-pre-line" onClick={(e) => e.stopPropagation()}>{c.phone ? (wa ? <a href={wa} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1"><MessageCircle size={11} className="shrink-0" />{c.phone}</a> : <span className="text-slate-600">{c.phone}</span>) : <span className="text-slate-300">—</span>}</td>
-                <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{web ? <a href={web} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">{prettyDomain(c.website)}</a> : <span className="text-slate-300">—</span>}</td>
+                {!hideWebsite && <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{web ? <a href={web} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">{prettyDomain(c.website)}</a> : <span className="text-slate-300">—</span>}</td>}
                 <td className="px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
+                {customSlots.map((slot) => (
+                  <td key={slot.key} className="px-3 py-2 text-xs text-slate-600">{c[slot.key] || "—"}</td>
+                ))}
                 <td
                   className="px-3 py-2 text-xs rounded-lg transition-colors hover:bg-orange-50/60"
                   onClick={(e) => e.stopPropagation()}
