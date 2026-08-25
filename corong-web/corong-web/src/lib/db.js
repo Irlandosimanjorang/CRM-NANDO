@@ -187,6 +187,20 @@ export async function sendLeadEmail({ lead_id, to_email, to_name, subject, body,
   return data;
 }
 
+// AI bikinin draft pesan follow-up personal berdasar histori lead - dipanggil
+// ON-DEMAND doang (pas user klik tombol "Draft WhatsApp"/"Draft Email"), gak
+// otomatis, jadi biaya AI cuma kejadi pas beneran dipake.
+export async function draftFollowup(leadId, channel) {
+  const { data, error } = await supabase.functions.invoke("draft-followup", { body: { lead_id: leadId, channel } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal bikin draft");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // ---- STAGES ----
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");
