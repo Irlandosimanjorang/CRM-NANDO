@@ -1297,6 +1297,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showIndustryDemo, setShowIndustryDemo] = useState(false);
 
   const submit = async () => {
     setMsg("");
@@ -1895,18 +1896,50 @@ export default function Auth() {
               </div>
             </div>
 
-            {/* Demo interaktif - klik industri, langsung kelihatan pipeline,
-                field, dan contoh lead yang bakal dipakai. */}
+            {/* Demo interaktif - disembunyiin di balik tombol CTA biar landing
+                page gak berat/keramean; abis diklik baru muncul full demo. */}
             <div className="mt-14">
-              <div className="mx-auto max-w-2xl text-center mb-2">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-600">
-                  Coba sendiri
+              {!showIndustryDemo ? (
+                <div className="mx-auto max-w-2xl text-center">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-600 mb-3">
+                    Coba sendiri
+                  </div>
+                  <button
+                    onClick={() => setShowIndustryDemo(true)}
+                    className="group relative inline-flex items-center gap-3 overflow-hidden rounded-full bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 px-8 py-4 text-white shadow-[0_20px_50px_-15px_rgba(234,88,12,0.55)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_25px_60px_-15px_rgba(234,88,12,0.7)]"
+                  >
+                    <span className="absolute inset-0 -translate-x-full bg-white/20 skew-x-12 transition-transform duration-700 group-hover:translate-x-full" />
+                    <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
+                      <Play size={15} className="fill-white" />
+                    </span>
+                    <span className="relative text-left">
+                      <span className="block text-[15px] font-bold leading-tight">Coba Demo Interaktif</span>
+                      <span className="block text-[10px] font-medium text-orange-100">Klik industri kamu, lihat langsung isinya</span>
+                    </span>
+                  </button>
                 </div>
-                <h3 className="mt-2 text-[20px] font-bold tracking-[-0.02em] text-slate-950 sm:text-[24px]">
-                  Klik industri kamu, lihat langsung isinya
-                </h3>
-              </div>
-              <IndustryDemo />
+              ) : (
+                <div>
+                  <div className="mx-auto max-w-2xl text-center mb-2">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-600">
+                      Coba sendiri
+                    </div>
+                    <div className="mt-2 flex items-center justify-center gap-3">
+                      <h3 className="text-[20px] font-bold tracking-[-0.02em] text-slate-950 sm:text-[24px]">
+                        Klik industri kamu, lihat langsung isinya
+                      </h3>
+                      <button
+                        onClick={() => setShowIndustryDemo(false)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600 shrink-0"
+                        aria-label="Tutup demo"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <IndustryDemo />
+                </div>
+              )}
             </div>
           </div>
         </section>
