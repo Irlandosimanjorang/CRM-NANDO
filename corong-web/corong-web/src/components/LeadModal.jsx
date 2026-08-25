@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
-import { fmtDate, todayISO } from "../lib/helpers";
+import { fmtDate, todayISO, stageMeta, chipStyle } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
@@ -75,6 +75,9 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
   const customSlots = getCustomFieldSlots(industry);
   const categories = getCategories(industry);
   const companyTypeOptions = getCompanyTypeOptions(industry);
+  // Warna header ngikutin tahap pipeline lead ini (real-time ngikutin pilihan
+  // dropdown Tahap di bawah, bukan cuma nilai awal pas modal dibuka).
+  const sm = stageMeta(stages, f.stage_key || stages[0]?.key);
 
   // ---- KIRIM EMAIL ----
   const [showEmail, setShowEmail] = useState(false);
@@ -153,9 +156,25 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg">{lead.id ? "Edit Lead" : "Tambah Lead"}</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
-        <div className="space-y-3">
+      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl my-8 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header gradient sesuai warna tahap pipeline lead ini - avatar bubble
+            "bocor" ke luar band, senada sama gaya kartu profil & popup lain. */}
+        <div className="relative h-20 shrink-0" style={{ background: `linear-gradient(135deg, ${sm.hex}, ${sm.hex}cc 55%, ${sm.hex}99)` }}>
+          <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"><X size={16} /></button>
+          <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-2xl overflow-hidden bg-white ring-4 ring-white shadow-md flex items-center justify-center font-bold text-xl" style={{ color: sm.hex }}>
+            {(f.name || "?").charAt(0).toUpperCase()}
+          </div>
+        </div>
+        <div className="pt-9 px-5 pb-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="font-bold text-lg text-slate-900 truncate">{f.name || (lead.id ? "Edit Lead" : "Tambah Lead")}</h2>
+              <div className="text-xs text-slate-400 truncate">{f.category || (lead.id ? "Edit detail lead" : "Isi info lead baru")}</div>
+            </div>
+            <span className="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full border mt-0.5" style={chipStyle(sm.hex)}>{sm.label}</span>
+          </div>
+        </div>
+        <div className="space-y-3 px-5 pb-5 pt-3">
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Kategori"><select className={inp} value={f.category || categories[0]} onChange={(e) => set("category", e.target.value)}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
@@ -194,7 +213,15 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
           {!hidden("website") && (
             <Field label="Website"><input className={inp} value={f.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" /></Field>
           )}
-          <div className="border border-orange-200 bg-orange-50/60 rounded-2xl p-3"><Field label="Next action"><input className={inp} value={f.next_action || ""} onChange={(e) => set("next_action", e.target.value)} placeholder="langkah berikutnya" /></Field></div>
+          <div className="border border-orange-200 bg-orange-50/60 rounded-2xl p-3 space-y-2.5">
+            <Field label="Next action"><input className={inp} value={f.next_action || ""} onChange={(e) => set("next_action", e.target.value)} placeholder="langkah berikutnya" /></Field>
+            <Field label="Tunggu sampai (opsional)">
+              <input type="date" className={inp} value={f.wait_until || ""} onChange={(e) => set("wait_until", e.target.value || null)} />
+            </Field>
+            {f.wait_until && (
+              <p className="text-[11px] text-orange-700">⏸️ AI Advisor & reminder bakal DIEM buat lead ini sampai tanggal di atas lewat - gak akan dianggep overdue walaupun lama gak dikontak.</p>
+            )}
+          </div>
 
           <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50">
             <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><ClipboardList size={14} /> Progress harian</div>
