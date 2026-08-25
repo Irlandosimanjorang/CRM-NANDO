@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Sparkles, MessageCircle, Mail, Copy, Loader2, Send } from "lucide-react";
 import * as db from "../lib/db";
 import { waLink } from "../lib/helpers";
 
 // Popup ringan buat generate & langsung kirim draft follow-up (WA/Email) TANPA
-// perlu buka LeadModal penuh - dipicu dari tombol di kolom tabel Leads.
-// AI cuma jalan pas user klik salah satu tombol channel di dalam sini (on-demand).
-export default function AiDraftPopup({ lead, rect, onClose, onSent }) {
+// perlu buka LeadModal penuh - dipicu dari tombol di kolom tabel Leads/kartu,
+// atau dari tombol "Handle Now" di kartu rekomendasi Dashboard (initialChannel
+// diisi biar langsung auto-generate begitu dibuka, gak perlu klik 2x).
+// AI cuma jalan pas user klik/buka salah satu channel di dalam sini (on-demand).
+export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChannel }) {
   const [channel, setChannel] = useState(null); // "whatsapp" | "email" | null
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,6 +31,13 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent }) {
       setBusy(false);
     }
   };
+
+  // Kalau dibuka dari tombol "Handle Now" (bawa initialChannel), langsung
+  // auto-generate draft-nya tanpa nunggu user klik channel dulu.
+  useEffect(() => {
+    if (initialChannel) runDraft(initialChannel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const copyWa = async () => {
     try { await navigator.clipboard.writeText(waText); setWaCopied(true); setTimeout(() => setWaCopied(false), 1800); } catch (_) {}
