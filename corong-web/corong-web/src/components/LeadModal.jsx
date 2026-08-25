@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
-import { COMPANY_TYPES, fmtDate, todayISO } from "../lib/helpers";
-import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories } from "../lib/industryTemplates";
+import { fmtDate, todayISO } from "../lib/helpers";
+import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
@@ -74,6 +74,7 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
   const hidden = (field) => isFieldHidden(industry, field);
   const customSlots = getCustomFieldSlots(industry);
   const categories = getCategories(industry);
+  const companyTypeOptions = getCompanyTypeOptions(industry);
 
   // ---- KIRIM EMAIL ----
   const [showEmail, setShowEmail] = useState(false);
@@ -159,13 +160,18 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
           <div className="grid grid-cols-2 gap-3">
             <Field label="Kategori"><select className={inp} value={f.category || categories[0]} onChange={(e) => set("category", e.target.value)}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
             {!hidden("company_type") && (
-              <Field label={lbl("company_type", "Tipe perusahaan")}><select className={inp} value={f.company_type || ""} onChange={(e) => set("company_type", e.target.value)}>{COMPANY_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
+              <Field label={lbl("company_type", "Tipe perusahaan")}><select className={inp} value={f.company_type || ""} onChange={(e) => set("company_type", e.target.value)}>{companyTypeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
             )}
           </div>
           <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => set("stage_key", e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
           <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3"><Field label="Email"><input className={inp} value={f.email || ""} onChange={(e) => set("email", e.target.value)} /></Field><Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field></div>
-          <div className="grid grid-cols-2 gap-3"><Field label="Key person"><input className={inp} value={f.key_person || ""} onChange={(e) => set("key_person", e.target.value)} /></Field><Field label={lbl("key_person_title", "Jabatan")}><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field></div>
+          {(!hidden("key_person") || !hidden("key_person_title")) && (
+            <div className="grid grid-cols-2 gap-3">
+              {!hidden("key_person") && <Field label={lbl("key_person", "Key person")}><input className={inp} value={f.key_person || ""} onChange={(e) => set("key_person", e.target.value)} /></Field>}
+              {!hidden("key_person_title") && <Field label={lbl("key_person_title", "Jabatan")}><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field>}
+            </div>
+          )}
           <Field label="Kota"><input className={inp} value={f.city || ""} onChange={(e) => set("city", e.target.value)} /></Field>
           {customSlots.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
@@ -174,16 +180,20 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
               ))}
             </div>
           )}
-          <div className="flex items-center justify-between border border-slate-200 rounded-2xl p-3 bg-slate-50">
-            <div className="text-xs">
-              <div className="font-semibold text-slate-600 flex items-center gap-1.5"><MapPin size={13} /> Titik lokasi GPS</div>
-              <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas kamu lagi di lokasi"}</div>
+          {!hidden("location") && (
+            <div className="flex items-center justify-between border border-slate-200 rounded-2xl p-3 bg-slate-50">
+              <div className="text-xs">
+                <div className="font-semibold text-slate-600 flex items-center gap-1.5"><MapPin size={13} /> Titik lokasi GPS</div>
+                <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas kamu lagi di lokasi"}</div>
+              </div>
+              <button onClick={saveLocation} disabled={locBusy || !lead.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-xl px-3 py-1.5 hover:bg-orange-50 disabled:opacity-50 shrink-0 font-medium">
+                {locBusy ? "Menyimpan…" : f.latitude ? "Check In" : "Simpan Lokasi Ini"}
+              </button>
             </div>
-            <button onClick={saveLocation} disabled={locBusy || !lead.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-xl px-3 py-1.5 hover:bg-orange-50 disabled:opacity-50 shrink-0 font-medium">
-              {locBusy ? "Menyimpan…" : f.latitude ? "Check In" : "Simpan Lokasi Ini"}
-            </button>
-          </div>
-          <Field label="Website"><input className={inp} value={f.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" /></Field>
+          )}
+          {!hidden("website") && (
+            <Field label="Website"><input className={inp} value={f.website || ""} onChange={(e) => set("website", e.target.value)} placeholder="https://" /></Field>
+          )}
           <div className="border border-orange-200 bg-orange-50/60 rounded-2xl p-3"><Field label="Next action"><input className={inp} value={f.next_action || ""} onChange={(e) => set("next_action", e.target.value)} placeholder="langkah berikutnya" /></Field></div>
 
           <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50">
