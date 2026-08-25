@@ -3,10 +3,10 @@ import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, MessageCircle, Mail, Globe, ExternalLink, ShieldCheck, ShieldAlert, Copy, MapPin, CheckCircle2 } from "lucide-react";
 import * as db from "../lib/db";
-import { CATEGORIES, stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
+import { stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, fmtDate, daysSince, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
-import { getFieldLabel } from "../lib/industryTemplates";
+import { getFieldLabel, getCategories, isFieldHidden } from "../lib/industryTemplates";
 
 const val = (row, keys) => {
   const lk = Object.keys(row);
@@ -45,6 +45,9 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
   const [checkedInToday, setCheckedInToday] = useState(new Set());
   const titleLabel = getFieldLabel(industry, "key_person_title", "Jabatan");
   const productLabel = getFieldLabel(industry, "product", "Produk");
+  const nameLabel = getFieldLabel(industry, "name", "Perusahaan");
+  const categories = getCategories(industry);
+  const showTypeFilter = !isFieldHidden(industry, "company_type");
 
   const loadCheckedInToday = () => {
     db.getTodayCheckedInLeadIds().then((ids) => setCheckedInToday(new Set(ids))).catch(() => {});
@@ -120,7 +123,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
     return true;
   }), [leads, q, fCat, fType]);
 
-  const blank = () => ({ name: "", category: CATEGORIES[0], stage_key: stages[0]?.key, company_type: "", priority: "", verified: false });
+  const blank = () => ({ name: "", category: categories[0], stage_key: stages[0]?.key, company_type: "", priority: "", verified: false });
 
   const importFile = async (file) => {
     if (!file) return;
@@ -197,8 +200,10 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
       <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-2">
         <div className="flex flex-wrap gap-2 items-center mb-2">
           <div className="relative flex-1 min-w-40"><Search size={14} className="absolute left-2.5 top-2 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
-          <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua kategori</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
-          <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
+          <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua kategori</option>{categories.map((c) => <option key={c}>{c}</option>)}</select>
+          {showTypeFilter && (
+            <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option><option value="Manufacturer">Manufacturer</option><option value="Trader">Trader</option><option value="Both">M &amp; T</option></select>
+          )}
           <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={14} /> Lead</button>
         </div>
 
@@ -214,7 +219,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
         <table className="text-sm" style={{ minWidth: "1700px", width: "100%" }}>
           <thead className="text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.name, width: colWidths.name, position: "sticky", left: 0, top: 0, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>Perusahaan<ColResizeHandle colKey="name" /></th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.name, width: colWidths.name, position: "sticky", left: 0, top: 0, zIndex: 25, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>{nameLabel}<ColResizeHandle colKey="name" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.city, width: colWidths.city, position: "sticky", top: 0, zIndex: 15 }}>Kota<ColResizeHandle colKey="city" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.location, width: colWidths.location, position: "sticky", top: 0, zIndex: 15 }}>Lokasi<ColResizeHandle colKey="location" /></th>
               <th className="text-left px-3 py-2 font-medium whitespace-nowrap bg-slate-50 relative" style={{ minWidth: colWidths.keyPerson, width: colWidths.keyPerson, position: "sticky", top: 0, zIndex: 15 }}>Key Person<ColResizeHandle colKey="keyPerson" /></th>
