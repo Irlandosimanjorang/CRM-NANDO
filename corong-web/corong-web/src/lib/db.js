@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { getIndustryTemplate } from "./industryTemplates";
 
 // Bersihin kolom telepon/WA: cuma boleh angka + karakter pemisah wajar (+, -, spasi,
 // koma, slash, kurung). Nama/label kayak "Admin 1:" otomatis kebuang, sisa nomornya
@@ -26,6 +27,14 @@ export async function getMyOrg() {
   const { data, error } = await supabase.from("organizations").select("*").eq("id", orgId).single();
   if (error) throw error;
   return data;
+}
+
+// Simpen pilihan industri org (dipilih sekali pas onboarding lewat IndustryPicker,
+// nentuin template pipeline default + label field yang dipake di seluruh CRM).
+export async function setOrgIndustry(industryKey) {
+  const orgId = await getMyOrgId();
+  const { error } = await supabase.from("organizations").update({ industry: industryKey }).eq("id", orgId);
+  if (error) throw error;
 }
 
 export async function getOrgMembers() {
@@ -197,20 +206,17 @@ export async function saveStages(stages) {
 // ---- ONBOARDING AKUN BARU ----
 // Dipanggil otomatis pas akun baru pertama kali login & belum punya pipeline
 // sama sekali - biar gak "kosong melompong" abis daftar sendiri.
+// Pipeline yang di-seed ngikutin template industri yang udah dipilih org
+// (org.industry, diisi lewat IndustryPicker) - fallback ke PVC/Kimia kalau
+// entah kenapa belum ada (org lama sebelum fitur ini ada).
 export async function initDefaultStages() {
   const { data: existing } = await supabase.from("stages").select("id").limit(1);
   if (existing && existing.length > 0) return; // udah ada isinya, jangan ditimpa
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
-  const defaults = [
-    { key: "prospek", label: "Prospek Baru", hex: "#94a3b8", type: "normal" },
-    { key: "kontak", label: "Kontak Awal", hex: "#60a5fa", type: "normal" },
-    { key: "presentasi", label: "Presentasi / Visit", hex: "#fbbf24", type: "normal" },
-    { key: "negosiasi", label: "Negosiasi", hex: "#f97316", type: "normal" },
-    { key: "deal", label: "Deal / Menang", hex: "#10b981", type: "won" },
-    { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
-  ];
-  const payload = defaults.map((s, i) => ({ user_id: uid, org_id: orgId, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
+  const org = await getMyOrg().catch(() => null);
+  const tpl = getIndustryTemplate(org?.industry);
+  const payload = tpl.stages.map((s, i) => ({ user_id: uid, org_id: orgId, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
   const { error } = await supabase.from("stages").insert(payload);
   if (error) throw error;
 }
