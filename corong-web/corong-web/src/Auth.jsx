@@ -1028,6 +1028,9 @@ const ENGINE_NODES = [
 ];
 
 function AiEngineLoopSection() {
+  const RADIUS = 300; // radius orbit desktop, px
+  const nodesWithAngle = ENGINE_NODES.map((n, i) => ({ ...n, angle: -90 + i * 90 })); // mulai dari atas, muter searah jarum jam
+
   return (
     <section className="relative overflow-hidden bg-[#05070c] px-5 py-24 text-white sm:px-7 sm:py-32 lg:px-10">
       <style>{`
@@ -1042,57 +1045,133 @@ function AiEngineLoopSection() {
           to { transform: rotate(360deg); }
         }
         @keyframes nexto-core-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,.45), 0 0 40px 8px rgba(249,115,22,.25); }
-          50% { box-shadow: 0 0 0 10px rgba(249,115,22,0), 0 0 60px 14px rgba(249,115,22,.4); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,.45), 0 0 44px 10px rgba(249,115,22,.28); }
+          50% { box-shadow: 0 0 0 14px rgba(249,115,22,0), 0 0 68px 16px rgba(249,115,22,.45); }
         }
+        @keyframes nexto-ring-rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .nexto-orbit-dot-1 { offset-path: content-box; animation: nexto-orbit-1 7s linear infinite; }
       `}</style>
 
-      {/* Grid + glow background - konsisten sama identitas gelap Nexto di sidebar app */}
+      {/* Grid + glow background - lebar penuh, kesan "zoomed out" */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
         style={{
           backgroundImage:
             "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
-          backgroundSize: "36px 36px",
+          backgroundSize: "40px 40px",
         }}
       />
       <div
-        className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/3 rounded-full opacity-30 blur-[110px]"
+        className="pointer-events-none absolute left-1/2 top-1/3 h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.22] blur-[130px]"
         style={{ background: "radial-gradient(circle, #f97316, transparent 70%)" }}
       />
       <div
-        className="pointer-events-none absolute bottom-0 right-0 h-[420px] w-[420px] translate-x-1/4 translate-y-1/4 rounded-full opacity-25 blur-[110px]"
+        className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full opacity-20 blur-[130px]"
         style={{ background: "radial-gradient(circle, #22d3ee, transparent 70%)" }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-0 left-0 h-[420px] w-[420px] -translate-x-1/3 translate-y-1/3 rounded-full opacity-[0.14] blur-[120px]"
+        style={{ background: "radial-gradient(circle, #a855f7, transparent 70%)" }}
       />
 
       <div className="relative mx-auto max-w-3xl text-center">
         <SectionLabel>The Engine</SectionLabel>
-        <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] sm:text-[48px]">
+        <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] sm:text-[52px]">
           NEXTO AI Engine Loops
         </h2>
-        <p className="mt-4 text-[15px] leading-relaxed text-slate-400">
+        <p className="mt-4 text-[15px] leading-relaxed text-slate-400 sm:text-[16px]">
           Bukan sekadar chatbot yang jawab pertanyaan. Ini loop yang jalan terus - baca konteks, mutusin next action, eksekusi, simpen hasilnya, terus balik lagi buat mutusin yang lebih tajam besok.
         </p>
       </div>
 
-      {/* ---- Diagram ---- */}
-      <div className="relative mx-auto mt-16 max-w-md">
-        {/* Inti / robot - sumber loop-nya */}
+      {/* ---- Diagram orbital (desktop/tablet lebar) ---- */}
+      <div className="relative mx-auto mt-20 hidden md:block" style={{ width: RADIUS * 2 + 280, height: RADIUS * 2 + 40, maxWidth: "100%" }}>
+        {/* Cincin orbit - muter pelan terus-menerus */}
+        <div
+          className="absolute left-1/2 top-1/2 rounded-full border border-dashed"
+          style={{
+            width: RADIUS * 2, height: RADIUS * 2,
+            marginLeft: -RADIUS, marginTop: -RADIUS,
+            borderColor: "rgba(255,255,255,.14)",
+            animation: "nexto-ring-rotate 40s linear infinite",
+          }}
+        />
+        <div
+          className="absolute left-1/2 top-1/2 rounded-full"
+          style={{
+            width: RADIUS * 2 - 2, height: RADIUS * 2 - 2,
+            marginLeft: -(RADIUS - 1), marginTop: -(RADIUS - 1),
+            background: "conic-gradient(from 0deg, #f9731633, transparent 25%, transparent 75%, #22d3ee33)",
+            animation: "nexto-ring-rotate 14s linear infinite",
+          }}
+        />
+
+        {/* Garis spoke dari inti ke tiap node */}
+        {nodesWithAngle.map((n) => {
+          const rad = (n.angle * Math.PI) / 180;
+          const x2 = RADIUS * Math.cos(rad);
+          const y2 = RADIUS * Math.sin(rad);
+          const len = Math.sqrt(x2 * x2 + y2 * y2);
+          const rot = (Math.atan2(y2, x2) * 180) / Math.PI;
+          return (
+            <div
+              key={`spoke-${n.key}`}
+              className="absolute left-1/2 top-1/2 h-px origin-left"
+              style={{ width: len, background: `linear-gradient(90deg, ${n.color}55, transparent)`, transform: `rotate(${rot}deg)` }}
+            />
+          );
+        })}
+
+        {/* Inti / robot - sumber loop-nya, di tengah lingkaran */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border border-orange-400/30 bg-gradient-to-br from-orange-500/25 to-orange-700/10" style={{ animation: "nexto-core-pulse 2.6s ease-in-out infinite" }}>
+            <Bot size={30} className="text-orange-400" />
+          </div>
+          <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.22em] text-orange-400/80">Nexto AI Core</div>
+        </div>
+
+        {/* 4 node engine, disebar keliling lingkaran */}
+        {nodesWithAngle.map((n) => {
+          const Icon = n.icon;
+          const rad = (n.angle * Math.PI) / 180;
+          const x = RADIUS * Math.cos(rad);
+          const y = RADIUS * Math.sin(rad);
+          return (
+            <div
+              key={n.key}
+              className="absolute left-1/2 top-1/2 w-[240px]"
+              style={{ transform: `translate(${x}px, ${y}px) translate(-50%, -50%)` }}
+            >
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 text-left backdrop-blur-sm shadow-[0_20px_50px_-25px_rgba(0,0,0,0.6)]">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: `${n.color}1f`, color: n.color, boxShadow: `0 0 0 1px ${n.color}33` }}>
+                    <Icon size={17} />
+                  </span>
+                  <span className="text-[12px] font-bold tracking-[0.08em]" style={{ color: n.color }}>{n.label}</span>
+                </div>
+                <p className="mt-2.5 text-[12.5px] leading-relaxed text-slate-400">{n.desc}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ---- Diagram vertikal (mobile) ---- */}
+      <div className="relative mx-auto mt-16 max-w-md md:hidden">
         <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-400/30 bg-gradient-to-br from-orange-500/20 to-orange-700/10" style={{ animation: "nexto-core-pulse 2.6s ease-in-out infinite" }}>
           <Bot size={26} className="text-orange-400" />
         </div>
-        <div className="mt-3 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-orange-400/80">
-          Nexto AI Core
-        </div>
+        <div className="mt-3 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-orange-400/80">Nexto AI Core</div>
 
-        {/* Garis penghubung vertikal dengan titik cahaya yang ngalir terus */}
         <div className="relative mx-auto mt-4 w-px" style={{ height: `${ENGINE_NODES.length * 148}px` }}>
           <div className="absolute inset-0 w-px bg-gradient-to-b from-orange-400/40 via-white/10 to-cyan-400/40" />
           <div
             className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-orange-300"
             style={{ boxShadow: "0 0 12px 3px rgba(251,146,60,.8)", animation: "nexto-flow-pulse 3.6s linear infinite" }}
           />
-
           {ENGINE_NODES.map((n, i) => {
             const Icon = n.icon;
             return (
@@ -1111,16 +1190,16 @@ function AiEngineLoopSection() {
             );
           })}
         </div>
+      </div>
 
-        {/* Loop-back indicator */}
-        <div className="mx-auto mt-2 flex max-w-[420px] items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/15" style={{ animation: "nexto-orbit-spin 3s linear infinite" }}>
-            <ArrowRight size={12} className="text-slate-300 -rotate-90" />
-          </span>
-          <p className="text-[11.5px] leading-relaxed text-slate-400">
-            Hasil dari Memory Engine balik lagi jadi konteks buat Decision Engine besok - <span className="text-white font-medium">loop-nya gak pernah berhenti.</span>
-          </p>
-        </div>
+      {/* Loop-back indicator - dipake di dua ukuran layar */}
+      <div className="relative mx-auto mt-10 flex max-w-[460px] items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/15" style={{ animation: "nexto-orbit-spin 3s linear infinite" }}>
+          <ArrowRight size={12} className="text-slate-300 -rotate-90" />
+        </span>
+        <p className="text-[11.5px] leading-relaxed text-slate-400">
+          Hasil dari Memory Engine balik lagi jadi konteks buat Decision Engine besok - <span className="text-white font-medium">loop-nya gak pernah berhenti.</span>
+        </p>
       </div>
     </section>
   );
