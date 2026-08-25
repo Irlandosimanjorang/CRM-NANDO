@@ -15,10 +15,11 @@ import Advisor from "./tabs/Advisor";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
+import IndustryDemo from "./tabs/IndustryDemo";
 import { getIndustryTemplate } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
+  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, Eye,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -58,6 +59,7 @@ const NAV = [
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
   { key: "komunitas", label: "Nex", short: "Nex", icon: Users2, special: true },
   { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
+  { key: "industridemo", label: "Demo Industri", short: "Demo", icon: Eye },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
 ];
 
@@ -253,7 +255,7 @@ export default function App() {
   // Fitur AI (Bot Telegram, AI Advisor, Rekam Meeting, dst) pake token API
   // berbayar, jadi cuma kebuka abis di-upgrade ke Premium (settings.plan = 'premium').
   const isPremium = settings.plan === "premium" || org?.plan === "enterprise";
-  const FREE_TABS = ["dashboard", "leads"];
+  const FREE_TABS = ["dashboard", "leads", "industridemo"];
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
   const effectiveTab = tab;
@@ -489,6 +491,7 @@ export default function App() {
               {effectiveTab === "kompetitor" && <PreviewLock locked={isLocked("kompetitor")}><Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "komunitas" && <PreviewLock locked={isLocked("komunitas")}><Nex dummy={isLocked("komunitas")} /></PreviewLock>}
               {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} /></PreviewLock>}
+              {effectiveTab === "industridemo" && <IndustryDemo />}
               {effectiveTab === "settings" && <PreviewLock locked={isLocked("settings")}><SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} /></PreviewLock>}
             </>
           )}
