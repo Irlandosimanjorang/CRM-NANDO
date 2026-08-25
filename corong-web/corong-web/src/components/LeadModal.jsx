@@ -74,6 +74,8 @@ function fillTemplate(str, lead) {
   return str.replace(/\{\{nama\}\}/g, lead.name || "perusahaan Anda").replace(/\{\{pic\}\}/g, lead.key_person || "Bapak/Ibu");
 }
 
+const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Gak ada budget", "Gak ada kebutuhan", "Kualitas/spek", "Respons lambat", "Lainnya"];
+
 export default function LeadModal({ lead, stages, settings, industry, onClose, onSaved }) {
   const [f, setF] = useState({ ...lead });
   const [log, setLog] = useState(lead.progressLog || []);
@@ -83,6 +85,43 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
   const [busy, setBusy] = useState(false);
   const [locBusy, setLocBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+
+  // ---- OUTCOME MEMORY - pas Tahap diganti ke tipe Menang/Kalah (dan
+  // sebelumnya belum closed), munculin form kecil nanya kenapa. Ini yang
+  // ngisi "Memory Engine" di alur Context->Decision->Action->Memory->Loop. ----
+  const [showOutcome, setShowOutcome] = useState(false);
+  const [outcomeResult, setOutcomeResult] = useState(null); // "won" | "lost"
+  const [outcomeCategory, setOutcomeCategory] = useState("");
+  const [outcomeReason, setOutcomeReason] = useState("");
+  const [outcomeGuessing, setOutcomeGuessing] = useState(false);
+
+  const onStageChange = (newKey) => {
+    set("stage_key", newKey);
+    const newStage = stages.find((s) => s.key === newKey);
+    const oldStage = stages.find((s) => s.key === lead.stage_key);
+    const isClosingNow = newStage && (newStage.type === "won" || newStage.type === "lost");
+    const wasAlreadyClosed = oldStage && (oldStage.type === "won" || oldStage.type === "lost");
+    if (isClosingNow && !wasAlreadyClosed && !lead.outcome) {
+      setShowOutcome(true);
+      setOutcomeResult(newStage.type);
+    } else if (!isClosingNow) {
+      setShowOutcome(false);
+    }
+  };
+
+  const guessOutcome = async () => {
+    if (!lead.id) return;
+    setOutcomeGuessing(true);
+    try {
+      const res = await db.guessOutcomeReason(lead.id, outcomeResult);
+      setOutcomeCategory(res.reason_category || "");
+      setOutcomeReason(res.reason || "");
+    } catch (e) {
+      alert("Gagal nebak: " + e.message);
+    } finally {
+      setOutcomeGuessing(false);
+    }
+  };
 
   // Label field & slot custom field ngikutin template industri org (Settings > pilihan
   // industri pas onboarding). Org PVC lama gak kerasa bedanya - labelnya persis sama.
@@ -150,7 +189,13 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
   const save = async () => {
     if (!f.name?.trim()) { alert("Nama wajib diisi."); return; }
     setBusy(true);
-    try { await db.upsertLead(f); onSaved(); }
+    try {
+      await db.upsertLead(f);
+      if (showOutcome && outcomeResult && lead.id) {
+        await db.saveOutcome(lead.id, { result: outcomeResult, reason_category: outcomeCategory, reason: outcomeReason, ai_generated: false });
+      }
+      onSaved();
+    }
     catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
   const del = async () => { if (!window.confirm("Hapus lead ini?")) return; setBusy(true); await db.deleteLead(lead.id); onSaved(); };
@@ -221,7 +266,28 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
               <Field label={lbl("company_type", "Tipe perusahaan")}><select className={inp} value={f.company_type || ""} onChange={(e) => set("company_type", e.target.value)}>{companyTypeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
             )}
           </div>
-          <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => set("stage_key", e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
+          <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => onStageChange(e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
+
+          {showOutcome && (
+            <div className={`border rounded-2xl p-3 space-y-2.5 ${outcomeResult === "won" ? "border-emerald-200 bg-emerald-50/60" : "border-rose-200 bg-rose-50/60"}`}>
+              <div className={`text-xs font-semibold flex items-center gap-1.5 ${outcomeResult === "won" ? "text-emerald-700" : "text-rose-700"}`}>
+                <Sparkles size={13} /> Kenapa {outcomeResult === "won" ? "Menang" : "Kalah"}?
+              </div>
+              <Field label="Kategori alasan">
+                <select className={inp} value={outcomeCategory} onChange={(e) => setOutcomeCategory(e.target.value)}>
+                  <option value="">Pilih...</option>
+                  {REASON_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label="Detail (opsional)">
+                <textarea className={inp + " min-h-[70px]"} value={outcomeReason} onChange={(e) => setOutcomeReason(e.target.value)} placeholder="Ceritain singkat kenapa..." />
+              </Field>
+              <button onClick={guessOutcome} disabled={outcomeGuessing || !lead.id} className="text-xs border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 rounded-lg px-3 py-1.5 font-medium flex items-center gap-1.5">
+                {outcomeGuessing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} Biarin AI nebak dari progress notes
+              </button>
+              <p className="text-[10px] text-slate-400">Kesimpen sebagai "Outcome Memory" - AI Advisor bakal belajar pola ini buat rekomendasi lead lain ke depannya.</p>
+            </div>
+          )}
           <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3"><Field label="Email"><input className={inp} value={f.email || ""} onChange={(e) => set("email", e.target.value)} /></Field><Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field></div>
           {(!hidden("key_person") || !hidden("key_person_title")) && (
