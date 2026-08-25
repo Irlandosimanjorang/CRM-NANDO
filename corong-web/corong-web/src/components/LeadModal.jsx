@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
 import { CATEGORIES, COMPANY_TYPES, fmtDate, todayISO } from "../lib/helpers";
+import { getFieldLabel, isFieldHidden, getCustomFieldSlots } from "../lib/industryTemplates";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
@@ -57,7 +58,7 @@ function fillTemplate(str, lead) {
   return str.replace(/\{\{nama\}\}/g, lead.name || "perusahaan Anda").replace(/\{\{pic\}\}/g, lead.key_person || "Bapak/Ibu");
 }
 
-export default function LeadModal({ lead, stages, settings, onClose, onSaved }) {
+export default function LeadModal({ lead, stages, settings, industry, onClose, onSaved }) {
   const [f, setF] = useState({ ...lead });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
@@ -66,6 +67,12 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
   const [busy, setBusy] = useState(false);
   const [locBusy, setLocBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+
+  // Label field & slot custom field ngikutin template industri org (Settings > pilihan
+  // industri pas onboarding). Org PVC lama gak kerasa bedanya - labelnya persis sama.
+  const lbl = (field, fallback) => getFieldLabel(industry, field, fallback);
+  const hidden = (field) => isFieldHidden(industry, field);
+  const customSlots = getCustomFieldSlots(industry);
 
   // ---- KIRIM EMAIL ----
   const [showEmail, setShowEmail] = useState(false);
@@ -150,13 +157,22 @@ export default function LeadModal({ lead, stages, settings, onClose, onSaved }) 
           <Field label="Nama perusahaan *"><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Kategori"><select className={inp} value={f.category || CATEGORIES[0]} onChange={(e) => set("category", e.target.value)}>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></Field>
-            <Field label="Tipe perusahaan"><select className={inp} value={f.company_type || ""} onChange={(e) => set("company_type", e.target.value)}>{COMPANY_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
+            {!hidden("company_type") && (
+              <Field label={lbl("company_type", "Tipe perusahaan")}><select className={inp} value={f.company_type || ""} onChange={(e) => set("company_type", e.target.value)}>{COMPANY_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
+            )}
           </div>
           <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => set("stage_key", e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
-          <Field label="Produk"><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
+          <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3"><Field label="Email"><input className={inp} value={f.email || ""} onChange={(e) => set("email", e.target.value)} /></Field><Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field></div>
-          <div className="grid grid-cols-2 gap-3"><Field label="Key person"><input className={inp} value={f.key_person || ""} onChange={(e) => set("key_person", e.target.value)} /></Field><Field label="Jabatan"><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field></div>
+          <div className="grid grid-cols-2 gap-3"><Field label="Key person"><input className={inp} value={f.key_person || ""} onChange={(e) => set("key_person", e.target.value)} /></Field><Field label={lbl("key_person_title", "Jabatan")}><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field></div>
           <Field label="Kota"><input className={inp} value={f.city || ""} onChange={(e) => set("city", e.target.value)} /></Field>
+          {customSlots.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              {customSlots.map((slot) => (
+                <Field key={slot.key} label={slot.label}><input className={inp} value={f[slot.key] || ""} onChange={(e) => set(slot.key, e.target.value)} /></Field>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between border border-slate-200 rounded-2xl p-3 bg-slate-50">
             <div className="text-xs">
               <div className="font-semibold text-slate-600 flex items-center gap-1.5"><MapPin size={13} /> Titik lokasi GPS</div>
