@@ -19,7 +19,7 @@ import IndustryDemo from "./tabs/IndustryDemo";
 import { getIndustryTemplate } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, Eye,
+  Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
 } from "lucide-react";
 
 export function NextoBadge({ size = 36 }) {
@@ -58,8 +58,6 @@ const NAV = [
   { key: "visitfollowup", label: "Visit & Follow-up", short: "Visit", icon: CalendarCheck },
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
   { key: "komunitas", label: "Nex", short: "Nex", icon: Users2, special: true },
-  { key: "advisor", label: "AI Advisor", short: "AI", icon: Lightbulb },
-  { key: "industridemo", label: "Demo Industri", short: "Demo", icon: Eye },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
 ];
 
