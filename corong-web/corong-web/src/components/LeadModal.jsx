@@ -1,11 +1,27 @@
 import { useState } from "react";
-import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2 } from "lucide-react";
+import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtDate, todayISO, stageMeta, chipStyle } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
+
+// Chip kecil buat nampilin level Customer State (Interest/Intent/Risk) dengan
+// warna - "invert" dipake buat Risk, soalnya "high risk" itu JELEK (merah),
+// beda arah sama Interest/Intent yang "high" itu BAGUS (hijau).
+function StateChip({ label, level, invert }) {
+  const COLORS = invert
+    ? { high: "#e11d48", medium: "#d97706", low: "#16a34a" }
+    : { high: "#16a34a", medium: "#d97706", low: "#94a3b8" };
+  const hex = COLORS[level] || "#94a3b8";
+  return (
+    <div className="rounded-xl border px-2 py-1.5 text-center" style={{ borderColor: `${hex}55`, backgroundColor: `${hex}14` }}>
+      <div className="text-[9px] text-slate-500">{label}</div>
+      <div className="text-[11px] font-bold capitalize" style={{ color: hex }}>{level || "—"}</div>
+    </div>
+  );
+}
 
 // Template siap pakai - {{nama}} & {{pic}} otomatis keganti pas dipilih.
 const EMAIL_TEMPLATES = {
@@ -175,6 +191,29 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
           </div>
         </div>
         <div className="space-y-3 px-5 pb-5 pt-3">
+          {lead.customer_state && (
+            <div className="border border-violet-200 bg-violet-50/60 rounded-2xl p-3">
+              <div className="text-xs font-semibold text-violet-700 mb-2 flex items-center gap-1.5">
+                <Sparkles size={13} /> Customer State (AI)
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <StateChip label="Interest" level={lead.customer_state.interest} />
+                <StateChip label="Intent" level={lead.customer_state.intent} />
+                <StateChip label="Risk" level={lead.customer_state.risk} invert />
+              </div>
+              {lead.customer_state.objection && (
+                <div className="mt-2 text-xs text-slate-600"><span className="text-slate-400">Objection:</span> {lead.customer_state.objection}</div>
+              )}
+              <div className="mt-1 text-xs text-slate-600">
+                <span className="text-slate-400">Decision maker:</span> {lead.customer_state.decision_maker_known ? "Kelihatannya sudah" : "Belum pasti"}
+                {lead.customer_state.expected_decision_date && <> · <span className="text-slate-400">Keputusan sekitar:</span> {new Date(lead.customer_state.expected_decision_date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</>}
+              </div>
+              {lead.customer_state.state_reason && (
+                <p className="mt-2 text-[11px] text-violet-700/80 italic">"{lead.customer_state.state_reason}"</p>
+              )}
+              <p className="mt-2 text-[10px] text-slate-400">Dihitung otomatis dari progress notes - update tiap lead ini kena analisis AI Advisor.</p>
+            </div>
+          )}
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Kategori"><select className={inp} value={f.category || categories[0]} onChange={(e) => set("category", e.target.value)}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
