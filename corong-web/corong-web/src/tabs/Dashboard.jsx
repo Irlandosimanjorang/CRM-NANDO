@@ -1,6 +1,105 @@
-import { useMemo, useState } from "react";
-import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Loader2 } from "lucide-react";
+import * as db from "../lib/db";
 import { todayISO, fmtRp } from "../lib/helpers";
+
+const ACTION_ICON = {
+  Call: Phone, WhatsApp: MessageCircle, Visit: MapPin, "Kirim Penawaran": FileText,
+  "Follow-up": Clock, "Jadwalkan Meeting": CalendarClock, Tunggu: Clock, Eskalasi: TriangleAlert, Closing: CheckCircle2,
+};
+const URGENCY_META = { high: { label: "Tinggi", hex: "#e11d48" }, medium: { label: "Sedang", hex: "#d97706" }, low: { label: "Rendah", hex: "#64748b" } };
+
+// Kartu "Good Morning" - baca hasil digest AI yang UDAH JALAN pagi ini (cron
+// jam 8, Senin-Jumat), gak nge-trigger AI call baru sama sekali pas dibuka -
+// murni nampilin apa yang udah kesimpen, jadi GRATIS tiap kali dashboard dibuka.
+function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
+  const [state, setState] = useState({ status: "loading", run: null });
+
+  useEffect(() => {
+    let alive = true;
+    db.getTodayAdvisorRun()
+      .then((run) => { if (alive) setState({ status: run ? "ready" : "empty", run }); })
+      .catch(() => { if (alive) setState({ status: "empty", run: null }); });
+    return () => { alive = false; };
+  }, []);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
+  const name = (settings?.community_display_name || "").split(" ")[0];
+
+  if (state.status === "loading") {
+    return (
+      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5 flex items-center gap-2 text-sm text-slate-400">
+        <Loader2 size={15} className="animate-spin" /> Memuat ringkasan…
+      </div>
+    );
+  }
+
+  if (state.status === "empty") {
+    return (
+      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700"><Sun size={16} className="text-orange-500" /> {greeting}{name ? `, ${name}` : ""}</div>
+        <p className="text-xs text-slate-400 mt-2">Belum ada ringkasan buat hari ini — analisis otomatis jalan tiap jam 8 pagi (Senin–Jumat). Cek lagi nanti, atau lihat email kamu.</p>
+      </div>
+    );
+  }
+
+  const { run } = state;
+  const stats = run.stats || {};
+  const topRecs = (run.recs || []).slice(0, 3);
+
+  return (
+    <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-[28px] shadow-[0_8px_30px_-10px_rgba(15,23,42,0.4)] p-5 text-white">
+      <div className="flex items-center gap-2 text-sm font-semibold"><Sun size={16} className="text-orange-400" /> {greeting}{name ? `, ${name}` : ""}</div>
+      <p className="text-[11px] text-slate-400 mt-1">Ringkasan CRM kamu hari ini.</p>
+
+      <div className="grid grid-cols-3 gap-2 mt-4">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
+          <div className="text-lg font-bold font-mono">{stats.total_active ?? "—"}</div>
+          <div className="text-[9px] text-slate-400 mt-0.5">Lead aktif</div>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
+          <div className="text-lg font-bold font-mono text-rose-400">{stats.overdue_followup ?? "—"}</div>
+          <div className="text-[9px] text-slate-400 mt-0.5">Overdue follow-up</div>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
+          <div className="text-lg font-bold font-mono text-emerald-400">{stats.win_rate !== null && stats.win_rate !== undefined ? `${stats.win_rate}%` : "—"}</div>
+          <div className="text-[9px] text-slate-400 mt-0.5">Win rate</div>
+        </div>
+      </div>
+
+      {topRecs.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {topRecs.map((r, i) => {
+            const Icon = ACTION_ICON[r.action_type] || Clock;
+            const um = URGENCY_META[r.urgency] || URGENCY_META.low;
+            const lead = (leads || []).find((l) => l.id === r.id);
+            return (
+              <button
+                key={i}
+                onClick={() => lead && onOpenLead && onOpenLead(lead)}
+                className="w-full text-left flex items-start gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 transition-colors"
+              >
+                <span className="w-7 h-7 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5"><Icon size={13} /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[12px] font-semibold truncate">{r.name}</span>
+                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: um.hex }}>{um.label}</span>
+                  </div>
+                  <div className="text-[10.5px] text-slate-400 mt-0.5 line-clamp-1">{r.action}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <button onClick={() => onGo("advisor")} className="w-full mt-4 text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors rounded-2xl py-2.5 text-center">
+        Lihat semua rekomendasi →
+      </button>
+    </div>
+  );
+}
 
 function StatCard({ icon: I, label, value, accent, small }) {
   const ac = accent === "orange" ? "text-orange-600" : accent === "emerald" ? "text-emerald-600" : "text-slate-800";
@@ -133,7 +232,7 @@ function PerformanceInsight({ leads, stages }) {
   );
 }
 
-export default function Dashboard({ leads, stages, dealTransactions, onGo }) {
+export default function Dashboard({ leads, stages, dealTransactions, settings, onGo, onOpenLead }) {
   const s = useMemo(() => {
     const won = stages.filter((x) => x.type === "won").map((x) => x.key);
     const activeKeys = stages.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
@@ -187,6 +286,8 @@ export default function Dashboard({ leads, stages, dealTransactions, onGo }) {
         <h1 className="text-xl font-bold tracking-tight text-slate-900">Dashboard</h1>
         <p className="text-xs text-slate-400 mt-1 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
+
+      <GoodMorningCard settings={settings} onGo={onGo} onOpenLead={onOpenLead} leads={leads} />
 
       <div className="grid grid-cols-2 gap-3">
         <RevenueCard label="Revenue Tahun Ini" value={s.revYear} dark />
