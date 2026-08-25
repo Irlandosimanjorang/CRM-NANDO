@@ -26,6 +26,8 @@ import {
   Bot,
   Pencil,
   CheckCircle2,  MessageCircle,
+  Database,
+  Layers,
 
 } from "lucide-react";
 const NEXTO_LOGO_SRC = "/nexto-logo.png";
@@ -985,6 +987,142 @@ function SectionLabel({ children }) {
       <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
       {children}
     </div>
+  );
+}
+
+// ============================================================
+// NEXTO AI ENGINE LOOPS - diagram signature, section sendiri di landing page.
+// 4 node (Context/Decision/Action/Memory) tersambung garis yang "hidup" -
+// titik cahaya ngalir turun terus-menerus, representasiin engine yang gak
+// pernah berhenti muter. Robot NEXTO jadi sumber/inti di paling atas.
+// ============================================================
+const ENGINE_NODES = [
+  {
+    key: "context",
+    label: "CONTEXT ENGINE",
+    icon: Database,
+    color: "#38bdf8",
+    desc: "Baca semua data lead - CRM, progress notes, deal, customer state, histori percakapan.",
+  },
+  {
+    key: "decision",
+    label: "DECISION ENGINE",
+    icon: BrainCircuit,
+    color: "#f97316",
+    desc: "Nentuin apa yang terjadi, next action apa, kenapa, dan kapan waktu yang tepat.",
+  },
+  {
+    key: "action",
+    label: "ACTION ENGINE",
+    icon: Zap,
+    color: "#a855f7",
+    desc: "Eksekusi - update CRM, sinkron calendar, bikin draft pesan, jadwalin follow-up.",
+  },
+  {
+    key: "memory",
+    label: "MEMORY ENGINE",
+    icon: Layers,
+    color: "#22d3ee",
+    desc: "Simpen hasilnya - customer state, outcome menang/kalah - buat keputusan besok lebih tajam.",
+  },
+];
+
+function AiEngineLoopSection() {
+  return (
+    <section className="relative overflow-hidden bg-[#05070c] px-5 py-24 text-white sm:px-7 sm:py-32 lg:px-10">
+      <style>{`
+        @keyframes nexto-flow-pulse {
+          0% { top: -8%; opacity: 0; }
+          8% { opacity: 1; }
+          92% { opacity: 1; }
+          100% { top: 100%; opacity: 0; }
+        }
+        @keyframes nexto-orbit-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes nexto-core-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,.45), 0 0 40px 8px rgba(249,115,22,.25); }
+          50% { box-shadow: 0 0 0 10px rgba(249,115,22,0), 0 0 60px 14px rgba(249,115,22,.4); }
+        }
+      `}</style>
+
+      {/* Grid + glow background - konsisten sama identitas gelap Nexto di sidebar app */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
+          backgroundSize: "36px 36px",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/3 rounded-full opacity-30 blur-[110px]"
+        style={{ background: "radial-gradient(circle, #f97316, transparent 70%)" }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-0 right-0 h-[420px] w-[420px] translate-x-1/4 translate-y-1/4 rounded-full opacity-25 blur-[110px]"
+        style={{ background: "radial-gradient(circle, #22d3ee, transparent 70%)" }}
+      />
+
+      <div className="relative mx-auto max-w-3xl text-center">
+        <SectionLabel>The Engine</SectionLabel>
+        <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] sm:text-[48px]">
+          NEXTO AI Engine Loops
+        </h2>
+        <p className="mt-4 text-[15px] leading-relaxed text-slate-400">
+          Bukan sekadar chatbot yang jawab pertanyaan. Ini loop yang jalan terus - baca konteks, mutusin next action, eksekusi, simpen hasilnya, terus balik lagi buat mutusin yang lebih tajam besok.
+        </p>
+      </div>
+
+      {/* ---- Diagram ---- */}
+      <div className="relative mx-auto mt-16 max-w-md">
+        {/* Inti / robot - sumber loop-nya */}
+        <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-400/30 bg-gradient-to-br from-orange-500/20 to-orange-700/10" style={{ animation: "nexto-core-pulse 2.6s ease-in-out infinite" }}>
+          <Bot size={26} className="text-orange-400" />
+        </div>
+        <div className="mt-3 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-orange-400/80">
+          Nexto AI Core
+        </div>
+
+        {/* Garis penghubung vertikal dengan titik cahaya yang ngalir terus */}
+        <div className="relative mx-auto mt-4 w-px" style={{ height: `${ENGINE_NODES.length * 148}px` }}>
+          <div className="absolute inset-0 w-px bg-gradient-to-b from-orange-400/40 via-white/10 to-cyan-400/40" />
+          <div
+            className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-orange-300"
+            style={{ boxShadow: "0 0 12px 3px rgba(251,146,60,.8)", animation: "nexto-flow-pulse 3.6s linear infinite" }}
+          />
+
+          {ENGINE_NODES.map((n, i) => {
+            const Icon = n.icon;
+            return (
+              <div key={n.key} className="absolute left-1/2 flex -translate-x-1/2 items-start gap-4" style={{ top: `${i * 148 + 24}px`, width: "min(88vw, 420px)" }}>
+                <span className="absolute left-1/2 top-1 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2" style={{ borderColor: n.color, background: "#05070c" }} />
+                <div className="ml-8 flex-1 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 text-left backdrop-blur-sm sm:ml-10">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl" style={{ background: `${n.color}1f`, color: n.color }}>
+                      <Icon size={16} />
+                    </span>
+                    <span className="text-[12px] font-bold tracking-[0.08em]" style={{ color: n.color }}>{n.label}</span>
+                  </div>
+                  <p className="mt-2 text-[12.5px] leading-relaxed text-slate-400">{n.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Loop-back indicator */}
+        <div className="mx-auto mt-2 flex max-w-[420px] items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/15" style={{ animation: "nexto-orbit-spin 3s linear infinite" }}>
+            <ArrowRight size={12} className="text-slate-300 -rotate-90" />
+          </span>
+          <p className="text-[11.5px] leading-relaxed text-slate-400">
+            Hasil dari Memory Engine balik lagi jadi konteks buat Decision Engine besok - <span className="text-white font-medium">loop-nya gak pernah berhenti.</span>
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1954,6 +2092,13 @@ export default function Auth() {
             </div>
           </div>
         </section>
+
+        {/* =========================================================
+            NEXTO AI ENGINE LOOPS - section sendiri, gak digabung sama
+            section lain. Diagram signature nunjukin gimana engine-nya
+            beneran jalan (Context -> Decision -> Action -> Memory -> loop).
+        ========================================================== */}
+        <AiEngineLoopSection />
 
         {/* =========================================================
             BEFORE / AFTER
