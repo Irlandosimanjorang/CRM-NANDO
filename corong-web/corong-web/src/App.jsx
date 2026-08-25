@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
 import Auth from "./Auth";
+import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
 import GenerateLeads from "./tabs/GenerateLeads";
@@ -13,6 +14,7 @@ import Advisor from "./tabs/Advisor";
 import SettingsTab from "./tabs/Settings";
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
+import { getIndustryTemplate } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Lightbulb, Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
@@ -333,18 +335,18 @@ export default function App() {
         <div className="px-4 pt-4 pb-3">
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3 shadow-[0_12px_30px_-22px_rgba(0,0,0,.9)]">
             <div className="flex items-center gap-2.5">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/10 bg-white/[0.06] shadow-[0_8px_25px_-12px_rgba(249,115,22,.7)]">
-                <Bot size={21} className="text-orange-400" strokeWidth={1.8} />
-                <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-400 nexto-status-dot" />
-              </div>
+              <NextoRobotHead size={38} />
 
               <div className="min-w-0 flex-1">
-                <div className="text-[17px] font-extrabold tracking-[-0.03em]">
-                  NE<span className="text-orange-400">X</span>TO
-                </div>
-                <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <NextoDarkWordmark width={78} />
+                <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Sales OS
                 </div>
+                {org?.industry && (
+                  <div className="mt-1.5 inline-block text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full">
+                    {getIndustryTemplate(org.industry).label}
+                  </div>
+                )}
               </div>
 
               <ProfileAvatar
@@ -586,8 +588,8 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setEditing(false); }} />
-          <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full mt-2.5 w-72 bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-50 overflow-hidden border border-slate-100`}>
+          <div className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[1px]" onClick={() => { setOpen(false); setEditing(false); }} />
+          <div className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full mt-2.5 w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-50 overflow-hidden border border-slate-100`}>
             {!editing ? (
               <>
                 {/* Header gradient band + avatar nongol - pola kartu profil app mobile */}
