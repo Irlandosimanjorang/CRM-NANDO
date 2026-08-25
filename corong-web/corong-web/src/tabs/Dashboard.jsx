@@ -12,16 +12,25 @@ const URGENCY_META = { high: { label: "High", hex: "#e11d48" }, medium: { label:
 
 const isMobileDevice = () => typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+// Kunci localStorage buat nandain "audio Good Morning udah pernah diputer hari
+// ini" - biar gak keulang tiap balik-balik ke tab Dashboard di hari yang sama.
+const playedTodayKey = () => `nexto-morning-played-${todayISO()}`;
+const alreadyPlayedToday = () => { try { return localStorage.getItem(playedTodayKey()) === "1"; } catch (_) { return false; } };
+const markPlayedToday = () => { try { localStorage.setItem(playedTodayKey(), "1"); } catch (_) {} };
+
 // "Good Morning" card - reads the AI digest that ALREADY RAN this morning (cron
 // at 8am, Mon-Fri), never triggers a new AI call OR new voice generation on open
 // - purely plays/displays what's already stored, so it's FREE every time the
 // dashboard is opened. Robot "talks" the greeting first (audio pre-generated
 // server-side); stats & recommendations only reveal once the audio finishes -
 // with a safety timeout so the card never gets stuck if audio fails/is blocked.
+// Audio cuma diputer SEKALI per hari - abis itu (atau abis di-skip/diklik
+// Listen), langsung ke tampilan statistik tiap balik ke Dashboard.
 function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
   const [state, setState] = useState({ status: "loading", run: null });
   const [audioPhase, setAudioPhase] = useState("idle"); // idle | playing | needs-tap | done
   const [revealed, setRevealed] = useState(false);
+  const [listenUsed, setListenUsed] = useState(false);
   const audioRef = useRef(null);
   const revealTimerRef = useRef(null);
 
@@ -37,13 +46,22 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
     if (revealTimerRef.current) { clearTimeout(revealTimerRef.current); revealTimerRef.current = null; }
     setRevealed(true);
     setAudioPhase("done");
+    markPlayedToday();
   };
 
-  // Pas data digest udah siap: coba muter audio (langsung di HP, tunggu tap di
-  // browser desktop) - dan pasang jaring pengaman biar kartu gak nyangkut
-  // nunggu audio kalau gagal/gak ada.
+  // Pas data digest udah siap: kalau audio udah pernah diputer hari ini,
+  // langsung tampilin statistiknya, gak nyoba muter ulang. Kalau belum,
+  // coba muter audio (langsung di HP, tunggu tap di browser desktop) - dan
+  // pasang jaring pengaman biar kartu gak nyangkut nunggu audio kalau gagal/gak ada.
   useEffect(() => {
     if (state.status !== "ready") return;
+
+    if (alreadyPlayedToday()) {
+      setRevealed(true);
+      setAudioPhase("done");
+      return;
+    }
+
     const audioUrl = state.run?.audio_url;
     if (!audioUrl) {
       // Gak ada audio (misal TTS gagal pas generate) - langsung tampilin abis jeda kecil.
@@ -74,7 +92,8 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
   }, [state.status, state.run]);
 
   const playNow = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || listenUsed) return;
+    setListenUsed(true); // disable tombolnya begitu diklik, gak bisa diklik ulang
     audioRef.current.play().then(() => setAudioPhase("playing")).catch(() => reveal());
   };
 
@@ -117,8 +136,8 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
           )}
         </div>
         {audioPhase === "needs-tap" && !revealed && (
-          <button onClick={playNow} className="shrink-0 flex items-center gap-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 transition-colors rounded-full px-3.5 py-2">
-            <Volume2 size={13} /> Listen
+          <button onClick={playNow} disabled={listenUsed} className="shrink-0 flex items-center gap-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-full px-3.5 py-2">
+            <Volume2 size={13} /> {listenUsed ? "Playing…" : "Listen"}
           </button>
         )}
       </div>
@@ -146,6 +165,10 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
               <div className="text-[9px] text-slate-400 mt-0.5">Win rate</div>
             </div>
           </div>
+
+          {stats.waiting_count > 0 && (
+            <div className="mt-2 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-xl px-3 py-2">⏸️ {stats.waiting_count} lead lagi ditunggu (customer minta waktu) - gak di-nudge sampai tanggalnya lewat.</div>
+          )}
 
           {topRecs.length > 0 && (
             <div className="mt-4 space-y-2">
