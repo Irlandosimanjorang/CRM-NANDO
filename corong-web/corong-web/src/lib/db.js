@@ -41,7 +41,15 @@ export async function getOrgMembers() {
   const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("organization_members").select("*").eq("org_id", orgId);
   if (error) throw error;
-  return data || [];
+  const members = data || [];
+  if (members.length === 0) return members;
+  // Narik nama tampilan tiap anggota dari tabel settings - sebelumnya cuma
+  // nampilin potongan UUID mentah yang gak kebaca sama sekali.
+  const userIds = members.map((m) => m.user_id);
+  const { data: settingsRows } = await supabase.from("settings").select("user_id, community_display_name").in("user_id", userIds);
+  const nameByUid = {};
+  for (const s of settingsRows || []) nameByUid[s.user_id] = s.community_display_name;
+  return members.map((m) => ({ ...m, display_name: nameByUid[m.user_id] || null }));
 }
 
 export async function createInviteCode(role = "sales_rep") {
