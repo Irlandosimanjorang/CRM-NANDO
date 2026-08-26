@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "./lib/supabaseClient";
 import IndustryDemo from "./tabs/IndustryDemo";
 import {
@@ -28,8 +28,34 @@ import {
   CheckCircle2,  MessageCircle,
   Database,
   Layers,
+  Volume2,
 
 } from "lucide-react";
+
+// Klip suara robot buat landing page - STATIS, di-generate SEKALI aja lewat
+// Edge Function generate-landing-audio (bukan tiap pengunjung buka web),
+// jadi gak ada biaya AI berulang. URL ini deterministik dari pola public
+// bucket Supabase (bucket morning-audio, folder landing/).
+const LANDING_AUDIO_BASE = "https://cewggulyfshnbebcpyui.supabase.co/storage/v1/object/public/morning-audio/landing";
+const ROBOT_CHATBOT_AUDIO = `${LANDING_AUDIO_BASE}/robot-chatbot.mp3`;
+const ROBOT_ENGINE_LOOP_AUDIO = `${LANDING_AUDIO_BASE}/robot-engine-loop.mp3`;
+
+// Hook kecil buat tombol "Dengerin" robot - play sekali klik, gak ada
+// autoplay (etika landing page publik: jangan maksa suara ke pengunjung
+// asing tanpa diminta).
+function useRobotVoice(src) {
+  const [speaking, setSpeaking] = useState(false);
+  // play() bisa dikasih callback onEnded - dipake buat nyambungin robot
+  // berikutnya begitu robot ini selesai ngomong (auto-play berantai).
+  const play = (onEnded) => {
+    if (speaking) return;
+    const audio = new Audio(src);
+    audio.addEventListener("ended", () => { setSpeaking(false); onEnded && onEnded(); });
+    audio.addEventListener("error", () => { setSpeaking(false); onEnded && onEnded(); });
+    audio.play().then(() => setSpeaking(true)).catch(() => { setSpeaking(false); onEnded && onEnded(); });
+  };
+  return { speaking, play };
+}
 const NEXTO_LOGO_SRC = "/nexto-logo.png";
 
 function NextoWordmark({ width = 108, className = "" }) {
@@ -289,7 +315,7 @@ const AI_DEMO_STATES = [
   },
 ];
 
-function NextoAISalesEngine() {
+function NextoAISalesEngine({ robotVoice }) {
   const [active, setActive] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
 
@@ -533,7 +559,7 @@ function NextoAISalesEngine() {
 
                   <div className="absolute right-[24%] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-orange-400 shadow-[0_0_15px_#fb923c] animate-pulse" />
 
-                  <div className="absolute left-1/2 bottom-[20%] h-[2px] w-7 -translate-x-1/2 rounded-full bg-orange-400/70" />
+                  <div className="absolute left-1/2 bottom-[20%] h-[2px] w-7 -translate-x-1/2 rounded-full bg-orange-400/70" style={robotVoice.speaking ? { animation: "nexto-mouth-talk 0.35s ease-in-out infinite alternate" } : undefined} />
                 </div>
 
                 {/* Nexto logo mark removed — the new wordmark is used across the landing page. */}
@@ -563,6 +589,16 @@ function NextoAISalesEngine() {
                   </div>
                 </div>
               </div>
+
+              {/* Tombol dengerin robot ngomong - klik doang, gak autoplay */}
+              <button
+                onClick={robotVoice.play}
+                disabled={robotVoice.speaking}
+                className="absolute -bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-orange-400/30 bg-[#111214]/90 px-3 py-1.5 text-[9px] font-semibold text-orange-300 backdrop-blur-xl transition-opacity disabled:opacity-70"
+              >
+                <Volume2 size={11} className={robotVoice.speaking ? "animate-pulse" : ""} />
+                {robotVoice.speaking ? "Speaking…" : "Listen"}
+              </button>
             </div>
           </div>
 
@@ -752,6 +788,11 @@ function NextoAISalesEngine() {
           to {
             transform: rotate(360deg);
           }
+        }
+
+        @keyframes nexto-mouth-talk {
+          from { transform: translateX(-50%) scaleX(0.6); opacity: 0.6; }
+          to { transform: translateX(-50%) scaleX(1.15); opacity: 1; }
         }
 
         @keyframes nextoSpinReverse {
@@ -993,7 +1034,7 @@ const ENGINE_NODES = [
   },
 ];
 
-function AiEngineLoopSection() {
+function AiEngineLoopSection({ robotVoice }) {
   const RADIUS = 300; // radius orbit desktop, px
   const nodesWithAngle = ENGINE_NODES.map((n, i) => ({ ...n, angle: -90 + i * 90 })); // mulai dari atas, muter searah jarum jam
 
@@ -1111,9 +1152,17 @@ function AiEngineLoopSection() {
         {/* Inti / robot - sumber loop-nya, di tengah lingkaran */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border border-orange-400/30 bg-gradient-to-br from-orange-500/25 to-orange-700/10" style={{ animation: "nexto-core-pulse 2.6s ease-in-out infinite" }}>
-            <Bot size={30} className="text-orange-400" />
+            <NextoRobotHead size={34} speaking={robotVoice.speaking} />
           </div>
           <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.22em] text-orange-400/80">Nexto AI Core</div>
+          <button
+            onClick={robotVoice.play}
+            disabled={robotVoice.speaking}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-orange-400/30 bg-white/[0.03] px-3 py-1.5 text-[9px] font-semibold text-orange-300 backdrop-blur-xl disabled:opacity-70"
+          >
+            <Volume2 size={11} className={robotVoice.speaking ? "animate-pulse" : ""} />
+            {robotVoice.speaking ? "Speaking…" : "Listen"}
+          </button>
         </div>
 
         {/* 4 node engine, disebar keliling lingkaran */}
@@ -1145,9 +1194,19 @@ function AiEngineLoopSection() {
       {/* ---- Diagram vertikal (mobile) ---- */}
       <div className="relative mx-auto mt-16 max-w-md md:hidden">
         <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-400/30 bg-gradient-to-br from-orange-500/20 to-orange-700/10" style={{ animation: "nexto-core-pulse 2.6s ease-in-out infinite" }}>
-          <Bot size={26} className="text-orange-400" />
+          <NextoRobotHead size={28} speaking={robotVoice.speaking} />
         </div>
         <div className="mt-3 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-orange-400/80">Nexto AI Core</div>
+        <div className="text-center">
+          <button
+            onClick={robotVoice.play}
+            disabled={robotVoice.speaking}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-orange-400/30 bg-white/[0.03] px-3 py-1.5 text-[9px] font-semibold text-orange-300 backdrop-blur-xl disabled:opacity-70"
+          >
+            <Volume2 size={11} className={robotVoice.speaking ? "animate-pulse" : ""} />
+            {robotVoice.speaking ? "Speaking…" : "Listen"}
+          </button>
+        </div>
 
         <div className="relative mx-auto mt-4 w-px" style={{ height: `${ENGINE_NODES.length * 148}px` }}>
           <div className="absolute inset-0 w-px bg-gradient-to-b from-orange-400/40 via-white/10 to-cyan-400/40" />
@@ -1375,6 +1434,31 @@ export default function Auth() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showIndustryDemo, setShowIndustryDemo] = useState(false);
 
+  // ---- AUTO-PLAY ROBOT NGOMONG ----
+  // Browser blokir audio bersuara yang muter sendiri TANPA interaksi user
+  // sama sekali (aturan platform, bukan batasan Nexto). Solusinya: putus
+  // audionya di INTERAKSI PERTAMA pengunjung (scroll/klik/sentuh pertama),
+  // bukan nunggu tombol khusus - kerasanya udah kayak "langsung jalan
+  // sendiri" karena hampir semua orang scroll begitu buka halaman.
+  // Robot chatbot ngomong duluan, abis kelar baru robot AI Engine Loops.
+  const chatbotVoice = useRobotVoice(ROBOT_CHATBOT_AUDIO);
+  const engineLoopVoice = useRobotVoice(ROBOT_ENGINE_LOOP_AUDIO);
+  const autoPlayedRef = useRef(false);
+
+  useEffect(() => {
+    const triggerAutoPlay = () => {
+      if (autoPlayedRef.current) return;
+      autoPlayedRef.current = true;
+      chatbotVoice.play(() => {
+        setTimeout(() => engineLoopVoice.play(), 500);
+      });
+    };
+    const events = ["scroll", "click", "touchstart", "keydown"];
+    events.forEach((evt) => window.addEventListener(evt, triggerAutoPlay, { once: true, passive: true }));
+    return () => events.forEach((evt) => window.removeEventListener(evt, triggerAutoPlay));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const submit = async () => {
     setMsg("");
     setLoading(true);
@@ -1595,14 +1679,14 @@ export default function Auth() {
             NEXTO AI SALES ENGINE
             TAMBAHAN — LANDING PAGE EXISTING TETAP
         ========================================================== */}
-        <NextoAISalesEngine />
+        <NextoAISalesEngine robotVoice={chatbotVoice} />
 
         {/* =========================================================
             NEXTO AI ENGINE LOOPS - section sendiri, gak digabung sama
             section lain. Diagram signature nunjukin gimana engine-nya
             beneran jalan (Context -> Decision -> Action -> Memory -> loop).
         ========================================================== */}
-        <AiEngineLoopSection />
+        <AiEngineLoopSection robotVoice={engineLoopVoice} />
 
         {/* =========================================================
             UNIVERSAL INDUSTRIES
