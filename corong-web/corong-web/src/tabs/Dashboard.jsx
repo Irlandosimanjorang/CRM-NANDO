@@ -451,8 +451,7 @@ export default function Dashboard({ leads, stages, dealTransactions, settings, o
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">Dashboard</h1>
-        <p className="text-xs text-slate-400 mt-1 capitalize">{new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+        <p className="text-xs text-slate-400 capitalize">{new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
 
       <GoodMorningCard settings={settings} onGo={onGo} onOpenLead={onOpenLead} leads={leads} />
