@@ -22,14 +22,8 @@ import {
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
 } from "lucide-react";
 
-export function NextoBadge({ size = 36 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" className="shrink-0">
-      <path d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z" fill="#f97316" />
-      <path d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z" fill="#9a3412" />
-    </svg>
-  );
-}
+// (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
+// di semua tempat, termasuk loading screen. Dihapus biar gak ada kode nganggur.)
 
 // ---- DATA DUMMY buat preview tab Premium (user Free) ----
 // Ngasal doang - biar user Free liat gambaran "beneran kepake" bukan tab kosong.
@@ -65,7 +59,7 @@ function ConfigScreen() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-md bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
-        <div className="mb-4"><NextoBadge size={48} /></div>
+        <div className="mb-4"><NextoRobotHead size={48} /></div>
         <h1 className="text-lg font-bold mb-2">Sambungin ke Supabase dulu</h1>
         <p className="text-sm text-slate-500 mb-3">Buat file <code className="bg-slate-100 px-1 rounded">.env</code> di root project (salin dari <code className="bg-slate-100 px-1 rounded">.env.example</code>), isi:</p>
         <pre className="text-xs bg-slate-900 text-slate-100 rounded-xl p-3 overflow-x-auto">VITE_SUPABASE_URL=...
@@ -674,7 +668,7 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
 function Splash({ inline }) {
   return (
     <div className={`${inline ? "py-20" : "min-h-screen"} bg-slate-50 flex flex-col items-center justify-center gap-3`}>
-      <div className="animate-pulse"><NextoBadge size={48} /></div>
+      <div className="animate-pulse"><NextoRobotHead size={48} /></div>
       <div className="text-slate-400 text-sm flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
     </div>
   );
