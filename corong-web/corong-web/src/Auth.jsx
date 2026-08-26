@@ -60,13 +60,32 @@ const NEXTO_LOGO_SRC = "/nexto-logo.png";
 
 function NextoWordmark({ width = 108, className = "" }) {
   return (
-    <img
-      src={NEXTO_LOGO_SRC}
-      alt="Nexto"
-      width={width}
-      className={`block h-auto object-contain ${className}`}
-      style={{ width, maxWidth: width }}
-    />
+    <div
+      className={`relative shrink-0 ${className}`}
+      style={{ width, lineHeight: 0 }}
+      aria-label="Nexto"
+      role="img"
+    >
+      {/* Lapisan dasar: paksa semua huruf jadi hitam */}
+      <img
+        src={NEXTO_LOGO_SRC}
+        alt=""
+        aria-hidden="true"
+        className="block h-auto w-full object-contain"
+        style={{ filter: "brightness(0) contrast(1.12) drop-shadow(0 1px 1px rgba(15,23,42,.08))" }}
+      />
+      {/* Lapisan overlay: cuma buat huruf X-nya, tetep oranye */}
+      <img
+        src={NEXTO_LOGO_SRC}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 block h-full w-full object-contain"
+        style={{
+          clipPath: "polygon(39% 0%, 61% 0%, 61% 100%, 39% 100%)",
+          WebkitClipPath: "polygon(39% 0%, 61% 0%, 61% 100%, 39% 100%)",
+        }}
+      />
+    </div>
   );
 }
 
