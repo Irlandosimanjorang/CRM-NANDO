@@ -24,10 +24,12 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   const [syncMsg, setSyncMsg] = useState("");
   const [showCleanup, setShowCleanup] = useState(false);
   const [showRecycleBin, setShowRecycleBin] = useState(false);
+  const [pwOld, setPwOld] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
   const [pwMsg, setPwMsg] = useState("");
+  const [pwMsgOk, setPwMsgOk] = useState(false);
 
   // ---- TIM / ORGANISASI ----
   const [org, setOrg] = useState(null);
@@ -169,15 +171,25 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   };
 
   const changePassword = async () => {
-    setPwMsg("");
-    if (pwNew.length < 6) { setPwMsg("Password minimal 6 karakter."); return; }
+    setPwMsg(""); setPwMsgOk(false);
+    if (!pwOld) { setPwMsg("Masukin password lama dulu."); return; }
+    if (pwNew.length < 8) { setPwMsg("Password baru minimal 8 karakter."); return; }
     if (pwNew !== pwConfirm) { setPwMsg("Konfirmasi password gak cocok."); return; }
     setPwBusy(true);
     try {
+      // Verifikasi password LAMA dulu sebelum ganti - biar orang yang cuma
+      // "numpang" sesi login (laptop ketinggalan login, dst) gak bisa ganti
+      // password & ngunci pemilik asli keluar dari akunnya sendiri.
+      const { data: userData } = await supabase.auth.getUser();
+      const email = userData?.user?.email;
+      if (!email) throw new Error("Gagal verifikasi akun, coba refresh halaman.");
+      const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: pwOld });
+      if (verifyError) throw new Error("Password lama salah.");
+
       const { error } = await supabase.auth.updateUser({ password: pwNew });
       if (error) throw error;
-      setPwMsg("✅ Password berhasil diganti.");
-      setPwNew(""); setPwConfirm("");
+      setPwMsg("✅ Password berhasil diganti."); setPwMsgOk(true);
+      setPwOld(""); setPwNew(""); setPwConfirm("");
     } catch (e) {
       setPwMsg("Gagal ganti password: " + e.message);
     } finally {
@@ -203,7 +215,7 @@ export default function Settings({ settings, stages, leads, onChanged }) {
                 <div key={m.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
                   <div className="text-xs flex items-center gap-1.5">
                     {m.role === "owner" && <Crown size={12} className="text-amber-500" />}
-                    {m.user_id === myUid ? "Kamu" : m.user_id.slice(0, 8)} <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>
+                    {m.user_id === myUid ? "Kamu" : (m.display_name || `Anggota ${m.user_id.slice(0, 8)}`)} <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>
                   </div>
                   {isOwner && m.user_id !== myUid && (
                     <button onClick={() => removeMember(m.id, ROLE_LABEL[m.role])} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
@@ -216,16 +228,16 @@ export default function Settings({ settings, stages, leads, onChanged }) {
               // Dia anggota organisasi ORANG LAIN (udah pernah gabung pake kode) -
               // kolom "gabung" disembunyiin, gantiin sama tombol keluar.
               <div className="border-t border-slate-100 mt-1 pt-3">
-                <p className="text-xs text-slate-500 mb-2">Kamu anggota organisasi <b>{org?.name}</b>.</p>
+                <p className="text-xs text-slate-500 mb-2">Kamu anggota organisasi <b>{org?.name || "ini"}</b>.</p>
                 <button onClick={leaveOrganization} disabled={leaveBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">
                   {leaveBusy ? "Keluar..." : "Keluar dari Organisasi"}
                 </button>
               </div>
-            ) : isIndividualPaid ? (
-              <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Paket kamu <b>Individual</b> - fitur tim (undang/gabung anggota) khusus paket Enterprise.</p>
             ) : (
               <>
-                {isEnterprise ? (
+                {isIndividualPaid ? (
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Paket kamu <b>Individual</b> - fitur undang anggota khusus paket Enterprise.</p>
+                ) : isEnterprise ? (
                   members.length >= (org?.member_limit || 1) ? (
                     <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
                   ) : inviteCode ? (
@@ -246,6 +258,11 @@ export default function Settings({ settings, stages, leads, onChanged }) {
                   <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise (Rp599rb/bulan, maks 6 orang) buat bisa undang anggota tim.</p>
                 )}
 
+                {/* Kotak "Punya kode undangan?" ini sekarang keliatan buat SEMUA
+                    owner (Free, Individual/Premium, Enterprise) - sebelumnya
+                    kepencet gak muncul sama sekali buat owner Individual/Premium,
+                    padahal mereka justru yang paling mungkin diundang gabung
+                    tim Enterprise orang lain. */}
                 <div className="border-t border-slate-100 mt-3 pt-3">
                   <p className="text-xs font-medium text-slate-500 mb-1.5">Punya kode undangan?</p>
                   <div className="flex gap-2">
@@ -356,11 +373,12 @@ export default function Settings({ settings, stages, leads, onChanged }) {
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><KeyRound size={15} className="text-slate-500" /> Ganti Password</h3>
-        <p className="text-xs text-slate-500 mb-3">Ganti password akun kamu kapan aja. Minimal 6 karakter.</p>
+        <p className="text-xs text-slate-500 mb-3">Ganti password akun kamu kapan aja. Minimal 8 karakter.</p>
         <div className="space-y-2 max-w-sm">
+          <input type="password" className={inp} placeholder="Password lama" value={pwOld} onChange={(e) => setPwOld(e.target.value)} />
           <input type="password" className={inp} placeholder="Password baru" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
           <input type="password" className={inp} placeholder="Ulangi password baru" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && changePassword()} />
-          {pwMsg && <div className={`text-xs rounded-lg p-2 ${pwMsg.startsWith("Gagal") || pwMsg.includes("gak cocok") || pwMsg.includes("minimal") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{pwMsg}</div>}
+          {pwMsg && <div className={`text-xs rounded-lg p-2 ${pwMsgOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{pwMsg}</div>}
           <button onClick={changePassword} disabled={pwBusy} className="bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5">
             {pwBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Ganti Password
           </button>
