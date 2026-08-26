@@ -378,12 +378,18 @@ function NextoAISalesEngine({ robotVoice }) {
       <div className="relative max-w-6xl mx-auto px-4 md:px-6 py-20 md:py-28">
         {/* Section heading */}
         <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/[0.07] px-3.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.08)]">
+          <div className="inline-flex items-center gap-2.5 rounded-lg border border-orange-500/25 bg-black/50 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.1)] backdrop-blur-sm">
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500/70" />
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500/70" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/70" />
+            </span>
+            <span className="h-3 w-px bg-white/10" />
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-400" />
             </span>
-            NEXTO AI SALES ENGINE
+            NEXTO COMMAND CENTER
           </div>
 
           <h2 className="mt-5 text-3xl md:text-5xl font-bold tracking-[-0.045em] leading-[1.05]">
@@ -395,8 +401,9 @@ function NextoAISalesEngine({ robotVoice }) {
 
           <p className="mt-5 text-sm md:text-base leading-7 text-stone-400 max-w-2xl mx-auto">
             Chatbot Nexto menjadi pusat kendali sales kamu. Satu chat bisa
-            mengatur visit, memperbarui progress, dan mengedit CRM tanpa harus
-            buka satu-satu.
+            mengatur visit, memperbarui progress, mengedit CRM, bahkan
+            <span className="text-orange-400 font-medium"> menyuruh Nexto kirim email follow-up ke lead secara otomatis</span> —
+            tanpa harus buka satu-satu.
           </p>
         </div>
 
