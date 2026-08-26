@@ -329,43 +329,34 @@ export default function App() {
       <aside className="nexto-sidebar hidden md:flex flex-col w-[248px] fixed top-0 left-0 h-screen z-30 text-white border-r border-white/[0.06]">
         <div className="px-4 pt-4 pb-3">
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3 shadow-[0_12px_30px_-22px_rgba(0,0,0,.9)]">
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2.5">
-                <NextoRobotHead size={30} />
-                <NextoDarkWordmark width={70} />
-                <ProfileAvatar
-                  settings={settings}
-                  session={session}
-                  org={org}
-                  onChanged={reload}
-                  size={34}
-                  align="left"
-                  className="ml-auto"
-                />
-              </div>
-              <div className="pl-[38px] min-w-0">
-                <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Sales OS
-                </div>
-                {org?.industry && (
-                  <div className="mt-1.5 inline-block text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full">
-                    {getIndustryTemplate(org.industry).label}
-                  </div>
-                )}
-              </div>
+            <div className="flex items-center gap-2.5">
+              <NextoRobotHead size={30} />
+              <NextoDarkWordmark width={70} />
+              <ProfileAvatar
+                settings={settings}
+                session={session}
+                org={org}
+                onChanged={reload}
+                size={34}
+                align="left"
+                className="ml-auto"
+              />
+            </div>
+            <div className="pl-[38px] mt-2 flex items-center gap-1.5 flex-wrap min-w-0">
+              {org?.industry && (
+                <span className="inline-block text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full">
+                  {getIndustryTemplate(org.industry).label}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-wide text-slate-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 nexto-status-dot" />
+                {isPremium ? "PRO" : "FREE"}
+              </span>
             </div>
           </div>
         </div>
 
         <div className="mx-4 mb-3 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-        <div className="px-4 pb-2">
-          <div className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 nexto-status-dot" />
-            <span className="text-[10px] font-semibold text-slate-400">Workspace aktif</span>
-            <span className="ml-auto rounded-md bg-white/[0.05] px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-slate-500">{isPremium ? "PRO" : "FREE"}</span>
-          </div>
-        </div>
 
         <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
           <div className="px-3 pb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600">Menu utama</div>
