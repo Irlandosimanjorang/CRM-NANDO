@@ -7,8 +7,50 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+
+// ---- VECTOR MEMORY - sama kayak di daily-digest: narik catatan progress
+// paling relevan (bukan cuma yang terakhir), gabungan recency + kemiripan. ----
+async function getEmbedding(text) {
+  const resp = await fetch("https://api.openai.com/v1/embeddings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_API_KEY}` },
+    body: JSON.stringify({ model: "text-embedding-3-small", input: text.slice(0, 4000) }),
+  });
+  if (!resp.ok) return null;
+  const dat = await resp.json();
+  return dat.data?.[0]?.embedding || null;
+}
+
+async function getRelevantNotes(supabase, lead) {
+  const allNotes = lead.progress_notes || [];
+  if (allNotes.length === 0) return [];
+  const sorted = [...allNotes].sort((a, b) => (a.note_date < b.note_date ? 1 : -1));
+  if (allNotes.length <= 4) return sorted.slice(0, 4).reverse();
+
+  const recent = sorted.slice(0, 2);
+  try {
+    const queryText = `${lead.name} ${lead.product || ""} status pelanggan, objection, sinyal beli, langkah selanjutnya`;
+    const queryEmbedding = await getEmbedding(queryText);
+    if (!queryEmbedding) return sorted.slice(0, 4).reverse();
+
+    const { data: matches } = await supabase.rpc("match_progress_notes", {
+      query_embedding: queryEmbedding,
+      match_lead_id: lead.id,
+      match_count: 3,
+    });
+
+    const merged = [...recent];
+    for (const m of matches || []) {
+      if (!merged.find((n) => n.id === m.id)) merged.push(m);
+    }
+    return merged.slice(0, 4).reverse();
+  } catch (e) {
+    return sorted.slice(0, 4).reverse();
+  }
+}
 
 // Duplikat ringan dari src/lib/industryTemplates.js (Edge Function jalan di
 // Deno, beda runtime, gak bisa import langsung dari kode React).
@@ -83,7 +125,8 @@ Deno.serve(async (req) => {
     }
 
     const noun = industryNoun(industryKey);
-    const recentProgress = (lead.progress_notes || []).slice(-5).map((p) => `${p.note_date}: ${(p.text || "").slice(0, 200)}`);
+    const relevantNotes = await getRelevantNotes(supabase, lead);
+    const recentProgress = relevantNotes.map((p) => `${p.note_date}: ${(p.text || "").slice(0, 200)}`);
     const context = {
       name: lead.name, product: lead.product || "", category: lead.category || "",
       days_since_contact: daysSince(lead.last_contact) ?? "belum pernah",
