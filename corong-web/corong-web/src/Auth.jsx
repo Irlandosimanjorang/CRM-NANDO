@@ -64,7 +64,8 @@ function NextoWordmark({ width = 108, className = "" }) {
       src={NEXTO_LOGO_SRC}
       alt="Nexto"
       width={width}
-      className={`block h-auto w-auto object-contain ${className}`}
+      className={`block h-auto object-contain ${className}`}
+      style={{ width, maxWidth: width }}
     />
   );
 }
