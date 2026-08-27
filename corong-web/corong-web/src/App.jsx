@@ -13,6 +13,7 @@ import Kompetitor from "./tabs/Kompetitor";
 import Nex from "./tabs/Nex";
 import Advisor from "./tabs/Advisor";
 import SettingsTab from "./tabs/Settings";
+import AdminDashboard from "./tabs/AdminDashboard";
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
 import IndustryDemo from "./tabs/IndustryDemo";
@@ -54,6 +55,11 @@ const NAV = [
   { key: "komunitas", label: "Nex", short: "Nex", icon: Users2, special: true },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
 ];
+// Menu ini DIPISAH dari NAV biasa - cuma ditambahin ke daftar tab kalau
+// settings.is_platform_admin true (dicek pas render, bukan hardcode di sini).
+// Ini murni buat kerapian UI - keamanan ASLI-nya di server (ADMIN_EMAIL),
+// jadi meskipun somehow ke-tembus tampil, data-nya tetep ke-block backend.
+const ADMIN_NAV_ITEM = { key: "adminops", label: "Dashboard Karyawan AI", short: "AI Ops", icon: Bot };
 
 function ConfigScreen() {
   return (
@@ -252,6 +258,9 @@ export default function App() {
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
   const effectiveTab = tab;
   const isLocked = (key) => !loading && !isPremium && !FREE_TABS.includes(key);
+  // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
+  // Customer biasa (99.9% user) gak akan pernah liat item ini nongol sama sekali.
+  const navItems = settings?.is_platform_admin ? [...NAV, ADMIN_NAV_ITEM] : NAV;
 
   return (
     <div className="nexto-app min-h-screen bg-[#f5f7fb] text-slate-900 flex overflow-x-hidden">
@@ -360,10 +369,10 @@ export default function App() {
 
         <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
           <div className="px-3 pb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600">Menu utama</div>
-          {NAV.map((n) => {
+          {navItems.map((n) => {
             const I = n.icon;
             const active = effectiveTab === n.key;
-            const locked = isLocked(n.key);
+            const locked = n.key === "adminops" ? false : isLocked(n.key);
             const cls = locked
               ? "text-slate-600 hover:bg-white/[0.03] cursor-pointer"
               : n.special
@@ -476,6 +485,7 @@ export default function App() {
               {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} /></PreviewLock>}
               {effectiveTab === "industridemo" && <IndustryDemo />}
               {effectiveTab === "settings" && <PreviewLock locked={isLocked("settings")}><SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "adminops" && settings?.is_platform_admin && <AdminDashboard />}
             </>
           )}
         </main>
@@ -483,10 +493,10 @@ export default function App() {
         {/* MOBILE BOTTOM NAV */}
         <nav className="md:hidden fixed bottom-3 inset-x-3 z-40">
           <div className="max-w-lg mx-auto flex justify-around px-1.5 py-2 bg-slate-950/95 backdrop-blur-2xl rounded-[24px] shadow-[0_16px_42px_-10px_rgba(15,23,42,.42)] border border-white/10">
-            {NAV.map((n) => {
+            {navItems.map((n) => {
               const I = n.icon;
               const active = effectiveTab === n.key;
-              const locked = isLocked(n.key);
+              const locked = n.key === "adminops" ? false : isLocked(n.key);
               const cls = locked
                 ? "text-slate-600"
                 : n.special
