@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp } from "lucide-react";
+import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp, Info, X } from "lucide-react";
 import * as db from "../lib/db";
 
 function ScoreRing({ score }) {
@@ -38,6 +38,7 @@ export default function GenerateLeads({ stages, onChanged }) {
   const [targetRole, setTargetRole] = useState("");
   const [productSold, setProductSold] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [msg, setMsg] = useState("");
   const [results, setResults] = useState([]);
   const [loadingResults, setLoadingResults] = useState(true);
@@ -94,8 +95,30 @@ export default function GenerateLeads({ stages, onChanged }) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Generate Leads</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">Generate Leads</h1>
+          <button onClick={() => setShowInfo((v) => !v)} className="shrink-0 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors" title="Gimana cara AI cari lead?">
+            <Info size={14} />
+          </button>
+        </div>
         <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Provinsi opsional (kosongin buat cari se-Indonesia), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 2x seminggu (gak boleh di hari yang sama).</p>
+
+        {showInfo && (
+          <div className="mt-3 bg-orange-50/60 border border-orange-100 rounded-2xl p-4 relative">
+            <button onClick={() => setShowInfo(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            <div className="text-sm font-bold text-slate-800 mb-2 pr-6">Gimana cara AI-nya nyari lead?</div>
+            <ul className="space-y-1.5 text-xs text-slate-600 list-disc list-inside">
+              <li><b>Cari dari 4 sumber publik</b>: Google Maps, cuplikan LinkedIn (company page & profil, bukan buka halamannya), Instagram/TikTok bisnis, dan direktori resmi (Kemenperin, dst).</li>
+              <li><b>Diarahin ke calon PEMBELI</b>, bukan sesama penjual — kalau lo isi "barang yang dijual", AI khusus nyari perusahaan yang kemungkinan BUTUH BELI itu, bukan kompetitor.</li>
+              <li><b>Belajar dari deal yang udah closing</b> — kalau lo udah punya lead yang statusnya "Menang" di pipeline, AI jadiin itu contoh "ideal customer" biar hasil generate makin mirip yang beneran closing.</li>
+              <li><b>Cari sinyal lagi berkembang</b> — lowongan kerja baru, buka cabang, ekspansi — biar diprioritasin ke yang lagi butuh, bukan yang stagnan.</li>
+              <li><b>Otomatis skip yang udah ada</b> di daftar lead lo, biar gak muncul dobel buang-buang kuota.</li>
+              <li><b>Kalau hasilnya kesikit</b> (kebanyakan kena skip karena dobel), AI otomatis coba nyari lagi 1x dengan sudut pencarian yang beda.</li>
+              <li><b>Tiap lead dikasih skor 3 komponen</b> (match industri, kelengkapan kontak, sinyal butuh beli) + skor keseluruhan, diurutin dari yang paling tinggi.</li>
+              <li>AI dilarang keras <b>ngarang data</b> — kalau info kayak nama PIC gak ketemu di sumber publik, dikosongin aja, bukan ditebak.</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
