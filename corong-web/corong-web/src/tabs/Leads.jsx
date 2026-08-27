@@ -37,7 +37,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
   const [busy, setBusy] = useState(false);
   const [showDup, setShowDup] = useState(false);
   const [draftPopup, setDraftPopup] = useState(null); // { lead, rect }
-  const [progressPopup, setProgressPopup] = useState(null); // { lead, rect, autoFocus }
+  const [progressPopup, setProgressPopup] = useState(null); // { lead, autoFocus }
   const titleLabel = getFieldLabel(industry, "key_person_title", "Jabatan");
   const keyPersonLabel = getFieldLabel(industry, "key_person", "Key Person");
   const productLabel = getFieldLabel(industry, "product", "Produk");
@@ -218,7 +218,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                     (senada sama kotak search/filter di atas), nyala oranye
                     pas di-hover buat kasih tau ini interaktif. */}
                 <button
-                  onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect(), autoFocus: true }); }}
+                  onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, autoFocus: true }); }}
                   className="mt-2.5 w-full flex items-center gap-2 text-left text-xs text-slate-500 border-2 border-slate-300 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-400 hover:text-orange-700 hover:bg-orange-50 transition-colors"
                   title="Update progress harian"
                 >
@@ -244,7 +244,6 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
       {progressPopup && (
         <ProgressPopup
           lead={progressPopup.lead}
-          rect={progressPopup.rect}
           autoFocus={progressPopup.autoFocus}
           onClose={() => setProgressPopup(null)}
           onChanged={onChanged}
