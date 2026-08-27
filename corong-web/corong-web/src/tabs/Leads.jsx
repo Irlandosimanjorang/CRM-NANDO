@@ -214,15 +214,15 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                   </div>
                 </div>
 
-                {/* Kolom quick-update progress harian - garis lebih tebel +
-                    tint warna dasar biar lebih "keliatan" sebagai area
-                    interaktif, tapi tetep clean (bukan solid block warna). */}
+                {/* Kolom quick-update progress harian - garis solid slate-300
+                    (senada sama kotak search/filter di atas), nyala oranye
+                    pas di-hover buat kasih tau ini interaktif. */}
                 <button
                   onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect(), autoFocus: true }); }}
-                  className="mt-2.5 w-full flex items-center gap-2 text-left text-xs text-slate-500 border-2 border-dashed border-orange-200 bg-orange-50/40 rounded-xl px-3 py-2 hover:border-orange-400 hover:text-orange-700 hover:bg-orange-50 transition-colors"
+                  className="mt-2.5 w-full flex items-center gap-2 text-left text-xs text-slate-500 border-2 border-slate-300 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-400 hover:text-orange-700 hover:bg-orange-50 transition-colors"
                   title="Update progress harian"
                 >
-                  <ClipboardList size={13} className="shrink-0 text-orange-400" />
+                  <ClipboardList size={13} className="shrink-0 text-slate-400 group-hover:text-orange-400" />
                   <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "Update progress hari ini…"}</span>
                 </button>
               </div>
