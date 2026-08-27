@@ -209,6 +209,31 @@ export async function draftFollowup(leadId, channel) {
   return data;
 }
 
+// ---- DASHBOARD ADMIN - status "karyawan AI" (health-check, daily-digest,
+// bot Telegram, dst) buat SELURUH platform. Cuma bisa dipanggil sama admin
+// (dicek server-side di Edge Function-nya, bukan cuma disembunyiin di UI). ----
+export async function getAdminStatus() {
+  const { data, error } = await supabase.functions.invoke("admin-status");
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal ambil status admin");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function callAdminTrigger(target) {
+  const { data, error } = await supabase.functions.invoke("admin-trigger", { body: { target } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal manggil function");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // ---- OUTCOME MEMORY - dicatet pas lead ditutup Menang/Kalah, dipake AI
 // Advisor besok-besok buat belajar pola "apa yang biasanya berhasil/gagal"
 // di bisnis org ini (nutup loop Context->Decision->Action->Memory->Decision). ----
