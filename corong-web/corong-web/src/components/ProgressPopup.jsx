@@ -6,7 +6,11 @@ import * as db from "../lib/db";
 // di bagian bawah kartu Leads. Beda dari LeadModal (yang nampilin SEMUA
 // field lead), ini fokus sempit: history scroll-able + tambah/edit/hapus
 // progress cepet, tanpa perlu buka modal penuh.
-export default function ProgressPopup({ lead, rect, onClose, onChanged, autoFocus }) {
+//
+// Sengaja modal DI TENGAH LAYAR (bukan nempel di posisi klik) - lebih
+// simpel & konsisten kayak LeadModal, gak rawan salah posisi/kepotong
+// tergantung di mana kartu-nya ada di halaman.
+export default function ProgressPopup({ lead, onClose, onChanged, autoFocus }) {
   const [notes, setNotes] = useState((lead.progressLog || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)));
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,17 +61,12 @@ export default function ProgressPopup({ lead, rect, onClose, onChanged, autoFocu
     }
   };
 
-  const POPUP_W = 340;
-  const POPUP_H = 440;
-  const left = Math.min(Math.max(rect.left - 20, 12), window.innerWidth - POPUP_W - 12);
-  const top = Math.min(Math.max(rect.top - POPUP_H - 8, 12), window.innerHeight - POPUP_H - 12);
-
   return (
-    <>
-      <div className="fixed inset-0 z-40 bg-slate-900/20" onClick={onClose} />
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
       <div
-        className="fixed z-50 bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden"
-        style={{ left, top, width: POPUP_W, height: POPUP_H, maxHeight: "calc(100vh - 24px)" }}
+        className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-sm flex flex-col overflow-hidden"
+        style={{ maxHeight: "min(560px, calc(100vh - 32px))" }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-orange-50 to-white border-b border-slate-100 flex items-start justify-between gap-2 shrink-0">
           <div className="min-w-0">
@@ -85,7 +84,7 @@ export default function ProgressPopup({ lead, rect, onClose, onChanged, autoFocu
               <div className="flex items-start justify-between gap-2">
                 <span className="text-[10px] font-medium text-slate-400">{new Date(n.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
                 {editingId !== n.id && (
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     <button onClick={() => startEdit(n)} className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50"><Pencil size={11} /></button>
                     <button onClick={() => remove(n.id)} className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 size={11} /></button>
                   </div>
@@ -127,6 +126,6 @@ export default function ProgressPopup({ lead, rect, onClose, onChanged, autoFocu
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
