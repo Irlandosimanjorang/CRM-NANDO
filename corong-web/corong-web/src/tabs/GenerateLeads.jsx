@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight } from "lucide-react";
+import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp } from "lucide-react";
 import * as db from "../lib/db";
 
 function ScoreRing({ score }) {
@@ -34,7 +34,7 @@ function Field({ icon: Icon, value }) {
 
 export default function GenerateLeads({ stages, onChanged }) {
   const [keyword, setKeyword] = useState("");
-  const [city, setCity] = useState("");
+  const [province, setProvince] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [productSold, setProductSold] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,13 +56,13 @@ export default function GenerateLeads({ stages, onChanged }) {
   useEffect(() => { load(); }, []);
 
   const generate = async () => {
-    if (!productSold.trim() || !keyword.trim() || !city.trim() || !targetRole.trim()) {
-      setMsg("Gagal: semua kolom wajib diisi (barang yang dijual, kata kunci, kota, jabatan).");
+    if (!productSold.trim() || !keyword.trim() || !targetRole.trim()) {
+      setMsg("Gagal: kolom barang yang dijual, kata kunci, dan jabatan wajib diisi (provinsi opsional).");
       return;
     }
     setBusy(true); setMsg("");
     try {
-      const res = await db.generateLeads({ keyword, city, targetRole, productSold });
+      const res = await db.generateLeads({ keyword, province, targetRole, productSold });
       setMsg(`✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`);
       load();
     } catch (e) {
@@ -95,7 +95,7 @@ export default function GenerateLeads({ stages, onChanged }) {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Generate Leads</h1>
-        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Isi semua kolom di bawah biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 2x seminggu (gak boleh di hari yang sama).</p>
+        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Provinsi opsional (kosongin buat cari se-Indonesia), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 2x seminggu (gak boleh di hari yang sama).</p>
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
@@ -123,15 +123,15 @@ export default function GenerateLeads({ stages, onChanged }) {
                 <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: distributor kabel listrik" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Kota <span className="text-rose-500">*</span></span>
-                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Surabaya" value={city} onChange={(e) => setCity(e.target.value)} />
+                <span className="text-xs font-medium text-slate-500">Provinsi (opsional - kosongin buat cari se-Indonesia)</span>
+                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Jawa Timur" value={province} onChange={(e) => setProvince(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Jabatan yang dicari <span className="text-rose-500">*</span></span>
                 <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Purchasing Manager" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
               </label>
             </div>
-            <button onClick={generate} disabled={busy || !productSold.trim() || !keyword.trim() || !city.trim() || !targetRole.trim()} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
+            <button onClick={generate} disabled={busy || !productSold.trim() || !keyword.trim() || !targetRole.trim()} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} {busy ? "Lagi nyari (bisa 1-2 menit)…" : "Generate 15 Leads"}
             </button>
           </div>
@@ -205,7 +205,15 @@ export default function GenerateLeads({ stages, onChanged }) {
                             <Field icon={Phone} value={r.phone} />
                             <Field icon={Mail} value={r.email} />
                           </div>
-                          {r.source_note && <div className="text-[11px] text-slate-400 mt-2 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
+                          {r.growth_signal && <div className="text-[11px] text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1 mt-2 flex items-center gap-1 w-fit"><TrendingUp size={11} /> {r.growth_signal}</div>}
+                          {(r.score_industry_match || r.score_contact_quality || r.score_buying_signal) && (
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[10px] text-slate-400">
+                              {r.score_industry_match != null && <span>Industri <b className="text-slate-600">{r.score_industry_match}</b></span>}
+                              {r.score_contact_quality != null && <span>Kontak <b className="text-slate-600">{r.score_contact_quality}</b></span>}
+                              {r.score_buying_signal != null && <span>Sinyal beli <b className="text-slate-600">{r.score_buying_signal}</b></span>}
+                            </div>
+                          )}
+                          {r.source_note && <div className="text-[11px] text-slate-400 mt-1.5 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
                         </div>
                       </div>
                     </button>
