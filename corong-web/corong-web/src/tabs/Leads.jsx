@@ -1,12 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, Mail, Globe, ShieldCheck, ShieldAlert, Copy, MapPin, Sparkles, Phone } from "lucide-react";
+import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, Mail, Globe, ShieldCheck, ShieldAlert, Copy, MapPin, Sparkles, Phone, ClipboardList } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
 import AiDraftPopup from "../components/AiDraftPopup";
+import ProgressPopup from "../components/ProgressPopup";
 import { getFieldLabel, getCategories, isFieldHidden, getCustomFieldSlots, getCompanyTypeOptions } from "../lib/industryTemplates";
 
 const val = (row, keys) => {
@@ -36,6 +37,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
   const [busy, setBusy] = useState(false);
   const [showDup, setShowDup] = useState(false);
   const [draftPopup, setDraftPopup] = useState(null); // { lead, rect }
+  const [progressPopup, setProgressPopup] = useState(null); // { lead, rect, autoFocus }
   const titleLabel = getFieldLabel(industry, "key_person_title", "Jabatan");
   const keyPersonLabel = getFieldLabel(industry, "key_person", "Key Person");
   const productLabel = getFieldLabel(industry, "product", "Produk");
@@ -197,6 +199,9 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                     <div key={slot.key} className="truncate"><span className="text-slate-400">{slot.label}:</span> {c[slot.key]}</div>
                   ) : null)}
                   {c.next_action && <div className="mt-2 text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5 line-clamp-2">📌 {c.next_action}</div>}
+                  {c.wait_until && new Date(c.wait_until) >= new Date(todayISO()) && (
+                    <div className="mt-1.5 text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5">⏸️ Nunggu sampai {new Date(c.wait_until).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
+                  )}
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -208,6 +213,17 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                     <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 size={13} /></button>
                   </div>
                 </div>
+
+                {/* Kolom quick-update progress harian - dikasih jarak dari tepi
+                    bawah kartu (pb-1 di parent + mt di sini), gak mepet mentok. */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect(), autoFocus: true }); }}
+                  className="mt-2.5 w-full flex items-center gap-2 text-left text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl px-3 py-2 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 transition-colors"
+                  title="Update progress harian"
+                >
+                  <ClipboardList size={13} className="shrink-0" />
+                  <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "Update progress hari ini…"}</span>
+                </button>
               </div>
             </div>
           );
@@ -222,6 +238,15 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
           rect={draftPopup.rect}
           onClose={() => setDraftPopup(null)}
           onSent={onChanged}
+        />
+      )}
+      {progressPopup && (
+        <ProgressPopup
+          lead={progressPopup.lead}
+          rect={progressPopup.rect}
+          autoFocus={progressPopup.autoFocus}
+          onClose={() => setProgressPopup(null)}
+          onChanged={onChanged}
         />
       )}
       {showDup && <DuplicateModal leads={leads} onClose={() => setShowDup(false)} onChanged={onChanged} />}
