@@ -20,6 +20,13 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
   const [emailMsg, setEmailMsg] = useState("");
 
   const runDraft = async (ch) => {
+    // Cek dulu SEBELUM manggil AI - kalau lead gak punya email tapi user
+    // pencet "Email", jangan buang-buang panggilan AI buat draft yang gak
+    // akan bisa dikirim ke mana-mana.
+    if (ch === "email" && !lead.email) {
+      setChannel("email"); setError("Lead ini belum punya alamat email tercatat.");
+      return;
+    }
     setBusy(true); setError(""); setChannel(ch); setEmailMsg("");
     try {
       const res = await db.draftFollowup(lead.id, ch);
