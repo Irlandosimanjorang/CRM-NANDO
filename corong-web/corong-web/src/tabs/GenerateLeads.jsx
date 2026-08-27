@@ -37,6 +37,7 @@ export default function GenerateLeads({ stages, onChanged }) {
   const [province, setProvince] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [productSold, setProductSold] = useState("");
+  const [companyScale, setCompanyScale] = useState("");
   const [busy, setBusy] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [msg, setMsg] = useState("");
@@ -63,7 +64,7 @@ export default function GenerateLeads({ stages, onChanged }) {
     }
     setBusy(true); setMsg("");
     try {
-      const res = await db.generateLeads({ keyword, province, targetRole, productSold });
+      const res = await db.generateLeads({ keyword, province, targetRole, productSold, companyScale });
       setMsg(`✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`);
       load();
     } catch (e) {
@@ -152,6 +153,15 @@ export default function GenerateLeads({ stages, onChanged }) {
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Jabatan yang dicari <span className="text-rose-500">*</span></span>
                 <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Purchasing Manager" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-slate-500">Skala perusahaan (opsional)</span>
+                <select className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={companyScale} onChange={(e) => setCompanyScale(e.target.value)}>
+                  <option value="">Semua skala</option>
+                  <option value="UMKM / Kecil">UMKM / Kecil</option>
+                  <option value="Menengah">Menengah</option>
+                  <option value="Besar / Korporat">Besar / Korporat</option>
+                </select>
               </label>
             </div>
             <button onClick={generate} disabled={busy || !productSold.trim() || !keyword.trim() || !targetRole.trim()} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
