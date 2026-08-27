@@ -35,6 +35,8 @@ function Field({ icon: Icon, value }) {
 export default function GenerateLeads({ stages, onChanged }) {
   const [keyword, setKeyword] = useState("");
   const [city, setCity] = useState("");
+  const [targetRole, setTargetRole] = useState("");
+  const [productSold, setProductSold] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [results, setResults] = useState([]);
@@ -56,7 +58,7 @@ export default function GenerateLeads({ stages, onChanged }) {
   const generate = async () => {
     setBusy(true); setMsg("");
     try {
-      const res = await db.generateLeads({ keyword, city });
+      const res = await db.generateLeads({ keyword, city, targetRole, productSold });
       setMsg(`✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`);
       load();
     } catch (e) {
@@ -89,7 +91,7 @@ export default function GenerateLeads({ stages, onChanged }) {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Generate Leads</h1>
-        <p className="text-sm text-slate-500 mt-1">AI cari calon lead baru lewat web search — Google Maps, LinkedIn, Instagram/TikTok bisnis, dan direktori Kemenperin. Maks 20 lead per generate, 2x seminggu (gak boleh di hari yang sama).</p>
+        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Isi "barang yang dijual" biar AI ngarahin ke pembeli potensial. Bisa targetin jabatan spesifik (misal Purchasing Manager). Maks 20 lead per generate, 2x seminggu (gak boleh di hari yang sama).</p>
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
@@ -109,12 +111,20 @@ export default function GenerateLeads({ stages, onChanged }) {
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
+                <span className="text-xs font-medium text-slate-500">Barang/jasa yang lo jual (opsional, tapi rekomended)</span>
+                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: resin PVC, kompon kabel" value={productSold} onChange={(e) => setProductSold(e.target.value)} />
+              </label>
+              <label className="block">
                 <span className="text-xs font-medium text-slate-500">Kata kunci / industri (opsional)</span>
                 <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: distributor kabel listrik" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Kota (opsional)</span>
                 <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Surabaya" value={city} onChange={(e) => setCity(e.target.value)} />
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-slate-500">Jabatan yang dicari (opsional)</span>
+                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Purchasing Manager" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
               </label>
             </div>
             <button onClick={generate} disabled={busy} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
