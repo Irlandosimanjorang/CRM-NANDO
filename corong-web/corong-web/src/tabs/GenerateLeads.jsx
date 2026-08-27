@@ -147,47 +147,72 @@ export default function GenerateLeads({ stages, onChanged }) {
           <div className="text-sm text-slate-400 bg-white border border-slate-100 rounded-2xl p-6 text-center">Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
         ) : (
           <div className="space-y-2.5">
-            {results.map((r) => {
-              const imported = r.status === "imported";
-              return (
-                <button
-                  key={r.id}
-                  onClick={() => importLead(r)}
-                  disabled={imported || importingId === r.id}
-                  className={`w-full text-left bg-white border rounded-2xl shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 transition-colors ${imported ? "border-emerald-200 bg-emerald-50/30" : "border-slate-100 hover:border-orange-300 hover:bg-orange-50/20 cursor-pointer"}`}
-                >
-                  <div className="flex items-start gap-3.5">
-                    <ScoreRing score={r.score ?? 50} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="font-bold text-sm truncate">{r.name}</div>
-                          {r.category && <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">{r.category}</span>}
-                        </div>
-                        <div className="shrink-0">
-                          {imported ? (
-                            <span className="text-xs font-medium text-emerald-700 bg-emerald-100 rounded-full px-3 py-1.5 flex items-center gap-1"><Check size={13} /> Sudah di Leads</span>
-                          ) : importingId === r.id ? (
-                            <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><Loader2 size={13} className="animate-spin" /> Menambah…</span>
-                          ) : (
-                            <span className="text-xs font-medium text-orange-600 flex items-center gap-1">Tambah ke Leads <ArrowRight size={13} /></span>
-                          )}
+            {(() => {
+              // Kelompokin hasil per-batch generate (run_id) - backend udah
+              // ngurutin run_started_at DESC lalu score DESC, di sini kita
+              // cuma nentuin kapan nampilin header pemisah batch baru.
+              const runCounts = {};
+              for (const r of results) {
+                const k = r.run_id || "legacy";
+                runCounts[k] = (runCounts[k] || 0) + 1;
+              }
+              let lastRunKey = null;
+              return results.map((r) => {
+                const imported = r.status === "imported";
+                const runKey = r.run_id || "legacy";
+                const showHeader = runKey !== lastRunKey;
+                lastRunKey = runKey;
+                const headerLabel = r.run_started_at
+                  ? new Date(r.run_started_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                  : "Generate sebelumnya";
+                return (
+                  <div key={r.id}>
+                    {showHeader && (
+                      <div className={`flex items-center gap-2 pb-2 ${lastRunKey === null ? "" : "pt-3"}`}>
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{headerLabel}</span>
+                        <span className="text-[11px] text-slate-300">· {runCounts[runKey]} hasil, diurut score tertinggi</span>
+                        <div className="flex-1 h-px bg-slate-100" />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => importLead(r)}
+                      disabled={imported || importingId === r.id}
+                      className={`w-full text-left bg-white border rounded-2xl shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 transition-colors ${imported ? "border-emerald-200 bg-emerald-50/30" : "border-slate-100 hover:border-orange-300 hover:bg-orange-50/20 cursor-pointer"}`}
+                    >
+                      <div className="flex items-start gap-3.5">
+                        <ScoreRing score={r.score ?? 50} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="font-bold text-sm truncate">{r.name}</div>
+                              {r.category && <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">{r.category}</span>}
+                            </div>
+                            <div className="shrink-0">
+                              {imported ? (
+                                <span className="text-xs font-medium text-emerald-700 bg-emerald-100 rounded-full px-3 py-1.5 flex items-center gap-1"><Check size={13} /> Sudah di Leads</span>
+                              ) : importingId === r.id ? (
+                                <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><Loader2 size={13} className="animate-spin" /> Menambah…</span>
+                              ) : (
+                                <span className="text-xs font-medium text-orange-600 flex items-center gap-1">Tambah ke Leads <ArrowRight size={13} /></span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5">
+                            <Field icon={Globe} value={r.website} />
+                            <Field icon={MapPin} value={r.city} />
+                            <Field icon={User} value={r.key_person ? `${r.key_person}${r.key_person_title ? " · " + r.key_person_title : ""}` : ""} />
+                            <Field icon={Package} value={r.product} />
+                            <Field icon={Phone} value={r.phone} />
+                            <Field icon={Mail} value={r.email} />
+                          </div>
+                          {r.source_note && <div className="text-[11px] text-slate-400 mt-2 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5">
-                        <Field icon={Globe} value={r.website} />
-                        <Field icon={MapPin} value={r.city} />
-                        <Field icon={User} value={r.key_person ? `${r.key_person}${r.key_person_title ? " · " + r.key_person_title : ""}` : ""} />
-                        <Field icon={Package} value={r.product} />
-                        <Field icon={Phone} value={r.phone} />
-                        <Field icon={Mail} value={r.email} />
-                      </div>
-                      {r.source_note && <div className="text-[11px] text-slate-400 mt-2 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
-                    </div>
+                    </button>
                   </div>
-                </button>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         )}
       </div>
