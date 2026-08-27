@@ -1,134 +1,130 @@
-import { useState, useEffect } from "react";
-import { X, Sparkles, MessageCircle, Mail, Copy, Loader2, Send } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, ClipboardList, Loader2, Send, Pencil, Trash2, Check } from "lucide-react";
 import * as db from "../lib/db";
-import { waLink } from "../lib/helpers";
 
-// Popup ringan buat generate & langsung kirim draft follow-up (WA/Email) TANPA
-// perlu buka LeadModal penuh - dipicu dari tombol di kolom tabel Leads/kartu,
-// atau dari tombol "Handle Now" di kartu rekomendasi Dashboard (initialChannel
-// diisi biar langsung auto-generate begitu dibuka, gak perlu klik 2x).
-// AI cuma jalan pas user klik/buka salah satu channel di dalam sini (on-demand).
-export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChannel }) {
-  const [channel, setChannel] = useState(null); // "whatsapp" | "email" | null
+// Popup ringan khusus progress notes - dipicu dari kolom "Update progress"
+// di bagian bawah kartu Leads. Beda dari LeadModal (yang nampilin SEMUA
+// field lead), ini fokus sempit: history scroll-able + tambah/edit/hapus
+// progress cepet, tanpa perlu buka modal penuh.
+export default function ProgressPopup({ lead, rect, onClose, onChanged, autoFocus }) {
+  const [notes, setNotes] = useState((lead.progressLog || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)));
+  const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [waText, setWaText] = useState("");
-  const [waCopied, setWaCopied] = useState(false);
-  const [emailSubject, setEmailSubject] = useState("");
-  const [emailBody, setEmailBody] = useState("");
-  const [emailBusy, setEmailBusy] = useState(false);
-  const [emailMsg, setEmailMsg] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const inputRef = useRef(null);
 
-  const runDraft = async (ch) => {
-    // Cek dulu SEBELUM manggil AI - kalau lead gak punya email tapi user
-    // pencet "Email", jangan buang-buang panggilan AI buat draft yang gak
-    // akan bisa dikirim ke mana-mana.
-    if (ch === "email" && !lead.email) {
-      setChannel("email"); setError("Lead ini belum punya alamat email tercatat.");
-      return;
-    }
-    setBusy(true); setError(""); setChannel(ch); setEmailMsg("");
+  useEffect(() => {
+    if (autoFocus && inputRef.current) inputRef.current.focus();
+  }, [autoFocus]);
+
+  const submit = async () => {
+    if (!text.trim() || busy) return;
+    setBusy(true);
     try {
-      const res = await db.draftFollowup(lead.id, ch);
-      if (ch === "whatsapp") setWaText(res.message || "");
-      else { setEmailSubject(res.subject || ""); setEmailBody(res.body || ""); }
+      const added = await db.addProgress(lead.id, text.trim());
+      setNotes((prev) => [added, ...prev]);
+      setText("");
+      onChanged && onChanged();
     } catch (e) {
-      setError(e.message);
+      alert("Gagal simpan: " + e.message);
     } finally {
       setBusy(false);
     }
   };
 
-  // Kalau dibuka dari tombol "Handle Now" (bawa initialChannel), langsung
-  // auto-generate draft-nya tanpa nunggu user klik channel dulu.
-  useEffect(() => {
-    if (initialChannel) runDraft(initialChannel);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const copyWa = async () => {
-    try { await navigator.clipboard.writeText(waText); setWaCopied(true); setTimeout(() => setWaCopied(false), 1800); } catch (_) {}
-  };
-  const openWa = () => {
-    const base = waLink(lead.phone);
-    if (!base) return;
-    window.open(`${base}?text=${encodeURIComponent(waText)}`, "_blank");
-  };
-
-  const sendEmail = async () => {
-    if (!lead.email) return;
-    if (!emailSubject.trim() || !emailBody.trim()) return;
-    setEmailBusy(true); setEmailMsg("");
+  const startEdit = (n) => { setEditingId(n.id); setEditText(n.text); };
+  const saveEdit = async (id) => {
+    if (!editText.trim()) return;
     try {
-      await db.sendLeadEmail({ lead_id: lead.id, to_email: lead.email, to_name: lead.name, subject: emailSubject, body: emailBody });
-      setEmailMsg("✅ Terkirim & kecatet di progress.");
-      onSent && onSent();
+      await db.updateProgress(id, editText.trim());
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, text: editText.trim() } : n)));
+      setEditingId(null);
+      onChanged && onChanged();
     } catch (e) {
-      setEmailMsg("Gagal: " + e.message);
-    } finally {
-      setEmailBusy(false);
+      alert("Gagal update: " + e.message);
     }
   };
 
-  const POPUP_W = 336;
-  const left = Math.min(Math.max(rect.left - 40, 12), window.innerWidth - POPUP_W - 12);
-  const top = Math.min(Math.max(rect.bottom + 8, 12), window.innerHeight - 420);
+  const remove = async (id) => {
+    if (!window.confirm("Hapus catatan ini?")) return;
+    try {
+      await db.deleteProgress(id);
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+      onChanged && onChanged();
+    } catch (e) {
+      alert("Gagal hapus: " + e.message);
+    }
+  };
+
+  const POPUP_W = 340;
+  const POPUP_H = 440;
+  const left = Math.min(Math.max(rect.left - 20, 12), window.innerWidth - POPUP_W - 12);
+  const top = Math.min(Math.max(rect.top - POPUP_H - 8, 12), window.innerHeight - POPUP_H - 12);
 
   return (
     <>
       <div className="fixed inset-0 z-40 bg-slate-900/20" onClick={onClose} />
       <div
-        className="fixed z-50 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
-        style={{ left, top, width: POPUP_W, maxHeight: "min(480px, calc(100vh - 24px))" }}
+        className="fixed z-50 bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden"
+        style={{ left, top, width: POPUP_W, height: POPUP_H, maxHeight: "calc(100vh - 24px)" }}
       >
-        <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-orange-50 to-white border-b border-slate-100 flex items-start justify-between gap-2">
+        <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-orange-50 to-white border-b border-slate-100 flex items-start justify-between gap-2 shrink-0">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1"><Sparkles size={11} /> Draft Follow-up (AI)</div>
+            <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1"><ClipboardList size={11} /> Progress Harian</div>
             <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{lead.name}</div>
           </div>
           <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-slate-600"><X size={16} /></button>
         </div>
 
-        <div className="p-4 overflow-y-auto" style={{ maxHeight: 400 }}>
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => runDraft("whatsapp")} disabled={busy} className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5">
-              {busy && channel === "whatsapp" ? <Loader2 size={13} className="animate-spin" /> : <MessageCircle size={13} />} WhatsApp
-            </button>
-            <button onClick={() => runDraft("email")} disabled={busy} className="text-xs bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5">
-              {busy && channel === "email" ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />} Email
-            </button>
-          </div>
-
-          {error && <p className="text-[11px] text-rose-600 mt-2.5">Gagal: {error}</p>}
-
-          {channel === "whatsapp" && waText && (
-            <div className="mt-3 space-y-2">
-              <textarea className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white min-h-[110px]" value={waText} onChange={(e) => setWaText(e.target.value)} />
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={copyWa} className="text-xs border border-slate-300 rounded-lg py-2 hover:bg-slate-50 flex items-center justify-center gap-1.5"><Copy size={12} /> {waCopied ? "Tersalin!" : "Salin"}</button>
-                <button onClick={openWa} disabled={!waLink(lead.phone)} className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg py-2 flex items-center justify-center gap-1.5"><MessageCircle size={12} /> Buka di WA</button>
+        {/* History - scroll-able, terbaru di atas */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {notes.length === 0 && <p className="text-xs text-slate-400 text-center py-6">Belum ada catatan progress.</p>}
+          {notes.map((n) => (
+            <div key={n.id} className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 group">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[10px] font-medium text-slate-400">{new Date(n.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                {editingId !== n.id && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button onClick={() => startEdit(n)} className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50"><Pencil size={11} /></button>
+                    <button onClick={() => remove(n.id)} className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 size={11} /></button>
+                  </div>
+                )}
               </div>
-              {!waLink(lead.phone) && <p className="text-[10px] text-amber-700">Nomor telepon belum diisi/gak valid.</p>}
-            </div>
-          )}
-
-          {channel === "email" && emailSubject && (
-            <div className="mt-3 space-y-2">
-              {!lead.email ? (
-                <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2">Lead ini belum punya alamat email.</p>
+              {editingId === n.id ? (
+                <div className="mt-1.5 flex items-end gap-1.5">
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    rows={2}
+                    className="flex-1 text-xs border border-orange-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                    autoFocus
+                  />
+                  <button onClick={() => saveEdit(n.id)} className="shrink-0 p-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700"><Check size={12} /></button>
+                </div>
               ) : (
-                <>
-                  <p className="text-[10px] text-slate-400">Kirim ke: <b>{lead.email}</b></p>
-                  <input className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
-                  <textarea className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white min-h-[110px]" value={emailBody} onChange={(e) => setEmailBody(e.target.value)} />
-                  <button onClick={sendEmail} disabled={emailBusy} className="w-full bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white text-xs py-2 rounded-lg font-medium flex items-center justify-center gap-1.5">
-                    {emailBusy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} {emailBusy ? "Mengirim…" : "Kirim Email"}
-                  </button>
-                  {emailMsg && <p className={`text-[11px] ${emailMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{emailMsg}</p>}
-                </>
+                <p className="text-xs text-slate-700 mt-1 whitespace-pre-wrap">{n.text}</p>
               )}
             </div>
-          )}
+          ))}
+        </div>
+
+        {/* Input tambah progress baru - selalu keliatan di bawah, gak kepotong scroll */}
+        <div className="px-3 py-3 border-t border-slate-100 shrink-0 bg-white">
+          <div className="flex items-end gap-1.5">
+            <textarea
+              ref={inputRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+              placeholder="Update progress hari ini… (Enter buat kirim)"
+              rows={1}
+              className="flex-1 text-sm border border-slate-300 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+            />
+            <button onClick={submit} disabled={busy || !text.trim()} className="shrink-0 p-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white">
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+            </button>
+          </div>
         </div>
       </div>
     </>
