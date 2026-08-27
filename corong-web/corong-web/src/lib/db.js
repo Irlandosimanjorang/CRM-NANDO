@@ -37,6 +37,27 @@ export async function setOrgIndustry(industryKey) {
   if (error) throw error;
 }
 
+// ---- MODE DEMO INDUSTRI (khusus admin platform) ----
+// Beda dari setOrgIndustry biasa (yang cuma dipake SEKALI pas onboarding),
+// fungsi ini boleh dipanggil BERKALI-KALI - buat Nando nunjukin "framework"
+// tiap industri pas lagi pitching ke calon klien. Selain ganti industry,
+// pipeline stages-nya juga ikut di-RESET total sesuai template industri baru
+// (bukan cuma label field yang berubah) - biar keliatan strukturnya beneran,
+// bukan cuma kosmetik doang.
+export async function switchDemoIndustry(industryKey) {
+  const orgId = await getMyOrgId();
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error: orgErr } = await supabase.from("organizations").update({ industry: industryKey }).eq("id", orgId);
+  if (orgErr) throw orgErr;
+
+  const tpl = getIndustryTemplate(industryKey);
+  const { data: rows } = await supabase.from("stages").select("id");
+  if (rows?.length) await supabase.from("stages").delete().in("id", rows.map((r) => r.id));
+  const payload = tpl.stages.map((s, i) => ({ user_id: uid, org_id: orgId, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
+  const { error: stagesErr } = await supabase.from("stages").insert(payload);
+  if (stagesErr) throw stagesErr;
+}
+
 export async function getOrgMembers() {
   const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("organization_members").select("*").eq("org_id", orgId);
