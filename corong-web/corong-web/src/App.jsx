@@ -17,7 +17,7 @@ import AdminDashboard from "./tabs/AdminDashboard";
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
 import IndustryDemo from "./tabs/IndustryDemo";
-import { getIndustryTemplate } from "./lib/industryTemplates";
+import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
@@ -352,10 +352,14 @@ export default function App() {
               />
             </div>
             <div className="pl-[38px] mt-2 flex items-center gap-1.5 flex-wrap min-w-0">
-              {org?.industry && (
-                <span className="inline-block text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full">
-                  {getIndustryTemplate(org.industry).label}
-                </span>
+              {settings?.is_platform_admin ? (
+                <IndustryDemoSwitcher org={org} onSwitched={reload} />
+              ) : (
+                org?.industry && (
+                  <span className="inline-block text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full">
+                    {getIndustryTemplate(org.industry).label}
+                  </span>
+                )
               )}
               <span className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-wide text-slate-500">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 nexto-status-dot" />
@@ -535,6 +539,63 @@ function PreviewLock({ locked, children }) {
         className="absolute inset-0 top-11 z-20 cursor-pointer"
       />
       {children}
+    </div>
+  );
+}
+
+// Switcher industri - CUMA muncul buat admin platform (is_platform_admin).
+// Beda dari IndustryPicker (onboarding sekali doang), ini boleh dipencet
+// berkali-kali - dipake Nando buat gonta-ganti industri pas demo/pitching,
+// biar calon klien liat langsung gimana Nexto "berubah bentuk" nyesuain
+// bisnis mereka (label field, kategori, & pipeline stages-nya ikut berubah).
+function IndustryDemoSwitcher({ org, onSwitched }) {
+  const [open, setOpen] = useState(false);
+  const [switching, setSwitching] = useState(null);
+  const current = org?.industry;
+
+  const doSwitch = async (key) => {
+    if (key === current || switching) return;
+    setSwitching(key);
+    try {
+      await db.switchDemoIndustry(key);
+      await onSwitched();
+      setOpen(false);
+    } catch (e) {
+      alert("Gagal ganti industri: " + e.message);
+    } finally {
+      setSwitching(null);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full transition-colors"
+        title="Mode demo - khusus admin, ganti industri buat pitching"
+      >
+        {current ? getIndustryTemplate(current).label : "Pilih industri"}
+        <span className="text-orange-400/70">▾</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[998]" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1.5 w-56 bg-[#0b101a] border border-white/10 rounded-2xl shadow-[0_16px_40px_-8px_rgba(0,0,0,0.6)] z-[999] overflow-hidden py-1.5">
+            <div className="px-3 py-1.5 text-[9px] font-mono uppercase tracking-widest text-slate-600">Mode Demo - Pitching</div>
+            {Object.entries(INDUSTRY_TEMPLATES).map(([key, tpl]) => (
+              <button
+                key={key}
+                onClick={() => doSwitch(key)}
+                disabled={!!switching}
+                className={`w-full text-left px-3 py-2 text-[12px] flex items-center justify-between gap-2 transition-colors disabled:opacity-50 ${key === current ? "text-orange-300 bg-orange-500/10" : "text-slate-300 hover:bg-white/[0.05]"}`}
+              >
+                <span className="truncate">{tpl.label}</span>
+                {switching === key ? <Loader2 size={12} className="animate-spin shrink-0" /> : key === current ? <span className="text-[9px] shrink-0">●</span> : null}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
