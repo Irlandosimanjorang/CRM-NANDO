@@ -271,21 +271,38 @@ const INDUSTRIES = [
   },
 ];
 
-const FREE_FEATURES = [
-  "Dashboard",
-  "Kelola Leads",
+const STANDARD_FEATURES = [
+  "Kelola Leads — kartu per perusahaan",
+  "Smart Import AI",
+  "Recycle Bin",
+  "Deteksi Duplikat",
+  "Nex — Komunitas Sesama Sales",
 ];
 
-const PREMIUM_FEATURES = [
-  "Semua fitur di paket Free",
-  "Deal & tracking transaksi",
-  "Visit & Follow-up + Check-in GPS",
-  "Rekam Meeting otomatis",
-  "Analisa Kompetitor",
+const PROFESSIONAL_FEATURES = [
+  "Semua fitur Standard",
+  "Bot Telegram (edit CRM, progress harian, jadwal visit)",
+  "Sinkron otomatis ke Google Calendar",
+  "Generate Leads AI (2x/bulan)",
+  "Rekam Meeting otomatis (AI)",
+  "Customer State (AI)",
+  "Outcome Memory (AI)",
+  "Vector Memory (AI)",
+  "GPS Check-in",
   "AI Advisor harian",
-  "Bot Telegram (agent aktif)",
-  "Sinkron Google Calendar",
-  "Nex — komunitas sesama sales",
+  "AI Draft Follow-up (WhatsApp & Email)",
+  "Good Morning Dashboard",
+  "Analisa Kompetitor",
+];
+
+const ENTERPRISE_FEATURES = [
+  "Semua fitur Professional",
+  "5 anggota tim dalam satu organisasi",
+  "Role-based visibility (Owner/Manager/Sales Rep)",
+  "Undang anggota tim via kode invite",
+  "Bot Telegram kirim email otonom",
+  "Approval-gate & keamanan tim",
+  "Prioritas support",
 ];
 
 const FAQS = [
@@ -1126,8 +1143,13 @@ function AiEngineLoopSection({ robotVoice }) {
         </p>
       </div>
 
-      {/* ---- Diagram orbital (desktop/tablet lebar) ---- */}
-      <div className="relative mx-auto mt-20 hidden md:block" style={{ width: RADIUS * 2 + 280, height: RADIUS * 2 + 40, maxWidth: "100%" }}>
+      {/* ---- Diagram orbital (desktop/tablet lebar) - baru nongol dari
+          breakpoint xl (1280px) ke atas, BUKAN md (768px). Diagram ini
+          butuh ruang ~880px biar semua kartu (radius 300px + lebar kartu
+          240px) gak kepotong. Kalau dipaksa muncul dari md, kartu Decision
+          Engine & Memory Engine (paling kiri/kanan) bisa ke-clip invisible
+          di lebar 768-1024px karena section-nya overflow-hidden. ---- */}
+      <div className="relative mx-auto mt-20 hidden xl:block" style={{ width: RADIUS * 2 + 280, height: RADIUS * 2 + 40, maxWidth: "100%" }}>
         {/* Cincin orbit - muter pelan terus-menerus */}
         <div
           className="absolute left-1/2 top-1/2 rounded-full border border-dashed"
@@ -1218,8 +1240,11 @@ function AiEngineLoopSection({ robotVoice }) {
         })}
       </div>
 
-      {/* ---- Diagram vertikal (mobile) ---- */}
-      <div className="relative mx-auto mt-16 max-w-md md:hidden">
+      {/* ---- Diagram vertikal (mobile + tablet + laptop kecil, sampe
+          breakpoint xl) - dipake lebih luas dari sebelumnya (dulu cuma
+          sampe md) biar gak ada rentang lebar layar yang kena bug clipping
+          di versi orbital. ---- */}
+      <div className="relative mx-auto mt-16 max-w-md xl:hidden">
         <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-400/30 bg-gradient-to-br from-orange-500/20 to-orange-700/10" style={{ animation: "nexto-core-pulse 2.6s ease-in-out infinite" }}>
           <NextoRobotHead size={28} speaking={robotVoice.speaking} />
         </div>
@@ -1831,48 +1856,64 @@ export default function Auth() {
         ========================================================== */}
         <section
           id="harga"
-          className="bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10"
+          className="relative overflow-hidden bg-[#05070c] px-5 py-20 text-white sm:px-7 sm:py-28 lg:px-10"
         >
-          <div className="mx-auto max-w-7xl">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-[420px] opacity-70"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(148,163,184,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.045) 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
+              maskImage: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent 75%)",
+              WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent 75%)",
+            }}
+          />
+
+          <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
               <SectionLabel>Simple pricing</SectionLabel>
 
-              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[46px]">
-                Mulai gratis.
-                <span className="block text-slate-400">
-                  Upgrade saat sales kamu siap.
-                </span>
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-white sm:text-[46px]">
+                Berapa banyak "karyawan AI"
+                <span className="block text-slate-500">yang mau kamu pekerjakan?</span>
               </h2>
+              <p className="mx-auto mt-4 max-w-lg text-[13px] leading-relaxed text-slate-500">
+                Standard cuma CRM. Dari Professional ke atas, engine AI-nya beneran nyala — analisis, draft pesan, dan eksekusi jalan sendiri di belakang layar.
+              </p>
             </div>
 
-            <div className="mx-auto mt-12 grid max-w-4xl gap-4 md:grid-cols-2">
-              <div className="rounded-[26px] border border-slate-200 bg-white p-7">
-                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                  Free
+            <div className="mx-auto mt-14 grid max-w-6xl gap-5 lg:grid-cols-3 lg:items-start">
+              {/* ---- STANDARD - AI engine OFF ---- */}
+              <div className="rounded-[26px] border border-white/[0.08] bg-white/[0.02] p-7">
+                <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-[0.16em] text-slate-500">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
+                  Mode Standar
+                </div>
+
+                <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                  Standard
                 </div>
 
                 <div className="mt-3 flex items-end gap-1">
-                  <span className="text-[42px] font-bold tracking-[-0.05em] text-slate-950">
-                    Rp0
+                  <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
+                    Rp79rb
                   </span>
+                  <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                 </div>
 
-                <div className="mt-1 text-[10px] text-slate-400">
-                  Selamanya gratis
+                <div className="mt-1 text-[10px] text-slate-500">
+                  CRM inti, tanpa AI — untuk yang mau rapiin data dulu
                 </div>
 
-                <div className="my-7 h-px bg-slate-100" />
+                <div className="my-7 h-px bg-white/[0.06]" />
 
                 <ul className="space-y-3">
-                  {FREE_FEATURES.map((feature) => (
+                  {STANDARD_FEATURES.map((feature) => (
                     <li
                       key={feature}
-                      className="flex items-center gap-2.5 text-[11px] text-slate-600"
+                      className="flex items-start gap-2.5 text-[11px] text-slate-400"
                     >
-                      <Check
-                        size={13}
-                        className="shrink-0 text-emerald-500"
-                      />
+                      <Check size={13} className="mt-0.5 shrink-0 text-slate-500" />
                       {feature}
                     </li>
                   ))}
@@ -1880,46 +1921,51 @@ export default function Auth() {
 
                 <button
                   onClick={goToSignup}
-                  className="mt-8 w-full rounded-xl border border-slate-200 py-3 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50"
+                  className="mt-8 w-full rounded-xl border border-white/10 py-3 text-[11px] font-bold text-slate-300 transition hover:bg-white/[0.05]"
                 >
-                  Mulai Gratis
+                  Mulai Standard
                 </button>
               </div>
 
-              <div className="relative overflow-hidden rounded-[26px] border border-orange-300 bg-white p-7 shadow-[0_25px_70px_-35px_rgba(234,88,12,0.4)]">
-                <div className="absolute right-5 top-5 rounded-full bg-orange-50 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.12em] text-orange-600">
-                  Recommended
+              {/* ---- PROFESSIONAL - AI engine ON (recommended) ---- */}
+              <div className="relative overflow-hidden rounded-[26px] border border-orange-500/30 bg-gradient-to-b from-orange-500/[0.07] to-white/[0.02] p-7 shadow-[0_25px_70px_-35px_rgba(234,88,12,0.5)] lg:-translate-y-3">
+                <div className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-orange-500/20 blur-[70px]" />
+                <div className="absolute right-5 top-5 rounded-full bg-orange-500/10 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.12em] text-orange-400">
+                  Paling Direkomendasikan
                 </div>
 
-                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-600">
-                  Premium
-                </div>
-
-                <div className="mt-3 flex items-end gap-1">
-                  <span className="text-[42px] font-bold tracking-[-0.05em] text-slate-950">
-                    Rp149rb
+                <div className="relative flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-[0.16em] text-orange-400">
+                  <span className="relative inline-flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-60" />
+                    <span className="relative inline-flex h-full w-full rounded-full bg-orange-400" />
                   </span>
-                  <span className="mb-1.5 text-[10px] text-slate-400">
-                    /bulan
+                  AI Engine Aktif
+                </div>
+
+                <div className="relative mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-orange-400">
+                  Professional
+                </div>
+
+                <div className="relative mt-3 flex items-end gap-1">
+                  <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
+                    Rp199rb
                   </span>
+                  <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                 </div>
 
-                <div className="mt-1 text-[10px] text-slate-400">
-                  Akses semua fitur
+                <div className="relative mt-1 text-[10px] text-slate-400">
+                  AI Sales Engine penuh — solo, tapi kerja kayak ada tim
                 </div>
 
-                <div className="my-7 h-px bg-slate-100" />
+                <div className="relative my-7 h-px bg-white/[0.08]" />
 
-                <ul className="space-y-3">
-                  {PREMIUM_FEATURES.map((feature) => (
+                <ul className="relative space-y-3">
+                  {PROFESSIONAL_FEATURES.map((feature) => (
                     <li
                       key={feature}
-                      className="flex items-center gap-2.5 text-[11px] text-slate-600"
+                      className="flex items-start gap-2.5 text-[11px] text-slate-300"
                     >
-                      <Check
-                        size={13}
-                        className="shrink-0 text-emerald-500"
-                      />
+                      <Check size={13} className="mt-0.5 shrink-0 text-orange-400" />
                       {feature}
                     </li>
                   ))}
@@ -1927,10 +1973,61 @@ export default function Auth() {
 
                 <button
                   onClick={goToSignup}
-                  className="mt-8 w-full rounded-xl bg-orange-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-orange-700"
+                  className="relative mt-8 w-full rounded-xl bg-orange-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-orange-500"
                 >
-                  Upgrade ke Premium
+                  Upgrade ke Professional
                 </button>
+              </div>
+
+              {/* ---- ENTERPRISE - AI engine ON, tim ---- */}
+              <div className="relative overflow-hidden rounded-[26px] border border-violet-500/30 bg-gradient-to-b from-violet-500/[0.08] to-white/[0.02] p-7 shadow-[0_25px_70px_-35px_rgba(124,58,237,0.5)]">
+                <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet-500/20 blur-[70px]" />
+
+                <div className="relative">
+                  <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-[0.16em] text-violet-300">
+                    <span className="relative inline-flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
+                      <span className="relative inline-flex h-full w-full rounded-full bg-violet-400" />
+                    </span>
+                    AI Engine + Tim
+                  </div>
+
+                  <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300">
+                    Enterprise
+                  </div>
+
+                  <div className="mt-3 flex items-end gap-1">
+                    <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
+                      Rp2,5jt
+                    </span>
+                    <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
+                  </div>
+
+                  <div className="mt-1 text-[10px] text-slate-400">
+                    Untuk 5 orang (≈Rp500rb/orang) — tim sales dengan visibilitas penuh
+                  </div>
+
+                  <div className="my-7 h-px bg-white/10" />
+
+                  <ul className="space-y-3">
+                    {ENTERPRISE_FEATURES.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-start gap-2.5 text-[11px] text-slate-300"
+                      >
+                        <Check size={13} className="mt-0.5 shrink-0 text-violet-400" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    onClick={goToSignup}
+                    className="mt-8 w-full rounded-xl bg-violet-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-violet-500"
+                  >
+                    Hubungi Sales
+                  </button>
+                </div>
               </div>
             </div>
           </div>
