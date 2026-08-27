@@ -56,6 +56,10 @@ export default function GenerateLeads({ stages, onChanged }) {
   useEffect(() => { load(); }, []);
 
   const generate = async () => {
+    if (!productSold.trim() || !keyword.trim() || !city.trim() || !targetRole.trim()) {
+      setMsg("Gagal: semua kolom wajib diisi (barang yang dijual, kata kunci, kota, jabatan).");
+      return;
+    }
     setBusy(true); setMsg("");
     try {
       const res = await db.generateLeads({ keyword, city, targetRole, productSold });
@@ -91,7 +95,7 @@ export default function GenerateLeads({ stages, onChanged }) {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Generate Leads</h1>
-        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Isi "barang yang dijual" biar AI ngarahin ke pembeli potensial. Bisa targetin jabatan spesifik (misal Purchasing Manager). Maks 20 lead per generate, 2x seminggu (gak boleh di hari yang sama).</p>
+        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Isi semua kolom di bawah biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 2x seminggu (gak boleh di hari yang sama).</p>
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
@@ -111,24 +115,24 @@ export default function GenerateLeads({ stages, onChanged }) {
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Barang/jasa yang lo jual (opsional, tapi rekomended)</span>
-                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: resin PVC, kompon kabel" value={productSold} onChange={(e) => setProductSold(e.target.value)} />
+                <span className="text-xs font-medium text-slate-500">Barang/jasa yang lo jual <span className="text-rose-500">*</span></span>
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: resin PVC, kompon kabel" value={productSold} onChange={(e) => setProductSold(e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Kata kunci / industri (opsional)</span>
-                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: distributor kabel listrik" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+                <span className="text-xs font-medium text-slate-500">Kata kunci / industri <span className="text-rose-500">*</span></span>
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: distributor kabel listrik" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Kota (opsional)</span>
-                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Surabaya" value={city} onChange={(e) => setCity(e.target.value)} />
+                <span className="text-xs font-medium text-slate-500">Kota <span className="text-rose-500">*</span></span>
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Surabaya" value={city} onChange={(e) => setCity(e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Jabatan yang dicari (opsional)</span>
-                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Purchasing Manager" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
+                <span className="text-xs font-medium text-slate-500">Jabatan yang dicari <span className="text-rose-500">*</span></span>
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Purchasing Manager" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
               </label>
             </div>
-            <button onClick={generate} disabled={busy} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
-              {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} {busy ? "Lagi nyari (bisa 1-2 menit)…" : "Generate 20 Leads"}
+            <button onClick={generate} disabled={busy || !productSold.trim() || !keyword.trim() || !city.trim() || !targetRole.trim()} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
+              {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} {busy ? "Lagi nyari (bisa 1-2 menit)…" : "Generate 15 Leads"}
             </button>
           </div>
         )}
