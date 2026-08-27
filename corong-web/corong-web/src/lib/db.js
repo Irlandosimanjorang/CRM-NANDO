@@ -146,8 +146,8 @@ export async function saveMyProfile({ avatar_url, job_title, name }) {
 }
 
 // ---- GENERATE LEADS (AI cari calon lead lewat web search) ----
-export async function generateLeads({ keyword, city } = {}) {
-  const { data, error } = await supabase.functions.invoke("generate-leads", { body: { keyword, city } });
+export async function generateLeads({ keyword, city, targetRole, productSold } = {}) {
+  const { data, error } = await supabase.functions.invoke("generate-leads", { body: { keyword, city, targetRole, productSold } });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
   return data;
