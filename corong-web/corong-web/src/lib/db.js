@@ -156,7 +156,14 @@ export async function generateLeads({ keyword, city, targetRole, productSold } =
 export async function getGeneratedLeads() {
   // Ambil SEMUA riwayat (bukan cuma yang pending) - biar tetep keliatan
   // walau udah diimport, gak ilang dari daftar.
-  const { data, error } = await supabase.from("generated_leads").select("*").order("created_at", { ascending: false });
+  // Urutan: batch generate TERBARU dulu (run_started_at desc), dan DI DALAM
+  // tiap batch, urut score TERTINGGI ke terendah - jadi gak campur aduk
+  // antar generate dan gak perlu di-sort manual lagi di frontend.
+  const { data, error } = await supabase
+    .from("generated_leads")
+    .select("*")
+    .order("run_started_at", { ascending: false, nullsFirst: false })
+    .order("score", { ascending: false });
   if (error) throw error;
   return data || [];
 }
