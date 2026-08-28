@@ -123,6 +123,7 @@ export default function GenerateLeads({ stages, onChanged }) {
             <ul className="space-y-1.5 text-xs text-slate-600 list-disc list-inside">
               <li><b>Cari dari 4 sumber publik</b>: Google Maps, cuplikan LinkedIn (company page & profil, bukan buka halamannya), Instagram/TikTok bisnis, dan direktori resmi (Kemenperin, dst).</li>
               <li><b>Diarahin ke calon PEMBELI</b>, bukan sesama penjual — kalau lo isi "barang yang dijual", AI khusus nyari perusahaan yang kemungkinan BUTUH BELI itu, bukan kompetitor.</li>
+              <li><b>Ngerti kalau customer-nya individu</b> (misal Asuransi, Property, Automotive) — AI gak nyari data pribadi orang, tapi nyari organisasi PERANTARA (HRD perusahaan, komunitas, koperasi) yang punya akses ke banyak calon individu sekaligus.</li>
               <li><b>Belajar dari deal yang udah closing</b> — kalau lo udah punya lead yang statusnya "Menang" di pipeline, AI jadiin itu contoh "ideal customer" biar hasil generate makin mirip yang beneran closing.</li>
               <li><b>Cari sinyal lagi berkembang</b> — lowongan kerja baru, buka cabang, ekspansi — biar diprioritasin ke yang lagi butuh, bukan yang stagnan.</li>
               <li><b>Otomatis skip yang udah ada</b> di daftar lead lo, biar gak muncul dobel buang-buang kuota.</li>
@@ -163,8 +164,8 @@ export default function GenerateLeads({ stages, onChanged }) {
                 <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Jawa Timur" value={province} onChange={(e) => setProvince(e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Jabatan yang dicari <span className="text-rose-500">*</span></span>
-                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Purchasing Manager" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
+                <span className="text-xs font-medium text-slate-500">Jabatan/peran yang dicari <span className="text-rose-500">*</span></span>
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Purchasing Manager, HRD, atau Ketua Komunitas" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Skala perusahaan (opsional)</span>
