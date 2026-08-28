@@ -2,19 +2,27 @@ import { useState, useEffect } from "react";
 import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp, Info, X } from "lucide-react";
 import * as db from "../lib/db";
 
+// Warna glow tiap kartu ditentuin TIER SKOR-nya - jadi bukan dekorasi doang,
+// tapi langsung nunjukin lead itu "panas" (ijo), "hangat" (kuning), atau
+// "netral" (ungu) sekilas pandang, tanpa perlu baca angka dulu.
+function tierStyle(score) {
+  if (score >= 70) return { ring: "#34d399", text: "#6ee7b7", glow: "rgba(16,185,129,0.45)", border: "rgba(52,211,153,0.35)" };
+  if (score >= 40) return { ring: "#fbbf24", text: "#fcd34d", glow: "rgba(245,158,11,0.40)", border: "rgba(251,191,36,0.32)" };
+  return { ring: "#a78bfa", text: "#c4b5fd", glow: "rgba(139,92,246,0.35)", border: "rgba(167,139,250,0.28)" };
+}
+
 function ScoreRing({ score }) {
-  const color = score >= 70 ? "#10b981" : score >= 40 ? "#f59e0b" : "#94a3b8";
-  const bg = score >= 70 ? "#ecfdf5" : score >= 40 ? "#fffbeb" : "#f8fafc";
+  const t = tierStyle(score);
   const circumference = 2 * Math.PI * 26;
   const dash = (score / 100) * circumference;
   return (
     <div className="relative shrink-0" style={{ width: 60, height: 60 }}>
-      <svg width="60" height="60" viewBox="0 0 60 60" className="-rotate-90">
-        <circle cx="30" cy="30" r="26" fill={bg} stroke="#e2e8f0" strokeWidth="4" />
-        <circle cx="30" cy="30" r="26" fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${dash} ${circumference}`} />
+      <svg width="60" height="60" viewBox="0 0 60 60" className="-rotate-90" style={{ filter: `drop-shadow(0 0 7px ${t.glow})` }}>
+        <circle cx="30" cy="30" r="26" fill="#0a0e1c" stroke="#1e2740" strokeWidth="4" />
+        <circle cx="30" cy="30" r="26" fill="none" stroke={t.ring} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${dash} ${circumference}`} />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-sm font-bold" style={{ color }}>{score}</span>
+        <span className="text-sm font-bold" style={{ color: t.text }}>{score}</span>
       </div>
     </div>
   );
@@ -25,9 +33,9 @@ function ScoreRing({ score }) {
 function Field({ icon: Icon, value }) {
   const I = Icon;
   return (
-    <div className="flex items-center gap-1.5 text-xs text-slate-600 min-w-0">
-      <I size={12} className="text-slate-400 shrink-0" />
-      <span className="truncate">{value || <span className="text-slate-300">—</span>}</span>
+    <div className="flex items-center gap-1.5 text-xs text-slate-400 min-w-0">
+      <I size={12} className="text-slate-500 shrink-0" />
+      <span className="truncate text-slate-300">{value || <span className="text-slate-600">—</span>}</span>
     </div>
   );
 }
@@ -177,9 +185,9 @@ export default function GenerateLeads({ stages, onChanged }) {
         {loadingResults ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : results.length === 0 ? (
-          <div className="text-sm text-slate-400 bg-white border border-slate-100 rounded-2xl p-6 text-center">Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
+          <div className="text-sm text-slate-400 rounded-[28px] p-8 text-center border border-white/5" style={{ background: "radial-gradient(120% 140% at 50% -10%, #161d33 0%, #05070d 70%)" }}>Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="rounded-[32px] p-4 sm:p-6 space-y-3" style={{ background: "radial-gradient(120% 100% at 15% -10%, #161d33 0%, #05070d 65%)" }}>
             {(() => {
               // Kelompokin hasil per-batch generate (run_id) - backend udah
               // ngurutin run_started_at DESC lalu score DESC, di sini kita
@@ -192,6 +200,7 @@ export default function GenerateLeads({ stages, onChanged }) {
               let lastRunKey = null;
               return results.map((r) => {
                 const imported = r.status === "imported";
+                const t = tierStyle(r.score ?? 50);
                 const runKey = r.run_id || "legacy";
                 const showHeader = runKey !== lastRunKey;
                 lastRunKey = runKey;
@@ -202,31 +211,37 @@ export default function GenerateLeads({ stages, onChanged }) {
                   <div key={r.id}>
                     {showHeader && (
                       <div className={`flex items-center gap-2 pb-2 ${lastRunKey === null ? "" : "pt-3"}`}>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{headerLabel}</span>
-                        <span className="text-[11px] text-slate-300">· {runCounts[runKey]} hasil, diurut score tertinggi</span>
-                        <div className="flex-1 h-px bg-slate-100" />
+                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">{headerLabel}</span>
+                        <span className="text-[11px] text-slate-500">· {runCounts[runKey]} hasil, diurut score tertinggi</span>
+                        <div className="flex-1 h-px bg-white/10" />
                       </div>
                     )}
                     <button
                       onClick={() => importLead(r)}
                       disabled={imported || importingId === r.id}
-                      className={`w-full text-left bg-white border rounded-2xl shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 transition-colors ${imported ? "border-emerald-200 bg-emerald-50/30" : "border-slate-100 hover:border-orange-300 hover:bg-orange-50/20 cursor-pointer"}`}
+                      className="w-full text-left rounded-2xl p-4 transition-all duration-200"
+                      style={{
+                        background: imported ? "linear-gradient(180deg, rgba(16,185,129,0.10), rgba(16,185,129,0.02))" : "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015))",
+                        border: `1px solid ${imported ? "rgba(52,211,153,0.35)" : t.border}`,
+                        boxShadow: imported ? "none" : `0 0 26px -8px ${t.glow}`,
+                        cursor: imported ? "default" : "pointer",
+                      }}
                     >
                       <div className="flex items-start gap-3.5">
                         <ScoreRing score={r.score ?? 50} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="font-bold text-sm truncate">{r.name}</div>
-                              {r.category && <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">{r.category}</span>}
+                              <div className="font-bold text-sm truncate text-white">{r.name}</div>
+                              {r.category && <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-white/5 text-slate-300 border border-white/10 rounded-full px-2 py-0.5">{r.category}</span>}
                             </div>
                             <div className="shrink-0">
                               {imported ? (
-                                <span className="text-xs font-medium text-emerald-700 bg-emerald-100 rounded-full px-3 py-1.5 flex items-center gap-1"><Check size={13} /> Sudah di Leads</span>
+                                <span className="text-xs font-medium text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-3 py-1.5 flex items-center gap-1"><Check size={13} /> Sudah di Leads</span>
                               ) : importingId === r.id ? (
                                 <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><Loader2 size={13} className="animate-spin" /> Menambah…</span>
                               ) : (
-                                <span className="text-xs font-medium text-orange-600 flex items-center gap-1">Tambah ke Leads <ArrowRight size={13} /></span>
+                                <span className="text-xs font-medium text-orange-400 flex items-center gap-1">Tambah ke Leads <ArrowRight size={13} /></span>
                               )}
                             </div>
                           </div>
@@ -238,15 +253,15 @@ export default function GenerateLeads({ stages, onChanged }) {
                             <Field icon={Phone} value={r.phone} />
                             <Field icon={Mail} value={r.email} />
                           </div>
-                          {r.growth_signal && <div className="text-[11px] text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1 mt-2 flex items-center gap-1 w-fit"><TrendingUp size={11} /> {r.growth_signal}</div>}
+                          {r.growth_signal && <div className="text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1 mt-2 flex items-center gap-1 w-fit"><TrendingUp size={11} /> {r.growth_signal}</div>}
                           {(r.score_industry_match || r.score_contact_quality || r.score_buying_signal) && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[10px] text-slate-400">
-                              {r.score_industry_match != null && <span>Industri <b className="text-slate-600">{r.score_industry_match}</b></span>}
-                              {r.score_contact_quality != null && <span>Kontak <b className="text-slate-600">{r.score_contact_quality}</b></span>}
-                              {r.score_buying_signal != null && <span>Sinyal beli <b className="text-slate-600">{r.score_buying_signal}</b></span>}
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[10px] text-slate-500">
+                              {r.score_industry_match != null && <span>Industri <b className="text-slate-300">{r.score_industry_match}</b></span>}
+                              {r.score_contact_quality != null && <span>Kontak <b className="text-slate-300">{r.score_contact_quality}</b></span>}
+                              {r.score_buying_signal != null && <span>Sinyal beli <b className="text-slate-300">{r.score_buying_signal}</b></span>}
                             </div>
                           )}
-                          {r.source_note && <div className="text-[11px] text-slate-400 mt-1.5 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
+                          {r.source_note && <div className="text-[11px] text-slate-500 mt-1.5 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
                         </div>
                       </div>
                     </button>
