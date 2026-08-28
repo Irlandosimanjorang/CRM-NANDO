@@ -29,14 +29,28 @@ function mapRow(row, category, firstStageKey) {
   };
 }
 
-// Badge tahap/prioritas: TEKS SELALU abu terang biar kebaca (gak ngandelin
-// warna hex tahap buat teks, soalnya banyak warna tahap yang kalem/pucat dan
-// jadi nyaris gak keliatan di background gelap). Kode warnanya tetep keliatan
-// lewat titik kecil bercahaya di samping teks - pola yang sama kayak
-// aplikasi dark-mode lain (Linear, Notion, dst).
+// Bracket sudut ala "target lock" HUD robot - signature visual yang bikin
+// kartu kerasa lagi "di-scan" sama sistem, bukan cuma kotak biasa. Ditaro di
+// LUAR area overflow-hidden biar ujungnya nongol jelas di sudut kartu.
+function CornerBrackets({ color = "#22d3ee" }) {
+  const armStyle = { position: "absolute", width: 14, height: 14, borderColor: color };
+  return (
+    <>
+      <div style={{ ...armStyle, top: -1, left: -1, borderTop: "2px solid", borderLeft: "2px solid", borderTopLeftRadius: 10 }} />
+      <div style={{ ...armStyle, top: -1, right: -1, borderTop: "2px solid", borderRight: "2px solid", borderTopRightRadius: 10 }} />
+      <div style={{ ...armStyle, bottom: -1, left: -1, borderBottom: "2px solid", borderLeft: "2px solid", borderBottomLeftRadius: 10 }} />
+      <div style={{ ...armStyle, bottom: -1, right: -1, borderBottom: "2px solid", borderRight: "2px solid", borderBottomRightRadius: 10 }} />
+    </>
+  );
+}
+
+// Badge tahap/prioritas: teks SELALU abu terang biar kebaca (gak ngandelin
+// warna hex tahap buat teks - banyak warna tahap yang kalem/pucat dan jadi
+// nyaris invisible di background gelap). Font mono + uppercase biar berasa
+// "readout" sistem, kode warnanya tetep keliatan lewat titik kecil bercahaya.
 function DarkChip({ hex, label }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-200 border border-white/10">
+    <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-200 border border-white/10">
       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: hex, boxShadow: `0 0 6px ${hex}` }} />
       {label}
     </span>
@@ -168,86 +182,109 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 rounded-[32px] p-4 sm:p-5"
+        style={{
+          background: "#04050a",
+          backgroundImage: "radial-gradient(rgba(34,211,238,0.07) 1px, transparent 1px)",
+          backgroundSize: "18px 18px",
+        }}
+      >
         {filtered.map((c) => {
           const sm = stageMeta(stages, c.stage_key);
           const wa = waLink(c.phone);
           const web = normUrl(c.website);
+          const shortId = String(c.id || "").replace(/-/g, "").slice(0, 6).toUpperCase() || "------";
           return (
             <div
               key={c.id}
               onClick={() => setEdit(c)}
-              className="relative rounded-3xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+              className="relative rounded-3xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
               style={{
-                background: "linear-gradient(160deg, rgba(255,255,255,0.055), rgba(5,6,11,0.96))",
-                border: "1.5px solid rgba(249,115,22,0.35)",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.03) inset, 0 10px 26px -12px rgba(249,115,22,0.32)",
+                boxShadow: "0 10px 26px -12px rgba(34,211,238,0.28)",
               }}
             >
-              {/* Aksen atas oranye tetap - identitas Nexto, KONSISTEN di semua kartu,
-                  gak lagi ngikutin warna tahap pipeline */}
-              <div style={{ height: 3, background: "linear-gradient(90deg, #f97316, #fb923c)" }} />
+              <CornerBrackets color="#22d3ee" />
+              <div
+                className="rounded-3xl overflow-hidden"
+                style={{
+                  background: "linear-gradient(160deg, rgba(34,211,238,0.05), rgba(4,5,10,0.98))",
+                  border: "1px solid rgba(148,163,184,0.18)",
+                }}
+              >
+                {/* Bar atas oranye tetap - identitas Nexto, KONSISTEN di semua kartu,
+                    gak lagi ngikutin warna tahap pipeline */}
+                <div style={{ height: 3, background: "linear-gradient(90deg, #f97316, #fb923c)" }} />
 
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-white text-sm flex items-center gap-1.5 flex-wrap">
-                      <span className="truncate">{c.name}</span>
-                      {typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-white/10 text-slate-200 shrink-0">{typeBadge(c.company_type)}</span>}
-                      {isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white shrink-0">NEW</span>}
+                <div className="p-4">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-[9px] font-mono text-cyan-500/70 tracking-widest">#{shortId}</span>
+                    <span className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider" style={{ color: c.verified ? "#34d399" : "#64748b" }}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${c.verified ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} />
+                      {c.verified ? "verified" : "unverified"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-white text-sm flex items-center gap-1.5 flex-wrap">
+                        <span className="truncate">{c.name}</span>
+                        {typeBadge(c.company_type) && <span className="text-[9px] font-mono font-bold px-1 rounded bg-white/10 text-slate-200 shrink-0">{typeBadge(c.company_type)}</span>}
+                        {isNewLead(c) && <span className="text-[9px] font-mono font-bold px-1 rounded bg-emerald-500 text-white shrink-0">NEW</span>}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 truncate">{c.category || "—"}</div>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 truncate">{c.category || "—"}</div>
+                    {c.verified ? <ShieldCheck size={14} className="text-emerald-400 shrink-0" /> : <ShieldAlert size={14} className="text-slate-500 shrink-0" />}
                   </div>
-                  {c.verified ? <ShieldCheck size={14} className="text-emerald-400 shrink-0" /> : <ShieldAlert size={14} className="text-slate-500 shrink-0" />}
-                </div>
 
-                <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
-                  <DarkChip hex={sm.hex} label={sm.label} />
-                  {c.priority && prioMeta(c.priority) && <DarkChip hex={prioMeta(c.priority).hex} label={prioMeta(c.priority).label} />}
-                </div>
-
-                <div className="mt-3 space-y-1.5 text-xs text-slate-300">
-                  <div className="flex items-center gap-1.5 truncate"><MapPin size={12} className="text-slate-500 shrink-0" /> {c.city || <span className="text-slate-600">—</span>}</div>
-                  {c.product && <div className="truncate"><span className="text-slate-500">{productLabel}:</span> {c.product}</div>}
-                  {!hideKeyPerson && c.key_person && <div className="truncate"><span className="text-slate-500">{keyPersonLabel}:</span> {c.key_person}</div>}
-                  {!hideTitle && c.key_person_title && <div className="truncate"><span className="text-slate-500">{titleLabel}:</span> {c.key_person_title}</div>}
-                  {c.phone && <div className="truncate flex items-center gap-1.5"><Phone size={12} className="text-slate-500 shrink-0" /> {c.phone}</div>}
-                  {c.email && <div className="truncate flex items-center gap-1.5"><Mail size={12} className="text-slate-500 shrink-0" /> {c.email}</div>}
-                  {!hideWebsite && web && <div className="truncate flex items-center gap-1.5"><Globe size={12} className="text-slate-500 shrink-0" /> {prettyDomain(c.website)}</div>}
-                  {customSlots.map((slot) => c[slot.key] ? (
-                    <div key={slot.key} className="truncate"><span className="text-slate-500">{slot.label}:</span> {c[slot.key]}</div>
-                  ) : null)}
-                  {c.next_action && <div className="mt-2 text-[11px] text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-lg px-2 py-1.5 line-clamp-2">📌 {c.next_action}</div>}
-                  {c.wait_until && new Date(c.wait_until) >= new Date(todayISO()) && (
-                    <div className="mt-1.5 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-lg px-2 py-1.5">⏸️ Nunggu sampai {new Date(c.wait_until).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
-                  )}
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                  {c.phone && (wa ? <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10" title={c.phone}><Phone size={13} /></a> : <span className="p-1.5 text-slate-600" title={c.phone}><Phone size={13} /></span>)}
-                  {c.email && <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/10" title={c.email}><Mail size={13} /></a>}
-                  <button onClick={(e) => setDraftPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() })} className="p-1.5 rounded-lg text-orange-400 hover:bg-orange-500/10" title="Draft follow-up (AI)"><Sparkles size={13} /></button>
-                  <div className="ml-auto flex items-center gap-0.5">
-                    <button onClick={() => setEdit(c)} className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10"><Pencil size={13} /></button>
-                    <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"><Trash2 size={13} /></button>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
+                    <DarkChip hex={sm.hex} label={sm.label} />
+                    {c.priority && prioMeta(c.priority) && <DarkChip hex={prioMeta(c.priority).hex} label={prioMeta(c.priority).label} />}
                   </div>
-                </div>
 
-                {/* Kolom quick-update progress harian - tema gelap, nyala oranye
-                    pas di-hover buat kasih tau interaktif. */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, autoFocus: true }); }}
-                  className="mt-2.5 w-full flex items-center gap-2 text-left text-xs text-slate-300 border-2 border-white/10 bg-white/[0.04] rounded-xl px-3 py-2 hover:border-orange-500/50 hover:text-orange-300 hover:bg-orange-500/10 transition-colors"
-                  title="Update progress harian"
-                >
-                  <ClipboardList size={13} className="shrink-0 text-slate-500" />
-                  <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "Update progress hari ini…"}</span>
-                </button>
+                  <div className="mt-3 space-y-1.5 text-xs text-slate-300">
+                    <div className="flex items-center gap-1.5 truncate"><MapPin size={12} className="text-slate-500 shrink-0" /> {c.city || <span className="text-slate-600">—</span>}</div>
+                    {c.product && <div className="truncate"><span className="text-slate-500">{productLabel}:</span> {c.product}</div>}
+                    {!hideKeyPerson && c.key_person && <div className="truncate"><span className="text-slate-500">{keyPersonLabel}:</span> {c.key_person}</div>}
+                    {!hideTitle && c.key_person_title && <div className="truncate"><span className="text-slate-500">{titleLabel}:</span> {c.key_person_title}</div>}
+                    {c.phone && <div className="truncate flex items-center gap-1.5"><Phone size={12} className="text-slate-500 shrink-0" /> {c.phone}</div>}
+                    {c.email && <div className="truncate flex items-center gap-1.5"><Mail size={12} className="text-slate-500 shrink-0" /> {c.email}</div>}
+                    {!hideWebsite && web && <div className="truncate flex items-center gap-1.5"><Globe size={12} className="text-slate-500 shrink-0" /> {prettyDomain(c.website)}</div>}
+                    {customSlots.map((slot) => c[slot.key] ? (
+                      <div key={slot.key} className="truncate"><span className="text-slate-500">{slot.label}:</span> {c[slot.key]}</div>
+                    ) : null)}
+                    {c.next_action && <div className="mt-2 text-[11px] text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-lg px-2 py-1.5 line-clamp-2">📌 {c.next_action}</div>}
+                    {c.wait_until && new Date(c.wait_until) >= new Date(todayISO()) && (
+                      <div className="mt-1.5 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-lg px-2 py-1.5">⏸️ Nunggu sampai {new Date(c.wait_until).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    {c.phone && (wa ? <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10" title={c.phone}><Phone size={13} /></a> : <span className="p-1.5 text-slate-600" title={c.phone}><Phone size={13} /></span>)}
+                    {c.email && <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/10" title={c.email}><Mail size={13} /></a>}
+                    <button onClick={(e) => setDraftPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() })} className="p-1.5 rounded-lg text-orange-400 hover:bg-orange-500/10" title="Draft follow-up (AI)"><Sparkles size={13} /></button>
+                    <div className="ml-auto flex items-center gap-0.5">
+                      <button onClick={() => setEdit(c)} className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10"><Pencil size={13} /></button>
+                      <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+
+                  {/* Kolom quick-update progress harian - tema gelap + font mono
+                      biar berasa command-line/terminal, nyala cyan pas di-hover. */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, autoFocus: true }); }}
+                    className="mt-2.5 w-full flex items-center gap-2 text-left text-xs font-mono text-slate-300 border-2 border-white/10 bg-white/[0.04] rounded-xl px-3 py-2 hover:border-cyan-500/50 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors"
+                    title="Update progress harian"
+                  >
+                    <ClipboardList size={13} className="shrink-0 text-slate-500" />
+                    <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "> update progress hari ini…"}</span>
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
-        {filtered.length === 0 && <div className="col-span-full p-8 text-center text-sm text-slate-400 rounded-3xl" style={{ background: "#05060b", border: "1px dashed rgba(255,255,255,0.1)" }}>Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
+        {filtered.length === 0 && <div className="col-span-full p-8 text-center text-sm text-slate-400 rounded-3xl border border-dashed border-white/10">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
       </div>
 
       {edit && <LeadModal lead={edit} stages={stages} settings={settings} industry={industry} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
