@@ -4,26 +4,30 @@ import * as db from "../lib/db";
 
 // Warna glow tiap kartu ditentuin TIER SKOR-nya - jadi bukan dekorasi doang,
 // tapi langsung nunjukin lead itu "panas" (ijo), "hangat" (kuning), atau
-// "netral" (ungu) sekilas pandang, tanpa perlu baca angka dulu.
+// "netral" (ungu) sekilas pandang, tanpa perlu baca angka dulu. Mirip konsep
+// kotak neon di referensi (tiap tool = 1 warna), di sini tiap TIER skor = 1 warna.
 function tierStyle(score) {
-  if (score >= 70) return { ring: "#34d399", text: "#6ee7b7", glow: "rgba(16,185,129,0.45)", border: "rgba(52,211,153,0.35)" };
-  if (score >= 40) return { ring: "#fbbf24", text: "#fcd34d", glow: "rgba(245,158,11,0.40)", border: "rgba(251,191,36,0.32)" };
-  return { ring: "#a78bfa", text: "#c4b5fd", glow: "rgba(139,92,246,0.35)", border: "rgba(167,139,250,0.28)" };
+  if (score >= 70) return { ring: "#34d399", text: "#6ee7b7", glow: "rgba(16,185,129,0.55)", border: "rgba(52,211,153,0.55)" };
+  if (score >= 40) return { ring: "#fbbf24", text: "#fde68a", glow: "rgba(245,158,11,0.50)", border: "rgba(251,191,36,0.5)" };
+  return { ring: "#a78bfa", text: "#ddd6fe", glow: "rgba(139,92,246,0.45)", border: "rgba(167,139,250,0.45)" };
 }
 
-function ScoreRing({ score }) {
+// Badge skor bentuk KOTAK bercahaya (bukan cincin lagi) - langsung niru gaya
+// kotak "Claude / Gemini / dst" di referensi: rounded square, border neon,
+// isi di tengah, glow keluar dari border-nya.
+function ScoreBadge({ score }) {
   const t = tierStyle(score);
-  const circumference = 2 * Math.PI * 26;
-  const dash = (score / 100) * circumference;
   return (
-    <div className="relative shrink-0" style={{ width: 60, height: 60 }}>
-      <svg width="60" height="60" viewBox="0 0 60 60" className="-rotate-90" style={{ filter: `drop-shadow(0 0 7px ${t.glow})` }}>
-        <circle cx="30" cy="30" r="26" fill="#0a0e1c" stroke="#1e2740" strokeWidth="4" />
-        <circle cx="30" cy="30" r="26" fill="none" stroke={t.ring} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${dash} ${circumference}`} />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-sm font-bold" style={{ color: t.text }}>{score}</span>
-      </div>
+    <div
+      className="relative shrink-0 w-16 h-16 rounded-2xl flex flex-col items-center justify-center"
+      style={{
+        background: "linear-gradient(160deg, rgba(255,255,255,0.07), rgba(0,0,0,0.55))",
+        border: `1.5px solid ${t.ring}`,
+        boxShadow: `0 0 4px 0px ${t.ring}, 0 0 22px -2px ${t.glow}, inset 0 0 14px -6px ${t.glow}`,
+      }}
+    >
+      <span className="text-xl font-extrabold leading-none" style={{ color: t.text, textShadow: `0 0 14px ${t.glow}` }}>{score}</span>
+      <span className="text-[8px] font-bold uppercase tracking-wider mt-1" style={{ color: t.ring, opacity: 0.8 }}>skor</span>
     </div>
   );
 }
@@ -185,9 +189,9 @@ export default function GenerateLeads({ stages, onChanged }) {
         {loadingResults ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : results.length === 0 ? (
-          <div className="text-sm text-slate-400 rounded-[28px] p-8 text-center border border-white/5" style={{ background: "radial-gradient(120% 140% at 50% -10%, #161d33 0%, #05070d 70%)" }}>Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
+          <div className="text-sm text-slate-400 rounded-[28px] p-8 text-center border border-white/5" style={{ background: "#05060b" }}>Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
         ) : (
-          <div className="rounded-[32px] p-4 sm:p-6 space-y-3" style={{ background: "radial-gradient(120% 100% at 15% -10%, #161d33 0%, #05070d 65%)" }}>
+          <div className="rounded-[32px] p-4 sm:p-6 space-y-4" style={{ background: "#05060b", backgroundImage: "radial-gradient(60% 40% at 20% 0%, rgba(99,102,241,0.10), transparent 70%)" }}>
             {(() => {
               // Kelompokin hasil per-batch generate (run_id) - backend udah
               // ngurutin run_started_at DESC lalu score DESC, di sini kita
@@ -210,7 +214,7 @@ export default function GenerateLeads({ stages, onChanged }) {
                 return (
                   <div key={r.id}>
                     {showHeader && (
-                      <div className={`flex items-center gap-2 pb-2 ${lastRunKey === null ? "" : "pt-3"}`}>
+                      <div className={`flex items-center gap-2 pb-2 ${lastRunKey === null ? "" : "pt-2"}`}>
                         <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">{headerLabel}</span>
                         <span className="text-[11px] text-slate-500">· {runCounts[runKey]} hasil, diurut score tertinggi</span>
                         <div className="flex-1 h-px bg-white/10" />
@@ -219,16 +223,20 @@ export default function GenerateLeads({ stages, onChanged }) {
                     <button
                       onClick={() => importLead(r)}
                       disabled={imported || importingId === r.id}
-                      className="w-full text-left rounded-2xl p-4 transition-all duration-200"
+                      className="relative w-full text-left rounded-3xl p-4 transition-all duration-200"
                       style={{
-                        background: imported ? "linear-gradient(180deg, rgba(16,185,129,0.10), rgba(16,185,129,0.02))" : "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015))",
-                        border: `1px solid ${imported ? "rgba(52,211,153,0.35)" : t.border}`,
-                        boxShadow: imported ? "none" : `0 0 26px -8px ${t.glow}`,
+                        background: imported
+                          ? "linear-gradient(160deg, rgba(16,185,129,0.10), rgba(5,6,11,0.9))"
+                          : "linear-gradient(160deg, rgba(255,255,255,0.055), rgba(5,6,11,0.96))",
+                        border: `1.5px solid ${imported ? "rgba(52,211,153,0.45)" : t.border}`,
+                        boxShadow: imported
+                          ? "none"
+                          : `0 0 0 1px rgba(255,255,255,0.03) inset, 0 10px 34px -10px ${t.glow}, 0 0 44px -14px ${t.glow}`,
                         cursor: imported ? "default" : "pointer",
                       }}
                     >
                       <div className="flex items-start gap-3.5">
-                        <ScoreRing score={r.score ?? 50} />
+                        <ScoreBadge score={r.score ?? 50} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
@@ -265,6 +273,9 @@ export default function GenerateLeads({ stages, onChanged }) {
                         </div>
                       </div>
                     </button>
+                    {!imported && (
+                      <div className="h-3 mx-8 -mt-1 rounded-full blur-md opacity-30" style={{ background: t.ring }} />
+                    )}
                   </div>
                 );
               });
