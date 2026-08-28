@@ -163,23 +163,28 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
             <div
               key={c.id}
               onClick={() => setEdit(c)}
-              className="bg-white border rounded-3xl shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-6px_rgba(15,23,42,0.15)] transition-all overflow-hidden"
-              style={{ borderColor: `${sm.hex}40` }}
+              className="relative rounded-3xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+              style={{
+                background: "linear-gradient(165deg, rgba(255,255,255,0.05), rgba(6,8,15,0.98))",
+                border: "1.5px solid rgba(249,115,22,0.32)",
+                boxShadow: "0 0 0 1px rgba(255,255,255,0.03) inset, 0 10px 26px -12px rgba(249,115,22,0.30)",
+              }}
             >
-              {/* Aksen warna atas - ngikutin warna tahap pipeline, biar gampang di-scan sekilas */}
-              <div style={{ height: 5, background: `linear-gradient(90deg, ${sm.hex}, ${sm.hex}99)` }} />
+              {/* Aksen atas oranye tetap - identitas Nexto, KONSISTEN di semua kartu,
+                  gak lagi ngikutin warna tahap pipeline */}
+              <div style={{ height: 3, background: "linear-gradient(90deg, #f97316, #fb923c)" }} />
 
-              <div className="p-4" style={{ background: `linear-gradient(180deg, ${sm.hex}0d, transparent 90px)` }}>
+              <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                    <div className="font-semibold text-white text-sm flex items-center gap-1.5 flex-wrap">
                       <span className="truncate">{c.name}</span>
-                      {typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600 shrink-0">{typeBadge(c.company_type)}</span>}
+                      {typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-white/10 text-slate-300 shrink-0">{typeBadge(c.company_type)}</span>}
                       {isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white shrink-0">NEW</span>}
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 truncate">{c.category || "—"}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 truncate">{c.category || "—"}</div>
                   </div>
-                  {c.verified ? <ShieldCheck size={14} className="text-emerald-500 shrink-0" /> : <ShieldAlert size={14} className="text-slate-300 shrink-0" />}
+                  {c.verified ? <ShieldCheck size={14} className="text-emerald-400 shrink-0" /> : <ShieldAlert size={14} className="text-slate-600 shrink-0" />}
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
@@ -187,49 +192,48 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                   {c.priority && prioMeta(c.priority) && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border" style={chipStyle(prioMeta(c.priority).hex)}>{prioMeta(c.priority).label}</span>}
                 </div>
 
-                <div className="mt-3 space-y-1.5 text-xs text-slate-600">
-                  <div className="flex items-center gap-1.5 truncate"><MapPin size={12} className="text-slate-300 shrink-0" /> {c.city || "—"}</div>
-                  {c.product && <div className="truncate"><span className="text-slate-400">{productLabel}:</span> {c.product}</div>}
-                  {!hideKeyPerson && c.key_person && <div className="truncate"><span className="text-slate-400">{keyPersonLabel}:</span> {c.key_person}</div>}
-                  {!hideTitle && c.key_person_title && <div className="truncate"><span className="text-slate-400">{titleLabel}:</span> {c.key_person_title}</div>}
-                  {c.phone && <div className="truncate flex items-center gap-1.5"><Phone size={12} className="text-slate-300 shrink-0" /> {c.phone}</div>}
-                  {c.email && <div className="truncate flex items-center gap-1.5"><Mail size={12} className="text-slate-300 shrink-0" /> {c.email}</div>}
-                  {!hideWebsite && web && <div className="truncate flex items-center gap-1.5"><Globe size={12} className="text-slate-300 shrink-0" /> {prettyDomain(c.website)}</div>}
+                <div className="mt-3 space-y-1.5 text-xs text-slate-400">
+                  <div className="flex items-center gap-1.5 truncate"><MapPin size={12} className="text-slate-500 shrink-0" /> {c.city || "—"}</div>
+                  {c.product && <div className="truncate text-slate-300"><span className="text-slate-500">{productLabel}:</span> {c.product}</div>}
+                  {!hideKeyPerson && c.key_person && <div className="truncate text-slate-300"><span className="text-slate-500">{keyPersonLabel}:</span> {c.key_person}</div>}
+                  {!hideTitle && c.key_person_title && <div className="truncate text-slate-300"><span className="text-slate-500">{titleLabel}:</span> {c.key_person_title}</div>}
+                  {c.phone && <div className="truncate flex items-center gap-1.5 text-slate-300"><Phone size={12} className="text-slate-500 shrink-0" /> {c.phone}</div>}
+                  {c.email && <div className="truncate flex items-center gap-1.5 text-slate-300"><Mail size={12} className="text-slate-500 shrink-0" /> {c.email}</div>}
+                  {!hideWebsite && web && <div className="truncate flex items-center gap-1.5 text-slate-300"><Globe size={12} className="text-slate-500 shrink-0" /> {prettyDomain(c.website)}</div>}
                   {customSlots.map((slot) => c[slot.key] ? (
-                    <div key={slot.key} className="truncate"><span className="text-slate-400">{slot.label}:</span> {c[slot.key]}</div>
+                    <div key={slot.key} className="truncate text-slate-300"><span className="text-slate-500">{slot.label}:</span> {c[slot.key]}</div>
                   ) : null)}
-                  {c.next_action && <div className="mt-2 text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5 line-clamp-2">📌 {c.next_action}</div>}
+                  {c.next_action && <div className="mt-2 text-[11px] text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-lg px-2 py-1.5 line-clamp-2">📌 {c.next_action}</div>}
                   {c.wait_until && new Date(c.wait_until) >= new Date(todayISO()) && (
-                    <div className="mt-1.5 text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5">⏸️ Nunggu sampai {new Date(c.wait_until).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
+                    <div className="mt-1.5 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-lg px-2 py-1.5">⏸️ Nunggu sampai {new Date(c.wait_until).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
                   )}
                 </div>
 
-                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                  {c.phone && (wa ? <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone}><Phone size={13} /></a> : <span className="p-1.5 text-slate-300" title={c.phone}><Phone size={13} /></span>)}
-                  {c.email && <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50" title={c.email}><Mail size={13} /></a>}
-                  <button onClick={(e) => setDraftPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() })} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50" title="Draft follow-up (AI)"><Sparkles size={13} /></button>
+                <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  {c.phone && (wa ? <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10" title={c.phone}><Phone size={13} /></a> : <span className="p-1.5 text-slate-600" title={c.phone}><Phone size={13} /></span>)}
+                  {c.email && <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/10" title={c.email}><Mail size={13} /></a>}
+                  <button onClick={(e) => setDraftPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() })} className="p-1.5 rounded-lg text-orange-400 hover:bg-orange-500/10" title="Draft follow-up (AI)"><Sparkles size={13} /></button>
                   <div className="ml-auto flex items-center gap-0.5">
-                    <button onClick={() => setEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"><Pencil size={13} /></button>
-                    <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 size={13} /></button>
+                    <button onClick={() => setEdit(c)} className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10"><Pencil size={13} /></button>
+                    <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"><Trash2 size={13} /></button>
                   </div>
                 </div>
 
-                {/* Kolom quick-update progress harian - garis solid slate-300
-                    (senada sama kotak search/filter di atas), nyala oranye
-                    pas di-hover buat kasih tau ini interaktif. */}
+                {/* Kolom quick-update progress harian - sekarang senada tema
+                    gelap, nyala oranye pas di-hover buat kasih tau interaktif. */}
                 <button
                   onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, autoFocus: true }); }}
-                  className="mt-2.5 w-full flex items-center gap-2 text-left text-xs text-slate-500 border-2 border-slate-300 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-400 hover:text-orange-700 hover:bg-orange-50 transition-colors"
+                  className="mt-2.5 w-full flex items-center gap-2 text-left text-xs text-slate-400 border-2 border-white/10 bg-white/[0.03] rounded-xl px-3 py-2 hover:border-orange-500/50 hover:text-orange-300 hover:bg-orange-500/10 transition-colors"
                   title="Update progress harian"
                 >
-                  <ClipboardList size={13} className="shrink-0 text-slate-400 group-hover:text-orange-400" />
+                  <ClipboardList size={13} className="shrink-0 text-slate-500" />
                   <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "Update progress hari ini…"}</span>
                 </button>
               </div>
             </div>
           );
         })}
-        {filtered.length === 0 && <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-3xl">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
+        {filtered.length === 0 && <div className="col-span-full p-8 text-center text-sm text-slate-400 rounded-3xl" style={{ background: "#05060b", border: "1px dashed rgba(255,255,255,0.1)" }}>Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
       </div>
 
       {edit && <LeadModal lead={edit} stages={stages} settings={settings} industry={industry} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
