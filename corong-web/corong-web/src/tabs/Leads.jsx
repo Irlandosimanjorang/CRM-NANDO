@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, Mail, Globe, ShieldCheck, ShieldAlert, Copy, MapPin, Sparkles, Phone, ClipboardList } from "lucide-react";
+import { Search, Plus, FileSpreadsheet, Download, Trash2, Pencil, Mail, Globe, ShieldCheck, ShieldAlert, Copy, MapPin, Sparkles, Phone, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, prioMeta, typeBadge, waLink, normUrl, prettyDomain, isNewLead, todayISO } from "../lib/helpers";
 import LeadModal from "../components/LeadModal";
@@ -60,6 +60,8 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
   const [q, setQ] = useState("");
   const [fCat, setFCat] = useState("");
   const [fType, setFType] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 60; // kelipatan pas buat grid 2/3/4 kolom
   const [edit, setEdit] = useState(null);
   const [busy, setBusy] = useState(false);
   const [showDup, setShowDup] = useState(false);
@@ -88,6 +90,16 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
     }
     return true;
   }), [leads, q, fCat, fType]);
+
+  // Balik ke halaman 1 tiap kali pencarian/filter berubah - biar gak nyangkut
+  // di halaman kosong pas hasil filter baru lebih dikit dari sebelumnya.
+  useEffect(() => { setPage(1); }, [q, fCat, fType]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
 
   const blank = () => ({ name: "", category: categories[0], stage_key: stages[0]?.key, company_type: "", priority: "", verified: false });
 
@@ -189,7 +201,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
           backgroundSize: "18px 18px",
         }}
       >
-        {filtered.map((c) => {
+        {pageItems.map((c) => {
           const sm = stageMeta(stages, c.stage_key);
           const wa = waLink(c.phone);
           const web = normUrl(c.website);
@@ -271,6 +283,41 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
         })}
         {filtered.length === 0 && <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-3xl">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
       </div>
+
+      {filtered.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1.5 mt-4">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg border border-slate-200 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">
+            <ChevronLeft size={15} />
+          </button>
+          {(() => {
+            // Nomor halaman dipendekin pake "..." kalau kepanjangan (>7 halaman),
+            // biar gak numpuk puluhan tombol pas data-nya gede.
+            const nums = [];
+            const window = 1;
+            for (let i = 1; i <= totalPages; i++) {
+              if (i === 1 || i === totalPages || (i >= page - window && i <= page + window)) nums.push(i);
+              else if (nums[nums.length - 1] !== "…") nums.push("…");
+            }
+            return nums.map((n, idx) =>
+              n === "…" ? (
+                <span key={`dots-${idx}`} className="px-1.5 text-slate-400 text-sm">…</span>
+              ) : (
+                <button
+                  key={n}
+                  onClick={() => setPage(n)}
+                  className={`min-w-[34px] h-[34px] px-2 rounded-lg text-sm font-medium ${n === page ? "bg-orange-600 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                >
+                  {n}
+                </button>
+              )
+            );
+          })()}
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg border border-slate-200 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">
+            <ChevronRight size={15} />
+          </button>
+          <span className="text-xs text-slate-400 ml-2">Halaman {page}/{totalPages} · {filtered.length} lead</span>
+        </div>
+      )}
 
       {edit && <LeadModal lead={edit} stages={stages} settings={settings} industry={industry} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
       {draftPopup && (
