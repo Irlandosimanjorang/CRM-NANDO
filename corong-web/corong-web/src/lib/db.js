@@ -337,7 +337,8 @@ export async function getLeads() {
     .select("*, progress_notes(id, note_date, text)")
     .is("deleted_at", null)
     .order("last_contact", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(0, 9999); // eksplisit minta sampe 10rb baris - Supabase default motong di 1000 kalau gak di-set
   if (error) throw error;
   return (data || []).map((l) => ({
     ...l,
