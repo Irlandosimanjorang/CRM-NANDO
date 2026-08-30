@@ -20,7 +20,7 @@ import IndustryDemo from "./tabs/IndustryDemo";
 import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles,
+  Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -247,6 +247,41 @@ export default function App() {
   // sebelum masuk ke dashboard. Org lama (industry udah keisi lewat SQL backfill)
   // gak bakal pernah kena kondisi ini.
   if (org && !org.industry) return <IndustryPicker onSelect={handlePickIndustry} busy={pickingIndustry} />;
+
+  // Dashboard Karyawan AI - FULLSCREEN TAKEOVER, terpisah dari layout biasa
+  // (sidebar & topbar ilang sementara) biar berasa "masuk command center
+  // sendiri", bukan cuma nempel jadi 1 tab isi konten biasa. Cuma nendang ke
+  // sini kalau admin beneran pilih tab ini - selain itu app jalan normal.
+  if (settings?.is_platform_admin && tab === "adminops") {
+    return (
+      <div className="min-h-screen bg-[#05070c]">
+        <div
+          className="pointer-events-none fixed inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage: "linear-gradient(rgba(148,163,184,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.06) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+            maskImage: "radial-gradient(circle at 50% 0%, rgba(0,0,0,.8), transparent 70%)",
+            WebkitMaskImage: "radial-gradient(circle at 50% 0%, rgba(0,0,0,.8), transparent 70%)",
+          }}
+        />
+        <div className="relative max-w-[1400px] mx-auto px-4 py-5 md:px-8 md:py-8">
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <button
+              onClick={() => setTab("dashboard")}
+              className="flex items-center gap-2 text-[12px] font-mono text-slate-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl px-3.5 py-2 transition-colors"
+            >
+              <ArrowLeft size={13} /> Kembali ke Workspace
+            </button>
+            <div className="flex items-center gap-2">
+              <NextoRobotHead size={26} />
+              <NextoDarkWordmark width={62} />
+            </div>
+          </div>
+          <AdminDashboard />
+        </div>
+      </div>
+    );
+  }
 
   // ---- SISTEM 2 TIPE (FREE / PREMIUM) ----
   // Gak ada trial otomatis - daftar langsung dapet Free (Dashboard & Leads doang).
@@ -489,7 +524,6 @@ export default function App() {
               {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} /></PreviewLock>}
               {effectiveTab === "industridemo" && <IndustryDemo />}
               {effectiveTab === "settings" && <PreviewLock locked={isLocked("settings")}><SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "adminops" && settings?.is_platform_admin && <AdminDashboard />}
             </>
           )}
         </main>
