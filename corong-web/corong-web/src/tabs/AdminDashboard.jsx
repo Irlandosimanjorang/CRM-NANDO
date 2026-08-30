@@ -222,11 +222,12 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* KARTU KARYAWAN AI */}
+        {/* KARTU KARYAWAN AI - dikasih nama biar berasa beneran tim, bukan cuma
+            nama function teknis (28 Agt 2026: RAKA/ADI/NEXA/MEMO) */}
         <div className="grid md:grid-cols-2 gap-3">
           <EmployeeCard
             icon={securityHealthy || !security ? ShieldCheck : ShieldAlert}
-            title="Security / Ops"
+            title="RAKA · Security & Ops"
             subtitle="health-check · pantau kesehatan sistem"
             accentColor={allSystemsGo ? "#34d399" : "#f59e0b"}
             glowClass={allSystemsGo ? "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]" : "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]"}
@@ -250,7 +251,7 @@ export default function AdminDashboard() {
 
           <EmployeeCard
             icon={Sparkles}
-            title="Sales Advisor"
+            title="ADI · Sales Advisor"
             subtitle="daily-digest · analisis lead & rekomendasi"
             accentColor="#f97316"
             glowClass="shadow-[0_0_40px_-25px_rgba(249,115,22,0.6)]"
@@ -268,7 +269,7 @@ export default function AdminDashboard() {
 
           <EmployeeCard
             icon={MessageCircle}
-            title="Asisten Chat"
+            title="NEXA · Asisten Chat"
             subtitle="telegram-webhook · eksekusi perintah"
             accentColor="#38bdf8"
             glowClass="shadow-[0_0_40px_-25px_rgba(56,189,248,0.6)]"
@@ -283,7 +284,7 @@ export default function AdminDashboard() {
 
           <EmployeeCard
             icon={Sparkles}
-            title="Vector Memory"
+            title="MEMO · Vector Memory"
             subtitle="embed-progress-note · memori semantik"
             accentColor={(status?.vector_memory?.pending_embeddings ?? 0) > 0 ? "#f59e0b" : "#a78bfa"}
             glowClass={(status?.vector_memory?.pending_embeddings ?? 0) > 0 ? "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]" : "shadow-[0_0_40px_-25px_rgba(167,139,250,0.6)]"}
