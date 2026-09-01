@@ -125,7 +125,21 @@ export async function leaveOrg() {
 }
 
 // ---- PROFIL AKUN (avatar bulat pojok kanan atas) ----
+// Validasi SEBELUM upload - biar user dapet pesan error yang jelas & gak
+// buang-buang bandwidth upload file yang bakal ditolak. CATATAN: ini validasi
+// sisi klien (bisa di-skip orang yang manggil API langsung), jadi proteksi
+// SEBENERNYA harus di-set juga di level Storage bucket Supabase (Dashboard ->
+// Storage -> bucket "avatars" -> Settings -> allowed MIME types & max file size).
+const AVATAR_MAX_SIZE_MB = 5;
+const AVATAR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
 export async function uploadAvatar(file) {
+  if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+    throw new Error("Format file harus JPG, PNG, WEBP, atau GIF ya.");
+  }
+  if (file.size > AVATAR_MAX_SIZE_MB * 1024 * 1024) {
+    throw new Error(`Ukuran file maksimal ${AVATAR_MAX_SIZE_MB}MB (file kamu ${(file.size / 1024 / 1024).toFixed(1)}MB).`);
+  }
   const uid = (await supabase.auth.getUser()).data.user.id;
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${uid}/avatar-${Date.now()}.${ext}`;
