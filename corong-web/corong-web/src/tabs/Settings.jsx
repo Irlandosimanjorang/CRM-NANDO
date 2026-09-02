@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -31,6 +31,89 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   const [pwMsg, setPwMsg] = useState("");
   const [pwMsgOk, setPwMsgOk] = useState(false);
 
+  // ---- 2FA (Multi-Factor Authentication via TOTP - Google Authenticator dkk) ----
+  const [mfaLoading, setMfaLoading] = useState(true);
+  const [mfaFactor, setMfaFactor] = useState(null); // factor TOTP yang udah verified, kalau ada
+  const [mfaEnrolling, setMfaEnrolling] = useState(false); // lagi di tengah proses daftar (nunjukin QR)
+  const [mfaPendingFactorId, setMfaPendingFactorId] = useState(null);
+  const [mfaQrCode, setMfaQrCode] = useState("");
+  const [mfaSecret, setMfaSecret] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaMsg, setMfaMsg] = useState("");
+  const [mfaMsgOk, setMfaMsgOk] = useState(false);
+
+  const loadMfaFactors = async () => {
+    setMfaLoading(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+      const verified = (data?.totp || []).find((f) => f.status === "verified");
+      setMfaFactor(verified || null);
+    } catch (e) {
+      console.error("Gagal load status 2FA:", e);
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const startMfaEnroll = async () => {
+    setMfaBusy(true); setMfaMsg("");
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "Nexto 2FA" });
+      if (error) throw error;
+      setMfaPendingFactorId(data.id);
+      setMfaQrCode(data.totp.qr_code);
+      setMfaSecret(data.totp.secret);
+      setMfaEnrolling(true);
+    } catch (e) {
+      setMfaMsg("Gagal mulai setup 2FA: " + e.message); setMfaMsgOk(false);
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const cancelMfaEnroll = async () => {
+    if (mfaPendingFactorId) {
+      try { await supabase.auth.mfa.unenroll({ factorId: mfaPendingFactorId }); } catch (_) {}
+    }
+    setMfaEnrolling(false); setMfaPendingFactorId(null); setMfaQrCode(""); setMfaSecret(""); setMfaCode("");
+  };
+
+  const confirmMfaEnroll = async () => {
+    if (mfaCode.length !== 6) { setMfaMsg("Kode harus 6 digit."); setMfaMsgOk(false); return; }
+    setMfaBusy(true); setMfaMsg("");
+    try {
+      const { data: challenge, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: mfaPendingFactorId });
+      if (challengeErr) throw challengeErr;
+      const { error: verifyErr } = await supabase.auth.mfa.verify({ factorId: mfaPendingFactorId, challengeId: challenge.id, code: mfaCode });
+      if (verifyErr) throw verifyErr;
+      setMfaMsg("✅ 2FA berhasil diaktifkan! Login berikutnya bakal minta kode dari app authenticator kamu."); setMfaMsgOk(true);
+      setMfaEnrolling(false); setMfaPendingFactorId(null); setMfaQrCode(""); setMfaSecret(""); setMfaCode("");
+      loadMfaFactors();
+    } catch (e) {
+      setMfaMsg("Kode salah/kedaluwarsa, coba lagi: " + e.message); setMfaMsgOk(false);
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const disableMfa = async () => {
+    if (!mfaFactor) return;
+    if (!window.confirm("Matiin 2FA? Login berikutnya cuma butuh email+password lagi, tanpa kode tambahan.")) return;
+    setMfaBusy(true); setMfaMsg("");
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactor.id });
+      if (error) throw error;
+      setMfaMsg("2FA dimatiin."); setMfaMsgOk(true);
+      setMfaFactor(null);
+    } catch (e) {
+      setMfaMsg("Gagal matiin 2FA: " + e.message); setMfaMsgOk(false);
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
   // ---- TIM / ORGANISASI ----
   const [org, setOrg] = useState(null);
   const [members, setMembers] = useState([]);
@@ -54,6 +137,7 @@ export default function Settings({ settings, stages, leads, onChanged }) {
     db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); }).catch(() => setTgLoading(false));
     db.getGoogleCalendarLink().then((l) => { setGcalLink(l); setGcalLoading(false); }).catch(() => setGcalLoading(false));
     loadOrg();
+    loadMfaFactors();
   }, []);
 
   const isOwner = org && myUid && org.owner_user_id === myUid;
@@ -368,6 +452,58 @@ export default function Settings({ settings, stages, leads, onChanged }) {
           <button onClick={connectGcal} disabled={gcalBusy} className="text-sm bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
             {gcalBusy ? <Loader2 size={15} className="animate-spin" /> : <Calendar size={15} />} Hubungkan Google Calendar
           </button>
+        )}
+      </div>
+
+      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5">
+          {mfaFactor ? <ShieldCheck size={15} className="text-emerald-500" /> : <ShieldAlert size={15} className="text-slate-400" />}
+          Autentikasi 2 Langkah (2FA)
+        </h3>
+        <p className="text-xs text-slate-500 mb-3">Tambah lapisan keamanan - abis password bener, login masih minta kode 6 digit dari app authenticator (Google Authenticator, Authy, dll). Biar akun tetep aman walau password bocor.</p>
+
+        {mfaLoading ? (
+          <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
+        ) : mfaEnrolling ? (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 max-w-sm">
+            <p className="text-xs text-slate-600">1. Scan QR code ini pake app authenticator (Google Authenticator, Authy, dll):</p>
+            {mfaQrCode && <img src={mfaQrCode} alt="QR code 2FA" className="w-40 h-40 mx-auto border border-slate-200 rounded-lg bg-white p-2" />}
+            <p className="text-[11px] text-slate-400">Gak bisa scan? Masukin manual kode ini di app authenticator-nya:</p>
+            <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-[11px]">
+              <span className="flex-1 break-all">{mfaSecret}</span>
+              <button onClick={() => navigator.clipboard.writeText(mfaSecret)} className="text-slate-400 hover:text-slate-700 shrink-0"><Copy size={13} /></button>
+            </div>
+            <p className="text-xs text-slate-600 pt-1">2. Masukin kode 6 digit yang muncul di app-nya:</p>
+            <input
+              className={inp + " text-center tracking-[0.3em] font-mono text-base"}
+              placeholder="000000"
+              maxLength={6}
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
+              onKeyDown={(e) => e.key === "Enter" && confirmMfaEnroll()}
+            />
+            {mfaMsg && <div className={`text-xs rounded-lg p-2 ${mfaMsgOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{mfaMsg}</div>}
+            <div className="flex gap-2">
+              <button onClick={cancelMfaEnroll} className="flex-1 text-xs text-slate-600 border border-slate-300 rounded-xl py-2 hover:bg-slate-100">Batal</button>
+              <button onClick={confirmMfaEnroll} disabled={mfaBusy || mfaCode.length !== 6} className="flex-1 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl py-2 font-medium flex items-center justify-center gap-1.5">
+                {mfaBusy ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />} Aktifkan
+              </button>
+            </div>
+          </div>
+        ) : mfaFactor ? (
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="text-sm text-emerald-700 flex items-center gap-1.5"><CheckCircle2 size={15} /> 2FA aktif</div>
+            <button onClick={disableMfa} disabled={mfaBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">
+              {mfaBusy ? "Memproses..." : "Matikan 2FA"}
+            </button>
+          </div>
+        ) : (
+          <>
+            {mfaMsg && <div className={`text-xs rounded-lg p-2 mb-2 ${mfaMsgOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{mfaMsg}</div>}
+            <button onClick={startMfaEnroll} disabled={mfaBusy} className="text-sm bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+              {mfaBusy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Aktifkan 2FA
+            </button>
+          </>
         )}
       </div>
 
