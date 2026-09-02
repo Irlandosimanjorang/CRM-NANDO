@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-
 import {
   Search,
   Plus,
@@ -14,25 +13,19 @@ import {
   ShieldCheck,
   ShieldAlert,
   Copy,
+  MapPin,
   Sparkles,
   Phone,
   ClipboardList,
   ChevronLeft,
   ChevronRight,
-  Flame,
-  Clock3,
-  ArrowUpRight,
-  Activity,
-  UserRound,
-  Target,
-  AlertTriangle,
-  CheckCircle2,
 } from "lucide-react";
 
 import * as db from "../lib/db";
 
 import {
   stageMeta,
+  chipStyle,
   prioMeta,
   typeBadge,
   waLink,
@@ -55,10 +48,6 @@ import {
   getCompanyTypeOptions,
 } from "../lib/industryTemplates";
 
-
-/* =========================================================
-   IMPORT HELPERS
-========================================================= */
 
 const val = (row, keys) => {
   const lk = Object.keys(row);
@@ -150,13 +139,6 @@ function mapRow(
       "nama kontak",
     ]),
 
-    key_person_title: val(row, [
-      "jabatan",
-      "title",
-      "position",
-      "key person title",
-    ]),
-
     product: val(row, [
       "产品",
       "product",
@@ -189,23 +171,18 @@ function mapRow(
 
     source: "import",
   };
-};
+}
 
 
-/* =========================================================
-   NEXTO HUD CORNERS
-========================================================= */
-
+// Bracket sudut ala "target lock" HUD robot
 function CornerBrackets({
-  color = "#94a3b8",
+  color = "#0891b2",
 }) {
   const armStyle = {
     position: "absolute",
-    width: 13,
-    height: 13,
+    width: 14,
+    height: 14,
     borderColor: color,
-    pointerEvents: "none",
-    zIndex: 5,
   };
 
   return (
@@ -217,7 +194,7 @@ function CornerBrackets({
           left: -1,
           borderTop: "2px solid",
           borderLeft: "2px solid",
-          borderTopLeftRadius: 8,
+          borderTopLeftRadius: 10,
         }}
       />
 
@@ -228,7 +205,7 @@ function CornerBrackets({
           right: -1,
           borderTop: "2px solid",
           borderRight: "2px solid",
-          borderTopRightRadius: 8,
+          borderTopRightRadius: 10,
         }}
       />
 
@@ -239,7 +216,7 @@ function CornerBrackets({
           left: -1,
           borderBottom: "2px solid",
           borderLeft: "2px solid",
-          borderBottomLeftRadius: 8,
+          borderBottomLeftRadius: 10,
         }}
       />
 
@@ -250,7 +227,7 @@ function CornerBrackets({
           right: -1,
           borderBottom: "2px solid",
           borderRight: "2px solid",
-          borderBottomRightRadius: 8,
+          borderBottomRightRadius: 10,
         }}
       />
     </>
@@ -258,234 +235,28 @@ function CornerBrackets({
 }
 
 
-/* =========================================================
-   STAGE CHIP
-========================================================= */
-
 function StageChip({
   hex,
   label,
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[8px] font-mono font-bold uppercase tracking-[0.13em] px-2 py-1 rounded-full bg-slate-50 text-slate-500 border border-slate-200">
+    <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+
       <span
         className="w-1.5 h-1.5 rounded-full shrink-0"
         style={{
-          background:
-            hex || "#94a3b8",
+          background: hex,
           boxShadow:
-            `0 0 4px ${
-              hex || "#94a3b8"
-            }`,
+            `0 0 4px ${hex}`,
         }}
       />
 
       {label}
+
     </span>
   );
 }
 
-
-/* =========================================================
-   LEAD HEALTH
-========================================================= */
-
-function getLeadHealth(lead) {
-  const priority = String(
-    lead.priority || ""
-  ).toLowerCase();
-
-  const hasNextAction =
-    !!lead.next_action;
-
-  const hasProgress =
-    !!lead.progressLog?.length;
-
-  const isWaiting =
-    lead.wait_until &&
-    new Date(
-      lead.wait_until
-    ) >= new Date(todayISO());
-
-  if (
-    priority.includes("high") ||
-    priority.includes("tinggi") ||
-    priority.includes("urgent")
-  ) {
-    return {
-      label: "HOT",
-      className:
-        "text-rose-600",
-      dot: "#f43f5e",
-    };
-  }
-
-  if (
-    hasNextAction &&
-    hasProgress &&
-    !isWaiting
-  ) {
-    return {
-      label: "ACTIVE",
-      className:
-        "text-emerald-600",
-      dot: "#10b981",
-    };
-  }
-
-  if (isWaiting) {
-    return {
-      label: "WAITING",
-      className:
-        "text-sky-600",
-      dot: "#0ea5e9",
-    };
-  }
-
-  return {
-    label: "OPEN",
-    className:
-      "text-slate-400",
-    dot: "#94a3b8",
-  };
-}
-
-
-/* =========================================================
-   DATE HELPERS
-========================================================= */
-
-function formatDate(date) {
-  if (!date) return "—";
-
-  try {
-    return new Date(
-      date
-    ).toLocaleDateString(
-      "id-ID",
-      {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }
-    );
-  } catch {
-    return "—";
-  }
-}
-
-
-function daysSince(date) {
-  if (!date) return null;
-
-  const d = new Date(date);
-
-  if (
-    Number.isNaN(
-      d.getTime()
-    )
-  ) {
-    return null;
-  }
-
-  const now = new Date();
-
-  const diff = Math.floor(
-    (
-      now.getTime() -
-      d.getTime()
-    ) /
-      (1000 * 60 * 60 * 24)
-  );
-
-  return Math.max(
-    0,
-    diff
-  );
-}
-
-
-/* =========================================================
-   AI SIGNAL
-========================================================= */
-
-function getAISignal(lead) {
-  const days =
-    daysSince(
-      lead.last_contact
-    );
-
-  const waiting =
-    lead.wait_until &&
-    new Date(
-      lead.wait_until
-    ) >=
-      new Date(todayISO());
-
-  if (waiting) {
-    return {
-      type: "waiting",
-      title: "Follow-up paused",
-      text:
-        `Waiting until ${formatDate(
-          lead.wait_until
-        )}`,
-      icon: Clock3,
-    };
-  }
-
-  if (
-    days !== null &&
-    days >= 7
-  ) {
-    return {
-      type: "danger",
-      title:
-        "Follow-up recommended",
-      text:
-        `No contact for ${days} days`,
-      icon: AlertTriangle,
-    };
-  }
-
-  if (!lead.next_action) {
-    return {
-      type: "warning",
-      title:
-        "Next action missing",
-      text:
-        "Determine the next step",
-      icon: Target,
-    };
-  }
-
-  if (
-    lead.progressLog?.length
-  ) {
-    return {
-      type: "active",
-      title:
-        "Lead is active",
-      text:
-        "Latest progress recorded",
-      icon: CheckCircle2,
-    };
-  }
-
-  return {
-    type: "neutral",
-    title:
-      "Ready to work",
-    text:
-      "No recent activity signal",
-    icon: Activity,
-  };
-}
-
-
-/* =========================================================
-   MAIN LEADS COMPONENT
-========================================================= */
 
 export default function Leads({
   leads,
@@ -494,6 +265,7 @@ export default function Leads({
   industry,
   onChanged,
 }) {
+
   const [q, setQ] =
     useState("");
 
@@ -501,9 +273,6 @@ export default function Leads({
     useState("");
 
   const [fType, setFType] =
-    useState("");
-
-  const [fHealth, setFHealth] =
     useState("");
 
   const [page, setPage] =
@@ -526,10 +295,6 @@ export default function Leads({
   const [progressPopup, setProgressPopup] =
     useState(null);
 
-
-  /* =======================================================
-     INDUSTRY CONFIG
-  ======================================================= */
 
   const titleLabel =
     getFieldLabel(
@@ -594,107 +359,98 @@ export default function Leads({
     );
 
 
-  /* =======================================================
-     FILTERED LEADS
-  ======================================================= */
+  /* ======================================================
+     FILTER
+  ====================================================== */
 
-  const filtered = useMemo(
-    () =>
-      leads.filter((c) => {
-
-        if (
-          fCat &&
-          c.category !== fCat
-        ) {
-          return false;
-        }
-
-        if (
-          fType &&
-          (c.company_type || "") !==
-            fType
-        ) {
-          return false;
-        }
-
-        if (fHealth) {
-          const health =
-            getLeadHealth(c)
-              .label;
+  const filtered =
+    useMemo(
+      () =>
+        leads.filter((c) => {
 
           if (
-            health !==
-            fHealth
+            fCat &&
+            c.category !==
+              fCat
           ) {
             return false;
           }
-        }
 
-        if (q) {
-          const s =
-            q.toLowerCase();
+          if (
+            fType &&
+            (c.company_type ||
+              "") !==
+              fType
+          ) {
+            return false;
+          }
 
-          const fieldHay = [
-            c.name,
-            c.city,
-            c.province,
-            c.key_person,
-            c.product,
-            c.sales_owner,
-            c.next_action,
-          ].map(
-            (x) =>
-              (
-                x || ""
-              ).toLowerCase()
-          );
+          if (q) {
 
-          const progressHay =
-            (
-              c.progressLog ||
-              []
-            ).map(
-              (p) =>
+            const s =
+              q.toLowerCase();
+
+            const fieldHay = [
+              c.name,
+              c.city,
+              c.province,
+              c.key_person,
+              c.product,
+              c.sales_owner,
+            ].map(
+              (x) =>
                 (
-                  p.text ||
-                  ""
+                  x || ""
                 ).toLowerCase()
             );
 
-          const allHay = [
-            ...fieldHay,
-            ...progressHay,
-          ];
+            const progressHay =
+              (
+                c.progressLog ||
+                []
+              ).map(
+                (p) =>
+                  (
+                    p.text ||
+                    ""
+                  ).toLowerCase()
+              );
 
-          if (
-            !allHay.some(
-              (h) =>
-                h.includes(s)
-            )
-          ) {
-            return false;
+            const allHay = [
+              ...fieldHay,
+              ...progressHay,
+            ];
+
+            if (
+              !allHay.some(
+                (h) =>
+                  h.includes(s)
+              )
+            ) {
+              return false;
+            }
+
           }
-        }
 
-        return true;
-      }),
-    [
-      leads,
-      q,
-      fCat,
-      fType,
-      fHealth,
-    ]
-  );
+          return true;
+
+        }),
+      [
+        leads,
+        q,
+        fCat,
+        fType,
+      ]
+    );
 
 
+  // Balik ke halaman 1 tiap kali pencarian/filter berubah
   useEffect(() => {
     setPage(1);
   }, [
     q,
     fCat,
     fType,
-    fHealth,
   ]);
 
 
@@ -710,6 +466,7 @@ export default function Leads({
 
   const pageItems =
     useMemo(() => {
+
       const start =
         (page - 1) *
         PAGE_SIZE;
@@ -718,68 +475,12 @@ export default function Leads({
         start,
         start + PAGE_SIZE
       );
+
     }, [
       filtered,
       page,
     ]);
 
-
-  /* =======================================================
-     KPI
-  ======================================================= */
-
-  const stats =
-    useMemo(() => {
-
-      const hot =
-        leads.filter(
-          (l) =>
-            getLeadHealth(l)
-              .label === "HOT"
-        ).length;
-
-      const active =
-        leads.filter(
-          (l) =>
-            getLeadHealth(l)
-              .label === "ACTIVE"
-        ).length;
-
-      const waiting =
-        leads.filter(
-          (l) =>
-            getLeadHealth(l)
-              .label === "WAITING"
-        ).length;
-
-      const followup =
-        leads.filter((l) => {
-          const d =
-            daysSince(
-              l.last_contact
-            );
-
-          return (
-            d !== null &&
-            d >= 7
-          );
-        }).length;
-
-      return {
-        total:
-          leads.length,
-        hot,
-        active,
-        waiting,
-        followup,
-      };
-
-    }, [leads]);
-
-
-  /* =======================================================
-     NEW LEAD
-  ======================================================= */
 
   const blank = () => ({
     name: "",
@@ -793,9 +494,9 @@ export default function Leads({
   });
 
 
-  /* =======================================================
+  /* ======================================================
      IMPORT
-  ======================================================= */
+  ====================================================== */
 
   const importFile =
     async (file) => {
@@ -881,10 +582,9 @@ export default function Leads({
               );
 
             if (m) {
-              sheetOut.push(
-                m
-              );
+              sheetOut.push(m);
             }
+
           }
 
 
@@ -941,10 +641,12 @@ export default function Leads({
 
                 if (
                   mapping &&
-                  mapping.name !==
-                    null &&
-                  mapping.name !==
-                    undefined
+                  (
+                    mapping.name !==
+                      null &&
+                    mapping.name !==
+                      undefined
+                  )
                 ) {
 
                   const startAt =
@@ -973,8 +675,12 @@ export default function Leads({
 
                     const get =
                       (idx) =>
-                        idx === null ||
-                        idx === undefined
+                        (
+                          idx ===
+                            null ||
+                          idx ===
+                            undefined
+                        )
                           ? ""
                           : String(
                               row[
@@ -1060,6 +766,7 @@ export default function Leads({
                       source:
                         "import",
                     });
+
                   }
 
 
@@ -1073,6 +780,7 @@ export default function Leads({
 
                     usedAiFallback =
                       true;
+
                   }
 
                 }
@@ -1141,6 +849,7 @@ export default function Leads({
           );
 
           return;
+
         }
 
 
@@ -1187,9 +896,9 @@ export default function Leads({
     };
 
 
-  /* =======================================================
+  /* ======================================================
      EXPORT
-  ======================================================= */
+  ====================================================== */
 
   const exportCSV =
     () => {
@@ -1197,6 +906,7 @@ export default function Leads({
       const rows =
         filtered.map(
           (c) => ({
+
             Nama:
               c.name,
 
@@ -1232,6 +942,7 @@ export default function Leads({
 
             Website:
               c.website,
+
           })
         );
 
@@ -1273,9 +984,9 @@ export default function Leads({
     };
 
 
-  /* =======================================================
+  /* ======================================================
      DELETE
-  ======================================================= */
+  ====================================================== */
 
   const del =
     async (id) => {
@@ -1297,78 +1008,24 @@ export default function Leads({
     };
 
 
-  /* =========================================================
-     RENDER
-  ========================================================= */
+  /* ======================================================
+     UI
+  ====================================================== */
 
   return (
-    <div className="space-y-4">
+    <div>
 
+      {/* HEADER */}
 
-      {/* ===================================================
-          HEADER
-      =================================================== */}
+      <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-2">
 
-      <div className="sticky top-14 md:top-0 z-20 bg-[#f5f7fb]/95 backdrop-blur-xl pt-1 pb-3">
+        <div className="flex flex-wrap gap-2 items-center mb-2">
 
-        <div className="flex flex-col xl:flex-row xl:items-center gap-3">
-
-          <div className="flex-1 min-w-0">
-
-            <div className="flex items-center gap-2">
-
-              <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-orange-500 font-bold">
-                Sales Intelligence
-              </div>
-
-              <span className="w-1 h-1 rounded-full bg-emerald-400 shadow-[0_0_7px_rgba(16,185,129,.8)]" />
-
-              <span className="text-[8px] font-mono text-slate-400">
-                {filtered.length} ACTIVE VIEW
-              </span>
-
-            </div>
-
-
-            <div className="flex items-center gap-2 mt-0.5">
-
-              <h1 className="text-xl md:text-2xl font-extrabold tracking-[-0.045em] text-slate-950">
-                Leads
-              </h1>
-
-              <span className="text-[8px] font-mono text-slate-400 border border-slate-200 bg-white rounded-full px-2 py-1">
-                {leads.length} records
-              </span>
-
-            </div>
-
-          </div>
-
-
-          <button
-            onClick={() =>
-              setEdit(
-                blank()
-              )
-            }
-            className="flex items-center justify-center gap-2 bg-slate-950 hover:bg-slate-800 text-white text-[11px] px-4 py-2.5 rounded-xl font-semibold shadow-[0_8px_20px_-12px_rgba(15,23,42,.7)] transition-colors"
-          >
-            <Plus size={13} />
-            Add Lead
-          </button>
-
-        </div>
-
-
-        {/* SEARCH */}
-
-        <div className="mt-3 flex flex-wrap gap-2">
-
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative flex-1 min-w-40">
 
             <Search
-              size={13}
-              className="absolute left-3 top-2.5 text-slate-400"
+              size={14}
+              className="absolute left-2.5 top-2 text-slate-400"
             />
 
             <input
@@ -1378,8 +1035,8 @@ export default function Leads({
                   e.target.value
                 )
               }
-              placeholder="Search company / PIC / city / product / progress..."
-              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-white shadow-sm focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+              placeholder="Cari nama / kota / PIC / produk / progress…"
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
             />
 
           </div>
@@ -1392,8 +1049,9 @@ export default function Leads({
                 e.target.value
               )
             }
-            className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-sm"
+            className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"
           >
+
             <option value="">
               Semua kategori
             </option>
@@ -1402,7 +1060,6 @@ export default function Leads({
               (c) => (
                 <option
                   key={c}
-                  value={c}
                 >
                   {c}
                 </option>
@@ -1413,6 +1070,7 @@ export default function Leads({
 
 
           {showTypeFilter && (
+
             <select
               value={fType}
               onChange={(e) =>
@@ -1420,71 +1078,59 @@ export default function Leads({
                   e.target.value
                 )
               }
-              className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-sm"
+              className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"
             >
+
               <option value="">
                 Semua tipe
               </option>
 
               {companyTypeOptions.map(
                 (t) => (
+
                   <option
                     key={t.v}
                     value={t.v}
                   >
                     {t.label}
                   </option>
+
                 )
               )}
 
             </select>
+
           )}
 
 
-          <select
-            value={fHealth}
-            onChange={(e) =>
-              setFHealth(
-                e.target.value
+          <button
+            onClick={() =>
+              setEdit(
+                blank()
               )
             }
-            className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-sm"
+            className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm shadow-orange-600/20"
           >
-            <option value="">
-              Semua status
-            </option>
 
-            <option value="HOT">
-              🔥 Hot
-            </option>
+            <Plus size={14} />
 
-            <option value="ACTIVE">
-              ● Active
-            </option>
+            Lead
 
-            <option value="WAITING">
-              ◷ Waiting
-            </option>
-
-            <option value="OPEN">
-              ○ Open
-            </option>
-
-          </select>
+          </button>
 
         </div>
 
 
-        {/* ACTIONS */}
+        <div className="flex flex-wrap gap-2">
 
-        <div className="mt-2 flex flex-wrap gap-2">
+          <label className="text-xs flex items-center gap-1.5 border border-emerald-300 text-emerald-700 rounded-lg px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
 
-          <label className="text-[10px] flex items-center gap-1.5 border border-emerald-200 text-emerald-700 rounded-lg px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 cursor-pointer font-medium">
-
-            <FileSpreadsheet size={12} />
+            <FileSpreadsheet
+              size={12}
+            />
 
             {busy
-              ? "Mengimpor..."
+              ? "Mengimpor…"
               : "Import Excel / CSV"}
 
             <input
@@ -1511,10 +1157,15 @@ export default function Leads({
             onClick={
               exportCSV
             }
-            className="text-[10px] flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white hover:bg-slate-50 font-medium"
+            className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
           >
-            <Download size={12} />
+
+            <Download
+              size={12}
+            />
+
             Export
+
           </button>
 
 
@@ -1524,149 +1175,46 @@ export default function Leads({
                 true
               )
             }
-            className="text-[10px] flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white hover:bg-slate-50 font-medium"
+            className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
           >
-            <Copy size={12} />
+
+            <Copy
+              size={12}
+            />
+
             Cek Duplikat
+
           </button>
 
-        </div>
 
-      </div>
+          <span className="text-xs text-slate-400 self-center ml-auto">
 
+            {filtered.length}
+            {" / "}
+            {leads.length}
 
-      {/* ===================================================
-          COMPACT KPI STRIP
-      =================================================== */}
-
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
-
-        {/* TOTAL */}
-
-        <div className="h-[62px] rounded-[16px] bg-white border border-slate-200/80 px-4 flex items-center justify-between shadow-[0_4px_16px_-12px_rgba(15,23,42,.22)]">
-
-          <div>
-
-            <div className="text-[8px] font-mono uppercase tracking-[0.16em] text-slate-400">
-              Total Leads
-            </div>
-
-            <div className="text-lg font-extrabold leading-none mt-1 text-slate-900">
-              {stats.total}
-            </div>
-
-          </div>
-
-          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
-            <Target size={14} />
-          </div>
-
-        </div>
-
-
-        {/* HOT */}
-
-        <div className="h-[62px] rounded-[16px] bg-white border border-rose-100 px-4 flex items-center justify-between shadow-[0_4px_16px_-12px_rgba(244,63,94,.25)]">
-
-          <div>
-
-            <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-[0.16em] text-rose-500">
-              <Flame size={9} />
-              Hot
-            </div>
-
-            <div className="text-lg font-extrabold leading-none mt-1 text-rose-600">
-              {stats.hot}
-            </div>
-
-          </div>
-
-          <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center text-rose-400">
-            <Flame size={14} />
-          </div>
-
-        </div>
-
-
-        {/* ACTIVE */}
-
-        <div className="h-[62px] rounded-[16px] bg-white border border-emerald-100 px-4 flex items-center justify-between shadow-[0_4px_16px_-12px_rgba(16,185,129,.25)]">
-
-          <div>
-
-            <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-[0.16em] text-emerald-500">
-              <Activity size={9} />
-              Active
-            </div>
-
-            <div className="text-lg font-extrabold leading-none mt-1 text-emerald-600">
-              {stats.active}
-            </div>
-
-          </div>
-
-          <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-400">
-            <Activity size={14} />
-          </div>
-
-        </div>
-
-
-        {/* WAITING */}
-
-        <div className="h-[62px] rounded-[16px] bg-white border border-sky-100 px-4 flex items-center justify-between shadow-[0_4px_16px_-12px_rgba(14,165,233,.25)]">
-
-          <div>
-
-            <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-[0.16em] text-sky-500">
-              <Clock3 size={9} />
-              Waiting
-            </div>
-
-            <div className="text-lg font-extrabold leading-none mt-1 text-sky-600">
-              {stats.waiting}
-            </div>
-
-          </div>
-
-          <div className="w-8 h-8 rounded-xl bg-sky-50 flex items-center justify-center text-sky-400">
-            <Clock3 size={14} />
-          </div>
-
-        </div>
-
-
-        {/* FOLLOW UP */}
-
-        <div className="h-[62px] rounded-[16px] bg-white border border-amber-100 px-4 flex items-center justify-between shadow-[0_4px_16px_-12px_rgba(245,158,11,.25)]">
-
-          <div>
-
-            <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-[0.16em] text-amber-500">
-              <AlertTriangle size={9} />
-              Follow-up
-            </div>
-
-            <div className="text-lg font-extrabold leading-none mt-1 text-amber-600">
-              {stats.followup}
-            </div>
-
-          </div>
-
-          <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-400">
-            <AlertTriangle size={14} />
-          </div>
+          </span>
 
         </div>
 
       </div>
 
 
-      {/* ===================================================
-          LEAD GRID
-      =================================================== */}
+      {/* LEAD CARDS */}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 rounded-[32px] p-4 sm:p-5"
+        style={{
+          background:
+            "#fafbfc",
+
+          backgroundImage:
+            "radial-gradient(rgba(15,23,42,0.045) 1px, transparent 1px)",
+
+          backgroundSize:
+            "18px 18px",
+        }}
+      >
 
         {pageItems.map(
           (c) => {
@@ -1687,44 +1235,6 @@ export default function Leads({
                 c.website
               );
 
-            const health =
-              getLeadHealth(c);
-
-            const ai =
-              getAISignal(c);
-
-            const AIIcon =
-              ai.icon;
-
-            const days =
-              daysSince(
-                c.last_contact
-              );
-
-            const currentStageIndex =
-              Math.max(
-                0,
-                stages.findIndex(
-                  (s) =>
-                    s.key ===
-                    c.stage_key
-                )
-              );
-
-            const progress =
-              stages.length <= 1
-                ? 100
-                : Math.round(
-                    (
-                      currentStageIndex /
-                      (
-                        stages.length -
-                        1
-                      )
-                    ) *
-                      100
-                  );
-
 
             return (
 
@@ -1733,88 +1243,72 @@ export default function Leads({
                 onClick={() =>
                   setEdit(c)
                 }
-                className="relative group cursor-pointer"
+                className="relative rounded-3xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+                style={{
+                  boxShadow:
+                    "0 8px 20px -10px rgba(15,23,42,0.18)",
+                }}
               >
 
                 <CornerBrackets
-                  color={
-                    health.label ===
-                    "HOT"
-                      ? "#f43f5e"
-                      : "#94a3b8"
-                  }
+                  color="#0891b2"
                 />
 
 
-                {/* CARD */}
-
                 <div
-                  className="
-                    relative
-                    overflow-hidden
-                    rounded-[18px]
-                    bg-white
-                    border border-slate-200/80
-                    transition-all duration-200
-                    group-hover:border-slate-300
-                    group-hover:-translate-y-[2px]
-                  "
+                  className="rounded-3xl overflow-hidden bg-white"
                   style={{
-                    boxShadow:
-                      "0 5px 18px -12px rgba(15,23,42,.28)",
+                    border:
+                      "1px solid rgba(15,23,42,0.08)",
                   }}
                 >
 
-
-                  {/* TOP ACCENT */}
+                  {/* ORANGE TOP BAR */}
 
                   <div
-                    className="h-[2px]"
                     style={{
+                      height: 3,
                       background:
-                        health.label ===
-                        "HOT"
-                          ? "linear-gradient(90deg,#fb7185,#f97316)"
-                          : "linear-gradient(90deg,#f97316,#fdba74)",
+                        "linear-gradient(90deg, #f97316, #fb923c)",
                     }}
                   />
 
 
                   <div className="p-4">
 
+                    {/* COMPANY */}
 
-                    {/* =====================================
-                        COMPANY HEADER
-                    ===================================== */}
-
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start justify-between gap-2">
 
                       <div className="min-w-0 flex-1">
 
-                        <div className="flex items-center gap-1.5 mb-1">
+                        <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
 
-                          <span
-                            className="w-1.5 h-1.5 rounded-full shrink-0"
-                            style={{
-                              background:
-                                health.dot,
-                              boxShadow:
-                                `0 0 6px ${health.dot}`,
-                            }}
-                          />
-
-                          <span
-                            className={`text-[8px] font-mono uppercase tracking-[0.15em] font-bold ${health.className}`}
-                          >
-                            {health.label}
+                          <span className="truncate">
+                            {c.name}
                           </span>
+
+
+                          {typeBadge(
+                            c.company_type
+                          ) && (
+
+                            <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600 shrink-0">
+
+                              {typeBadge(
+                                c.company_type
+                              )}
+
+                            </span>
+
+                          )}
 
 
                           {isNewLead(
                             c
                           ) && (
 
-                            <span className="text-[7px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-1.5 py-[2px]">
+                            <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white shrink-0">
                               NEW
                             </span>
 
@@ -1823,469 +1317,291 @@ export default function Leads({
                         </div>
 
 
-                        <div className="text-[14px] font-bold leading-[18px] tracking-[-0.025em] text-slate-950 break-words">
-                          {c.name}
-                        </div>
-
-
-                        <div className="flex items-center gap-1.5 mt-1 text-[9px] text-slate-400">
-
-                          <span className="truncate">
-                            {c.category ||
-                              "—"}
-                          </span>
-
-                          {c.city && (
-                            <>
-                              <span className="text-slate-200">
-                                /
-                              </span>
-
-                              <span className="truncate">
-                                {c.city}
-                              </span>
-                            </>
-                          )}
-
+                        <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                          {c.category ||
+                            "—"}
                         </div>
 
                       </div>
 
 
-                      <div className="shrink-0">
+                      {c.verified ? (
 
-                        {c.verified ? (
-                          <ShieldCheck
-                            size={15}
-                            className="text-emerald-500"
-                          />
-                        ) : (
-                          <ShieldAlert
-                            size={15}
-                            className="text-slate-300"
-                          />
-                        )}
-
-                      </div>
-
-                    </div>
-
-
-                    {/* =====================================
-                        PIPELINE
-                    ===================================== */}
-
-                    <div className="mt-4">
-
-                      <div className="flex items-center justify-between mb-1.5">
-
-                        <div className="flex items-center gap-1.5">
-
-                          <span
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{
-                              background:
-                                sm.hex ||
-                                "#94a3b8",
-                            }}
-                          />
-
-                          <span className="text-[9px] font-semibold text-slate-600">
-                            {sm.label}
-                          </span>
-
-                        </div>
-
-
-                        <span className="text-[8px] font-mono text-slate-400">
-                          {progress}%
-                        </span>
-
-                      </div>
-
-
-                      <div className="h-[4px] bg-slate-100 rounded-full overflow-hidden">
-
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width:
-                              `${progress}%`,
-                            background:
-                              progress >=
-                              75
-                                ? "linear-gradient(90deg,#f97316,#22c55e)"
-                                : "linear-gradient(90deg,#f97316,#fb923c)",
-                          }}
+                        <ShieldCheck
+                          size={14}
+                          className="text-emerald-500 shrink-0"
                         />
 
-                      </div>
+                      ) : (
 
+                        <ShieldAlert
+                          size={14}
+                          className="text-slate-300 shrink-0"
+                        />
 
-                      <div className="flex justify-between mt-1">
-
-                        <span className="text-[7px] text-slate-300 font-mono">
-                          LEAD
-                        </span>
-
-                        <span className="text-[7px] text-slate-300 font-mono">
-                          STAGE{" "}
-                          {currentStageIndex +
-                            1}
-                          /
-                          {
-                            stages.length
-                          }
-                        </span>
-
-                      </div>
+                      )}
 
                     </div>
 
 
-                    {/* =====================================
-                        PERSON / PRODUCT
-                    ===================================== */}
+                    {/* STAGE + PRIORITY */}
 
-                    <div className="mt-4 flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
 
-                      {!hideKeyPerson &&
-                        c.key_person && (
-
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-
-                            <div className="w-7 h-7 shrink-0 rounded-full bg-slate-100 flex items-center justify-center">
-
-                              <UserRound
-                                size={12}
-                                className="text-slate-400"
-                              />
-
-                            </div>
+                      <StageChip
+                        hex={sm.hex}
+                        label={
+                          sm.label
+                        }
+                      />
 
 
-                            <div className="min-w-0">
+                      {c.priority &&
+                        prioMeta(
+                          c.priority
+                        ) && (
 
-                              <div className="text-[10px] font-semibold text-slate-700 truncate">
-                                {
-                                  c.key_person
-                                }
-                              </div>
-
-
-                              {!hideTitle &&
-                                c.key_person_title && (
-
-                                  <div className="text-[8px] text-slate-400 truncate">
-                                    {
-                                      c.key_person_title
-                                    }
-                                  </div>
-
-                                )}
-
-                            </div>
-
-                          </div>
+                          <StageChip
+                            hex={
+                              prioMeta(
+                                c.priority
+                              ).hex
+                            }
+                            label={
+                              prioMeta(
+                                c.priority
+                              ).label
+                            }
+                          />
 
                         )}
+
+                    </div>
+
+
+                    {/* DETAILS */}
+
+                    <div className="mt-3 space-y-1.5 text-xs text-slate-600">
+
+                      <div className="flex items-center gap-1.5 truncate">
+
+                        <MapPin
+                          size={12}
+                          className="text-slate-300 shrink-0"
+                        />
+
+                        {c.city ||
+                          "—"}
+
+                      </div>
 
 
                       {c.product && (
 
-                        <div className="min-w-0 flex-1">
+                        <div className="truncate">
 
-                          <div className="text-[7px] font-mono uppercase tracking-wider text-slate-400">
+                          <span className="text-slate-400">
                             {
                               productLabel
                             }
-                          </div>
+                            :
+                          </span>{" "}
 
-                          <div className="text-[9px] font-medium text-slate-600 truncate mt-0.5">
-                            {
-                              c.product
-                            }
-                          </div>
-
-                        </div>
-
-                      )}
-
-                    </div>
-
-
-                    {/* =====================================
-                        CONTACT
-                    ===================================== */}
-
-                    {(c.phone ||
-                      c.email) && (
-
-                      <div className="mt-3 flex items-center gap-3 text-[9px] text-slate-400">
-
-                        {c.phone && (
-                          <div className="flex items-center gap-1 min-w-0">
-                            <Phone
-                              size={10}
-                            />
-
-                            <span className="truncate">
-                              {
-                                c.phone
-                              }
-                            </span>
-                          </div>
-                        )}
-
-
-                        {c.email && (
-                          <div className="flex items-center gap-1 min-w-0">
-                            <Mail
-                              size={10}
-                            />
-
-                            <span className="truncate">
-                              {
-                                c.email
-                              }
-                            </span>
-                          </div>
-                        )}
-
-                      </div>
-
-                    )}
-
-
-                    {/* WEBSITE */}
-
-                    {!hideWebsite &&
-                      web && (
-
-                        <div className="mt-1 flex items-center gap-1.5 text-[9px] text-slate-400 truncate">
-
-                          <Globe
-                            size={10}
-                            className="shrink-0"
-                          />
-
-                          <span className="truncate">
-                            {
-                              prettyDomain(
-                                c.website
-                              )
-                            }
-                          </span>
+                          {
+                            c.product
+                          }
 
                         </div>
 
                       )}
 
 
-                    {/* CUSTOM FIELDS */}
+                      {!hideKeyPerson &&
+                        c.key_person && (
 
-                    {customSlots.map(
-                      (slot) =>
-                        c[
-                          slot.key
-                        ] ? (
-
-                          <div
-                            key={
-                              slot.key
-                            }
-                            className="mt-1 text-[9px] text-slate-500 truncate"
-                          >
+                          <div className="truncate">
 
                             <span className="text-slate-400">
                               {
-                                slot.label
+                                keyPersonLabel
                               }
                               :
                             </span>{" "}
 
                             {
-                              c[
-                                slot.key
-                              ]
+                              c.key_person
                             }
 
                           </div>
 
-                        ) : null
-                    )}
+                        )}
 
 
-                    {/* =====================================
-                        LAST CONTACT / NEXT ACTION
-                    ===================================== */}
+                      {!hideTitle &&
+                        c.key_person_title && (
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-4">
+                          <div className="truncate">
 
-                      {/* LAST CONTACT */}
+                            <span className="text-slate-400">
+                              {
+                                titleLabel
+                              }
+                              :
+                            </span>{" "}
 
-                      <div className="min-w-0">
+                            {
+                              c.key_person_title
+                            }
 
-                        <div className="flex items-center gap-1 text-[7px] font-mono uppercase tracking-[0.14em] text-slate-400">
-
-                          <Clock3
-                            size={9}
-                          />
-
-                          Last Contact
-
-                        </div>
-
-
-                        <div className="mt-1 text-[9px] font-semibold text-slate-700">
-
-                          {formatDate(
-                            c.last_contact
-                          )}
-
-                        </div>
-
-
-                        {days !==
-                          null && (
-
-                          <div
-                            className={`text-[7px] mt-0.5 ${
-                              days >=
-                              7
-                                ? "text-rose-500"
-                                : "text-slate-400"
-                            }`}
-                          >
-                            {days ===
-                            0
-                              ? "Today"
-                              : `${days} days ago`}
                           </div>
 
                         )}
 
-                      </div>
 
+                      {c.phone && (
 
-                      {/* NEXT ACTION */}
+                        <div className="truncate flex items-center gap-1.5">
 
-                      <div className="min-w-0">
-
-                        <div className="flex items-center gap-1 text-[7px] font-mono uppercase tracking-[0.14em] text-orange-500">
-
-                          <ArrowUpRight
-                            size={9}
+                          <Phone
+                            size={12}
+                            className="text-slate-300 shrink-0"
                           />
 
-                          Next Action
-
-                        </div>
-
-
-                        <div className="mt-1 text-[9px] font-semibold text-slate-700 line-clamp-2 leading-3.5">
-
-                          {c.next_action ||
-                            "Belum ditentukan"}
-
-                        </div>
-
-                      </div>
-
-                    </div>
-
-
-                    {/* =====================================
-                        WAITING
-                    ===================================== */}
-
-                    {c.wait_until &&
-                      new Date(
-                        c.wait_until
-                      ) >=
-                        new Date(
-                          todayISO()
-                        ) && (
-
-                        <div className="mt-2 flex items-center gap-2 text-[8px] text-sky-700">
-
-                          <Clock3
-                            size={10}
-                          />
-
-                          <span>
-                            Waiting until{" "}
-                            <b>
-                              {
-                                formatDate(
-                                  c.wait_until
-                                )
-                              }
-                            </b>
-                          </span>
+                          {
+                            c.phone
+                          }
 
                         </div>
 
                       )}
 
 
-                    {/* =====================================
-                        AI SIGNAL
-                    ===================================== */}
+                      {c.email && (
 
-                    <div className="mt-3 flex items-center gap-2">
+                        <div className="truncate flex items-center gap-1.5">
 
-                      <div
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded-full border text-[7px] font-mono uppercase tracking-wider ${
-                          ai.type ===
-                          "danger"
-                            ? "bg-rose-50 border-rose-100 text-rose-600"
-                            : ai.type ===
-                              "warning"
-                            ? "bg-amber-50 border-amber-100 text-amber-600"
-                            : ai.type ===
-                              "active"
-                            ? "bg-emerald-50 border-emerald-100 text-emerald-600"
-                            : ai.type ===
-                              "waiting"
-                            ? "bg-sky-50 border-sky-100 text-sky-600"
-                            : "bg-slate-50 border-slate-100 text-slate-500"
-                        }`}
-                      >
+                          <Mail
+                            size={12}
+                            className="text-slate-300 shrink-0"
+                          />
 
-                        <AIIcon
-                          size={9}
-                        />
+                          {
+                            c.email
+                          }
 
-                        AI
+                        </div>
 
-                      </div>
+                      )}
 
 
-                      <span className="text-[8px] text-slate-400 truncate">
-                        {
-                          ai.title
-                        }
-                      </span>
+                      {!hideWebsite &&
+                        web && (
+
+                          <div className="truncate flex items-center gap-1.5">
+
+                            <Globe
+                              size={12}
+                              className="text-slate-300 shrink-0"
+                            />
+
+                            {prettyDomain(
+                              c.website
+                            )}
+
+                          </div>
+
+                        )}
+
+
+                      {customSlots.map(
+                        (slot) =>
+                          c[
+                            slot.key
+                          ] ? (
+
+                            <div
+                              key={
+                                slot.key
+                              }
+                              className="truncate"
+                            >
+
+                              <span className="text-slate-400">
+                                {
+                                  slot.label
+                                }
+                                :
+                              </span>{" "}
+
+                              {
+                                c[
+                                  slot.key
+                                ]
+                              }
+
+                            </div>
+
+                          ) : null
+                      )}
+
+
+                      {c.next_action && (
+
+                        <div className="mt-2 text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5 line-clamp-2">
+
+                          📌{" "}
+                          {
+                            c.next_action
+                          }
+
+                        </div>
+
+                      )}
+
+
+                      {c.wait_until &&
+                        new Date(
+                          c.wait_until
+                        ) >=
+                          new Date(
+                            todayISO()
+                          ) && (
+
+                          <div className="mt-1.5 text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5">
+
+                            ⏸️ Nunggu sampai{" "}
+
+                            {new Date(
+                              c.wait_until
+                            ).toLocaleDateString(
+                              "id-ID",
+                              {
+                                day:
+                                  "numeric",
+                                month:
+                                  "short",
+                              }
+                            )}
+
+                          </div>
+
+                        )}
 
                     </div>
 
 
-                    {/* =====================================
-                        ACTIONS
-                    ===================================== */}
+                    {/* ACTION BAR */}
 
                     <div
-                      className="mt-3 flex items-center justify-between"
+                      className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1.5"
                       onClick={(e) =>
                         e.stopPropagation()
                       }
                     >
 
-                      <div className="flex items-center gap-0.5">
-
-                        {c.phone &&
-                          wa && (
+                      {c.phone &&
+                        (
+                          wa ? (
 
                             <a
                               href={
@@ -2293,60 +1609,76 @@ export default function Leads({
                               }
                               target="_blank"
                               rel="noreferrer"
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-600 hover:bg-emerald-50 transition-colors"
-                              title="WhatsApp"
+                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"
+                              title={
+                                c.phone
+                              }
                             >
+
                               <Phone
-                                size={
-                                  12
-                                }
+                                size={13}
                               />
+
                             </a>
 
-                          )}
+                          ) : (
 
-
-                        {c.email && (
-
-                          <a
-                            href={`mailto:${c.email}`}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Email"
-                          >
-                            <Mail
-                              size={
-                                12
+                            <span
+                              className="p-1.5 text-slate-300"
+                              title={
+                                c.phone
                               }
-                            />
-                          </a>
+                            >
 
+                              <Phone
+                                size={13}
+                              />
+
+                            </span>
+
+                          )
                         )}
 
 
-                        <button
-                          onClick={(e) =>
-                            setDraftPopup(
-                              {
-                                lead: c,
-                                rect:
-                                  e.currentTarget.getBoundingClientRect(),
-                              }
-                            )
+                      {c.email && (
+
+                        <a
+                          href={`mailto:${c.email}`}
+                          className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50"
+                          title={
+                            c.email
                           }
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-orange-500 hover:bg-orange-50 transition-colors"
-                          title="AI Draft"
                         >
-                          <Sparkles
-                            size={
-                              12
-                            }
+
+                          <Mail
+                            size={13}
                           />
-                        </button>
 
-                      </div>
+                        </a>
+
+                      )}
 
 
-                      <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) =>
+                          setDraftPopup({
+                            lead: c,
+                            rect:
+                              e.currentTarget.getBoundingClientRect(),
+                          })
+                        }
+                        className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50"
+                        title="Draft follow-up (AI)"
+                      >
+
+                        <Sparkles
+                          size={13}
+                        />
+
+                      </button>
+
+
+                      <div className="ml-auto flex items-center gap-0.5">
 
                         <button
                           onClick={() =>
@@ -2354,9 +1686,13 @@ export default function Leads({
                               c
                             )
                           }
-                          className="text-[8px] font-medium text-slate-400 hover:text-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-50"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
                         >
-                          Edit
+
+                          <Pencil
+                            size={13}
+                          />
+
                         </button>
 
 
@@ -2366,14 +1702,13 @@ export default function Leads({
                               c.id
                             )
                           }
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50"
-                          title="Delete"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
                         >
+
                           <Trash2
-                            size={
-                              11
-                            }
+                            size={13}
                           />
+
                         </button>
 
                       </div>
@@ -2381,30 +1716,27 @@ export default function Leads({
                     </div>
 
 
-                    {/* =====================================
-                        QUICK PROGRESS
-                    ===================================== */}
+                    {/* QUICK PROGRESS */}
 
                     <button
                       onClick={(e) => {
 
                         e.stopPropagation();
 
-                        setProgressPopup(
-                          {
-                            lead: c,
-                            autoFocus:
-                              true,
-                          }
-                        );
+                        setProgressPopup({
+                          lead: c,
+                          autoFocus:
+                            true,
+                        });
 
                       }}
-                      className="mt-2 w-full flex items-center gap-2 text-left text-[8px] font-mono text-slate-400 hover:text-cyan-600 transition-colors"
+                      className="mt-2.5 w-full flex items-center gap-2 text-left text-xs font-mono text-slate-500 border-2 border-slate-200 bg-slate-50 rounded-xl px-3 py-2 hover:border-cyan-400 hover:text-cyan-700 hover:bg-cyan-50 transition-colors"
+                      title="Update progress harian"
                     >
 
                       <ClipboardList
-                        size={10}
-                        className="shrink-0"
+                        size={13}
+                        className="shrink-0 text-slate-400"
                       />
 
                       <span className="truncate">
@@ -2413,12 +1745,11 @@ export default function Leads({
                           ? c
                               .progressLog[0]
                               .text
-                          : "> update progress..."}
+                          : "> update progress hari ini…"}
 
                       </span>
 
                     </button>
-
 
                   </div>
 
@@ -2427,35 +1758,19 @@ export default function Leads({
               </div>
 
             );
+
           }
         )}
 
 
-        {/* EMPTY */}
-
         {filtered.length ===
           0 && (
 
-          <div className="col-span-full p-10 text-center bg-white border border-dashed border-slate-200 rounded-2xl">
+          <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-3xl">
 
-            <div className="mx-auto w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
-
-              <Search
-                size={17}
-                className="text-slate-400"
-              />
-
-            </div>
-
-
-            <div className="mt-3 text-sm font-semibold text-slate-600">
-              Tidak ada lead ditemukan
-            </div>
-
-
-            <div className="mt-1 text-[10px] text-slate-400">
-              Coba ubah search atau filter.
-            </div>
+            Belum ada lead yang cocok.
+            Import Excel atau tambah
+            manual.
 
           </div>
 
@@ -2464,15 +1779,13 @@ export default function Leads({
       </div>
 
 
-      {/* ===================================================
-          PAGINATION
-      =================================================== */}
+      {/* PAGINATION */}
 
       {filtered.length >
         0 &&
         totalPages > 1 && (
 
-        <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4">
+        <div className="flex items-center justify-center gap-1.5 mt-4">
 
           <button
             onClick={() =>
@@ -2489,9 +1802,11 @@ export default function Leads({
             }
             className="p-2 rounded-lg border border-slate-200 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
           >
+
             <ChevronLeft
               size={15}
             />
+
           </button>
 
 
@@ -2560,9 +1875,7 @@ export default function Leads({
                 ) : (
 
                   <button
-                    key={
-                      n
-                    }
+                    key={n}
                     onClick={() =>
                       setPage(
                         n
@@ -2575,12 +1888,11 @@ export default function Leads({
                         : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    {
-                      n
-                    }
+                    {n}
                   </button>
 
                 )
+
             );
 
           })()}
@@ -2602,14 +1914,17 @@ export default function Leads({
             }
             className="p-2 rounded-lg border border-slate-200 bg-white text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
           >
+
             <ChevronRight
               size={15}
             />
+
           </button>
 
 
-          <span className="text-[9px] font-mono text-slate-400 ml-2">
-            PAGE{" "}
+          <span className="text-xs text-slate-400 ml-2">
+
+            Halaman{" "}
             {page}/
             {
               totalPages
@@ -2618,7 +1933,8 @@ export default function Leads({
             {
               filtered.length
             }{" "}
-            LEADS
+            lead
+
           </span>
 
         </div>
@@ -2626,9 +1942,7 @@ export default function Leads({
       )}
 
 
-      {/* ===================================================
-          MODALS
-      =================================================== */}
+      {/* MODALS */}
 
       {edit && (
 
