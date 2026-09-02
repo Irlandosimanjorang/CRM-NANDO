@@ -20,7 +20,7 @@ import IndustryDemo from "./tabs/IndustryDemo";
 import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
-  Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft,
+  Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -171,6 +171,24 @@ export default function App() {
     }
   }, [session]);
 
+  // ---- 2FA GATE ----
+  // Supabase kasih sesi VALID (aal1) begitu password bener, WALAUPUN user
+  // itu punya 2FA aktif - kode 2FA-nya sendiri itu langkah TAMBAHAN buat naik
+  // ke aal2, bukan syarat sesi ke-buat. Makanya App HARUS ngecek level ini
+  // sendiri tiap kali sesi berubah, dan nahan akses ke seluruh app (bukan
+  // cuma nampilin peringatan) sampe kode 2FA-nya beneran diverifikasi -
+  // kalau enggak, 2FA yang di-setup di Settings cuma jadi hiasan doang.
+  const [mfa, setMfa] = useState({ checking: true, needed: false, verified: false });
+  useEffect(() => {
+    if (!session) { setMfa({ checking: false, needed: false, verified: false }); return; }
+    setMfa((m) => ({ ...m, checking: true }));
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data, error }) => {
+      if (error) { setMfa({ checking: false, needed: false, verified: false }); return; }
+      const needsStep = data.nextLevel === "aal2" && data.currentLevel !== "aal2";
+      setMfa({ checking: false, needed: needsStep, verified: !needsStep });
+    });
+  }, [session]);
+
   // Kalau tab ditinggal lebih dari 5 menit terus dibuka lagi, sync data diem-diem
   // (ga nyalain loading spinner) biar tetep fresh tanpa bikin capek liat loading mulu.
   useEffect(() => {
@@ -243,6 +261,15 @@ export default function App() {
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
   if (!session) return <Auth />;
+
+  // Sesi udah valid (password bener), TAPI kalau user ini punya 2FA aktif
+  // dan belum verifikasi kode-nya di sesi ini, app-nya DIBLOKIR total -
+  // gak nampilin apapun dari isi app sampe kode 2FA bener.
+  if (mfa.checking) return <Splash />;
+  if (mfa.needed && !mfa.verified) {
+    return <MfaVerifyScreen onVerified={() => setMfa((m) => ({ ...m, verified: true, needed: false }))} onCancel={() => supabase.auth.signOut()} />;
+  }
+
   // Org baru yang belum pernah milih industri bisnisnya - tampilin picker dulu
   // sebelum masuk ke dashboard. Org lama (industry udah keisi lewat SQL backfill)
   // gak bakal pernah kena kondisi ini.
@@ -757,6 +784,63 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
         {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
       </button>
       {open && createPortal(card, document.body)}
+    </div>
+  );
+}
+
+// Layar input kode 2FA pas login - muncul SETELAH password bener tapi
+// SEBELUM app-nya keliatan, kalau user itu punya 2FA aktif.
+function MfaVerifyScreen({ onVerified, onCancel }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const verify = async () => {
+    if (code.length !== 6) { setErr("Kode harus 6 digit."); return; }
+    setBusy(true); setErr("");
+    try {
+      const { data: factors, error: listErr } = await supabase.auth.mfa.listFactors();
+      if (listErr) throw listErr;
+      const factor = (factors?.totp || []).find((f) => f.status === "verified");
+      if (!factor) throw new Error("Gak ketemu 2FA yang aktif.");
+      const { data: challenge, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: factor.id });
+      if (challengeErr) throw challengeErr;
+      const { error: verifyErr } = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId: challenge.id, code });
+      if (verifyErr) throw verifyErr;
+      onVerified();
+    } catch (e) {
+      setErr("Kode salah/kedaluwarsa: " + e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="max-w-sm w-full bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
+        <div className="mb-4 flex justify-center"><NextoRobotHead size={48} /></div>
+        <div className="text-center mb-1">
+          <ShieldCheck size={22} className="mx-auto text-orange-600 mb-2" />
+          <h1 className="text-lg font-bold">Verifikasi 2FA</h1>
+          <p className="text-sm text-slate-500 mt-1">Masukin kode 6 digit dari app authenticator kamu.</p>
+        </div>
+        <input
+          className="w-full mt-5 px-3 py-3 text-center text-xl tracking-[0.4em] font-mono border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+          placeholder="000000"
+          maxLength={6}
+          autoFocus
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          onKeyDown={(e) => e.key === "Enter" && verify()}
+        />
+        {err && <div className="mt-3 text-xs bg-rose-50 text-rose-700 rounded-lg p-2.5">{err}</div>}
+        <button onClick={verify} disabled={busy || code.length !== 6} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm py-3 rounded-xl font-semibold flex items-center justify-center gap-1.5">
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Verifikasi
+        </button>
+        <button onClick={onCancel} className="w-full mt-2 text-xs text-slate-400 hover:text-slate-600 py-2">
+          Bukan kamu? Ganti akun
+        </button>
+      </div>
     </div>
   );
 }
