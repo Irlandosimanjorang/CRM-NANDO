@@ -307,11 +307,7 @@ function MiniKpi({
       <div className="flex items-center gap-1.5 h-full">
         <Icon
           size={11}
-          className={
-            active
-              ? "text-white"
-              : iconClass
-          }
+          className={active ? "text-white" : iconClass}
         />
 
         <div className="min-w-0 flex items-center gap-1">
@@ -322,12 +318,7 @@ function MiniKpi({
               tracking-wider
               font-semibold
               truncate
-              leading-none
-              ${
-                active
-                  ? "text-slate-400"
-                  : "text-slate-400"
-              }
+              ${active ? "text-slate-400" : "text-slate-400"}
             `}
           >
             {label}
@@ -338,11 +329,7 @@ function MiniKpi({
               text-xs
               leading-none
               font-bold
-              ${
-                active
-                  ? "text-white"
-                  : "text-slate-900"
-              }
+              ${active ? "text-white" : "text-slate-900"}
             `}
           >
             {value}
@@ -352,7 +339,6 @@ function MiniKpi({
     </button>
   );
 }
-
 /* =========================================================
    LEADS
 ========================================================= */
@@ -1415,10 +1401,10 @@ export default function Leads({
                 blank()
               )
             }
-            className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm shadow-orange-600/20"
+            className="flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white text-xs px-2.5 py-1 rounded-lg font-medium shadow-sm shadow-orange-600/20"
           >
 
-            <Plus size={14} />
+            <Plus size={12} />
 
             Lead
 
@@ -1511,569 +1497,330 @@ export default function Leads({
       ===================================================== */}
 
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 rounded-[32px] p-4 sm:p-5"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 rounded-[28px] p-3 sm:p-4"
         style={{
-          background:
-            "#fafbfc",
-
+          background: "#fafbfc",
           backgroundImage:
             "radial-gradient(rgba(15,23,42,0.045) 1px, transparent 1px)",
-
-          backgroundSize:
-            "18px 18px",
+          backgroundSize: "18px 18px",
         }}
       >
+        {pageItems.map((c) => {
+          const sm = stageMeta(stages, c.stage_key);
+          const wa = waLink(c.phone);
+          const web = normUrl(c.website);
 
-        {pageItems.map(
-          (c) => {
+          const stageIndex = Math.max(
+            0,
+            stages.findIndex((s) => s.key === c.stage_key)
+          );
+          const stageNumber =
+            stages.length > 0 ? stageIndex + 1 : 1;
+          const progressPercent =
+            stages.length > 1
+              ? Math.min(
+                  100,
+                  Math.max(
+                    0,
+                    (stageIndex / (stages.length - 1)) * 100
+                  )
+                )
+              : 0;
 
-            const sm =
-              stageMeta(
-                stages,
-                c.stage_key
-              );
+          const lastProgress = c.progressLog?.[0];
+          const lastContact =
+            lastProgress?.created_at ||
+            lastProgress?.date ||
+            lastProgress?.updated_at ||
+            "—";
+          const lastContactBy =
+            lastProgress?.author_name ||
+            lastProgress?.sales_owner ||
+            c.sales_owner ||
+            "Admin";
 
-            const wa =
-              waLink(
-                c.phone
-              );
-
-            const web =
-              normUrl(
-                c.website
-              );
-
-
-            return (
+          return (
+            <div
+              key={c.id}
+              onClick={() => setEdit(c)}
+              className="relative rounded-[24px] cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+              style={{
+                boxShadow: "0 8px 24px -14px rgba(15,23,42,0.28)",
+              }}
+            >
+              <CornerBrackets color="#0f172a" />
 
               <div
-                key={c.id}
-                onClick={() =>
-                  setEdit(c)
-                }
-                className="relative rounded-3xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+                className="rounded-[24px] overflow-hidden bg-white h-full"
                 style={{
-                  boxShadow:
-                    "0 8px 20px -10px rgba(15,23,42,0.18)",
+                  border: "1px solid rgba(15,23,42,0.10)",
                 }}
               >
-
-                <CornerBrackets
-                  color="#0891b2"
+                {/* orange top accent */}
+                <div
+                  style={{
+                    height: 4,
+                    background:
+                      "linear-gradient(90deg, #f97316, #fb923c)",
+                  }}
                 />
 
-
-                <div
-                  className="rounded-3xl overflow-hidden bg-white"
-                  style={{
-                    border:
-                      "1px solid rgba(15,23,42,0.08)",
-                  }}
-                >
-
-                  <div
-                    style={{
-                      height: 3,
-                      background:
-                        "linear-gradient(90deg, #f97316, #fb923c)",
-                    }}
-                  />
-
-
-                  <div className="p-4">
-
-                    <div className="flex items-start justify-between gap-2">
-
-                      <div className="min-w-0 flex-1">
-
-                        <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
-
-                          <span className="truncate">
-                            {c.name}
-                          </span>
-
-
-                          {typeBadge(
-                            c.company_type
-                          ) && (
-
-                            <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600 shrink-0">
-
-                              {typeBadge(
-                                c.company_type
-                              )}
-
-                            </span>
-
-                          )}
-
-
-                          {isNewLead(
-                            c
-                          ) && (
-
-                            <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white shrink-0">
-                              NEW
-                            </span>
-
-                          )}
-
-                        </div>
-
-
-                        <div className="text-[10px] text-slate-400 mt-0.5 truncate">
-                          {c.category ||
-                            "—"}
-                        </div>
-
+                <div className="p-4 sm:p-5">
+                  {/* HEADER */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-[0.16em] px-2 py-1 rounded-full bg-slate-50 text-slate-500 border border-slate-200">
+                          <span className="w-2 h-2 rounded-full bg-slate-400" />
+                          OPEN
+                        </span>
                       </div>
 
+                      <div className="font-bold text-slate-950 text-[17px] leading-[1.2] tracking-tight">
+                        {c.name}
+                      </div>
 
-                      {c.verified ? (
-
-                        <ShieldCheck
-                          size={14}
-                          className="text-emerald-500 shrink-0"
-                        />
-
-                      ) : (
-
-                        <ShieldAlert
-                          size={14}
-                          className="text-slate-300 shrink-0"
-                        />
-
-                      )}
-
+                      <div className="text-[11px] text-slate-400 mt-1.5 truncate">
+                        {c.category || "Lainnya"}
+                        <span className="mx-1.5">•</span>
+                        {c.city || c.province || "—"}
+                      </div>
                     </div>
 
-
-                    <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
-
-                      <StageChip
-                        hex={sm.hex}
-                        label={
-                          sm.label
-                        }
+                    {c.verified ? (
+                      <ShieldCheck
+                        size={19}
+                        className="text-emerald-500 shrink-0"
                       />
-
-
-                      {c.priority &&
-                        prioMeta(
-                          c.priority
-                        ) && (
-
-                          <StageChip
-                            hex={
-                              prioMeta(
-                                c.priority
-                              ).hex
-                            }
-                            label={
-                              prioMeta(
-                                c.priority
-                              ).label
-                            }
-                          />
-
-                        )}
-
-                    </div>
-
-
-                    <div className="mt-3 space-y-1.5 text-xs text-slate-600">
-
-                      <div className="flex items-center gap-1.5 truncate">
-
-                        <MapPin
-                          size={12}
-                          className="text-slate-300 shrink-0"
-                        />
-
-                        {c.city ||
-                          "—"}
-
-                      </div>
-
-
-                      {c.product && (
-
-                        <div className="truncate">
-
-                          <span className="text-slate-400">
-                            {
-                              productLabel
-                            }
-                            :
-                          </span>{" "}
-
-                          {
-                            c.product
-                          }
-
-                        </div>
-
-                      )}
-
-
-                      {!hideKeyPerson &&
-                        c.key_person && (
-
-                          <div className="truncate">
-
-                            <span className="text-slate-400">
-                              {
-                                keyPersonLabel
-                              }
-                              :
-                            </span>{" "}
-
-                            {
-                              c.key_person
-                            }
-
-                          </div>
-
-                        )}
-
-
-                      {!hideTitle &&
-                        c.key_person_title && (
-
-                          <div className="truncate">
-
-                            <span className="text-slate-400">
-                              {
-                                titleLabel
-                              }
-                              :
-                            </span>{" "}
-
-                            {
-                              c.key_person_title
-                            }
-
-                          </div>
-
-                        )}
-
-
-                      {c.phone && (
-
-                        <div className="truncate flex items-center gap-1.5">
-
-                          <Phone
-                            size={12}
-                            className="text-slate-300 shrink-0"
-                          />
-
-                          {
-                            c.phone
-                          }
-
-                        </div>
-
-                      )}
-
-
-                      {c.email && (
-
-                        <div className="truncate flex items-center gap-1.5">
-
-                          <Mail
-                            size={12}
-                            className="text-slate-300 shrink-0"
-                          />
-
-                          {
-                            c.email
-                          }
-
-                        </div>
-
-                      )}
-
-
-                      {!hideWebsite &&
-                        web && (
-
-                          <div className="truncate flex items-center gap-1.5">
-
-                            <Globe
-                              size={12}
-                              className="text-slate-300 shrink-0"
-                            />
-
-                            {prettyDomain(
-                              c.website
-                            )}
-
-                          </div>
-
-                        )}
-
-
-                      {customSlots.map(
-                        (slot) =>
-                          c[
-                            slot.key
-                          ] ? (
-
-                            <div
-                              key={
-                                slot.key
-                              }
-                              className="truncate"
-                            >
-
-                              <span className="text-slate-400">
-                                {
-                                  slot.label
-                                }
-                                :
-                              </span>{" "}
-
-                              {
-                                c[
-                                  slot.key
-                                ]
-                              }
-
-                            </div>
-
-                          ) : null
-                      )}
-
-
-                      {c.next_action && (
-
-                        <div className="mt-2 text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5 line-clamp-2">
-
-                          📌{" "}
-                          {
-                            c.next_action
-                          }
-
-                        </div>
-
-                      )}
-
-
-                      {c.wait_until &&
-                        new Date(
-                          c.wait_until
-                        ) >=
-                          new Date(
-                            todayISO()
-                          ) && (
-
-                          <div className="mt-1.5 text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5">
-
-                            ⏸️ Nunggu sampai{" "}
-
-                            {new Date(
-                              c.wait_until
-                            ).toLocaleDateString(
-                              "id-ID",
-                              {
-                                day:
-                                  "numeric",
-                                month:
-                                  "short",
-                              }
-                            )}
-
-                          </div>
-
-                        )}
-
-                    </div>
-
-
-                    <div
-                      className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1.5"
-                      onClick={(e) =>
-                        e.stopPropagation()
-                      }
-                    >
-
-                      {c.phone &&
-                        (
-                          wa ? (
-
-                            <a
-                              href={
-                                wa
-                              }
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"
-                              title={
-                                c.phone
-                              }
-                            >
-
-                              <Phone
-                                size={13}
-                              />
-
-                            </a>
-
-                          ) : (
-
-                            <span
-                              className="p-1.5 text-slate-300"
-                              title={
-                                c.phone
-                              }
-                            >
-
-                              <Phone
-                                size={13}
-                              />
-
-                            </span>
-
-                          )
-                        )}
-
-
-                      {c.email && (
-
-                        <a
-                          href={`mailto:${c.email}`}
-                          className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50"
-                          title={
-                            c.email
-                          }
-                        >
-
-                          <Mail
-                            size={13}
-                          />
-
-                        </a>
-
-                      )}
-
-
-                      <button
-                        onClick={(e) =>
-                          setDraftPopup({
-                            lead: c,
-                            rect:
-                              e.currentTarget.getBoundingClientRect(),
-                          })
-                        }
-                        className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50"
-                        title="Draft follow-up (AI)"
-                      >
-
-                        <Sparkles
-                          size={13}
-                        />
-
-                      </button>
-
-
-                      <div className="ml-auto flex items-center gap-0.5">
-
-                        <button
-                          onClick={() =>
-                            setEdit(
-                              c
-                            )
-                          }
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                        >
-
-                          <Pencil
-                            size={13}
-                          />
-
-                        </button>
-
-
-                        <button
-                          onClick={() =>
-                            del(
-                              c.id
-                            )
-                          }
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                        >
-
-                          <Trash2
-                            size={13}
-                          />
-
-                        </button>
-
-                      </div>
-
-                    </div>
-
-
-                    <button
-                      onClick={(e) => {
-
-                        e.stopPropagation();
-
-                        setProgressPopup({
-                          lead: c,
-                          autoFocus:
-                            true,
-                        });
-
-                      }}
-                      className="mt-2.5 w-full flex items-center gap-2 text-left text-xs font-mono text-slate-500 border-2 border-slate-200 bg-slate-50 rounded-xl px-3 py-2 hover:border-cyan-400 hover:text-cyan-700 hover:bg-cyan-50 transition-colors"
-                      title="Update progress harian"
-                    >
-
-                      <ClipboardList
-                        size={13}
-                        className="shrink-0 text-slate-400"
+                    ) : (
+                      <ShieldAlert
+                        size={19}
+                        className="text-slate-300 shrink-0"
                       />
-
-                      <span className="truncate">
-
-                        {c.progressLog?.[0]
-                          ? c
-                              .progressLog[0]
-                              .text
-                          : "> update progress hari ini…"}
-
-                      </span>
-
-                    </button>
-
+                    )}
                   </div>
 
+                  {/* PIPELINE */}
+                  <div className="mt-4 rounded-[22px] bg-slate-50/80 border border-slate-100 p-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <StageChip
+                        hex={sm.hex}
+                        label={sm.label}
+                      />
+
+                      <span className="text-[9px] font-mono font-semibold tracking-wider text-slate-400 uppercase">
+                        Stage {stageNumber}/{Math.max(stages.length, 1)}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 h-2 rounded-full bg-slate-200 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${progressPercent}%`,
+                          background:
+                            "linear-gradient(90deg, #f97316, #fb923c)",
+                        }}
+                      />
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400">
+                        Pipeline
+                      </span>
+                      <span className="text-[9px] font-mono font-bold text-slate-500">
+                        {Math.round(progressPercent)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* PRODUCT / PHONE */}
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    {c.phone ? (
+                      <div className="rounded-[18px] bg-slate-50 border border-slate-100 px-3 py-3 min-w-0">
+                        <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400">
+                          Phone
+                        </div>
+                        <div className="text-[12px] text-slate-700 mt-1 truncate">
+                          {c.phone}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-[18px] bg-slate-50 border border-slate-100 px-3 py-3 min-w-0">
+                        <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400">
+                          Key Person
+                        </div>
+                        <div className="text-[12px] text-slate-700 mt-1 truncate">
+                          {c.key_person || "—"}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="rounded-[18px] bg-slate-50 border border-slate-100 px-3 py-3 min-w-0">
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400">
+                        {productLabel || "Produk Dominan"}
+                      </div>
+                      <div className="text-[12px] text-slate-700 mt-1 truncate">
+                        {c.product || "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* EMAIL */}
+                  {c.email && (
+                    <div className="mt-2.5 flex items-center gap-2 text-[11px] text-slate-500 truncate px-1">
+                      <Mail
+                        size={14}
+                        className="text-slate-400 shrink-0"
+                      />
+                      <span className="truncate">{c.email}</span>
+                    </div>
+                  )}
+
+                  {/* LAST CONTACT / NEXT ACTION */}
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <div className="rounded-[18px] border border-slate-100 bg-white px-3 py-3 min-w-0">
+                      <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-wider text-slate-400">
+                        <span className="text-[11px]">◷</span>
+                        Last Contact
+                      </div>
+
+                      <div className="text-[12px] font-medium text-slate-700 mt-1.5 truncate">
+                        {lastContact === "—"
+                          ? "—"
+                          : new Date(lastContact).toLocaleDateString(
+                              "id-ID",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              }
+                            )}
+                      </div>
+
+                      {lastContact !== "—" && (
+                        <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                          oleh {lastContactBy}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-[18px] border border-orange-100 bg-orange-50/60 px-3 py-3 min-w-0">
+                      <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-wider text-orange-500">
+                        ↗ Next Action
+                      </div>
+
+                      <div className="text-[12px] font-medium text-orange-700 mt-1.5 line-clamp-2">
+                        {c.next_action || "Belum ditentukan"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* FOOTER ACTIONS */}
+                  <div
+                    className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {c.phone && (
+                      wa ? (
+                        <a
+                          href={wa}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"
+                          title={c.phone}
+                        >
+                          <Phone size={13} />
+                        </a>
+                      ) : (
+                        <span
+                          className="p-1.5 text-slate-300"
+                          title={c.phone}
+                        >
+                          <Phone size={13} />
+                        </span>
+                      )
+                    )}
+
+                    {c.email && (
+                      <a
+                        href={`mailto:${c.email}`}
+                        className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50"
+                        title={c.email}
+                      >
+                        <Mail size={13} />
+                      </a>
+                    )}
+
+                    <button
+                      onClick={(e) =>
+                        setDraftPopup({
+                          lead: c,
+                          rect:
+                            e.currentTarget.getBoundingClientRect(),
+                        })
+                      }
+                      className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50"
+                      title="Draft follow-up (AI)"
+                    >
+                      <Sparkles size={13} />
+                    </button>
+
+                    <div className="ml-auto flex items-center gap-0.5">
+                      <button
+                        onClick={() => setEdit(c)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                        title="Edit lead"
+                      >
+                        <Pencil size={13} />
+                      </button>
+
+                      <button
+                        onClick={() => del(c.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        title="Hapus lead"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* PROGRESS UPDATE */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProgressPopup({
+                        lead: c,
+                        autoFocus: true,
+                      });
+                    }}
+                    className="mt-2.5 w-full flex items-center gap-2 text-left text-[11px] font-mono text-slate-500 border border-slate-200 bg-slate-50 rounded-xl px-3 py-2 hover:border-cyan-400 hover:text-cyan-700 hover:bg-cyan-50 transition-colors"
+                    title="Update progress harian"
+                  >
+                    <ClipboardList
+                      size={13}
+                      className="shrink-0 text-slate-400"
+                    />
+
+                    <span className="truncate">
+                      {c.progressLog?.[0]
+                        ? c.progressLog[0].text
+                        : "> update progress hari ini…"}
+                    </span>
+                  </button>
                 </div>
-
               </div>
+            </div>
+          );
+        })}
 
-            );
-
-          }
-        )}
-
-
-        {filtered.length ===
-          0 && (
-
+        {filtered.length === 0 && (
           <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-3xl">
-
             Belum ada lead yang cocok.
-            Import Excel atau tambah
-            manual.
-
+            Import Excel atau tambah manual.
           </div>
-
         )}
-
       </div>
-
 
       {/* =====================================================
           PAGINATION
