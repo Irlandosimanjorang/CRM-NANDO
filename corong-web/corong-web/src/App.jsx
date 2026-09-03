@@ -844,4 +844,22 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
           onKeyDown={(e) => e.key === "Enter" && verify()}
         />
         {err && <div className="mt-3 text-xs bg-rose-50 text-rose-700 rounded-lg p-2.5">{err}</div>}
-        <button onClick={verify} disabled={busy || code.length !
+        <button onClick={verify} disabled={busy || code.length !== 6} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm py-3 rounded-xl font-semibold flex items-center justify-center gap-1.5">
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Verifikasi
+        </button>
+        <button onClick={onCancel} className="w-full mt-2 text-xs text-slate-400 hover:text-slate-600 py-2">
+          Bukan kamu? Ganti akun
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Splash({ inline }) {
+  return (
+    <div className={`${inline ? "py-20" : "min-h-screen"} bg-slate-50 flex flex-col items-center justify-center gap-3`}>
+      <div className="animate-pulse"><NextoRobotHead size={48} /></div>
+      <div className="text-slate-400 text-sm flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
+    </div>
+  );
+}
