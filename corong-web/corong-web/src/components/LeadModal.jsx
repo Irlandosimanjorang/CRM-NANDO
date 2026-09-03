@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles } from "lucide-react";
+import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtDate, todayISO, stageMeta, chipStyle } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
@@ -76,7 +76,11 @@ function fillTemplate(str, lead) {
 
 const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Gak ada budget", "Gak ada kebutuhan", "Kualitas/spek", "Respons lambat", "Lainnya"];
 
-export default function LeadModal({ lead, stages, settings, industry, onClose, onSaved }) {
+// myLevel: 0=Free, 1=Standard, 2=Professional+ (dikirim dari App.jsx) -
+// dipake buat ngunci tombol AI yang backend-nya udah di-gate Professional
+// (guess-outcome-reason.ts), biar user Free/Standard liat versi "terkunci"
+// yang rapi, bukan klik terus dapet error 403 mentah.
+export default function LeadModal({ lead, stages, settings, industry, myLevel = 2, onClose, onSaved }) {
   const [f, setF] = useState({ ...lead });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
@@ -85,6 +89,7 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
   const [busy, setBusy] = useState(false);
   const [locBusy, setLocBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const isProfessional = myLevel >= 2;
 
   // ---- OUTCOME MEMORY - pas Tahap diganti ke tipe Menang/Kalah (dan
   // sebelumnya belum closed), munculin form kecil nanya kenapa. Ini yang
@@ -111,6 +116,7 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
 
   const guessOutcome = async () => {
     if (!lead.id) return;
+    if (!isProfessional) { alert("Fitur \"biarin AI nebak\" itu khusus paket Professional ke atas. Isi manual aja dulu ya, atau upgrade di tab Pengaturan."); return; }
     setOutcomeGuessing(true);
     try {
       const res = await db.guessOutcomeReason(lead.id, outcomeResult);
@@ -282,8 +288,14 @@ export default function LeadModal({ lead, stages, settings, industry, onClose, o
               <Field label="Detail (opsional)">
                 <textarea className={inp + " min-h-[70px]"} value={outcomeReason} onChange={(e) => setOutcomeReason(e.target.value)} placeholder="Ceritain singkat kenapa..." />
               </Field>
-              <button onClick={guessOutcome} disabled={outcomeGuessing || !lead.id} className="text-xs border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 rounded-lg px-3 py-1.5 font-medium flex items-center gap-1.5">
-                {outcomeGuessing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} Biarin AI nebak dari progress notes
+              <button
+                onClick={guessOutcome}
+                disabled={outcomeGuessing || !lead.id || !isProfessional}
+                title={!isProfessional ? "Khusus paket Professional ke atas" : undefined}
+                className="text-xs border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 rounded-lg px-3 py-1.5 font-medium flex items-center gap-1.5"
+              >
+                {outcomeGuessing ? <Loader2 size={12} className="animate-spin" /> : !isProfessional ? <Lock size={12} /> : <Sparkles size={12} />}
+                {!isProfessional ? "Biarin AI nebak (Professional)" : "Biarin AI nebak dari progress notes"}
               </button>
               <p className="text-[10px] text-slate-400">Kesimpen sebagai "Outcome Memory" - AI Advisor bakal belajar pola ini buat rekomendasi lead lain ke depannya.</p>
             </div>
