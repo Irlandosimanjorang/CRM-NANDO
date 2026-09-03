@@ -339,7 +339,7 @@ export default function Settings({ settings, stages, leads, onChanged }) {
                     </button>
                   )
                 ) : (
-                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise (Rp599rb/bulan, maks 6 orang) buat bisa undang anggota tim.</p>
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise buat bisa undang anggota tim.</p>
                 )}
 
                 {/* Kotak "Punya kode undangan?" ini sekarang keliatan buat SEMUA
