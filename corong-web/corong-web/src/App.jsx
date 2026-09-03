@@ -310,16 +310,26 @@ export default function App() {
     );
   }
 
-  // ---- SISTEM 2 TIPE (FREE / PREMIUM) ----
+  // ---- SISTEM 3 TIER (FREE / STANDARD / PROFESSIONAL) ----
   // Gak ada trial otomatis - daftar langsung dapet Free (Dashboard & Leads doang).
-  // Fitur AI (Bot Telegram, AI Advisor, Rekam Meeting, dst) pake token API
-  // berbayar, jadi cuma kebuka abis di-upgrade ke Premium (settings.plan = 'premium').
-  const isPremium = settings.plan === "premium" || org?.plan === "enterprise";
-  const FREE_TABS = ["dashboard", "leads", "industridemo"];
+  // "premium" tetep dipake sebagai VALUE di database (biar user yang udah
+  // bayar sekarang gak perlu di-migrasi) tapi sekarang artinya "Professional"
+  // (tier tertinggi individual) - "standard" adalah tier BARU di antara
+  // Free dan Professional. Enterprise (org.plan) otomatis dapet level
+  // Professional + fitur tim tambahan yang di-gate terpisah di Settings.jsx.
+  const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
+  const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
+  const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
+  // Level minimal tiap tab: 0=Free, 1=Standard, 2=Professional.
+  // Tab yang gak disebutin di sini otomatis level 0 (Free).
+  const TAB_MIN_LEVEL = {
+    komunitas: 1, settings: 1,
+    generateleads: 2, deal: 2, visitfollowup: 2, kompetitor: 2, advisor: 2,
+  };
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
   const effectiveTab = tab;
-  const isLocked = (key) => !loading && !isPremium && !FREE_TABS.includes(key);
+  const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
   // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
   // Customer biasa (99.9% user) gak akan pernah liat item ini nongol sama sekali.
   const navItems = settings?.is_platform_admin ? [...NAV, ADMIN_NAV_ITEM] : NAV;
@@ -425,7 +435,7 @@ export default function App() {
               )}
               <span className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-wide text-slate-500">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 nexto-status-dot" />
-                {isPremium ? "PRO" : "FREE"}
+                {myLevel >= 2 ? "PRO" : myLevel === 1 ? "STANDARD" : "FREE"}
               </span>
             </div>
           </div>
@@ -512,7 +522,7 @@ export default function App() {
         </header>
 
         <main className="relative z-10 flex-1 w-full max-w-[1440px] mx-auto px-4 py-5 md:px-7 md:py-7 lg:px-9 pb-32">
-          {!loading && !isPremium && (
+          {!loading && myLevel < 2 && (
             <div className="mb-5 overflow-hidden rounded-[20px] border border-orange-200/70 bg-gradient-to-r from-orange-50 via-white to-orange-50/60 shadow-[0_12px_35px_-25px_rgba(249,115,22,.45)]">
               <div className="flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-5">
                 <div className="flex items-start gap-3">
@@ -520,11 +530,11 @@ export default function App() {
                     <Sparkles size={15} />
                   </div>
                   <div>
-                    <div className="text-[12px] font-semibold text-slate-800">Kamu sedang memakai Nexto Free</div>
-                    <div className="mt-0.5 text-[10px] leading-4 text-slate-500">Dashboard & Leads aktif. Upgrade untuk membuka AI, Deal, Visit, Calendar, dan automation.</div>
+                    <div className="text-[12px] font-semibold text-slate-800">{myLevel === 1 ? "Kamu sedang memakai Nexto Standard" : "Kamu sedang memakai Nexto Free"}</div>
+                    <div className="mt-0.5 text-[10px] leading-4 text-slate-500">{myLevel === 1 ? "Leads & Komunitas aktif. Upgrade ke Professional untuk membuka AI, Deal, Visit, Calendar, dan automation." : "Dashboard & Leads aktif. Upgrade untuk membuka Komunitas, AI, Deal, Visit, Calendar, dan automation."}</div>
                   </div>
                 </div>
-                <a href="https://subscription.myr.id/m/nexto-premium-88379/" target="_blank" rel="noreferrer" className="shrink-0 rounded-xl bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold text-white shadow-[0_8px_18px_-10px_rgba(15,23,42,.7)] hover:bg-slate-800">Upgrade Premium →</a>
+                <a href="https://subscription.myr.id/m/nexto-premium-88379/" target="_blank" rel="noreferrer" className="shrink-0 rounded-xl bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold text-white shadow-[0_8px_18px_-10px_rgba(15,23,42,.7)] hover:bg-slate-800">Upgrade Professional →</a>
               </div>
               <div className="border-t border-orange-200/50 px-4 py-3 md:px-5">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -579,7 +589,7 @@ export default function App() {
         </nav>
       </div>
 
-      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} />}
+      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} />}
     </div>
   );
 }
@@ -834,22 +844,4 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
           onKeyDown={(e) => e.key === "Enter" && verify()}
         />
         {err && <div className="mt-3 text-xs bg-rose-50 text-rose-700 rounded-lg p-2.5">{err}</div>}
-        <button onClick={verify} disabled={busy || code.length !== 6} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm py-3 rounded-xl font-semibold flex items-center justify-center gap-1.5">
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Verifikasi
-        </button>
-        <button onClick={onCancel} className="w-full mt-2 text-xs text-slate-400 hover:text-slate-600 py-2">
-          Bukan kamu? Ganti akun
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Splash({ inline }) {
-  return (
-    <div className={`${inline ? "py-20" : "min-h-screen"} bg-slate-50 flex flex-col items-center justify-center gap-3`}>
-      <div className="animate-pulse"><NextoRobotHead size={48} /></div>
-      <div className="text-slate-400 text-sm flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
-    </div>
-  );
-}
+        <button onClick={verify} disabled={busy || code.length !
