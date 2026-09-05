@@ -321,10 +321,11 @@ const INDUSTRIES = [
 const STANDARD_FEATURES = [
   "Kelola Leads — kartu per perusahaan",
   "Smart Import AI",
+  "Vector Memory ringan (AI inget catatan lama yang relevan)",
   "Recycle Bin",
   "Deteksi Duplikat",
   "Nex — Komunitas Sesama Sales",
-  "Good Morning Dashboard (rekomendasi AI harian)",
+  "Daily Digest (rekomendasi AI harian)",
 ];
 
 const PROFESSIONAL_FEATURES = [
@@ -335,7 +336,6 @@ const PROFESSIONAL_FEATURES = [
   "Rekam Meeting otomatis (AI)",
   "Customer State (AI)",
   "Outcome Memory (AI)",
-  "Vector Memory (AI)",
   "GPS Check-in",
   "AI Advisor harian",
   "AI Draft Follow-up (WhatsApp & Email)",
@@ -1803,7 +1803,7 @@ export default function Auth() {
                 <span className="block text-slate-500">yang mau kamu pekerjakan?</span>
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-[13px] leading-relaxed text-slate-500">
-                Standard cuma CRM. Dari Professional ke atas, engine AI-nya beneran nyala — analisis, draft pesan, dan eksekusi jalan sendiri di belakang layar.
+                Standard udah dibekelin AI ringan (import & rekomendasi harian). Dari Professional ke atas, AI Sales Engine-nya nyala penuh — analisis, draft pesan, dan eksekusi jalan sendiri di belakang layar.
               </p>
             </div>
 
@@ -1827,7 +1827,7 @@ export default function Auth() {
                 </div>
 
                 <div className="mt-1 text-[10px] text-slate-500">
-                  CRM inti, tanpa AI — untuk yang mau rapiin data dulu
+                  CRM inti + AI ringan — untuk yang mau rapiin data leads dulu
                 </div>
 
                 <div className="my-7 h-px bg-white/[0.06]" />
