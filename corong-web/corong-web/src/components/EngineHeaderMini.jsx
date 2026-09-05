@@ -11,7 +11,7 @@
 
 export default function EngineHeaderMini({ stats }) {
   const chips = [
-    { key: "active", label: "Lead", color: "#0ea5e9" },
+    { key: "total", label: "Lead", color: "#0ea5e9" },
     { key: "followup", label: "Follow-up", color: "#f97316" },
     { key: "visitsToday", label: "Visit", color: "#a855f7" },
     { key: "deals", label: "Deal", color: "#22d3ee" },

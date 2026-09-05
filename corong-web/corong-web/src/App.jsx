@@ -385,6 +385,7 @@ export default function App() {
   const headerStatsWon = stageList.filter((x) => x.type === "won").map((x) => x.key);
   const headerStatsActiveKeys = stageList.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
   const headerStats = {
+    total: leads.length,
     active: leads.filter((c) => headerStatsActiveKeys.includes(c.stage_key)).length,
     followup: leads.filter((c) => c.next_action && c.next_action.trim()).length,
     deals: leads.filter((c) => headerStatsWon.includes(c.stage_key)).length,
