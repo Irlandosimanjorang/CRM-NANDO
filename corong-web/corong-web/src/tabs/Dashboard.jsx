@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Loader2, Volume2, Zap } from "lucide-react";
-import LiveEngineLoop from "../components/LiveEngineLoop";
+import ReactorStrip from "../components/ReactorStrip";
 import * as db from "../lib/db";
 import { todayISO, fmtRp } from "../lib/helpers";
 import { NextoRobotHead } from "../Auth";
@@ -504,7 +504,7 @@ export default function Dashboard({ leads, stages, dealTransactions, settings, o
 
   return (
     <div className="space-y-5">
-      <LiveEngineLoop stats={s} />
+      <ReactorStrip stats={s} />
 
       <div>
         <p className="text-xs text-slate-400 capitalize">{new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
