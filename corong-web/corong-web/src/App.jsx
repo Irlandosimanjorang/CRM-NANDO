@@ -374,16 +374,22 @@ export default function App() {
   // Statistik ringkas buat EngineHeaderMini - logika sama kayak stats di
   // Dashboard.jsx (activeKeys/won dari stages), dihitung ulang di sini biar
   // header (global, tampil di semua tab) gak perlu depend ke Dashboard.
-  const headerStats = useMemo(() => {
-    const won = stageList.filter((x) => x.type === "won").map((x) => x.key);
-    const activeKeys = stageList.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
-    return {
-      active: leads.filter((c) => activeKeys.includes(c.stage_key)).length,
-      followup: leads.filter((c) => c.next_action && c.next_action.trim()).length,
-      deals: leads.filter((c) => won.includes(c.stage_key)).length,
-      visitsToday: leads.filter((c) => c.visit_date === todayISO()).length,
-    };
-  }, [leads, stageList]);
+  // BUG FIX: sebelumnya ini useMemo() - tapi baris ini ada SETELAH beberapa
+  // early return (!isConfigured/!authReady/!session/mfa.checking) di atas.
+  // Hook gak boleh dipanggil kondisional - begitu user login (lolos semua
+  // early return itu), jumlah hook yang kepanggil jadi beda dari render
+  // sebelumnya (pas masih di halaman login), bikin React crash ("Rendered
+  // more hooks than during the previous render") persis pas transisi ke
+  // Dashboard. Diganti jadi variabel biasa (bukan hook) - aman dipanggil
+  // kondisional, cuma kehilangan memoization (gak masalah, komputasinya ringan).
+  const headerStatsWon = stageList.filter((x) => x.type === "won").map((x) => x.key);
+  const headerStatsActiveKeys = stageList.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
+  const headerStats = {
+    active: leads.filter((c) => headerStatsActiveKeys.includes(c.stage_key)).length,
+    followup: leads.filter((c) => c.next_action && c.next_action.trim()).length,
+    deals: leads.filter((c) => headerStatsWon.includes(c.stage_key)).length,
+    visitsToday: leads.filter((c) => c.visit_date === todayISO()).length,
+  };
 
   const effectiveTab = tab;
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
