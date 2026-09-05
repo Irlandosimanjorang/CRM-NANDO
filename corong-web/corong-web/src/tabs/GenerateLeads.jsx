@@ -44,7 +44,11 @@ function Field({ icon: Icon, value }) {
   );
 }
 
-export default function GenerateLeads({ stages, onChanged }) {
+// onNotify (opsional) - dipanggil pas generate SELESAI (sukses/gagal), biar
+// user tetep dapet kabar walau dia udah pindah ke tab lain pas nungguin
+// (komponen ini sekarang selalu ke-mount di App.jsx, jadi proses ini gak
+// bakal keputus/ilang lagi cuma gara-gara ganti tab).
+export default function GenerateLeads({ stages, onChanged, onNotify }) {
   const [keyword, setKeyword] = useState("");
   const [province, setProvince] = useState("");
   const [targetRole, setTargetRole] = useState("");
@@ -77,10 +81,13 @@ export default function GenerateLeads({ stages, onChanged }) {
     setBusy(true); setMsg("");
     try {
       const res = await db.generateLeads({ keyword, province, targetRole, productSold, companyScale });
-      setMsg(`✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`);
+      const successMsg = `✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`;
+      setMsg(successMsg);
+      onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
       load();
     } catch (e) {
       setMsg("Gagal: " + e.message);
+      onNotify?.(`Generate Leads gagal: ${e.message}`, "error");
     } finally {
       setBusy(false);
     }
@@ -114,7 +121,7 @@ export default function GenerateLeads({ stages, onChanged }) {
             <Info size={14} />
           </button>
         </div>
-        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Provinsi opsional (kosongin buat cari se-Indonesia), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 2x seminggu (gak boleh di hari yang sama).</p>
+        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Provinsi opsional (kosongin buat cari se-Indonesia), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 1x seminggu.</p>
 
         {showInfo && (
           <div className="mt-3 bg-orange-50/60 border border-orange-100 rounded-2xl p-4 relative">
@@ -137,16 +144,14 @@ export default function GenerateLeads({ stages, onChanged }) {
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
         <div className="flex items-center gap-2 mb-4">
-          {[0, 1].map((i) => (
-            <div key={i} className={`h-1.5 flex-1 rounded-full ${i < cooldown.usedThisWeek ? "bg-orange-500" : "bg-slate-100"}`} />
-          ))}
-          <span className="text-[11px] text-slate-400 shrink-0 ml-1">{cooldown.usedThisWeek}/2 minggu ini</span>
+          <div className={`h-1.5 flex-1 rounded-full ${cooldown.usedThisWeek >= 1 ? "bg-orange-500" : "bg-slate-100"}`} />
+          <span className="text-[11px] text-slate-400 shrink-0 ml-1">{cooldown.usedThisWeek}/1 minggu ini</span>
         </div>
 
         {!cooldown.canGenerate ? (
           <div className="flex items-center gap-2.5 text-sm text-amber-700 bg-amber-50 rounded-2xl p-4">
             <Clock size={18} className="shrink-0" />
-            <span>{cooldown.usedThisWeek >= 2 ? "Kuota 2x/minggu udah abis" : "Udah generate hari ini"} — bisa lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
+            <span>Kuota 1x/minggu udah kepake — bisa lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
           </div>
         ) : (
           <div className="space-y-3">
@@ -178,7 +183,7 @@ export default function GenerateLeads({ stages, onChanged }) {
               </label>
             </div>
             <button onClick={generate} disabled={busy || !productSold.trim() || !keyword.trim() || !targetRole.trim()} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
-              {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} {busy ? "Lagi nyari (bisa 1-2 menit)…" : "Generate 15 Leads"}
+              {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} {busy ? "Lagi nyari (bisa 1-2 menit)… bebas pindah tab, nanti ada notif" : "Generate 15 Leads"}
             </button>
           </div>
         )}
