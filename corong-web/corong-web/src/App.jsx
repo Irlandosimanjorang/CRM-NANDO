@@ -4,8 +4,6 @@ import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
 import Auth from "./Auth";
 import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
-import EngineHeaderMini from "./components/EngineHeaderMini";
-import { todayISO } from "./lib/helpers";
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
 import GenerateLeads from "./tabs/GenerateLeads";
@@ -371,20 +369,6 @@ export default function App() {
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
 
-  // Statistik ringkas buat EngineHeaderMini - logika sama kayak stats di
-  // Dashboard.jsx (activeKeys/won dari stages), dihitung ulang di sini biar
-  // header (global, tampil di semua tab) gak perlu depend ke Dashboard.
-  const headerStats = useMemo(() => {
-    const won = stageList.filter((x) => x.type === "won").map((x) => x.key);
-    const activeKeys = stageList.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
-    return {
-      active: leads.filter((c) => activeKeys.includes(c.stage_key)).length,
-      followup: leads.filter((c) => c.next_action && c.next_action.trim()).length,
-      deals: leads.filter((c) => won.includes(c.stage_key)).length,
-      visitsToday: leads.filter((c) => c.visit_date === todayISO()).length,
-    };
-  }, [leads, stageList]);
-
   const effectiveTab = tab;
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
   // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
@@ -585,8 +569,6 @@ export default function App() {
               </div>
             </div>
           </div>
-
-          <EngineHeaderMini stats={headerStats} />
 
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/75 px-3.5 py-2 text-[10px] text-slate-400 shadow-sm">
