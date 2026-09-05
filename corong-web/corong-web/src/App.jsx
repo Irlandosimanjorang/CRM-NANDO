@@ -21,6 +21,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
+  CheckCircle2, XCircle, Info as InfoIcon,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -61,6 +62,15 @@ const NAV = [
 // jadi meskipun somehow ke-tembus tampil, data-nya tetep ke-block backend.
 const ADMIN_NAV_ITEM = { key: "adminops", label: "Dashboard Karyawan AI", short: "AI Ops", icon: Bot };
 
+// ---- COST/BUG FIX (5 Sep 2026) ----
+// Tab-tab di daftar ini SELALU di-mount (gak pernah di-unmount pas pindah
+// tab lain), cuma disembunyiin pake CSS display:none. Ini biar proses async
+// yang lagi jalan di dalamnya (generate leads yang makan 1-2 menit, dst)
+// GAK KEPUTUS/ILANG state-nya cuma gara-gara user iseng pindah tab pas
+// nungguin. Tab lain yang gak punya proses async lama-lama biarin tetep
+// conditional-mount kayak sebelumnya (lebih hemat memori, gak ada downside).
+const KEEP_MOUNTED_TABS = ["generateleads"];
+
 function ConfigScreen() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -72,6 +82,27 @@ function ConfigScreen() {
 VITE_SUPABASE_ANON_KEY=...</pre>
         <p className="text-xs text-slate-400 mt-3">Ambil dari Supabase → Project Settings → API. Terus restart <code className="bg-slate-100 px-1 rounded">npm run dev</code>.</p>
       </div>
+    </div>
+  );
+}
+
+// ---- TOAST NOTIFICATION GLOBAL ----
+// Dipake buat ngasih tau user hasil dari proses async yang lama (generate
+// leads, draft follow-up, dst) WALAUPUN user-nya udah pindah ke tab lain
+// pas prosesnya masih jalan - notif ini muncul di atas SEMUA tab, gak
+// peduli tab mana yang lagi aktif.
+function Toast({ toast, onDismiss }) {
+  const isError = toast.type === "error";
+  const Icon = isError ? XCircle : toast.type === "info" ? InfoIcon : CheckCircle2;
+  return (
+    <div
+      className={`pointer-events-auto flex items-start gap-2.5 w-full max-w-sm rounded-2xl px-4 py-3 shadow-[0_16px_40px_-12px_rgba(15,23,42,0.35)] border ${isError ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-white border-slate-200 text-slate-800"}`}
+    >
+      <Icon size={18} className={`shrink-0 mt-0.5 ${isError ? "text-rose-500" : "text-emerald-500"}`} />
+      <span className="text-sm flex-1">{toast.text}</span>
+      <button onClick={() => onDismiss(toast.id)} className="shrink-0 text-slate-300 hover:text-slate-500">
+        <XCircle size={15} />
+      </button>
     </div>
   );
 }
@@ -105,6 +136,15 @@ export default function App() {
   };
   const [editLead, setEditLead] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // ---- TOAST STATE - lihat komentar di komponen Toast di atas ----
+  const [toasts, setToasts] = useState([]);
+  const pushToast = (text, type = "success") => {
+    const id = `${Date.now()}-${Math.random()}`;
+    setToasts((t) => [...t, { id, text, type }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 7000);
+  };
+  const dismissToast = (id) => setToasts((t) => t.filter((x) => x.id !== id));
 
   useEffect(() => {
     if (!isConfigured) { setAuthReady(true); return; }
@@ -406,6 +446,13 @@ export default function App() {
         </div>
       )}
 
+      {/* ---- TOAST CONTAINER - fixed di atas semua tab, gak ikut kepengaruh mount/unmount tab manapun ---- */}
+      {toasts.length > 0 && (
+        <div className="fixed z-[1200] top-4 inset-x-0 flex flex-col items-center gap-2 px-4 pointer-events-none md:top-5 md:right-5 md:left-auto md:items-end">
+          {toasts.map((t) => <Toast key={t.id} toast={t} onDismiss={dismissToast} />)}
+        </div>
+      )}
+
       {/* DESKTOP SIDEBAR */}
       <aside className="nexto-sidebar hidden md:flex flex-col w-[248px] fixed top-0 left-0 h-screen z-30 text-white border-r border-white/[0.06]">
         <div className="px-4 pt-4 pb-3">
@@ -551,11 +598,22 @@ export default function App() {
 
           {loading ? <Splash inline /> : (
             <>
+              {/* ---- TAB YANG SELALU KE-MOUNT (lihat KEEP_MOUNTED_TABS di atas) ----
+                  Disembunyiin pake CSS display:none, BUKAN di-unmount - biar
+                  proses async lama (generate leads) gak keputus/ilang state-nya
+                  cuma gara-gara user pindah tab pas nungguin. ---- */}
+              <div style={{ display: effectiveTab === "generateleads" ? "block" : "none" }}>
+                <PreviewLock locked={isLocked("generateleads")}>
+                  <GenerateLeads stages={stageList} onChanged={reload} onNotify={pushToast} />
+                </PreviewLock>
+              </div>
+
+              {/* ---- TAB LAIN - tetep conditional mount/unmount kayak sebelumnya
+                  (gak ada proses async lama yang perlu "diselamatin" di sini) ---- */}
               {effectiveTab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} />}
               {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} onChanged={reload} />}
-              {effectiveTab === "generateleads" && <PreviewLock locked={isLocked("generateleads")}><GenerateLeads stages={stageList} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
+              {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} /></PreviewLock>}
               {effectiveTab === "kompetitor" && <PreviewLock locked={isLocked("kompetitor")}><Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "komunitas" && <PreviewLock locked={isLocked("komunitas")}><Nex dummy={isLocked("komunitas")} /></PreviewLock>}
               {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} /></PreviewLock>}
