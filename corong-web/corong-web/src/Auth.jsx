@@ -30,6 +30,10 @@ import {
   Database,
   Layers,
   Volume2,
+  ShieldCheck,
+  KeyRound,
+  Lock,
+  History,
 
 } from "lucide-react";
 
@@ -256,6 +260,35 @@ export function NextoDarkWordmark({ width = 108, className = "" }) {
   );
 }
 
+
+// ============================================================
+// SECTION KEAMANAN AKUN (5 Sep 2026) - trust-building sebelum masuk ke
+// pricing, sekalian ngasih tau fitur 2FA + kode recovery yang baru
+// ditambahin biar user tau akun mereka gak bakal kekunci permanen kalau
+// HP hilang (celah yang sempet ada, udah ditambal).
+// ============================================================
+const SECURITY_FEATURES = [
+  {
+    icon: ShieldCheck,
+    title: "Autentikasi 2 Langkah (2FA)",
+    desc: "Aktifin 2FA pakai app authenticator (Google Authenticator, Authy, dll) — abis password bener, login masih minta kode 6 digit. Akun tetep aman walau password bocor.",
+  },
+  {
+    icon: KeyRound,
+    title: "Kode Recovery",
+    desc: "Begitu 2FA aktif, kamu dikasih 10 kode cadangan sekali-pakai. HP hilang atau app authenticator-nya kehapus? Tinggal pakai satu kode itu buat tetep bisa masuk — gak pernah kekunci permanen dari akun sendiri.",
+  },
+  {
+    icon: Lock,
+    title: "Data Timmu Terisolasi",
+    desc: "Row Level Security (RLS) mastiin data organisasimu gak bisa ketembus/keliatan sama organisasi lain, sekalipun sama-sama pengguna Nexto.",
+  },
+  {
+    icon: History,
+    title: "Audit Log Aktivitas",
+    desc: "Perubahan sensitif (hapus lead, hapus kompetitor, dst) tercatat rapi — gampang ditelusuri kalau ada yang perlu dicek ulang.",
+  },
+];
 
 const INDUSTRIES = [
   {
@@ -1405,6 +1438,12 @@ export default function Auth() {
               Industri
             </a>
             <a
+              href="#keamanan"
+              className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
+            >
+              Keamanan
+            </a>
+            <a
               href="#harga"
               className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
             >
@@ -1444,6 +1483,7 @@ export default function Auth() {
               {[
                 ["#cara-kerja", "Cara Kerja"],
                 ["#industri", "Industri"],
+                ["#keamanan", "Keamanan"],
                 ["#harga", "Harga"],
               ].map(([href, label]) => (
                 <a
@@ -1679,6 +1719,59 @@ export default function Auth() {
                   <IndustryDemo />
                 </div>
               )}
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            KEAMANAN AKUN
+        ========================================================== */}
+        <section id="keamanan" className="bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-2xl text-center">
+              <SectionLabel>Keamanan akun</SectionLabel>
+
+              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[48px]">
+                Data lead kamu,
+                <span className="block text-orange-600">dijaga kayak brankas.</span>
+              </h2>
+
+              <p className="mt-5 text-[13px] leading-6 text-slate-500">
+                Ratusan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis kamu. Makanya keamanan akun bukan fitur tempelan.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-4 sm:grid-cols-2">
+              {SECURITY_FEATURES.map((f) => {
+                const Icon = f.icon;
+                return (
+                  <div
+                    key={f.title}
+                    className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 transition hover:border-orange-200"
+                  >
+                    <div className="absolute right-[-40px] top-[-40px] h-32 w-32 rounded-full bg-orange-100/50 blur-2xl transition group-hover:bg-orange-200/60" />
+                    <div className="relative">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                        <Icon size={18} />
+                      </div>
+                      <div className="mt-4 text-[14px] font-bold tracking-tight text-slate-900">{f.title}</div>
+                      <p className="mt-2 text-[12px] leading-5 text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
+              <div className="text-[12px] font-bold text-slate-800">
+                Transparan soal data kamu
+              </div>
+              <div className="mt-1 text-[10px] leading-5 text-slate-400">
+                Data lead/progress tetap milikmu, gak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) &amp; OpenAI untuk diproses — kami sebutkan jelas apa & kenapa di{" "}
+                <button onClick={() => setLegalModal("privacy")} className="font-semibold text-orange-600 underline hover:text-orange-700">
+                  Kebijakan Privasi
+                </button>.
+              </div>
             </div>
           </div>
         </section>
