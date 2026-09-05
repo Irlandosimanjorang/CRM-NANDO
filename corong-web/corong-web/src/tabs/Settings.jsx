@@ -43,6 +43,29 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   const [mfaMsg, setMfaMsg] = useState("");
   const [mfaMsgOk, setMfaMsgOk] = useState(false);
 
+  // ---- KODE RECOVERY 2FA - tambalan buat celah "HP hilang = terkunci
+  // permanen". Plaintext-nya CUMA ada di state ini sesaat setelah generate,
+  // gak pernah disimpen ke mana pun (server cuma nyimpen hash-nya) - begitu
+  // di-refresh/pindah tab, ilang dari layar dan gak bisa diliat ulang. ----
+  const [recoveryCodes, setRecoveryCodes] = useState(null);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryMsg, setRecoveryMsg] = useState("");
+  const [recoverySavedConfirm, setRecoverySavedConfirm] = useState(false);
+
+  const generateRecoveryCodes = async () => {
+    setRecoveryBusy(true); setRecoveryMsg(""); setRecoverySavedConfirm(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("mfa-recovery", { body: { action: "generate" } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setRecoveryCodes(data.codes);
+    } catch (e) {
+      setRecoveryMsg("Gagal bikin kode recovery: " + e.message);
+    } finally {
+      setRecoveryBusy(false);
+    }
+  };
+
   const loadMfaFactors = async () => {
     setMfaLoading(true);
     try {
@@ -91,6 +114,7 @@ export default function Settings({ settings, stages, leads, onChanged }) {
       setMfaMsg("✅ 2FA berhasil diaktifkan! Login berikutnya bakal minta kode dari app authenticator kamu."); setMfaMsgOk(true);
       setMfaEnrolling(false); setMfaPendingFactorId(null); setMfaQrCode(""); setMfaSecret(""); setMfaCode("");
       loadMfaFactors();
+      generateRecoveryCodes(); // langsung siapin kode recovery begitu 2FA aktif - jangan sampe user lupa/gak pernah punya kode cadangan
     } catch (e) {
       setMfaMsg("Kode salah/kedaluwarsa, coba lagi: " + e.message); setMfaMsgOk(false);
     } finally {
@@ -504,6 +528,49 @@ export default function Settings({ settings, stages, leads, onChanged }) {
               {mfaBusy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Aktifkan 2FA
             </button>
           </>
+        )}
+
+        {/* ---- KODE RECOVERY - cuma relevan kalau 2FA lagi aktif/baru aktif.
+            Kotak kode plaintext CUMA muncul sesaat setelah generate - dari
+            situ makanya ada tombol "Sudah saya simpan" buat nutup & ngosongin
+            dari layar (bukan disimpen ulang, emang gak ada di server juga). ---- */}
+        {mfaFactor && !mfaEnrolling && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="text-xs text-slate-600">
+                <span className="font-semibold">Kode Recovery</span> — buat jaga-jaga kalau HP/app authenticator kamu ilang atau rusak, jadi gak kekunci permanen dari akun sendiri.
+              </div>
+              <button onClick={generateRecoveryCodes} disabled={recoveryBusy} className="text-xs border border-slate-300 text-slate-700 rounded-xl px-3 py-1.5 hover:bg-slate-100 disabled:opacity-60 shrink-0 flex items-center gap-1.5">
+                {recoveryBusy ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} {recoveryCodes ? "Buat ulang" : "Buat kode recovery"}
+              </button>
+            </div>
+            {recoveryMsg && <div className="text-xs rounded-lg p-2 mt-2 bg-rose-50 text-rose-700">{recoveryMsg}</div>}
+            {recoveryCodes && (
+              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 max-w-sm">
+                <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang — ini CUMA ditampilin sekali. Tiap kode cuma bisa dipake 1x buat masuk kalau HP kamu hilang.</p>
+                <div className="grid grid-cols-2 gap-1.5 font-mono text-[12px] bg-white rounded-lg p-2.5 border border-amber-100">
+                  {recoveryCodes.map((c) => <div key={c}>{c}</div>)}
+                </div>
+                <button
+                  onClick={() => navigator.clipboard.writeText(recoveryCodes.join("\n"))}
+                  className="mt-2 text-[11px] text-amber-700 hover:text-amber-900 flex items-center gap-1"
+                >
+                  <Copy size={11} /> Salin semua kode
+                </button>
+                <label className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-800">
+                  <input type="checkbox" checked={recoverySavedConfirm} onChange={(e) => setRecoverySavedConfirm(e.target.checked)} />
+                  Saya sudah simpan kode-kode ini di tempat aman
+                </label>
+                <button
+                  onClick={() => setRecoveryCodes(null)}
+                  disabled={!recoverySavedConfirm}
+                  className="mt-2 w-full text-xs bg-amber-600 hover:bg-amber-700 disabled:opacity-40 text-white rounded-lg py-1.5 font-medium"
+                >
+                  Tutup
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

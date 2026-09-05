@@ -898,6 +898,10 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // "totp" = kode 6 digit biasa dari app authenticator. "recovery" = jalur
+  // darurat kalau HP/app authenticator-nya ilang - liat mfa-recovery Edge
+  // Function buat detail cara kerjanya (nambal celah "terkunci permanen").
+  const [mode, setMode] = useState("totp");
 
   const verify = async () => {
     if (code.length !== 6) { setErr("Kode harus 6 digit."); return; }
@@ -919,6 +923,24 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
     }
   };
 
+  const verifyRecovery = async () => {
+    if (!code.trim()) { setErr("Masukin kode recovery-nya (format XXXX-XXXX)."); return; }
+    setBusy(true); setErr("");
+    try {
+      const { data, error } = await supabase.functions.invoke("mfa-recovery", { body: { action: "verify", code: code.trim() } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      // 2FA baru aja dimatiin di server + sesi lama ke-invalidate (efek
+      // bawaan hapus factor) - paksa login ulang dari nol biar bersih,
+      // jangan coba lanjut pake sesi yang mungkin udah setengah revoked.
+      await supabase.auth.signOut();
+      window.location.reload();
+    } catch (e) {
+      setErr("Kode recovery salah/gagal: " + e.message);
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-sm w-full bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
@@ -926,22 +948,48 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
         <div className="text-center mb-1">
           <ShieldCheck size={22} className="mx-auto text-orange-600 mb-2" />
           <h1 className="text-lg font-bold">Verifikasi 2FA</h1>
-          <p className="text-sm text-slate-500 mt-1">Masukin kode 6 digit dari app authenticator kamu.</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {mode === "totp" ? "Masukin kode 6 digit dari app authenticator kamu." : "Masukin salah satu kode recovery yang kamu simpan pas aktifin 2FA."}
+          </p>
         </div>
-        <input
-          className="w-full mt-5 px-3 py-3 text-center text-xl tracking-[0.4em] font-mono border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-          placeholder="000000"
-          maxLength={6}
-          autoFocus
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-          onKeyDown={(e) => e.key === "Enter" && verify()}
-        />
+        {mode === "totp" ? (
+          <input
+            className="w-full mt-5 px-3 py-3 text-center text-xl tracking-[0.4em] font-mono border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+            placeholder="000000"
+            maxLength={6}
+            autoFocus
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={(e) => e.key === "Enter" && verify()}
+          />
+        ) : (
+          <input
+            className="w-full mt-5 px-3 py-3 text-center text-base tracking-[0.15em] font-mono uppercase border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+            placeholder="XXXX-XXXX"
+            maxLength={9}
+            autoFocus
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === "Enter" && verifyRecovery()}
+          />
+        )}
         {err && <div className="mt-3 text-xs bg-rose-50 text-rose-700 rounded-lg p-2.5">{err}</div>}
-        <button onClick={verify} disabled={busy || code.length !== 6} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm py-3 rounded-xl font-semibold flex items-center justify-center gap-1.5">
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Verifikasi
+        {mode === "totp" ? (
+          <button onClick={verify} disabled={busy || code.length !== 6} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm py-3 rounded-xl font-semibold flex items-center justify-center gap-1.5">
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Verifikasi
+          </button>
+        ) : (
+          <button onClick={verifyRecovery} disabled={busy || !code.trim()} className="w-full mt-4 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-sm py-3 rounded-xl font-semibold flex items-center justify-center gap-1.5">
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Pakai Kode Recovery
+          </button>
+        )}
+        <button
+          onClick={() => { setMode(mode === "totp" ? "recovery" : "totp"); setCode(""); setErr(""); }}
+          className="w-full mt-2 text-xs text-orange-600 hover:text-orange-700 py-1.5 font-medium"
+        >
+          {mode === "totp" ? "HP hilang? Pakai kode recovery" : "Punya akses ke app authenticator? Pakai kode 6 digit"}
         </button>
-        <button onClick={onCancel} className="w-full mt-2 text-xs text-slate-400 hover:text-slate-600 py-2">
+        <button onClick={onCancel} className="w-full mt-1 text-xs text-slate-400 hover:text-slate-600 py-2">
           Bukan kamu? Ganti akun
         </button>
       </div>
