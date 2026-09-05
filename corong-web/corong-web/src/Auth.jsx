@@ -1737,7 +1737,7 @@ export default function Auth() {
               </h2>
 
               <p className="mt-5 text-[13px] leading-6 text-slate-500">
-                Ratusan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis kamu. Makanya keamanan akun bukan fitur tempelan.
+                Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis kamu. Makanya keamanan akun bukan fitur tempelan.
               </p>
             </div>
 
