@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2 } from "lucide-react";
+import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
 import MeetingRecorderModal from "../components/MeetingRecorderModal";
@@ -66,7 +66,7 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
   );
 }
 
-function TodayVisitsCard({ leads, onChanged }) {
+function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
   const todayVisits = useMemo(() => leads.filter((c) => c.visit_date === todayISO()), [leads]);
   const [myPos, setMyPos] = useState(null);
   const [geoError, setGeoError] = useState(false);
@@ -76,12 +76,16 @@ function TodayVisitsCard({ leads, onChanged }) {
   const [checkedInToday, setCheckedInToday] = useState(new Set());
 
   useEffect(() => {
+    if (!isEnterprise) return;
     db.getTodayCheckedInLeadIds().then((ids) => setCheckedInToday(new Set(ids))).catch(() => {});
-  }, []);
+  }, [isEnterprise]);
   const watchIdRef = useRef(null);
 
   useEffect(() => {
-    if (todayVisits.length === 0 || !navigator.geolocation) return;
+    // Bukan Enterprise: gak perlu minta izin GPS browser sama sekali buat
+    // fitur yang emang gak bisa dipake - jangan ganggu user Professional
+    // dengan popup izin lokasi yang gak ada gunanya buat mereka.
+    if (!isEnterprise || todayVisits.length === 0 || !navigator.geolocation) return;
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => { setMyPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoError(false); },
       () => setGeoError(true),
@@ -137,6 +141,7 @@ function TodayVisitsCard({ leads, onChanged }) {
   };
 
   if (todayVisits.length === 0) return null;
+  if (!isEnterprise) return <GpsCheckinLocked />;
 
   return (
     <div className="bg-white border border-orange-200 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 mb-4">
@@ -203,13 +208,31 @@ function TodayVisitsCard({ leads, onChanged }) {
   );
 }
 
-function CheckinHistory() {
+// Kartu upsell dipake bareng di TodayVisitsCard & CheckinHistory - satu
+// tempat, konsisten pesannya (GPS Check-in dipindah dari Professional ke
+// Enterprise - lebih relevan buat tracking tim, bukan sales solo).
+function GpsCheckinLocked() {
+  return (
+    <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-start gap-3">
+      <span className="w-8 h-8 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
+      <div className="text-sm">
+        <div className="font-medium text-violet-900">GPS Check-in itu fitur Enterprise</div>
+        <div className="text-xs text-violet-700 mt-0.5">Buat tracking kunjungan tim sales secara real-time. Upgrade ke Enterprise buat pake fitur ini.</div>
+      </div>
+    </div>
+  );
+}
+
+function CheckinHistory({ isEnterprise }) {
   const [month, setMonth] = useState(todayISO().slice(0, 7));
   const [items, setItems] = useState(null);
 
   useEffect(() => {
+    if (!isEnterprise) return;
     db.getCheckins(month).then(setItems).catch(() => setItems([]));
-  }, [month]);
+  }, [month, isEnterprise]);
+
+  if (!isEnterprise) return <GpsCheckinLocked />;
 
   return (
     <div>
@@ -353,7 +376,7 @@ function MonthCalendar({ leads, onEdit, month, setMonth }) {
   );
 }
 
-function VisitView({ leads, onEdit, onChanged }) {
+function VisitView({ leads, onEdit, onChanged, isEnterprise }) {
   const [add, setAdd] = useState(false);
   const [recording, setRecording] = useState(false);
   const [view, setView] = useState("table");
@@ -374,7 +397,7 @@ function VisitView({ leads, onEdit, onChanged }) {
         </div>
       </div>
 
-      <TodayVisitsCard leads={leads} onChanged={onChanged} />
+      <TodayVisitsCard leads={leads} onChanged={onChanged} isEnterprise={isEnterprise} />
 
       {visits.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana aja.</div>
@@ -437,7 +460,7 @@ function FollowupView({ leads, onEdit, onChanged }) {
   );
 }
 
-export default function VisitFollowup({ leads, onEdit, onChanged }) {
+export default function VisitFollowup({ leads, onEdit, onChanged, isEnterprise }) {
   const [tab, setTab] = useState("visit");
   const visitCount = leads.filter((c) => c.visit_date).length;
   const followupCount = leads.filter((c) => c.next_action && c.next_action.trim()).length;
@@ -457,9 +480,9 @@ export default function VisitFollowup({ leads, onEdit, onChanged }) {
         </button>
       </div>
 
-      {tab === "visit" && <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
+      {tab === "visit" && <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} isEnterprise={isEnterprise} />}
       {tab === "followup" && <FollowupView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
-      {tab === "checkin" && <CheckinHistory />}
+      {tab === "checkin" && <CheckinHistory isEnterprise={isEnterprise} />}
     </div>
   );
 }

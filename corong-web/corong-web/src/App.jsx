@@ -656,7 +656,7 @@ export default function App() {
               </div>
               <div style={{ display: effectiveTab === "visitfollowup" ? "block" : "none" }}>
                 <PreviewLock locked={isLocked("visitfollowup")}>
-                  <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} />
+                  <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} />
                 </PreviewLock>
               </div>
               <div style={{ display: effectiveTab === "kompetitor" ? "block" : "none" }}>
@@ -724,10 +724,10 @@ function PreviewLock({ locked, children }) {
   return (
     <div className="relative">
       <div className="mb-3 bg-slate-800 text-white text-xs rounded-2xl px-4 py-2.5 flex items-center gap-2">
-        <Lock size={13} className="shrink-0" /> Mode lihat-lihat doang - upgrade ke Premium buat bisa nambah/ubah data di sini.
+        <Lock size={13} className="shrink-0" /> Mode lihat-lihat doang - upgrade ke Professional buat bisa nambah/ubah data di sini.
       </div>
       <div
-        onClick={() => alert("Ini fitur Premium bro - di paket Free cuma bisa dilihat doang, gak bisa diubah. Upgrade dulu (Rp149rb/bulan) buat bisa pake fiturnya.")}
+        onClick={() => alert("Ini fitur Professional bro - di paket Free/Standard cuma bisa dilihat doang, gak bisa diubah. Upgrade dulu (Rp269rb/bulan) buat bisa pake fiturnya.")}
         className="absolute inset-0 top-11 z-20 cursor-pointer"
       />
       {children}
@@ -816,7 +816,9 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
   const planInfo = org?.plan === "enterprise"
     ? { label: "Enterprise", cls: "bg-violet-100 text-violet-700" }
     : settings.plan === "premium"
-    ? { label: "Premium", cls: "bg-orange-100 text-orange-700" }
+    ? { label: "Professional", cls: "bg-orange-100 text-orange-700" }
+    : settings.plan === "standard"
+    ? { label: "Standard", cls: "bg-sky-100 text-sky-700" }
     : { label: "Free", cls: "bg-slate-100 text-slate-500" };
 
   const toggleOpen = () => {

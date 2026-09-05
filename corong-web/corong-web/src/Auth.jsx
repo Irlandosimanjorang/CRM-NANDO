@@ -336,7 +336,6 @@ const PROFESSIONAL_FEATURES = [
   "Rekam Meeting otomatis (AI)",
   "Customer State (AI)",
   "Outcome Memory (AI)",
-  "GPS Check-in",
   "AI Advisor harian",
   "AI Draft Follow-up (WhatsApp & Email)",
   "Analisa Kompetitor",
@@ -344,6 +343,7 @@ const PROFESSIONAL_FEATURES = [
 
 const ENTERPRISE_FEATURES = [
   "Semua fitur Professional",
+  "GPS Check-in (tracking kunjungan tim real-time)",
   "4 anggota tim dalam satu organisasi",
   "Role-based visibility (Owner/Manager/Sales Rep)",
   "Undang anggota tim via kode invite",
