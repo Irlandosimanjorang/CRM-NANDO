@@ -53,6 +53,36 @@ import {
   getCompanyTypeOptions,
 } from "../lib/industryTemplates";
 
+// === BUG FIX (5 Sep 2026) ===
+// Popup draft AI (AiDraftPopup) sekarang di-"ingat" lewat localStorage - kalau
+// browser/tab HP di-reload total (bukan cuma pindah menu doang) SAAT popup ini
+// lagi kebuka, dia otomatis kebuka LAGI pas Nexto dibuka ulang, gak perlu klik
+// tombol Sparkles-nya manual lagi. Ini murni soal "popup mana yang lagi
+// kebuka" - beda dari isi draft-nya sendiri yang udah disimpen di server
+// (lihat draft-followup.ts). "source" dipake buat bedain restore punya tab
+// Leads vs tab Dashboard, biar gak dobel kebuka di dua tempat sekaligus
+// (soalnya sekarang semua tab selalu ke-mount bareng).
+const OPEN_POPUP_KEY = "nexto-open-draft-popup";
+const OPEN_POPUP_TTL_MS = 24 * 60 * 60 * 1000;
+function saveOpenPopup(source, leadId) {
+  try { localStorage.setItem(OPEN_POPUP_KEY, JSON.stringify({ source, leadId, savedAt: Date.now() })); } catch (_) {}
+}
+function clearOpenPopup() {
+  try { localStorage.removeItem(OPEN_POPUP_KEY); } catch (_) {}
+}
+function getOpenPopup(source) {
+  try {
+    const raw = localStorage.getItem(OPEN_POPUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.source !== source) return null;
+    if (Date.now() - (parsed.savedAt || 0) > OPEN_POPUP_TTL_MS) { localStorage.removeItem(OPEN_POPUP_KEY); return null; }
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
 
 /* =========================================================
    IMPORT MAPPING
@@ -379,6 +409,29 @@ export default function Leads({
 
   const [progressPopup, setProgressPopup] =
     useState(null);
+
+  // ---- RESTORE popup draft yang lagi kebuka pas terakhir kali app ke-reload
+  // total (lihat komentar BUG FIX di atas file). Nunggu `leads` beneran udah
+  // ke-load dulu (gak nyari di array kosong) sebelum nyoba restore. ----
+  useEffect(() => {
+    if (!leads || leads.length === 0) return;
+    const saved = getOpenPopup("leads");
+    if (saved) {
+      const lead = leads.find((l) => l.id === saved.leadId);
+      if (lead) setDraftPopup({ lead, rect: null });
+      else clearOpenPopup(); // lead-nya udah gak ada (misal kehapus), buang aja catetannya
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads.length > 0]);
+
+  const openDraftPopup = (lead, rect) => {
+    setDraftPopup({ lead, rect });
+    saveOpenPopup("leads", lead.id);
+  };
+  const closeDraftPopup = () => {
+    setDraftPopup(null);
+    clearOpenPopup();
+  };
 
 
   /* =========================================================
@@ -1754,11 +1807,7 @@ export default function Leads({
 
                     <button
                       onClick={(e) =>
-                        setDraftPopup({
-                          lead: c,
-                          rect:
-                            e.currentTarget.getBoundingClientRect(),
-                        })
+                        openDraftPopup(c, e.currentTarget.getBoundingClientRect())
                       }
                       className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50"
                       title="Draft follow-up (AI)"
@@ -2026,11 +2075,7 @@ export default function Leads({
           rect={
             draftPopup.rect
           }
-          onClose={() =>
-            setDraftPopup(
-              null
-            )
-          }
+          onClose={closeDraftPopup}
           onSent={
             onChanged
           }
