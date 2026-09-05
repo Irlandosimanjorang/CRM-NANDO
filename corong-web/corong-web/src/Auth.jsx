@@ -344,7 +344,7 @@ const PROFESSIONAL_FEATURES = [
 
 const ENTERPRISE_FEATURES = [
   "Semua fitur Professional",
-  "5 anggota tim dalam satu organisasi",
+  "4 anggota tim dalam satu organisasi",
   "Role-based visibility (Owner/Manager/Sales Rep)",
   "Undang anggota tim via kode invite",
   "Bot Telegram kirim email otonom",
@@ -1929,7 +1929,7 @@ export default function Auth() {
                   </div>
 
                   <div className="mt-1 text-[10px] text-slate-400">
-                    Untuk 5 orang (≈Rp500rb/orang) — tim sales dengan visibilitas penuh
+                    Untuk 4 orang (≈Rp625rb/orang) — tim sales dengan visibilitas penuh
                   </div>
 
                   <div className="my-7 h-px bg-white/10" />
