@@ -1873,7 +1873,7 @@ export default function Auth() {
 
                 <div className="relative mt-3 flex items-end gap-1">
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                    Rp199rb
+                    Rp269rb
                   </span>
                   <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                 </div>
@@ -1923,13 +1923,13 @@ export default function Auth() {
 
                   <div className="mt-3 flex items-end gap-1">
                     <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                      Rp2,5jt
+                      Rp1,3jt
                     </span>
                     <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                   </div>
 
                   <div className="mt-1 text-[10px] text-slate-400">
-                    Untuk 4 orang (≈Rp625rb/orang) — tim sales dengan visibilitas penuh
+                    Untuk 4 orang (≈Rp325rb/orang) — tim sales dengan visibilitas penuh
                   </div>
 
                   <div className="my-7 h-px bg-white/10" />
