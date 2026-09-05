@@ -25,12 +25,8 @@ export default function ReactorStrip({ stats }) {
   const glowId = `reactor-glow-${uid}`;
 
   return (
-    <div className="relative overflow-hidden bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] h-[104px]">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.55]"
-        style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(249,115,22,.13) 1px, transparent 0)", backgroundSize: "16px 16px" }}
-      />
-      <div className="pointer-events-none absolute inset-y-0 w-[120px] bg-gradient-to-r from-transparent via-orange-500/[0.07] to-transparent" style={{ animation: "reactor-sweep 5s ease-in-out infinite" }} />
+    <div className="relative overflow-hidden h-[104px]">
+      <div className="pointer-events-none absolute inset-y-0 w-[120px] bg-gradient-to-r from-transparent via-orange-500/[0.06] to-transparent" style={{ animation: "reactor-sweep 5s ease-in-out infinite" }} />
 
       <div className="absolute right-3.5 top-2.5 z-10 flex items-center gap-1.5">
         <span className="relative flex h-1.5 w-1.5">
