@@ -592,7 +592,7 @@ export default function App() {
             </div>
           </div>
 
-          <EngineHeaderMini stats={headerStats} />
+          {effectiveTab === "dashboard" && <EngineHeaderMini stats={headerStats} />}
 
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/75 px-3.5 py-2 text-[10px] text-slate-400 shadow-sm">
