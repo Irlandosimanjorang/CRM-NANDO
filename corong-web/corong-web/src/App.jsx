@@ -63,13 +63,13 @@ const NAV = [
 const ADMIN_NAV_ITEM = { key: "adminops", label: "Dashboard Karyawan AI", short: "AI Ops", icon: Bot };
 
 // ---- COST/BUG FIX (5 Sep 2026) ----
-// Tab-tab di daftar ini SELALU di-mount (gak pernah di-unmount pas pindah
-// tab lain), cuma disembunyiin pake CSS display:none. Ini biar proses async
-// yang lagi jalan di dalamnya (generate leads yang makan 1-2 menit, dst)
-// GAK KEPUTUS/ILANG state-nya cuma gara-gara user iseng pindah tab pas
-// nungguin. Tab lain yang gak punya proses async lama-lama biarin tetep
-// conditional-mount kayak sebelumnya (lebih hemat memori, gak ada downside).
-const KEEP_MOUNTED_TABS = ["generateleads", "dashboard"];
+// SEMUA tab sekarang selalu di-mount (gak pernah di-unmount pas pindah tab),
+// cuma disembunyiin pake CSS display:none. Awalnya cuma GenerateLeads/Dashboard/
+// Leads yang dipisah khusus - tapi ternyata popup AiDraftPopup & proses async
+// serupa bisa muncul dari tab MANAPUN (siapa tau ada juga di Deal/Kompetitor/
+// dst yang belum ketauan), jadi lebih aman & konsisten kalau SEMUA tab
+// diperlakukan sama - biar gak ada proses/popup yang keputus/ilang lagi cuma
+// gara-gara pindah tab, di tab manapun.
 
 function ConfigScreen() {
   return (
@@ -598,35 +598,55 @@ export default function App() {
 
           {loading ? <Splash inline /> : (
             <>
-              {/* ---- TAB YANG SELALU KE-MOUNT (lihat KEEP_MOUNTED_TABS di atas) ----
-                  Disembunyiin pake CSS display:none, BUKAN di-unmount - biar
-                  proses async lama (generate leads) gak keputus/ilang state-nya
+              {/* ---- SEMUA TAB SELALU KE-MOUNT (lihat komentar KEEP_MOUNTED_TABS
+                  di atas) - disembunyiin pake CSS display:none, BUKAN di-unmount.
+                  Ini biar proses async apapun (generate leads, draft follow-up AI,
+                  rekam meeting, dst) yang lagi jalan di tab manapun GAK KEPUTUS
                   cuma gara-gara user pindah tab pas nungguin. ---- */}
+              <div style={{ display: effectiveTab === "dashboard" ? "block" : "none" }}>
+                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} />
+              </div>
+              <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
+                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} onChanged={reload} />
+              </div>
               <div style={{ display: effectiveTab === "generateleads" ? "block" : "none" }}>
                 <PreviewLock locked={isLocked("generateleads")}>
                   <GenerateLeads stages={stageList} onChanged={reload} onNotify={pushToast} />
                 </PreviewLock>
               </div>
-
-              {/* ---- Dashboard SELALU ke-mount juga - popup "Handle Now" (AiDraftPopup)
-                  dirender di dalem sini (via GoodMorningCard), jadi kalau Dashboard
-                  ke-unmount pas pindah tab, popup draft WA/Email-nya ikut ilang &
-                  proses generate draft yang lagi jalan keputus. Sama kasusnya kayak
-                  GenerateLeads di atas. ---- */}
-              <div style={{ display: effectiveTab === "dashboard" ? "block" : "none" }}>
-                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} />
+              <div style={{ display: effectiveTab === "deal" ? "block" : "none" }}>
+                <PreviewLock locked={isLocked("deal")}>
+                  <Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} />
+                </PreviewLock>
               </div>
-
-              {/* ---- TAB LAIN - tetep conditional mount/unmount kayak sebelumnya
-                  (gak ada proses async lama yang perlu "diselamatin" di sini) ---- */}
-              {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} onChanged={reload} />}
-              {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} /></PreviewLock>}
-              {effectiveTab === "kompetitor" && <PreviewLock locked={isLocked("kompetitor")}><Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} /></PreviewLock>}
-              {effectiveTab === "komunitas" && <PreviewLock locked={isLocked("komunitas")}><Nex dummy={isLocked("komunitas")} /></PreviewLock>}
-              {effectiveTab === "advisor" && <PreviewLock locked={isLocked("advisor")}><Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} /></PreviewLock>}
-              {effectiveTab === "industridemo" && <IndustryDemo />}
-              {effectiveTab === "settings" && <PreviewLock locked={isLocked("settings")}><SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} /></PreviewLock>}
+              <div style={{ display: effectiveTab === "visitfollowup" ? "block" : "none" }}>
+                <PreviewLock locked={isLocked("visitfollowup")}>
+                  <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} />
+                </PreviewLock>
+              </div>
+              <div style={{ display: effectiveTab === "kompetitor" ? "block" : "none" }}>
+                <PreviewLock locked={isLocked("kompetitor")}>
+                  <Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} />
+                </PreviewLock>
+              </div>
+              <div style={{ display: effectiveTab === "komunitas" ? "block" : "none" }}>
+                <PreviewLock locked={isLocked("komunitas")}>
+                  <Nex dummy={isLocked("komunitas")} />
+                </PreviewLock>
+              </div>
+              <div style={{ display: effectiveTab === "advisor" ? "block" : "none" }}>
+                <PreviewLock locked={isLocked("advisor")}>
+                  <Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} />
+                </PreviewLock>
+              </div>
+              <div style={{ display: effectiveTab === "industridemo" ? "block" : "none" }}>
+                <IndustryDemo />
+              </div>
+              <div style={{ display: effectiveTab === "settings" ? "block" : "none" }}>
+                <PreviewLock locked={isLocked("settings")}>
+                  <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />
+                </PreviewLock>
+              </div>
             </>
           )}
         </main>
