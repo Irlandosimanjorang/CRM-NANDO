@@ -271,19 +271,29 @@ const INDUSTRIES = [
   },
 ];
 
+// === PRICING UPDATE (5 Sep 2026) ===
+// 1. Good Morning Dashboard (daily digest) sekarang RESMI jadi fitur Standard
+//    (bukan cuma Professional) - backend daily-digest.ts udah dibenerin buat
+//    ngasih Standard+ juga, Free tetep di-skip. Professional TETEP dapet fitur
+//    ini juga - convention landing page ini "Semua fitur Standard" di baris
+//    pertama Professional udah otomatis nyakup ini, jadi gak perlu ditulis
+//    ulang di daftar Professional (biar gak dobel/rancu).
+// 2. Generate Leads AI dibenerin dari "2x/bulan" (gak sesuai kode) jadi
+//    "1x/minggu" (sesuai batas asli di generate-leads.ts).
 const STANDARD_FEATURES = [
   "Kelola Leads — kartu per perusahaan",
   "Smart Import AI",
   "Recycle Bin",
   "Deteksi Duplikat",
   "Nex — Komunitas Sesama Sales",
+  "Good Morning Dashboard (rekomendasi AI harian)",
 ];
 
 const PROFESSIONAL_FEATURES = [
   "Semua fitur Standard",
   "Bot Telegram (edit CRM, progress harian, jadwal visit)",
   "Sinkron otomatis ke Google Calendar",
-  "Generate Leads AI (2x/bulan)",
+  "Generate Leads AI (1x/minggu)",
   "Rekam Meeting otomatis (AI)",
   "Customer State (AI)",
   "Outcome Memory (AI)",
@@ -291,7 +301,6 @@ const PROFESSIONAL_FEATURES = [
   "GPS Check-in",
   "AI Advisor harian",
   "AI Draft Follow-up (WhatsApp & Email)",
-  "Good Morning Dashboard",
   "Analisa Kompetitor",
 ];
 
@@ -303,29 +312,6 @@ const ENTERPRISE_FEATURES = [
   "Bot Telegram kirim email otonom",
   "Approval-gate & keamanan tim",
   "Prioritas support",
-];
-
-const FAQS = [
-  {
-    q: "Nexto itu CRM untuk industri apa?",
-    a: "Nexto dibuat sebagai sales engine yang fleksibel untuk berbagai industri. Property, automotive, B2B, SaaS, insurance, education, dan tim sales lainnya bisa menyesuaikan proses penjualannya.",
-  },
-  {
-    q: "Apa bedanya Nexto dengan CRM biasa?",
-    a: "CRM biasa banyak berfungsi sebagai tempat menyimpan data. Nexto dirancang untuk terus mendorong sales ke next best action — siapa yang perlu dihubungi, apa yang harus dilakukan, dan apa langkah berikutnya.",
-  },
-  {
-    q: "Paket Free-nya kayak gimana?",
-    a: "Free bisa dipakai selamanya dengan akses Dashboard dan Leads. Cocok untuk mulai merapikan data prospek sebelum menggunakan fitur sales intelligence yang lebih lengkap.",
-  },
-  {
-    q: "Bisa berhenti kapan aja?",
-    a: "Bisa. Tidak ada kontrak jangka panjang. Kamu bisa berhenti atau upgrade kapan saja.",
-  },
-  {
-    q: "Data saya aman?",
-    a: "Data setiap organisasi dipisahkan berdasarkan akun dan permission yang berlaku. Akses data mengikuti struktur organisasi dan role pengguna.",
-  },
 ];
 
 const AI_DEMO_STATES = [
@@ -1299,190 +1285,12 @@ function AiEngineLoopSection({ robotVoice }) {
   );
 }
 
-function ProductMockup() {
-  return (
-    <div className="relative mx-auto w-full max-w-[650px]">
-      <div className="absolute -inset-10 rounded-[60px] bg-orange-500/10 blur-3xl" />
-
-      <div className="relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_35px_100px_-30px_rgba(15,23,42,0.32)]">
-        <div className="flex h-11 items-center justify-between border-b border-slate-100 bg-white px-4">
-          <div className="flex items-center">
-            <NextoWordmark width={78} />
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-slate-200" />
-            <div className="h-2 w-2 rounded-full bg-slate-200" />
-            <div className="h-2 w-2 rounded-full bg-slate-200" />
-          </div>
-        </div>
-
-        <div className="grid min-h-[420px] grid-cols-[150px_1fr] bg-slate-50">
-          <div className="hidden border-r border-slate-100 bg-white p-4 sm:block">
-            <div className="mb-6 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-300">
-              Workspace
-            </div>
-
-            <div className="space-y-1.5">
-              {["Today", "Leads", "Deals", "Visits", "AI Advisor"].map(
-                (item, index) => (
-                  <div
-                    key={item}
-                    className={`rounded-lg px-3 py-2 text-[10px] font-medium ${
-                      index === 0
-                        ? "bg-orange-50 text-orange-700"
-                        : "text-slate-400"
-                    }`}
-                  >
-                    {item}
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-5">
-            <div className="mb-5 flex items-end justify-between">
-              <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-orange-500">
-                  Sales command center
-                </div>
-                <div className="mt-1 text-lg font-bold tracking-tight text-slate-900">
-                  Good morning, Nando 👋
-                </div>
-                <div className="mt-1 text-[10px] text-slate-400">
-                  5 actions need your attention.
-                </div>
-              </div>
-
-              <div className="hidden rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[9px] text-slate-400 sm:block">
-                Today
-              </div>
-            </div>
-
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-[10px] font-bold text-slate-700">
-                Next best actions
-              </div>
-              <div className="text-[9px] text-slate-400">AI prioritized</div>
-            </div>
-
-            <div className="space-y-2.5">
-              <div className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
-                <div className="flex gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
-                    <Zap size={14} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-[10px] font-bold text-slate-900">
-                          Call PT ABC
-                        </div>
-                        <div className="mt-0.5 text-[9px] text-slate-400">
-                          Rp180M opportunity
-                        </div>
-                      </div>
-
-                      <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[8px] font-bold text-orange-600">
-                        HIGH
-                      </span>
-                    </div>
-
-                    <div className="mt-2 text-[9px] leading-relaxed text-slate-500">
-                      Quotation dikirim 3 hari lalu. Customer belum merespons.
-                    </div>
-
-                    <div className="mt-2.5 flex gap-1.5">
-                      <button className="rounded-md bg-slate-900 px-2.5 py-1.5 text-[8px] font-semibold text-white">
-                        Call
-                      </button>
-                      <button className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[8px] font-semibold text-slate-600">
-                        WhatsApp
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
-                <div className="flex gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                    <MapPin size={14} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-[10px] font-bold text-slate-900">
-                          Visit PT XYZ
-                        </div>
-                        <div className="mt-0.5 text-[9px] text-slate-400">
-                          1.2 km away
-                        </div>
-                      </div>
-
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[8px] font-bold text-emerald-600">
-                        REORDER
-                      </span>
-                    </div>
-
-                    <div className="mt-2 text-[9px] leading-relaxed text-slate-500">
-                      Customer biasanya order setiap 30 hari. Hari ini hari ke-29.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
-                <div className="flex gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                    <MessageSquare size={14} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-[10px] font-bold text-slate-900">
-                          Follow up Sarah
-                        </div>
-                        <div className="mt-0.5 text-[9px] text-slate-400">
-                          High buying intent
-                        </div>
-                      </div>
-
-                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-bold text-blue-600">
-                        TODAY
-                      </span>
-                    </div>
-
-                    <div className="mt-2 text-[9px] leading-relaxed text-slate-500">
-                      Customer bertanya harga kemarin.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-200 py-2.5 text-[8px] font-medium text-slate-400">
-              <Sparkles size={11} className="text-orange-500" />
-              AI terus mencari langkah berikutnya
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Auth() {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
-  const [openFaq, setOpenFaq] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showIndustryDemo, setShowIndustryDemo] = useState(false);
 
@@ -1660,69 +1468,87 @@ export default function Auth() {
           HERO
       ========================================================== */}
       <main>
-        <section className="relative overflow-hidden bg-[#fbfaf8]">
-          <div className="absolute left-[-180px] top-[-180px] h-[500px] w-[500px] rounded-full bg-orange-200/20 blur-3xl" />
-          <div className="absolute bottom-[-250px] right-[-150px] h-[550px] w-[550px] rounded-full bg-orange-100/30 blur-3xl" />
+        <section className="relative overflow-hidden bg-[#05070c]">
+          {/* Background clean & konsisten sama section AI Engine Loops di
+              bawahnya - grid halus + satu glow oranye di tengah, BUKAN 2
+              blob oranye ngambang kayak sebelumnya (lebih rapi/minimal). */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
+              backgroundSize: "40px 40px",
+              maskImage: "radial-gradient(circle at 50% 30%, black 0%, transparent 70%)",
+              WebkitMaskImage: "radial-gradient(circle at 50% 30%, black 0%, transparent 70%)",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute left-1/2 top-[30%] h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-[130px]"
+            style={{ background: "radial-gradient(circle, #f97316, transparent 70%)" }}
+          />
 
-          <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-7 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:px-10 lg:py-24">
-            <div>
+          {/* Single-column, di-tengahin - headline jadi fokus utama, gak
+              kebagi perhatian sama mockup produk lagi. */}
+          <div className="relative mx-auto max-w-4xl px-5 py-24 text-center sm:px-7 sm:py-32 lg:px-10 lg:py-40">
+            <div className="flex justify-center">
               <SectionLabel>AI Sales Operating System</SectionLabel>
-
-              <h1 className="mt-5 max-w-[620px] text-[42px] font-bold leading-[1.02] tracking-[-0.055em] text-slate-950 sm:text-[58px] lg:text-[66px]">
-                Stop managing leads.
-                <span className="block text-orange-600">
-                  Start closing deals.
-                </span>
-              </h1>
-
-              <p className="mt-6 max-w-[570px] text-[15px] leading-7 text-slate-500 sm:text-[16px]">
-                Nexto membantu sales tahu{" "}
-                <strong className="font-semibold text-slate-800">
-                  siapa yang harus dihubungi, apa yang harus dilakukan,
-                </strong>{" "}
-                dan apa langkah berikutnya — tanpa harus terus-terusan mikir
-                dan update CRM.
-              </p>
-
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={goToSignup}
-                  className="group inline-flex items-center gap-2.5 rounded-xl bg-slate-950 px-5 py-3.5 text-[12px] font-bold text-white shadow-[0_12px_30px_-12px_rgba(15,23,42,0.5)] transition hover:-translate-y-0.5 hover:bg-slate-800"
-                >
-                  Mulai Gratis
-                  <ArrowRight
-                    size={14}
-                    className="transition group-hover:translate-x-0.5"
-                  />
-                </button>
-
-                <a
-                  href="#cara-kerja"
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-[12px] font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  <Play size={12} />
-                  Lihat cara kerja
-                </a>
-              </div>
-
-              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-medium text-slate-400">
-                <span className="flex items-center gap-1.5">
-                  <CircleCheck size={12} className="text-emerald-500" />
-                  Mulai gratis
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CircleCheck size={12} className="text-emerald-500" />
-                  Tanpa setup ribet
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CircleCheck size={12} className="text-emerald-500" />
-                  Untuk semua industri
-                </span>
-              </div>
             </div>
 
-            <div className="lg:pl-2">
-              <ProductMockup />
+            {/* === HEADLINE UPDATE (5 Sep 2026) ===
+                Final pick abis beberapa ronde brainstorm: kontras
+                "lo di lapangan" vs "Nexto kerja di belakang layar",
+                pake istilah "plays" (playbook/strategi per lead) biar
+                kesannya lebih strategic daripada "moves" yang generik. */}
+            <h1 className="mx-auto mt-6 max-w-3xl text-[42px] font-bold leading-[1.02] tracking-[-0.055em] text-white sm:text-[58px] lg:text-[72px]">
+              Go out and sell.
+              <span className="block text-orange-500">
+                We run your plays.
+              </span>
+            </h1>
+
+            <p className="mx-auto mt-6 max-w-xl text-[15px] leading-7 text-slate-400 sm:text-[16px]">
+              Nexto membantu sales tahu{" "}
+              <strong className="font-semibold text-slate-200">
+                siapa yang harus dihubungi, apa yang harus dilakukan,
+              </strong>{" "}
+              dan apa langkah berikutnya — tanpa harus terus-terusan mikir
+              dan update CRM.
+            </p>
+
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={goToSignup}
+                className="group inline-flex items-center gap-2.5 rounded-xl bg-orange-600 px-5 py-3.5 text-[12px] font-bold text-white shadow-[0_12px_30px_-12px_rgba(234,88,12,0.6)] transition hover:-translate-y-0.5 hover:bg-orange-500"
+              >
+                Mulai Gratis
+                <ArrowRight
+                  size={14}
+                  className="transition group-hover:translate-x-0.5"
+                />
+              </button>
+
+              <a
+                href="#cara-kerja"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-3.5 text-[12px] font-bold text-slate-200 transition hover:border-white/25 hover:bg-white/[0.08]"
+              >
+                <Play size={12} />
+                Lihat cara kerja
+              </a>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] font-medium text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <CircleCheck size={12} className="text-emerald-500" />
+                Mulai gratis
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CircleCheck size={12} className="text-emerald-500" />
+                Tanpa setup ribet
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CircleCheck size={12} className="text-emerald-500" />
+                Untuk semua industri
+              </span>
             </div>
           </div>
         </section>
@@ -2029,60 +1855,6 @@ export default function Auth() {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* =========================================================
-            FAQ
-        ========================================================== */}
-        <section className="bg-white px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
-          <div className="mx-auto max-w-3xl">
-            <div className="text-center">
-              <SectionLabel>FAQ</SectionLabel>
-
-              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[44px]">
-                Yang sering ditanyain.
-              </h2>
-            </div>
-
-            <div className="mt-10 space-y-2.5">
-              {FAQS.map((faq, index) => {
-                const isOpen = openFaq === index;
-
-                return (
-                  <div
-                    key={faq.q}
-                    className={`overflow-hidden rounded-2xl border transition ${
-                      isOpen
-                        ? "border-orange-200 bg-orange-50/30"
-                        : "border-slate-200 bg-white"
-                    }`}
-                  >
-                    <button
-                      onClick={() => setOpenFaq(isOpen ? null : index)}
-                      className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
-                    >
-                      <span className="text-[12px] font-bold text-slate-800">
-                        {faq.q}
-                      </span>
-
-                      <ChevronDown
-                        size={15}
-                        className={`shrink-0 text-slate-400 transition ${
-                          isOpen ? "rotate-180 text-orange-600" : ""
-                        }`}
-                      />
-                    </button>
-
-                    {isOpen && (
-                      <div className="border-t border-slate-100 px-5 pb-5 pt-3 text-[11px] leading-6 text-slate-500">
-                        {faq.a}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           </div>
         </section>
