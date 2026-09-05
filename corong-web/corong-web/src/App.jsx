@@ -69,7 +69,7 @@ const ADMIN_NAV_ITEM = { key: "adminops", label: "Dashboard Karyawan AI", short:
 // GAK KEPUTUS/ILANG state-nya cuma gara-gara user iseng pindah tab pas
 // nungguin. Tab lain yang gak punya proses async lama-lama biarin tetep
 // conditional-mount kayak sebelumnya (lebih hemat memori, gak ada downside).
-const KEEP_MOUNTED_TABS = ["generateleads"];
+const KEEP_MOUNTED_TABS = ["generateleads", "dashboard"];
 
 function ConfigScreen() {
   return (
@@ -608,9 +608,17 @@ export default function App() {
                 </PreviewLock>
               </div>
 
+              {/* ---- Dashboard SELALU ke-mount juga - popup "Handle Now" (AiDraftPopup)
+                  dirender di dalem sini (via GoodMorningCard), jadi kalau Dashboard
+                  ke-unmount pas pindah tab, popup draft WA/Email-nya ikut ilang &
+                  proses generate draft yang lagi jalan keputus. Sama kasusnya kayak
+                  GenerateLeads di atas. ---- */}
+              <div style={{ display: effectiveTab === "dashboard" ? "block" : "none" }}>
+                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} />
+              </div>
+
               {/* ---- TAB LAIN - tetep conditional mount/unmount kayak sebelumnya
                   (gak ada proses async lama yang perlu "diselamatin" di sini) ---- */}
-              {effectiveTab === "dashboard" && <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} />}
               {effectiveTab === "leads" && <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} onChanged={reload} />}
               {effectiveTab === "deal" && <PreviewLock locked={isLocked("deal")}><Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} /></PreviewLock>}
               {effectiveTab === "visitfollowup" && <PreviewLock locked={isLocked("visitfollowup")}><VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} /></PreviewLock>}
