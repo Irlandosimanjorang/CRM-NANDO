@@ -5,6 +5,36 @@ import { todayISO, fmtRp } from "../lib/helpers";
 import { NextoRobotHead } from "../Auth";
 import AiDraftPopup from "../components/AiDraftPopup";
 
+// === BUG FIX (5 Sep 2026) ===
+// Popup draft AI ("Handle Now") sekarang di-"ingat" lewat localStorage - kalau
+// browser/tab HP di-reload total (bukan cuma pindah menu doang) SAAT popup ini
+// lagi kebuka, dia otomatis kebuka LAGI pas Nexto dibuka ulang, LENGKAP sama
+// channel (WhatsApp/Email) yang lagi diproses - jadi draft-nya ikut auto-ke-ambil
+// lagi dari server (yang udah nyimpen hasilnya duluan, lihat draft-followup.ts),
+// gak perlu klik "Handle Now" manual lagi dari awal. "source" dipake buat
+// bedain restore punya tab Dashboard vs tab Leads, biar gak dobel kebuka di
+// dua tempat sekaligus (soalnya sekarang semua tab selalu ke-mount bareng).
+const OPEN_POPUP_KEY = "nexto-open-draft-popup";
+const OPEN_POPUP_TTL_MS = 24 * 60 * 60 * 1000;
+function saveOpenPopup(source, leadId, channel) {
+  try { localStorage.setItem(OPEN_POPUP_KEY, JSON.stringify({ source, leadId, channel: channel || null, savedAt: Date.now() })); } catch (_) {}
+}
+function clearOpenPopup() {
+  try { localStorage.removeItem(OPEN_POPUP_KEY); } catch (_) {}
+}
+function getOpenPopup(source) {
+  try {
+    const raw = localStorage.getItem(OPEN_POPUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.source !== source) return null;
+    if (Date.now() - (parsed.savedAt || 0) > OPEN_POPUP_TTL_MS) { localStorage.removeItem(OPEN_POPUP_KEY); return null; }
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
 // Mapping action_type -> channel draft yang paling relevan. Action_type yang
 // gak ada di sini (Call, Visit, Jadwalkan Meeting, Tunggu, Eskalasi, Closing)
 // gak ada draft otomatisnya - "Handle Now" buat itu langsung buka lead-nya aja.
@@ -74,6 +104,29 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
       .catch(() => { if (alive) setState({ status: "empty", run: null }); });
     return () => { alive = false; };
   }, []);
+
+  // ---- RESTORE popup draft yang lagi kebuka pas terakhir kali app ke-reload
+  // total (lihat komentar BUG FIX di atas file). Nunggu `leads` beneran udah
+  // ke-load dulu sebelum nyoba restore, biar bisa nemuin lead-nya. ----
+  useEffect(() => {
+    if (!leads || leads.length === 0) return;
+    const saved = getOpenPopup("dashboard");
+    if (saved) {
+      const lead = leads.find((l) => l.id === saved.leadId);
+      if (lead) setDraftPopup({ lead, rect: null, channel: saved.channel || undefined });
+      else clearOpenPopup();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads.length > 0]);
+
+  const openDraftPopup = (lead, rect, channel) => {
+    setDraftPopup({ lead, rect, channel });
+    saveOpenPopup("dashboard", lead.id, channel);
+  };
+  const closeDraftPopup = () => {
+    setDraftPopup(null);
+    clearOpenPopup();
+  };
 
   const reveal = () => {
     if (revealTimerRef.current) { clearTimeout(revealTimerRef.current); revealTimerRef.current = null; }
@@ -234,7 +287,7 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
                     </button>
                     {lead && draftChannel && (
                       <button
-                        onClick={(e) => setDraftPopup({ lead, rect: e.currentTarget.getBoundingClientRect(), channel: draftChannel })}
+                        onClick={(e) => openDraftPopup(lead, e.currentTarget.getBoundingClientRect(), draftChannel)}
                         className="shrink-0 flex items-center gap-1 text-[10px] font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-2.5 py-1.5 transition-colors mt-0.5"
                       >
                         <Zap size={11} /> Handle Now
@@ -261,7 +314,7 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
           lead={draftPopup.lead}
           rect={draftPopup.rect}
           initialChannel={draftPopup.channel}
-          onClose={() => setDraftPopup(null)}
+          onClose={closeDraftPopup}
           onSent={() => {}}
         />
       )}
