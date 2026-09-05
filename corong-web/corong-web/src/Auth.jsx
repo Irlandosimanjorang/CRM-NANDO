@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "./lib/supabaseClient";
 import IndustryDemo from "./tabs/IndustryDemo";
+import LegalModal from "./components/LegalModal";
 import {
   Loader2,
   ArrowRight,
@@ -39,6 +40,10 @@ import {
 const LANDING_AUDIO_BASE = "https://cewggulyfshnbebcpyui.supabase.co/storage/v1/object/public/morning-audio/landing";
 const ROBOT_CHATBOT_AUDIO = `${LANDING_AUDIO_BASE}/robot-chatbot.mp3`;
 const ROBOT_ENGINE_LOOP_AUDIO = `${LANDING_AUDIO_BASE}/robot-engine-loop.mp3`;
+
+// Nomor WhatsApp support Nexto - satu tempat doang, gampang diganti kalau
+// suatu saat nomornya berubah.
+const SUPPORT_WA_NUMBER = "6281273059284";
 
 // Hook kecil buat tombol "Dengerin" robot - play sekali klik, gak ada
 // autoplay (etika landing page publik: jangan maksa suara ke pengunjung
@@ -1293,6 +1298,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showIndustryDemo, setShowIndustryDemo] = useState(false);
+  const [legalModal, setLegalModal] = useState(null); // "tos" | "privacy" | null
 
   // ---- AUTO-PLAY ROBOT NGOMONG ----
   // Browser blokir audio bersuara yang muter sendiri TANPA interaksi user
@@ -1996,8 +2002,11 @@ export default function Auth() {
                   </div>
 
                   <div className="mt-5 border-t border-white/[0.06] pt-4 text-center text-[8px] leading-4 text-slate-600">
-                    Dengan membuat akun, kamu setuju menggunakan Nexto sesuai
-                    ketentuan layanan yang berlaku.
+                    Dengan membuat akun, kamu setuju menggunakan Nexto sesuai{" "}
+                    <button onClick={() => setLegalModal("tos")} className="underline hover:text-slate-400">ketentuan layanan</button>{" "}
+                    dan{" "}
+                    <button onClick={() => setLegalModal("privacy")} className="underline hover:text-slate-400">kebijakan privasi</button>{" "}
+                    yang berlaku.
                   </div>
                 </div>
               </div>
@@ -2022,7 +2031,26 @@ export default function Auth() {
             © {new Date().getFullYear()} Nexto. Built for modern sales teams.
           </div>
         </div>
+
+        {/* ---- SUPPORT + LEGAL LINKS (5 Sep 2026) ---- */}
+        <div className="mx-auto mt-5 flex max-w-7xl flex-wrap items-center justify-between gap-4 border-t border-white/[0.06] pt-5">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[9px] text-slate-500">
+            <button onClick={() => setLegalModal("tos")} className="hover:text-slate-300 transition">Ketentuan Layanan</button>
+            <button onClick={() => setLegalModal("privacy")} className="hover:text-slate-300 transition">Kebijakan Privasi</button>
+          </div>
+          <a
+            href={`https://wa.me/${SUPPORT_WA_NUMBER}?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-2 text-[10px] font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+          >
+            <MessageCircle size={13} />
+            Butuh Bantuan? Chat Support
+          </a>
+        </div>
       </footer>
+
+      {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} supportWaNumber={SUPPORT_WA_NUMBER} />}
     </div>
   );
 }
