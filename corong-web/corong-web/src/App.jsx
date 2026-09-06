@@ -401,8 +401,20 @@ export default function App() {
   // walau yang dipilih orangnya Standard atau Enterprise.
   let intendedTierLabel = null;
   try {
-    const t = localStorage.getItem("nexto_intended_plan");
-    intendedTierLabel = TIER_LABEL[t] || null;
+    // BUG FIX (6 Sep 2026): begitu user BENERAN udah punya plan berbayar
+    // (myLevel >= 1), flag "intended" dari sebelum checkout ini jadi BASI -
+    // kejadian nyata: orang niatnya klik "Upgrade ke Professional" tapi pas
+    // di halaman Mayar ternyata bayar Standard (lebih murah/tergoda diskon,
+    // dll) - banner-nya masih ngotot bilang "kamu pilih Professional,
+    // selesaiin pembayaran Professional" padahal Standard-nya udah AKTIF,
+    // bikin bingung dikira gagal. Begitu ada plan aktif, buang flag ini -
+    // biar banner balik ke pesan normal sesuai plan yang BENERAN dia punya.
+    if (myLevel >= 1) {
+      localStorage.removeItem("nexto_intended_plan");
+    } else {
+      const t = localStorage.getItem("nexto_intended_plan");
+      intendedTierLabel = TIER_LABEL[t] || null;
+    }
   } catch {}
   // Level minimal tiap tab: 0=Free, 1=Standard, 2=Professional.
   // Tab yang gak disebutin di sini otomatis level 0 (Free).
