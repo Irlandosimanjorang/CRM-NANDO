@@ -49,12 +49,6 @@ const ROBOT_ENGINE_LOOP_AUDIO = `${LANDING_AUDIO_BASE}/robot-engine-loop.mp3`;
 // suatu saat nomornya berubah.
 const SUPPORT_WA_NUMBER = "6281273059284";
 
-// Link pembayaran Mayar - 1 link buat semua tier (Standard/Professional/
-// Enterprise) & semua durasi (1 bulan/6 bulan), soalnya di Mayar itu semua
-// cuma 1 produk "Tier Membership" - pembeli milih tier & durasinya sendiri
-// di halaman Mayar. Ganti di sini aja kalau link-nya berubah.
-const MAYAR_PAYMENT_LINK = "https://crmnexto.myr.id/m/premium-12306";
-
 // Hook kecil buat tombol "Dengerin" robot - play sekali klik, gak ada
 // autoplay (etika landing page publik: jangan maksa suara ke pengunjung
 // asing tanpa diminta).
@@ -1400,6 +1394,16 @@ export default function Auth() {
     }, 50);
   };
 
+  // Dipanggil dari tombol pricing (Standard/Professional/Enterprise) - orang
+  // HARUS bikin akun Nexto dulu sebelum bayar (biar webhook Mayar bisa
+  // nyocokin email pembayaran ke akun yang benar - lihat catatan di
+  // mayar-webhook.ts). Tier pilihan disimpen di localStorage biar dashboard
+  // bisa nampilin banner "lanjutkan bayar [tier]" abis mereka selesai daftar.
+  const chooseTierAndSignup = (tier) => {
+    try { localStorage.setItem("nexto_intended_plan", tier); } catch {}
+    goToSignup();
+  };
+
   const goToSignin = () => {
     setMode("signin");
     setMsg("");
@@ -1847,7 +1851,7 @@ export default function Auth() {
                 </ul>
 
                 <button
-                  onClick={() => window.open(MAYAR_PAYMENT_LINK, "_blank", "noopener,noreferrer")}
+                  onClick={() => chooseTierAndSignup("standard")}
                   className="mt-8 w-full rounded-xl border border-white/10 py-3 text-[11px] font-bold text-slate-300 transition hover:bg-white/[0.05]"
                 >
                   Mulai Standard
@@ -1902,7 +1906,7 @@ export default function Auth() {
                 </ul>
 
                 <button
-                  onClick={() => window.open(MAYAR_PAYMENT_LINK, "_blank", "noopener,noreferrer")}
+                  onClick={() => chooseTierAndSignup("premium")}
                   className="relative mt-8 w-full rounded-xl bg-orange-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-orange-500"
                 >
                   Upgrade ke Professional
@@ -1955,7 +1959,7 @@ export default function Auth() {
                   </ul>
 
                   <button
-                    onClick={() => window.open(MAYAR_PAYMENT_LINK, "_blank", "noopener,noreferrer")}
+                    onClick={() => chooseTierAndSignup("enterprise")}
                     className="mt-8 w-full rounded-xl bg-violet-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-violet-500"
                   >
                     Upgrade ke Enterprise
@@ -2040,6 +2044,18 @@ export default function Auth() {
                         ? "Lanjutkan mengelola sales loop kamu."
                         : "Gratis buat mulai. Upgrade kapan kamu siap."}
                     </p>
+
+                    {mode === "signup" && (() => {
+                      let intended = null;
+                      try { intended = localStorage.getItem("nexto_intended_plan"); } catch {}
+                      const label = { standard: "Standard", premium: "Professional", enterprise: "Enterprise" }[intended];
+                      if (!label) return null;
+                      return (
+                        <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/[0.06] px-3 py-2 text-[10px] leading-4 text-orange-300">
+                          Kamu pilih paket <b>{label}</b> — daftar gratis dulu di sini, abis itu kita arahin buat pembayarannya.
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="space-y-3">

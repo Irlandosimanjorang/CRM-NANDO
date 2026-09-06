@@ -109,6 +109,16 @@ function Toast({ toast, onDismiss }) {
   );
 }
 
+// Link pembayaran Mayar - 1 link buat semua tier (Standard/Professional/
+// Enterprise) & semua durasi (1 bulan/6 bulan) - di Mayar itu semua cuma 1
+// produk "Tier Membership", pembeli milih tier & durasinya sendiri di
+// halaman Mayar. HARUS SAMA dengan link di Auth.jsx (landing page) - jangan
+// sampai beda lagi kayak sebelumnya (link lama di sini nunjuk ke produk
+// Mayar yang berbeda/basi: subscription.myr.id/m/nexto-premium-88379).
+const MAYAR_PAYMENT_LINK = "https://crmnexto.myr.id/m/premium-12306";
+
+const TIER_LABEL = { standard: "Standard", premium: "Professional", enterprise: "Enterprise" };
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
@@ -362,6 +372,16 @@ export default function App() {
   const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
   const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
   const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
+
+  // Tier yang dipilih user pas klik tombol pricing di landing page SEBELUM
+  // daftar (lihat chooseTierAndSignup di Auth.jsx) - dipake buat personalisasi
+  // banner upgrade di bawah, biar gak generic "Upgrade Professional" doang
+  // walau yang dipilih orangnya Standard atau Enterprise.
+  let intendedTierLabel = null;
+  try {
+    const t = localStorage.getItem("nexto_intended_plan");
+    intendedTierLabel = TIER_LABEL[t] || null;
+  } catch {}
   // Level minimal tiap tab: 0=Free, 1=Standard, 2=Professional.
   // Tab yang gak disebutin di sini otomatis level 0 (Free).
   const TAB_MIN_LEVEL = {
@@ -612,11 +632,21 @@ export default function App() {
                     <Sparkles size={15} />
                   </div>
                   <div>
-                    <div className="text-[12px] font-semibold text-slate-800">{myLevel === 1 ? "Kamu sedang memakai Nexto Standard" : "Kamu sedang memakai Nexto Free"}</div>
-                    <div className="mt-0.5 text-[10px] leading-4 text-slate-500">{myLevel === 1 ? "Leads & Komunitas aktif. Upgrade ke Professional untuk membuka AI, Deal, Visit, Calendar, dan automation." : "Dashboard & Leads aktif. Upgrade untuk membuka Komunitas, AI, Deal, Visit, Calendar, dan automation."}</div>
+                    <div className="text-[12px] font-semibold text-slate-800">
+                      {intendedTierLabel ? `Kamu pilih paket ${intendedTierLabel}` : myLevel === 1 ? "Kamu sedang memakai Nexto Standard" : "Kamu sedang memakai Nexto Free"}
+                    </div>
+                    <div className="mt-0.5 text-[10px] leading-4 text-slate-500">
+                      {intendedTierLabel
+                        ? `Akunmu udah jadi - tinggal selesaiin pembayaran ${intendedTierLabel}. Pastikan pakai email yang sama persis (${session?.user?.email || "email akun ini"}) pas bayar di Mayar.`
+                        : myLevel === 1
+                        ? "Leads & Komunitas aktif. Upgrade ke Professional untuk membuka AI, Deal, Visit, Calendar, dan automation."
+                        : "Dashboard & Leads aktif. Upgrade untuk membuka Komunitas, AI, Deal, Visit, Calendar, dan automation."}
+                    </div>
                   </div>
                 </div>
-                <a href="https://subscription.myr.id/m/nexto-premium-88379/" target="_blank" rel="noreferrer" className="shrink-0 rounded-xl bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold text-white shadow-[0_8px_18px_-10px_rgba(15,23,42,.7)] hover:bg-slate-800">Upgrade Professional →</a>
+                <a href={MAYAR_PAYMENT_LINK} target="_blank" rel="noreferrer" className="shrink-0 rounded-xl bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold text-white shadow-[0_8px_18px_-10px_rgba(15,23,42,.7)] hover:bg-slate-800">
+                  {intendedTierLabel ? `Bayar ${intendedTierLabel} →` : "Upgrade Professional →"}
+                </a>
               </div>
               <div className="border-t border-orange-200/50 px-4 py-3 md:px-5">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
