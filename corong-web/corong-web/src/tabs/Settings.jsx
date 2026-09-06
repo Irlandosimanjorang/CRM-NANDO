@@ -7,6 +7,12 @@ import RecycleBinModal from "../components/RecycleBinModal";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
+// Username bot Telegram Nexto (dari BotFather) - sebelum ini gak pernah
+// disebutin sama sekali di UI, orang cuma disuruh "cari bot kamu" tanpa
+// tau nama botnya apa. Ganti di sini kalau suatu saat bikin bot baru.
+const TELEGRAM_BOT_USERNAME = "MilestoBot";
+const TELEGRAM_BOT_LINK = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
+
 export default function Settings({ settings, stages, leads, onChanged, mayarLink, userEmail }) {
   const [names, setNames] = useState((settings.sales_names || []).join(", "));
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
@@ -464,7 +470,10 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Send size={15} className="text-sky-500" /> Telegram Bot</h3>
-        <p className="text-xs text-slate-500 mb-3">Sambungin akun Telegram kamu buat tambah lead, jadwalin visit, dan catat progress langsung dari chat.</p>
+        <p className="text-xs text-slate-500 mb-3">
+          Sambungin akun Telegram kamu buat tambah lead, jadwalin visit, dan catat progress langsung dari chat. Nama bot-nya{" "}
+          <a href={TELEGRAM_BOT_LINK} target="_blank" rel="noreferrer" className="font-semibold text-sky-600 hover:underline">@{TELEGRAM_BOT_USERNAME}</a>.
+        </p>
         {myLevel < 2 ? (
           <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
@@ -482,12 +491,20 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
           </div>
         ) : tgCode ? (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-            <p className="text-xs text-slate-600 mb-2">Buka Telegram, cari bot kamu, lalu kirim pesan ini:</p>
+            <p className="text-xs text-slate-600 mb-2">
+              1. Buka bot{" "}
+              <a href={TELEGRAM_BOT_LINK} target="_blank" rel="noreferrer" className="font-semibold text-sky-600 hover:underline">@{TELEGRAM_BOT_USERNAME}</a>
+              {" "}di Telegram (klik Start kalau belum pernah)
+            </p>
+            <p className="text-xs text-slate-600 mb-2">2. Kirim pesan ini ke bot-nya:</p>
             <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
               <span className="flex-1">/link {tgCode}</span>
               <button onClick={() => navigator.clipboard.writeText(`/link ${tgCode}`)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
             </div>
-            <p className="text-[11px] text-slate-400 mt-2">Kode berlaku 10 menit. Setelah terhubung, refresh halaman ini.</p>
+            <p className="text-[11px] text-slate-400 mt-2">Kode berlaku 10 menit. Setelah bot bilang berhasil, refresh halaman ini.</p>
+            <a href={TELEGRAM_BOT_LINK} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs bg-sky-600 hover:bg-sky-700 text-white rounded-xl px-3 py-2 font-medium">
+              <Send size={13} /> Buka @{TELEGRAM_BOT_USERNAME}
+            </a>
           </div>
         ) : (
           <button onClick={genCode} disabled={tgBusy} className="text-sm bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
