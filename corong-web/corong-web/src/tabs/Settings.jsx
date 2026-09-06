@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -169,6 +169,16 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
   // Yang bayar paket Individual (bukan Enterprise) sengaja gak dikasih akses
   // fitur tim sama sekali - paket itu emang didesain solo doang.
   const isIndividualPaid = settings.plan === "premium" && !isEnterprise;
+
+  // BUG FIX (6 Sep 2026): Telegram Bot & Google Calendar itu fitur
+  // PROFESSIONAL ke atas (lihat landing page) tapi sebelum ini tombol
+  // "Hubungkan"-nya nongol aktif buat SEMUA tier termasuk Free/Standard -
+  // gak ada pengecekan tier sama sekali di sini. Google Calendar bahkan
+  // gak ke-gate juga di backend-nya (beda dari Telegram bot yang emang
+  // udah ke-gate di telegram-webhook.ts). Sekarang dikunci di sini,
+  // backend-nya juga dibenerin sekalian.
+  const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
+  const myLevel = isEnterprise ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
 
   const generateInvite = async () => {
     setInviteBusy(true);
@@ -455,7 +465,15 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Send size={15} className="text-sky-500" /> Telegram Bot</h3>
         <p className="text-xs text-slate-500 mb-3">Sambungin akun Telegram kamu buat tambah lead, jadwalin visit, dan catat progress langsung dari chat.</p>
-        {tgLoading ? (
+        {myLevel < 2 ? (
+          <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-start gap-3">
+            <span className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
+            <div className="text-sm">
+              <div className="font-medium text-sky-900">Telegram Bot itu fitur Professional</div>
+              <div className="text-xs text-sky-700 mt-0.5">Upgrade ke Professional buat bisa nyambungin & pake bot Telegram-nya.</div>
+            </div>
+          </div>
+        ) : tgLoading ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : tgLink ? (
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -481,7 +499,15 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
         <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar kamu biar jadwal visit & follow-up dari bot Telegram otomatis masuk ke calendar.</p>
-        {gcalLoading ? (
+        {myLevel < 2 ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
+            <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
+            <div className="text-sm">
+              <div className="font-medium text-rose-900">Google Calendar itu fitur Professional</div>
+              <div className="text-xs text-rose-700 mt-0.5">Upgrade ke Professional buat bisa nyambungin Google Calendar kamu.</div>
+            </div>
+          </div>
+        ) : gcalLoading ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : gcalLink ? (
           <div className="space-y-3">
