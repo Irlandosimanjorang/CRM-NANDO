@@ -222,7 +222,7 @@ export default function LeadModal({ lead, stages, settings, industry, myLevel = 
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl my-8 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header gradient sesuai warna tahap pipeline lead ini - avatar bubble
             "bocor" ke luar band, senada sama gaya kartu profil & popup lain. */}

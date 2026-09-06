@@ -56,7 +56,7 @@ export default function DuplicateModal({ leads, onClose, onChanged }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1"><h2 className="font-bold text-lg flex items-center gap-2"><Copy size={18} className="text-orange-500" /> Cek Duplikat</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
         <p className="text-sm text-slate-500 mb-4">Ditemukan {visible.length} pasangan nama company yang mirip. Klik kartu buat pilih mana yang mau dipertahankan, lalu Gabungkan.</p>

@@ -66,7 +66,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
   const incompleteLeads = useMemo(() => active.filter((l) => !l.city || !l.phone), [active]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 z-50 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-bold text-lg flex items-center gap-2"><Sparkles size={18} className="text-orange-500" /> Rapihin Data</h2>
