@@ -13,6 +13,32 @@ const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg
 const TELEGRAM_BOT_USERNAME = "MilestoBot";
 const TELEGRAM_BOT_LINK = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
 
+// BUG FIX (6 Sep 2026): kode /link Telegram cuma disimpen di state React
+// biasa - begitu tab Nexto ke-reload (kejadian nyata: orang klik link bot,
+// balik lagi ke tab Nexto, tab-nya kebuang dari memori HP terus di-reload
+// ulang sama browser/OS), kodenya ILANG walau kodenya SENDIRI masih valid
+// 10 menit di server (lihat generateTelegramCode di db.js). Sekarang
+// disimpen juga di localStorage biar bisa di-restore.
+const TG_CODE_KEY = "nexto-telegram-link-code";
+const TG_CODE_TTL_MS = 10 * 60 * 1000; // samain sama masa berlaku kode di server
+function saveTgCode(code) {
+  try { localStorage.setItem(TG_CODE_KEY, JSON.stringify({ code, savedAt: Date.now() })); } catch (_) {}
+}
+function clearTgCode() {
+  try { localStorage.removeItem(TG_CODE_KEY); } catch (_) {}
+}
+function getSavedTgCode() {
+  try {
+    const raw = localStorage.getItem(TG_CODE_KEY);
+    if (!raw) return "";
+    const parsed = JSON.parse(raw);
+    if (Date.now() - (parsed.savedAt || 0) > TG_CODE_TTL_MS) { localStorage.removeItem(TG_CODE_KEY); return ""; }
+    return parsed.code || "";
+  } catch (_) {
+    return "";
+  }
+}
+
 export default function Settings({ settings, stages, leads, onChanged, mayarLink, userEmail }) {
   const [names, setNames] = useState((settings.sales_names || []).join(", "));
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
@@ -20,7 +46,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
   const [msg, setMsg] = useState("");
   const [exporting, setExporting] = useState(false);
   const [tgLink, setTgLink] = useState(null);
-  const [tgCode, setTgCode] = useState("");
+  const [tgCode, setTgCode] = useState(getSavedTgCode);
   const [tgBusy, setTgBusy] = useState(false);
   const [tgLoading, setTgLoading] = useState(true);
   const [gcalLink, setGcalLink] = useState(null);
@@ -164,7 +190,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
   };
 
   useEffect(() => {
-    db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); }).catch(() => setTgLoading(false));
+    db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); if (l) clearTgCode(); }).catch(() => setTgLoading(false));
     db.getGoogleCalendarLink().then((l) => { setGcalLink(l); setGcalLoading(false); }).catch(() => setGcalLoading(false));
     loadOrg();
     loadMfaFactors();
@@ -228,14 +254,14 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
   const genCode = async () => {
     setTgBusy(true);
-    try { const code = await db.generateTelegramCode(); setTgCode(code); }
+    try { const code = await db.generateTelegramCode(); setTgCode(code); saveTgCode(code); }
     catch (e) { alert("Gagal generate kode: " + e.message); }
     finally { setTgBusy(false); }
   };
   const unlinkTg = async () => {
     if (!window.confirm("Putuskan koneksi Telegram?")) return;
     setTgBusy(true);
-    try { await db.unlinkTelegram(); setTgLink(null); setTgCode(""); }
+    try { await db.unlinkTelegram(); setTgLink(null); setTgCode(""); clearTgCode(); }
     catch (e) { alert("Gagal: " + e.message); }
     finally { setTgBusy(false); }
   };

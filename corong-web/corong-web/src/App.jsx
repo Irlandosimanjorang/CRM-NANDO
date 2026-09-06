@@ -127,7 +127,33 @@ const TIER_LABEL = { standard: "Standard", premium: "Professional", enterprise: 
 export default function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [tab, setTab] = useState("dashboard");
+  // BUG FIX (6 Sep 2026): Leads.jsx & Dashboard.jsx udah bisa restore popup
+  // draft AI yang lagi kebuka pas app di-reload total (state-nya beneran
+  // balik) - TAPI reload selalu balikin tab AKTIF ke "dashboard", jadi kalau
+  // popup-nya kesimpen buat tab Leads, dia restore diem-diem di BALIK layar
+  // (display:none) - orangnya ngerasa "ilang" padahal cuma ketutupan. Sekarang
+  // tab awal dicek dari localStorage yang sama, biar landing LANGSUNG di tab
+  // yang bener begitu popup-nya kebuka lagi.
+  const [tab, setTab] = useState(() => {
+    try {
+      const raw = localStorage.getItem("nexto-open-draft-popup");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const stillValid = Date.now() - (parsed?.savedAt || 0) < 24 * 60 * 60 * 1000;
+        if (stillValid && (parsed?.source === "leads" || parsed?.source === "dashboard")) return parsed.source;
+      }
+      // Sama kasusnya sama kode /link Telegram (lihat Settings.jsx) - kalau
+      // masih ada kode yang belum expired (<10 menit), landing langsung ke
+      // tab Pengaturan biar keliatan, bukan ketutupan di Dashboard.
+      const tgRaw = localStorage.getItem("nexto-telegram-link-code");
+      if (tgRaw) {
+        const tgParsed = JSON.parse(tgRaw);
+        const tgStillValid = Date.now() - (tgParsed?.savedAt || 0) < 10 * 60 * 1000;
+        if (tgStillValid && tgParsed?.code) return "settings";
+      }
+    } catch {}
+    return "dashboard";
+  });
   const [stages, setStages] = useState([]);
   const [settings, setSettings] = useState({ sales_names: [] });
   const [leads, setLeads] = useState([]);
