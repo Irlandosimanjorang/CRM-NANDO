@@ -7,7 +7,7 @@ import RecycleBinModal from "../components/RecycleBinModal";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
-export default function Settings({ settings, stages, leads, onChanged }) {
+export default function Settings({ settings, stages, leads, onChanged, mayarLink, userEmail }) {
   const [names, setNames] = useState((settings.sales_names || []).join(", "));
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
   const [busy, setBusy] = useState(false);
@@ -308,6 +308,31 @@ export default function Settings({ settings, stages, leads, onChanged }) {
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Pengaturan</h1>
+
+      {!orgLoading && !isEnterprise && settings.plan !== "premium" && (
+        <div className="overflow-hidden rounded-[28px] border border-orange-200/70 bg-gradient-to-r from-orange-50 via-white to-orange-50/60 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]">
+          <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                <Sparkles size={15} />
+              </div>
+              <div>
+                <div className="text-[13px] font-semibold text-slate-800">
+                  {settings.plan === "standard" ? "Kamu sedang memakai Nexto Standard" : "Kamu sedang memakai Nexto Free"}
+                </div>
+                <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                  {settings.plan === "standard"
+                    ? "Leads & Komunitas aktif. Upgrade ke Professional untuk membuka AI, Deal, Visit, Calendar, dan automation."
+                    : "Dashboard & Leads aktif. Upgrade untuk membuka Komunitas, AI, Deal, Visit, Calendar, dan automation."}
+                </div>
+              </div>
+            </div>
+            <a href={mayarLink} target="_blank" rel="noreferrer" className="shrink-0 rounded-xl bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold text-white shadow-[0_8px_18px_-10px_rgba(15,23,42,.7)] hover:bg-slate-800">
+              Upgrade Professional →
+            </a>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Users size={15} className="text-violet-500" /> Tim</h3>

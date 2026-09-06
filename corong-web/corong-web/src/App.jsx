@@ -658,7 +658,13 @@ export default function App() {
         </header>
 
         <main className="relative z-10 flex-1 w-full max-w-[1440px] mx-auto px-4 py-5 md:px-7 md:py-7 lg:px-9 pb-32">
-          {!loading && myLevel < 2 && (
+          {/* Banner ini cuma buat user Free - begitu udah bayar (Standard ke
+              atas), gak perlu terus dipajang gede di ATAS SETIAP TAB (dulu
+              nongol truss walau udah jadi pelanggan bayar, kesannya maksa).
+              Upgrade CTA buat Standard/Professional dipindah ke tab
+              Pengaturan aja - orang yang emang mau upgrade pasti nyari ke
+              situ, gak perlu dipaksa liat tiap buka app. */}
+          {!loading && myLevel < 1 && (
             <div className="mb-5 overflow-hidden rounded-[20px] border border-orange-200/70 bg-gradient-to-r from-orange-50 via-white to-orange-50/60 shadow-[0_12px_35px_-25px_rgba(249,115,22,.45)]">
               <div className="flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-5">
                 <div className="flex items-start gap-3">
@@ -743,7 +749,7 @@ export default function App() {
               </div>
               <div style={{ display: effectiveTab === "settings" ? "block" : "none" }}>
                 <PreviewLock locked={isLocked("settings")}>
-                  <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} />
+                  <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} mayarLink={MAYAR_PAYMENT_LINK} userEmail={session?.user?.email} />
                 </PreviewLock>
               </div>
             </>
