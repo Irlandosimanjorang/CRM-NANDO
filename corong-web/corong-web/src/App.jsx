@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
 import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPos } from "./lib/uiPersist";
+import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
 import Auth from "./Auth";
 import EngineHeaderMini from "./components/EngineHeaderMini";
 import { todayISO } from "./lib/helpers";
@@ -110,20 +111,8 @@ function Toast({ toast, onDismiss }) {
   );
 }
 
-// Link pembayaran Mayar - 1 link buat semua tier (Standard/Professional/
-// Enterprise) & semua durasi (1 bulan/6 bulan) - di Mayar itu semua cuma 1
-// produk "Tier Membership", pembeli milih tier & durasinya sendiri di
-// halaman Mayar.
-//
-// AWAS: slug di URL ini ikut berubah kalau nama produknya diganti di Mayar
-// Dashboard (udah kejadian sekali - link lama /m/premium-12306 jadi 404
-// gara-gara produknya di-rename jadi "NEXTO CRM - AI Sales Operating
-// System"). Kalau nanti nama produk di Mayar diganti LAGI, link ini WAJIB
-// diupdate manual di sini juga, kalau enggak tombol "Bayar" di dashboard
-// bakal ngarahin ke halaman 404.
-const MAYAR_PAYMENT_LINK = "https://crmnexto.myr.id/m/nexto-crm-ai-sales-operating-system";
-
-const TIER_LABEL = { standard: "Standard", premium: "Professional", enterprise: "Enterprise" };
+// MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL: lihat ./lib/plans.js (satu
+// sumber kebenaran, jangan definisi ulang di sini).
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -498,7 +487,6 @@ export default function App() {
   // (tier tertinggi individual) - "standard" adalah tier BARU di antara
   // Free dan Professional. Enterprise (org.plan) otomatis dapet level
   // Professional + fitur tim tambahan yang di-gate terpisah di Settings.jsx.
-  const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
   const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
   const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
 

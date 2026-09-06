@@ -5,6 +5,7 @@ import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
 import RecycleBinModal from "../components/RecycleBinModal";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
+import { PLAN_LEVEL } from "../lib/plans";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
@@ -211,7 +212,6 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
   // gak ke-gate juga di backend-nya (beda dari Telegram bot yang emang
   // udah ke-gate di telegram-webhook.ts). Sekarang dikunci di sini,
   // backend-nya juga dibenerin sekalian.
-  const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
   const myLevel = isEnterprise ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
 
   const generateInvite = async () => {
