@@ -49,6 +49,12 @@ const ROBOT_ENGINE_LOOP_AUDIO = `${LANDING_AUDIO_BASE}/robot-engine-loop.mp3`;
 // suatu saat nomornya berubah.
 const SUPPORT_WA_NUMBER = "6281273059284";
 
+// Link pembayaran Mayar - 1 link buat semua tier (Standard/Professional/
+// Enterprise) & semua durasi (1 bulan/6 bulan), soalnya di Mayar itu semua
+// cuma 1 produk "Tier Membership" - pembeli milih tier & durasinya sendiri
+// di halaman Mayar. Ganti di sini aja kalau link-nya berubah.
+const MAYAR_PAYMENT_LINK = "https://crmnexto.myr.id/m/premium-12306";
+
 // Hook kecil buat tombol "Dengerin" robot - play sekali klik, gak ada
 // autoplay (etika landing page publik: jangan maksa suara ke pengunjung
 // asing tanpa diminta).
@@ -1829,6 +1835,9 @@ export default function Auth() {
                 <div className="mt-1 text-[10px] text-slate-500">
                   CRM inti + AI ringan — untuk yang mau rapiin data leads dulu
                 </div>
+                <div className="mt-2 inline-block rounded-full bg-white/[0.06] px-2.5 py-1 text-[9px] font-semibold text-slate-400">
+                  atau Rp395rb/6 bulan — bayar 5, dapat 6
+                </div>
 
                 <div className="my-7 h-px bg-white/[0.06]" />
 
@@ -1845,7 +1854,7 @@ export default function Auth() {
                 </ul>
 
                 <button
-                  onClick={goToSignup}
+                  onClick={() => window.open(MAYAR_PAYMENT_LINK, "_blank", "noopener,noreferrer")}
                   className="mt-8 w-full rounded-xl border border-white/10 py-3 text-[11px] font-bold text-slate-300 transition hover:bg-white/[0.05]"
                 >
                   Mulai Standard
@@ -1881,6 +1890,9 @@ export default function Auth() {
                 <div className="relative mt-1 text-[10px] text-slate-400">
                   AI Sales Engine penuh — solo, tapi kerja kayak ada tim
                 </div>
+                <div className="relative mt-2 inline-block rounded-full bg-orange-500/10 px-2.5 py-1 text-[9px] font-semibold text-orange-300">
+                  atau Rp1,345jt/6 bulan — bayar 5, dapat 6
+                </div>
 
                 <div className="relative my-7 h-px bg-white/[0.08]" />
 
@@ -1897,7 +1909,7 @@ export default function Auth() {
                 </ul>
 
                 <button
-                  onClick={goToSignup}
+                  onClick={() => window.open(MAYAR_PAYMENT_LINK, "_blank", "noopener,noreferrer")}
                   className="relative mt-8 w-full rounded-xl bg-orange-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-orange-500"
                 >
                   Upgrade ke Professional
@@ -1931,6 +1943,9 @@ export default function Auth() {
                   <div className="mt-1 text-[10px] text-slate-400">
                     Untuk 4 orang (≈Rp325rb/orang) — tim sales dengan visibilitas penuh
                   </div>
+                  <div className="mt-2 inline-block rounded-full bg-violet-500/10 px-2.5 py-1 text-[9px] font-semibold text-violet-300">
+                    atau Rp6,5jt/6 bulan — bayar 5, dapat 6
+                  </div>
 
                   <div className="my-7 h-px bg-white/10" />
 
@@ -1947,10 +1962,10 @@ export default function Auth() {
                   </ul>
 
                   <button
-                    onClick={goToSignup}
+                    onClick={() => window.open(MAYAR_PAYMENT_LINK, "_blank", "noopener,noreferrer")}
                     className="mt-8 w-full rounded-xl bg-violet-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-violet-500"
                   >
-                    Hubungi Sales
+                    Upgrade ke Enterprise
                   </button>
                 </div>
               </div>
