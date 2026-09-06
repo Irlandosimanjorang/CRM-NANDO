@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
+import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 const DRAFT_KEY = "nexto_add_deal_draft";
@@ -124,7 +125,11 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
 }
 
 export default function Deal({ leads, stages, dealTransactions, onEdit, onChanged }) {
-  const [add, setAdd] = useState(false);
+  // BUG FIX (6 Sep 2026): modal ini udah lama punya sistem draft field
+  // (lihat DRAFT_KEY di atas) - tapi visibilitas modal-nya sendiri belum
+  // ke-restore abis reload paksa, jadi orangnya harus klik "+Tambah Deal"
+  // manual lagi biar draft-nya keliatan. Sekarang otomatis kebuka lagi.
+  const [add, setAdd] = useState(() => !!getOpenModal("deal"));
   const [qtyRevealed, setQtyRevealed] = useState(false);
   const [rpRevealed, setRpRevealed] = useState(false);
   const [expanded, setExpanded] = useState(new Set());
@@ -165,7 +170,7 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
     <div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2"><Trophy size={20} className="text-emerald-500" /><h1 className="text-2xl font-bold tracking-tight">Deal</h1><span className="text-sm text-slate-400">({groups.length})</span></div>
-        <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah Deal</button>
+        <button onClick={() => { setAdd(true); saveOpenModal("deal", {}); }} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah Deal</button>
       </div>
       {groups.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Trophy size={32} className="mx-auto text-slate-300 mb-3" />Belum ada deal. Klik "Tambah Deal" atau ubah tahap lead jadi "Deal (menang)".</div>
@@ -255,7 +260,7 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
           </div>
         </>
       )}
-      {add && <AddDealModal leads={leads} stages={stages} onClose={() => setAdd(false)} onSaved={() => { setAdd(false); onChanged(); }} />}
+      {add && <AddDealModal leads={leads} stages={stages} onClose={() => { setAdd(false); clearOpenModal("deal"); }} onSaved={() => { setAdd(false); clearOpenModal("deal"); onChanged(); }} />}
     </div>
   );
 }

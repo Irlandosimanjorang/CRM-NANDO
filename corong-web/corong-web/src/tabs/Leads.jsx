@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import {
@@ -44,6 +44,7 @@ import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
 import AiDraftPopup from "../components/AiDraftPopup";
 import ProgressPopup from "../components/ProgressPopup";
+import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 import {
   getFieldLabel,
@@ -53,34 +54,22 @@ import {
   getCompanyTypeOptions,
 } from "../lib/industryTemplates";
 
-// === BUG FIX (5 Sep 2026) ===
-// Popup draft AI (AiDraftPopup) sekarang di-"ingat" lewat localStorage - kalau
+// === BUG FIX (5 Sep 2026, diperluas 6 Sep 2026) ===
+// Popup draft AI (AiDraftPopup) di-"ingat" lewat localStorage (modul
+// lib/uiPersist.js, dipake bareng sama modal lain kayak LeadModal) - kalau
 // browser/tab HP di-reload total (bukan cuma pindah menu doang) SAAT popup ini
 // lagi kebuka, dia otomatis kebuka LAGI pas Nexto dibuka ulang, gak perlu klik
-// tombol Sparkles-nya manual lagi. Ini murni soal "popup mana yang lagi
-// kebuka" - beda dari isi draft-nya sendiri yang udah disimpen di server
-// (lihat draft-followup.ts). "source" dipake buat bedain restore punya tab
-// Leads vs tab Dashboard, biar gak dobel kebuka di dua tempat sekaligus
-// (soalnya sekarang semua tab selalu ke-mount bareng).
-const OPEN_POPUP_KEY = "nexto-open-draft-popup";
-const OPEN_POPUP_TTL_MS = 24 * 60 * 60 * 1000;
-function saveOpenPopup(source, leadId) {
-  try { localStorage.setItem(OPEN_POPUP_KEY, JSON.stringify({ source, leadId, savedAt: Date.now() })); } catch (_) {}
-}
-function clearOpenPopup() {
-  try { localStorage.removeItem(OPEN_POPUP_KEY); } catch (_) {}
-}
-function getOpenPopup(source) {
-  try {
-    const raw = localStorage.getItem(OPEN_POPUP_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.source !== source) return null;
-    if (Date.now() - (parsed.savedAt || 0) > OPEN_POPUP_TTL_MS) { localStorage.removeItem(OPEN_POPUP_KEY); return null; }
-    return parsed;
-  } catch (_) {
-    return null;
-  }
+// tombol Sparkles-nya manual lagi. "source" dipake buat bedain restore punya
+// tab Leads vs tab Dashboard (biar gak dobel kebuka di dua tempat sekaligus -
+// semua tab selalu ke-mount bareng), "channel" (whatsapp/email) DIIKUTIN
+// juga - sebelumnya kalau di-restore, orangnya harus klik WhatsApp/Email lagi
+// biar draft-nya keliatan (padahal draft-nya sendiri udah kesimpen di server,
+// tinggal ditampilin doang).
+function saveOpenDraftPopup(leadId, channel) { saveOpenModal("draft", { source: "leads", leadId, channel }); }
+function clearOpenDraftPopup() { clearOpenModal("draft"); }
+function getOpenDraftPopup() {
+  const data = getOpenModal("draft");
+  return data?.source === "leads" ? data : null;
 }
 
 
@@ -398,6 +387,34 @@ export default function Leads({
   const [edit, setEdit] =
     useState(null);
 
+  // BUG FIX (6 Sep 2026): LeadModal yang dibuka dari SINI (klik kartu lead di
+  // tab Leads) itu instance LOKAL-nya sendiri, terpisah dari LeadModal global
+  // di App.jsx (yang dipakai Dashboard/Deal/Visit/Advisor) - jadi butuh
+  // restore sendiri juga, kind BEDA ("leadinline") biar gak bentrok dobel
+  // modal kalau kebetulan dua-duanya kesimpen.
+  // `restoredRef` jaga-jaga race condition: effect "simpan" di bawah ini
+  // jalan JUGA pas mount pertama (edit masih null) - tanpa guard ini dia
+  // bakal langsung clearOpenModal() dan ngewipe catetan localStorage SEBELUM
+  // effect restore (yang nunggu `leads` selesai load) sempet baca sama sekali.
+  const restoredLeadInlineRef = useRef(false);
+  useEffect(() => {
+    if (edit?.id) saveOpenModal("leadinline", { leadId: edit.id });
+    else if (restoredLeadInlineRef.current) clearOpenModal("leadinline");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edit?.id]);
+  useEffect(() => {
+    if (!leads || leads.length === 0) return;
+    restoredLeadInlineRef.current = true;
+    if (edit) return;
+    const saved = getOpenModal("leadinline");
+    if (saved?.leadId) {
+      const lead = leads.find((l) => l.id === saved.leadId);
+      if (lead) setEdit(lead);
+      else clearOpenModal("leadinline");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads.length > 0]);
+
   const [busy, setBusy] =
     useState(false);
 
@@ -410,27 +427,36 @@ export default function Leads({
   const [progressPopup, setProgressPopup] =
     useState(null);
 
-  // ---- RESTORE popup draft yang lagi kebuka pas terakhir kali app ke-reload
-  // total (lihat komentar BUG FIX di atas file). Nunggu `leads` beneran udah
-  // ke-load dulu (gak nyari di array kosong) sebelum nyoba restore. ----
+  // ---- RESTORE popup yang lagi kebuka pas terakhir kali app ke-reload total
+  // (lihat komentar BUG FIX di atas file). Nunggu `leads` beneran udah
+  // ke-load dulu (gak nyari di array kosong) sebelum nyoba restore. Cek modal
+  // generik SEKALI - isinya bisa draft popup, cek duplikat, ATAU progress
+  // popup (satu-satunya yang realistis kebuka barengan). ----
   useEffect(() => {
     if (!leads || leads.length === 0) return;
-    const saved = getOpenPopup("leads");
-    if (saved) {
-      const lead = leads.find((l) => l.id === saved.leadId);
-      if (lead) setDraftPopup({ lead, rect: null });
-      else clearOpenPopup(); // lead-nya udah gak ada (misal kehapus), buang aja catetannya
+    const draftSaved = getOpenDraftPopup();
+    if (draftSaved) {
+      const lead = leads.find((l) => l.id === draftSaved.leadId);
+      if (lead) { setDraftPopup({ lead, rect: null, channel: draftSaved.channel || undefined }); return; }
+      clearOpenDraftPopup(); // lead-nya udah gak ada (misal kehapus), buang aja catetannya
     }
+    const progressSaved = getOpenModal("progress");
+    if (progressSaved?.leadId) {
+      const lead = leads.find((l) => l.id === progressSaved.leadId);
+      if (lead) { setProgressPopup({ lead, autoFocus: true }); return; }
+      clearOpenModal("progress");
+    }
+    if (getOpenModal("dupcheck")) setShowDup(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leads.length > 0]);
 
   const openDraftPopup = (lead, rect) => {
     setDraftPopup({ lead, rect });
-    saveOpenPopup("leads", lead.id);
+    saveOpenDraftPopup(lead.id, undefined);
   };
   const closeDraftPopup = () => {
     setDraftPopup(null);
-    clearOpenPopup();
+    clearOpenDraftPopup();
   };
 
 
@@ -1515,11 +1541,10 @@ export default function Leads({
 
 
           <button
-            onClick={() =>
-              setShowDup(
-                true
-              )
-            }
+            onClick={() => {
+              setShowDup(true);
+              saveOpenModal("dupcheck", {});
+            }}
             className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
           >
 
@@ -1842,6 +1867,7 @@ export default function Leads({
                         lead: c,
                         autoFocus: true,
                       });
+                      saveOpenModal("progress", { leadId: c.id });
                     }}
                     className="mt-2.5 w-full flex items-center gap-2 text-left text-[11px] font-mono text-slate-500 border border-slate-200 bg-slate-50 rounded-xl px-3 py-2 hover:border-cyan-400 hover:text-cyan-700 hover:bg-cyan-50 transition-colors"
                     title="Update progress harian"
@@ -2075,6 +2101,8 @@ export default function Leads({
           rect={
             draftPopup.rect
           }
+          initialChannel={draftPopup.channel}
+          onChannelChange={(ch) => saveOpenDraftPopup(draftPopup.lead.id, ch)}
           onClose={closeDraftPopup}
           onSent={
             onChanged
@@ -2093,11 +2121,10 @@ export default function Leads({
           autoFocus={
             progressPopup.autoFocus
           }
-          onClose={() =>
-            setProgressPopup(
-              null
-            )
-          }
+          onClose={() => {
+            setProgressPopup(null);
+            clearOpenModal("progress");
+          }}
           onChanged={
             onChanged
           }
@@ -2112,11 +2139,10 @@ export default function Leads({
           leads={
             leads
           }
-          onClose={() =>
-            setShowDup(
-              false
-            )
-          }
+          onClose={() => {
+            setShowDup(false);
+            clearOpenModal("dupcheck");
+          }}
           onChanged={
             onChanged
           }

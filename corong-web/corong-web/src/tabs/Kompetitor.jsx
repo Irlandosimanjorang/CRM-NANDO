@@ -1,9 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Swords, Plus } from "lucide-react";
 import CompetitorModal from "../components/CompetitorModal";
+import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 export default function Kompetitor({ competitors, onChanged }) {
   const [edit, setEdit] = useState(null);
+
+  // BUG FIX (6 Sep 2026): restore abis app di-reload paksa - CUMA buat yang
+  // lagi EDIT kompetitor yang udah ada (punya id beneran), bukan form "+
+  // Kompetitor" kosong (gak ada isinya yang berharga buat direstore).
+  useEffect(() => {
+    if (!competitors || competitors.length === 0) return;
+    const saved = getOpenModal("competitor");
+    if (saved?.competitorId) {
+      const comp = competitors.find((c) => c.id === saved.competitorId);
+      if (comp) setEdit(comp);
+      else clearOpenModal("competitor");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [competitors.length > 0]);
   return (
     <div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -16,7 +31,7 @@ export default function Kompetitor({ competitors, onChanged }) {
         <div className="space-y-3">
           {competitors.map((k) => (
             <div key={k.id} className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-              <div className="flex items-center justify-between mb-1 cursor-pointer" onClick={() => setEdit(k)}>
+              <div className="flex items-center justify-between mb-1 cursor-pointer" onClick={() => { setEdit(k); saveOpenModal("competitor", { competitorId: k.id }); }}>
                 <span className="font-semibold flex items-center gap-2"><Swords size={15} className="text-rose-400" />{k.name}<span className="text-[10px] text-slate-400 font-normal">· {k.usages.length} company</span></span>
               </div>
               {k.product && <p className="text-xs text-slate-500 mb-2">{k.product}</p>}
@@ -32,7 +47,7 @@ export default function Kompetitor({ competitors, onChanged }) {
           ))}
         </div>
       )}
-      {edit && <CompetitorModal comp={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); onChanged(); }} />}
+      {edit && <CompetitorModal comp={edit} onClose={() => { setEdit(null); clearOpenModal("competitor"); }} onSaved={() => { setEdit(null); clearOpenModal("competitor"); onChanged(); }} />}
     </div>
   );
 }

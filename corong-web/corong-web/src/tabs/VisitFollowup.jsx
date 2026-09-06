@@ -3,6 +3,7 @@ import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Tabl
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
 import MeetingRecorderModal from "../components/MeetingRecorderModal";
+import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 // Rumus Haversine - itung jarak lurus antara 2 titik GPS (dalam meter)
 function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -377,7 +378,15 @@ function MonthCalendar({ leads, onEdit, month, setMonth }) {
 }
 
 function VisitView({ leads, onEdit, onChanged, isEnterprise }) {
-  const [add, setAdd] = useState(false);
+  // BUG FIX (6 Sep 2026): form-nya masih blank waktu dibuka ulang (beda dari
+  // Tambah Deal yang udah punya draft field) - tapi minimal MODAL-nya otomatis
+  // kebuka lagi abis app di-reload paksa, gak keliatan "ilang" gitu aja.
+  const [add, setAdd] = useState(() => !!getOpenModal("visit"));
+  // Catatan: "Rekam Meeting" SENGAJA gak direstore - rekaman audio yang lagi
+  // jalan gak mungkin "dilanjutin" abis tab-nya di-reload (buffer audio-nya
+  // ilang beneran, bukan soal nyimpen state doang), jadi maksa buka modal-nya
+  // lagi cuma bakal nunjukin form kosong yang keliatan kayak seolah rekaman
+  // lama masih ada padahal enggak - lebih aman biarin orangnya klik ulang manual.
   const [recording, setRecording] = useState(false);
   const [view, setView] = useState("table");
   const [month, setMonth] = useState(new Date());
@@ -393,7 +402,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise }) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setRecording(true)} className="flex items-center gap-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm px-3 py-2 rounded-xl font-medium"><Mic size={15} /> Rekam Meeting</button>
-          <button onClick={() => setAdd(true)} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
+          <button onClick={() => { setAdd(true); saveOpenModal("visit", {}); }} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
         </div>
       </div>
 
@@ -429,7 +438,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise }) {
           </div>
         </>
       )}
-      {add && <AddVisitModal leads={leads} onClose={() => setAdd(false)} onSaved={() => { setAdd(false); onChanged(); }} />}
+      {add && <AddVisitModal leads={leads} onClose={() => { setAdd(false); clearOpenModal("visit"); }} onSaved={() => { setAdd(false); clearOpenModal("visit"); onChanged(); }} />}
       {recording && <MeetingRecorderModal leads={leads} onClose={() => setRecording(false)} onSaved={onChanged} />}
     </div>
   );

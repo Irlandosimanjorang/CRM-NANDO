@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
 import RecycleBinModal from "../components/RecycleBinModal";
+import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
@@ -54,8 +55,9 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
   const [gcalLoading, setGcalLoading] = useState(true);
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
-  const [showCleanup, setShowCleanup] = useState(false);
-  const [showRecycleBin, setShowRecycleBin] = useState(false);
+  // BUG FIX (6 Sep 2026): otomatis kebuka lagi abis app di-reload paksa.
+  const [showCleanup, setShowCleanup] = useState(() => !!getOpenModal("datacleanup"));
+  const [showRecycleBin, setShowRecycleBin] = useState(() => !!getOpenModal("recyclebin"));
   const [pwOld, setPwOld] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
@@ -481,7 +483,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Sparkles size={15} className="text-orange-500" /> Rapihin Data</h3>
         <p className="text-xs text-slate-500 mb-3">Cari saran kategori buat lead "Lainnya", lead yang udah lama ga aktif, dan data kontak yang kurang lengkap. Semua perubahan tetap kamu yang approve.</p>
-        <button onClick={() => setShowCleanup(true)} className="text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+        <button onClick={() => { setShowCleanup(true); saveOpenModal("datacleanup", {}); }} className="text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
           <Sparkles size={15} /> Buka Rapihin Data
         </button>
       </div>
@@ -489,7 +491,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Trash2 size={15} className="text-slate-400" /> Recycle Bin</h3>
         <p className="text-xs text-slate-500 mb-3">Lead yang kehapus (manual atau otomatis dari bot) kesimpen di sini dulu, bisa dibalikin kapan aja sebelum di-hapus permanen.</p>
-        <button onClick={() => setShowRecycleBin(true)} className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+        <button onClick={() => { setShowRecycleBin(true); saveOpenModal("recyclebin", {}); }} className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
           <Trash2 size={15} /> Buka Recycle Bin
         </button>
       </div>
@@ -696,8 +698,8 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
         <button onClick={() => supabase.auth.signOut()} className="text-sm border border-rose-300 text-rose-600 rounded-xl px-3 py-2 hover:bg-rose-50">Keluar</button>
       </div>
 
-      {showCleanup && <DataCleanupModal leads={leads} stages={stages} onClose={() => setShowCleanup(false)} onChanged={onChanged} />}
-      {showRecycleBin && <RecycleBinModal onClose={() => setShowRecycleBin(false)} onChanged={onChanged} />}
+      {showCleanup && <DataCleanupModal leads={leads} stages={stages} onClose={() => { setShowCleanup(false); clearOpenModal("datacleanup"); }} onChanged={onChanged} />}
+      {showRecycleBin && <RecycleBinModal onClose={() => { setShowRecycleBin(false); clearOpenModal("recyclebin"); }} onChanged={onChanged} />}
     </div>
   );
 }

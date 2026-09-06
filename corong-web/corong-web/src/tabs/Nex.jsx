@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, MessageCircle, Trash2, Loader2, Send, ThumbsUp, Share2, Image as ImageIcon, Pencil } from "lucide-react";
 import * as db from "../lib/db";
+import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 function fmtWhen(iso) {
   const d = new Date(iso);
@@ -323,7 +324,8 @@ const DUMMY_POSTS = [
 
 export default function Nex({ dummy }) {
   const [posts, setPosts] = useState(null);
-  const [showComposer, setShowComposer] = useState(false);
+  // BUG FIX (6 Sep 2026): otomatis kebuka lagi abis app di-reload paksa.
+  const [showComposer, setShowComposer] = useState(() => !!getOpenModal("nexpost"));
   const [myId, setMyId] = useState(null);
   const [myName, setMyName] = useState("");
   const [myBio, setMyBio] = useState("");
@@ -368,7 +370,7 @@ export default function Nex({ dummy }) {
         )}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setShowComposer(true)}>
+      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => { setShowComposer(true); saveOpenModal("nexpost", {}); }}>
         <div className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm text-slate-400">Apa yang mau kamu share, {myName ? myName.split(" ")[0] : ""}?</div>
         <ImageIcon size={20} className="text-emerald-500 shrink-0" />
       </div>
@@ -385,7 +387,7 @@ export default function Nex({ dummy }) {
         </div>
       )}
 
-      {showComposer && <ComposerModal displayName={myName || "User Nexto"} onClose={() => setShowComposer(false)} onPosted={load} />}
+      {showComposer && <ComposerModal displayName={myName || "User Nexto"} onClose={() => { setShowComposer(false); clearOpenModal("nexpost"); }} onPosted={load} />}
 
       {showProfileEdit && (
         <ProfileEditModal

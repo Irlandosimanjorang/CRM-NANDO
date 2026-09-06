@@ -17,7 +17,7 @@ import { waLink } from "../lib/helpers";
 // dari tombol "Handle Now" di kartu rekomendasi Dashboard (initialChannel
 // diisi biar langsung auto-generate begitu dibuka), ATAU di-restore otomatis
 // abis reload total (rect null, lihat Leads.jsx/Dashboard.jsx).
-export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChannel }) {
+export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChannel, onChannelChange }) {
   const [channel, setChannel] = useState(null); // "whatsapp" | "email" | null
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -38,6 +38,7 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
       return;
     }
     setBusy(true); setError(""); setChannel(ch); setEmailMsg(""); setWasCached(false);
+    onChannelChange?.(ch); // BUG FIX (6 Sep 2026): biar channel yang lagi keliatan ke-inget juga kalau app di-reload paksa
     try {
       // db.draftFollowup manggil backend - backend sendiri yang mutusin apa
       // perlu generate baru atau tinggal balikin yang udah tersimpan (lihat

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
+import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPos } from "./lib/uiPersist";
 import Auth from "./Auth";
 import EngineHeaderMini from "./components/EngineHeaderMini";
 import { todayISO } from "./lib/helpers";
@@ -127,20 +128,41 @@ const TIER_LABEL = { standard: "Standard", premium: "Professional", enterprise: 
 export default function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  // BUG FIX (6 Sep 2026): Leads.jsx & Dashboard.jsx udah bisa restore popup
-  // draft AI yang lagi kebuka pas app di-reload total (state-nya beneran
-  // balik) - TAPI reload selalu balikin tab AKTIF ke "dashboard", jadi kalau
-  // popup-nya kesimpen buat tab Leads, dia restore diem-diem di BALIK layar
-  // (display:none) - orangnya ngerasa "ilang" padahal cuma ketutupan. Sekarang
-  // tab awal dicek dari localStorage yang sama, biar landing LANGSUNG di tab
-  // yang bener begitu popup-nya kebuka lagi.
+  // BUG FIX (6 Sep 2026): SEMUA modal/popup di app (draft AI, progress, cek
+  // duplikat, tambah Deal/Visit, rekam meeting, kompetitor, recycle bin,
+  // rapihin data, post Nex, dst) udah bisa "inget" & restore state-nya abis
+  // app di-reload paksa (kejadian umum di HP - browser/OS suka buang tab
+  // yang lagi di-background pas orang buka app lain kayak Telegram, terus
+  // reload ulang diam-diam pas dibuka lagi). TAPI reload SELALU balikin tab
+  // aktif ke "dashboard" - jadi kalau modal yang ke-restore itu punya tab
+  // LAIN (Leads/Deal/Visit/Kompetitor/Komunitas/Pengaturan), dia restore
+  // diem-diem di BALIK LAYAR (display:none), orangnya ngerasa "ilang" padahal
+  // cuma ketutupan. MODAL_KIND_TAB di bawah nentuin tab yang bener buat
+  // setiap jenis modal, biar landing LANGSUNG di situ.
   const [tab, setTab] = useState(() => {
     try {
-      const raw = localStorage.getItem("nexto-open-draft-popup");
-      if (raw) {
-        const parsed = JSON.parse(raw);
+      const modalRaw = localStorage.getItem("nexto-open-modal");
+      if (modalRaw) {
+        const parsed = JSON.parse(modalRaw);
         const stillValid = Date.now() - (parsed?.savedAt || 0) < 24 * 60 * 60 * 1000;
-        if (stillValid && (parsed?.source === "leads" || parsed?.source === "dashboard")) return parsed.source;
+        if (stillValid) {
+          const MODAL_KIND_TAB = {
+            draft: (d) => d?.source,
+            progress: () => "leads",
+            dupcheck: () => "leads",
+            leadinline: () => "leads",
+            deal: () => "deal",
+            visit: () => "visitfollowup",
+            meetingrecorder: () => "visitfollowup",
+            competitor: () => "kompetitor",
+            nexpost: () => "komunitas",
+            recyclebin: () => "settings",
+            datacleanup: () => "settings",
+          };
+          const resolver = MODAL_KIND_TAB[parsed?.kind];
+          const target = resolver ? resolver(parsed?.data) : null;
+          if (target) return target;
+        }
       }
       // Sama kasusnya sama kode /link Telegram (lihat Settings.jsx) - kalau
       // masih ada kode yang belum expired (<10 menit), landing langsung ke
@@ -179,6 +201,65 @@ export default function App() {
   };
   const [editLead, setEditLead] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // BUG FIX (6 Sep 2026): LeadModal (lihat render-nya di paling bawah file
+  // ini) itu overlay GLOBAL, gak kebungkus display:none per-tab - jadi begitu
+  // di-restore, dia bakal langsung keliatan gak peduli tab mana yang aktif.
+  // Nyimpen/restore-nya otomatis lewat effect ini, gak perlu ubah satu-satu
+  // tempat yang manggil setEditLead (Dashboard/Deal/VisitFollowup/Advisor).
+  // `restoredLeadRef` jaga-jaga race condition: effect "simpan" di bawah
+  // jalan JUGA pas mount pertama (editLead masih null) - tanpa guard ini dia
+  // bakal langsung clearOpenModal() dan ngewipe catetan localStorage SEBELUM
+  // effect restore (yang nunggu `leads` selesai load) sempet baca sama sekali.
+  const restoredLeadRef = useRef(false);
+  useEffect(() => {
+    if (editLead?.id) saveOpenModal("lead", { leadId: editLead.id });
+    else if (restoredLeadRef.current) clearOpenModal("lead");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editLead?.id]);
+
+  useEffect(() => {
+    if (!leads || leads.length === 0) return;
+    restoredLeadRef.current = true;
+    if (editLead) return;
+    const saved = getOpenModal("lead");
+    if (saved?.leadId) {
+      const lead = leads.find((l) => l.id === saved.leadId);
+      if (lead) setEditLead(lead);
+      else clearOpenModal("lead");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads.length > 0]);
+
+  // BUG FIX (6 Sep 2026): posisi scroll juga ilang tiap reload paksa - user
+  // yang lagi baca/edit di bagian bawah halaman balik ke paling atas lagi.
+  // Diinget PER TAB (sessionStorage, otomatis ke-hapus kalau tab BENERAN
+  // ditutup) - discroll dikit aja langsung ke-simpen (throttle via rAF),
+  // dipulihin abis konten tab-nya beres di-render/loading kelar.
+  useEffect(() => {
+    let raf = null;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { saveScrollPos(tab, window.scrollY); raf = null; });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [tab]);
+
+  useEffect(() => {
+    if (loading) return;
+    const y = getScrollPos(tab);
+    if (y <= 0) return;
+    // Konten tiap tab (chart Dashboard, tabel Leads, dst) sering masih
+    // NAMBAH TINGGI abis `loading` App-level ini kelar (masing-masing tab
+    // punya loading state internal sendiri) - sekali coba scrollTo doang
+    // gampang ke-CLAMP ke tinggi halaman yang masih pendek saat itu. Coba
+    // beberapa kali dalam ~1.2 detik biar kena momen yang kontennya udah
+    // cukup tinggi.
+    const attempts = [0, 60, 150, 300, 500, 800, 1200];
+    const timers = attempts.map((ms) => setTimeout(() => window.scrollTo(0, y), ms));
+    return () => timers.forEach(clearTimeout);
+  }, [tab, loading]);
 
   // ---- TOAST STATE - lihat komentar di komponen Toast di atas ----
   const [toasts, setToasts] = useState([]);

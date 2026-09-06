@@ -4,9 +4,11 @@ import * as db from "../lib/db";
 import { todayISO, fmtRp } from "../lib/helpers";
 import { NextoRobotHead } from "../Auth";
 import AiDraftPopup from "../components/AiDraftPopup";
+import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
-// === BUG FIX (5 Sep 2026) ===
-// Popup draft AI ("Handle Now") sekarang di-"ingat" lewat localStorage - kalau
+// === BUG FIX (5 Sep 2026, dipindah ke lib/uiPersist.js bareng modal lain 6
+// Sep 2026) ===
+// Popup draft AI ("Handle Now") di-"ingat" lewat localStorage - kalau
 // browser/tab HP di-reload total (bukan cuma pindah menu doang) SAAT popup ini
 // lagi kebuka, dia otomatis kebuka LAGI pas Nexto dibuka ulang, LENGKAP sama
 // channel (WhatsApp/Email) yang lagi diproses - jadi draft-nya ikut auto-ke-ambil
@@ -14,25 +16,11 @@ import AiDraftPopup from "../components/AiDraftPopup";
 // gak perlu klik "Handle Now" manual lagi dari awal. "source" dipake buat
 // bedain restore punya tab Dashboard vs tab Leads, biar gak dobel kebuka di
 // dua tempat sekaligus (soalnya sekarang semua tab selalu ke-mount bareng).
-const OPEN_POPUP_KEY = "nexto-open-draft-popup";
-const OPEN_POPUP_TTL_MS = 24 * 60 * 60 * 1000;
-function saveOpenPopup(source, leadId, channel) {
-  try { localStorage.setItem(OPEN_POPUP_KEY, JSON.stringify({ source, leadId, channel: channel || null, savedAt: Date.now() })); } catch (_) {}
-}
-function clearOpenPopup() {
-  try { localStorage.removeItem(OPEN_POPUP_KEY); } catch (_) {}
-}
+function saveOpenPopup(source, leadId, channel) { saveOpenModal("draft", { source, leadId, channel: channel || null }); }
+function clearOpenPopup() { clearOpenModal("draft"); }
 function getOpenPopup(source) {
-  try {
-    const raw = localStorage.getItem(OPEN_POPUP_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.source !== source) return null;
-    if (Date.now() - (parsed.savedAt || 0) > OPEN_POPUP_TTL_MS) { localStorage.removeItem(OPEN_POPUP_KEY); return null; }
-    return parsed;
-  } catch (_) {
-    return null;
-  }
+  const data = getOpenModal("draft");
+  return data?.source === source ? data : null;
 }
 
 // Mapping action_type -> channel draft yang paling relevan. Action_type yang
@@ -314,6 +302,7 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
           lead={draftPopup.lead}
           rect={draftPopup.rect}
           initialChannel={draftPopup.channel}
+          onChannelChange={(ch) => saveOpenPopup("dashboard", draftPopup.lead.id, ch)}
           onClose={closeDraftPopup}
           onSent={() => {}}
         />
