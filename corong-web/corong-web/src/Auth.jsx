@@ -477,7 +477,7 @@ function NextoAISalesEngine({ robotVoice }) {
         {/* =========================================================
             ENGINE AREA
         ========================================================== */}
-        <div className="relative mt-14 md:mt-20 min-h-[760px] md:min-h-[680px]">
+        <div className="relative mt-14 md:mt-20 flex flex-col md:block md:min-h-[680px]">
           {/* Desktop connection lines */}
           <div className="hidden md:block absolute inset-0 pointer-events-none">
             {/* left line */}
@@ -499,7 +499,7 @@ function NextoAISalesEngine({ robotVoice }) {
           {/* =======================================================
               LEFT — CALENDAR
           ======================================================== */}
-          <div className="engine-card absolute left-0 top-[5%] md:w-[29%] w-full md:max-w-none">
+          <div className="engine-card relative md:absolute left-0 top-0 md:top-[5%] md:w-[29%] w-full md:max-w-none order-1 md:order-none">
             <EngineCard
               active={active === 0}
               number="01"
@@ -549,7 +549,7 @@ function NextoAISalesEngine({ robotVoice }) {
           {/* =======================================================
               RIGHT — CRM
           ======================================================== */}
-          <div className="engine-card absolute right-0 top-[5%] md:w-[29%] w-full md:max-w-none mt-[510px] md:mt-0">
+          <div className="engine-card relative md:absolute right-0 top-0 md:top-[5%] md:w-[29%] w-full md:max-w-none mt-6 md:mt-0 order-3 md:order-none">
             <EngineCard
               active={active === 2}
               number="03"
@@ -604,7 +604,7 @@ function NextoAISalesEngine({ robotVoice }) {
           {/* =======================================================
               CENTER ROBOT
           ======================================================== */}
-          <div className="absolute left-1/2 top-[27%] md:top-[21%] -translate-x-1/2 z-20">
+          <div className="relative flex justify-center md:absolute md:block md:left-1/2 md:top-[21%] md:-translate-x-1/2 z-20 my-8 md:my-0 order-2 md:order-none">
             <div className="relative flex h-[270px] w-[270px] items-center justify-center md:h-[320px] md:w-[320px]">
               {/* outer rotating ring */}
               <div className="absolute inset-0 rounded-full border border-orange-500/20 animate-spin-slow" />
@@ -644,7 +644,7 @@ function NextoAISalesEngine({ robotVoice }) {
               </div>
 
               {/* floating chat bubble */}
-              <div className="absolute -top-7 left-1/2 w-[235px] -translate-x-1/2 translate-x-[20%] rounded-2xl border border-orange-400/30 bg-[#111214]/90 px-3.5 py-2.5 shadow-[0_15px_40px_-15px_rgba(249,115,22,0.45)] backdrop-blur-xl">
+              <div className="absolute -top-7 left-1/2 w-[200px] md:w-[235px] -translate-x-1/2 md:translate-x-[20%] rounded-2xl border border-orange-400/30 bg-[#111214]/90 px-3.5 py-2.5 shadow-[0_15px_40px_-15px_rgba(249,115,22,0.45)] backdrop-blur-xl">
                 <div className="flex items-start gap-2">
                   <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15">
                     <Bot size={11} className="text-orange-400" />
@@ -679,7 +679,7 @@ function NextoAISalesEngine({ robotVoice }) {
           {/* =======================================================
               BOTTOM — PROGRESS
           ======================================================== */}
-          <div className="engine-card absolute left-1/2 bottom-0 md:bottom-[2%] -translate-x-1/2 w-full md:w-[40%]">
+          <div className="engine-card relative md:absolute md:left-1/2 bottom-auto md:bottom-[2%] md:-translate-x-1/2 w-full md:w-[40%] mt-6 md:mt-0 order-4 md:order-none">
             <EngineCard
               active={active === 1}
               number="02"
@@ -732,13 +732,6 @@ function NextoAISalesEngine({ robotVoice }) {
             </EngineCard>
           </div>
 
-          {/* Mobile connector / central label */}
-          <div className="md:hidden absolute top-[43%] left-1/2 -translate-x-1/2 z-10">
-            <div className="flex items-center gap-2 rounded-full border border-orange-500/20 bg-[#0c0b09]/90 px-3 py-1.5 text-[7px] uppercase tracking-[0.18em] text-orange-400 backdrop-blur">
-              <Zap size={9} />
-              Nexto Engine
-            </div>
-          </div>
         </div>
 
         {/* =========================================================
