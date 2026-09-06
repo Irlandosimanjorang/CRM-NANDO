@@ -1970,6 +1970,10 @@ export default function Auth() {
                 </div>
               </div>
             </div>
+
+            <p className="mx-auto mt-8 max-w-xl text-center text-[10px] leading-relaxed text-slate-500">
+              Penting: pas isi form di halaman pembayaran, pakai <b className="text-slate-300">email yang sama persis</b> dengan email akun Nexto kamu — supaya akunmu otomatis ke-upgrade begitu pembayaran selesai.
+            </p>
           </div>
         </section>
 
