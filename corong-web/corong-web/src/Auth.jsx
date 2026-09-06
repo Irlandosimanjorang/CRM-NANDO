@@ -1360,8 +1360,8 @@ export default function Auth() {
     setMsg("");
 
     if (mode === "signup") {
-      if (!fullName.trim() || !companyName.trim() || !whatsapp.trim()) {
-        setMsg("Nama lengkap, nama perusahaan, dan nomor WhatsApp wajib diisi.");
+      if (!fullName.trim() || !companyName.trim()) {
+        setMsg("Nama lengkap dan nama perusahaan wajib diisi.");
         return;
       }
       if (!Object.values(pwChecks(pw)).every(Boolean)) {
@@ -2118,7 +2118,7 @@ export default function Auth() {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                              JABATAN
+                              JABATAN <span className="font-normal normal-case text-slate-600">(opsional)</span>
                             </label>
                             <input
                               type="text"
@@ -2130,7 +2130,7 @@ export default function Auth() {
                           </div>
                           <div>
                             <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                              NO. WHATSAPP
+                              NO. WHATSAPP <span className="font-normal normal-case text-slate-600">(opsional)</span>
                             </label>
                             <input
                               type="tel"
