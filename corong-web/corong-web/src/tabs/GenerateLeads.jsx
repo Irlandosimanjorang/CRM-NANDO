@@ -151,7 +151,7 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
         {!cooldown.canGenerate ? (
           <div className="flex items-center gap-2.5 text-sm text-amber-700 bg-amber-50 rounded-2xl p-4">
             <Clock size={18} className="shrink-0" />
-            <span>Kuota 1x/minggu udah kepake — bisa lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
+            <span>Kuota 4x/bulan udah kepake — bisa lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
           </div>
         ) : (
           <div className="space-y-3">

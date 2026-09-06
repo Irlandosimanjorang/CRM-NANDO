@@ -316,8 +316,8 @@ const INDUSTRIES = [
 //    ini juga - convention landing page ini "Semua fitur Standard" di baris
 //    pertama Professional udah otomatis nyakup ini, jadi gak perlu ditulis
 //    ulang di daftar Professional (biar gak dobel/rancu).
-// 2. Generate Leads AI dibenerin dari "2x/bulan" (gak sesuai kode) jadi
-//    "1x/minggu" (sesuai batas asli di generate-leads.ts).
+// 2. Generate Leads AI: "4x/bulan" (sesuai batas terbaru di generate-leads.ts,
+//    6 Sep 2026 - sebelumnya "1x/minggu").
 const STANDARD_FEATURES = [
   "Kelola Leads — kartu per perusahaan",
   "Smart Import AI",
@@ -332,7 +332,7 @@ const PROFESSIONAL_FEATURES = [
   "Semua fitur Standard",
   "Bot Telegram (edit CRM, progress harian, jadwal visit)",
   "Sinkron otomatis ke Google Calendar",
-  "Generate Leads AI (1x/minggu)",
+  "Generate Leads AI (4x/bulan)",
   "Rekam Meeting otomatis (AI)",
   "Customer State (AI)",
   "Outcome Memory (AI)",
