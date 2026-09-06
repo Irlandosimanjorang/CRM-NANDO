@@ -112,10 +112,15 @@ function Toast({ toast, onDismiss }) {
 // Link pembayaran Mayar - 1 link buat semua tier (Standard/Professional/
 // Enterprise) & semua durasi (1 bulan/6 bulan) - di Mayar itu semua cuma 1
 // produk "Tier Membership", pembeli milih tier & durasinya sendiri di
-// halaman Mayar. HARUS SAMA dengan link di Auth.jsx (landing page) - jangan
-// sampai beda lagi kayak sebelumnya (link lama di sini nunjuk ke produk
-// Mayar yang berbeda/basi: subscription.myr.id/m/nexto-premium-88379).
-const MAYAR_PAYMENT_LINK = "https://crmnexto.myr.id/m/premium-12306";
+// halaman Mayar.
+//
+// AWAS: slug di URL ini ikut berubah kalau nama produknya diganti di Mayar
+// Dashboard (udah kejadian sekali - link lama /m/premium-12306 jadi 404
+// gara-gara produknya di-rename jadi "NEXTO CRM - AI Sales Operating
+// System"). Kalau nanti nama produk di Mayar diganti LAGI, link ini WAJIB
+// diupdate manual di sini juga, kalau enggak tombol "Bayar" di dashboard
+// bakal ngarahin ke halaman 404.
+const MAYAR_PAYMENT_LINK = "https://crmnexto.myr.id/m/nexto-crm-ai-sales-operating-system";
 
 const TIER_LABEL = { standard: "Standard", premium: "Professional", enterprise: "Enterprise" };
 
