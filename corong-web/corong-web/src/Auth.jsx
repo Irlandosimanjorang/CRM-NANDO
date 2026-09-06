@@ -2104,7 +2104,7 @@ export default function Auth() {
                       <>
                         <div>
                           <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                            NAMA LENGKAP
+                            NAMA LENGKAP <span className="text-orange-400">*</span>
                           </label>
                           <input
                             type="text"
@@ -2118,7 +2118,7 @@ export default function Auth() {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                              JABATAN <span className="font-normal normal-case text-slate-600">(opsional)</span>
+                              JABATAN
                             </label>
                             <input
                               type="text"
@@ -2130,7 +2130,7 @@ export default function Auth() {
                           </div>
                           <div>
                             <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                              NO. WHATSAPP <span className="font-normal normal-case text-slate-600">(opsional)</span>
+                              NO. WHATSAPP
                             </label>
                             <input
                               type="tel"
@@ -2144,7 +2144,7 @@ export default function Auth() {
 
                         <div>
                           <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                            NAMA PERUSAHAAN
+                            NAMA PERUSAHAAN <span className="text-orange-400">*</span>
                           </label>
                           <input
                             type="text"
@@ -2159,7 +2159,7 @@ export default function Auth() {
 
                     <div>
                       <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                        EMAIL
+                        EMAIL {mode === "signup" && <span className="text-orange-400">*</span>}
                       </label>
                       <input
                         type="email"
@@ -2172,7 +2172,7 @@ export default function Auth() {
 
                     <div>
                       <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                        PASSWORD
+                        PASSWORD {mode === "signup" && <span className="text-orange-400">*</span>}
                       </label>
                       <input
                         type="password"
