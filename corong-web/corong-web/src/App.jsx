@@ -170,6 +170,23 @@ export default function App() {
     try {
       let myOrg = null;
       try { myOrg = await db.getMyOrg(); } catch (e) { console.error(e); }
+
+      // Data profil (nama/jabatan/perusahaan/WA) yang diisi pas daftar tadi
+      // gak bisa langsung disimpen kalau akun masih nunggu verifikasi email
+      // (belum ada sesi = belum boleh nulis ke DB) - jadi ditaro dulu di
+      // localStorage sama Auth.jsx. Begitu beneran login pertama kali (sesi
+      // udah aktif, org udah kebentuk), terapkan sekali di sini terus hapus
+      // biar gak ke-apply berkali-kali tiap reload().
+      try {
+        const pendingRaw = localStorage.getItem("nexto_pending_profile");
+        if (pendingRaw) {
+          const pending = JSON.parse(pendingRaw);
+          await db.saveMyProfile({ name: pending.fullName, job_title: pending.jobTitle, whatsapp: pending.whatsapp });
+          if (pending.companyName) { await db.setOrgName(pending.companyName); myOrg = await db.getMyOrg(); }
+          localStorage.removeItem("nexto_pending_profile");
+        }
+      } catch (e) { console.error("Gagal nerapin data profil dari signup:", e); }
+
       setOrg(myOrg);
       let [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
       // Akun baru (belum pernah setup pipeline sama sekali) - otomatis kasih

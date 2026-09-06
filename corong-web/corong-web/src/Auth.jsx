@@ -1320,6 +1320,11 @@ export default function Auth() {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [agreedTerms, setAgreedTerms] = useState(false);
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -1353,6 +1358,22 @@ export default function Auth() {
 
   const submit = async () => {
     setMsg("");
+
+    if (mode === "signup") {
+      if (!fullName.trim() || !companyName.trim() || !whatsapp.trim()) {
+        setMsg("Nama lengkap, nama perusahaan, dan nomor WhatsApp wajib diisi.");
+        return;
+      }
+      if (!Object.values(pwChecks(pw)).every(Boolean)) {
+        setMsg("Password belum memenuhi semua syarat di bawah.");
+        return;
+      }
+      if (!agreedTerms) {
+        setMsg("Centang dulu persetujuan ketentuan layanan & kebijakan privasi.");
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -1364,16 +1385,26 @@ export default function Auth() {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password: pw,
         });
 
         if (error) throw error;
 
-        setMsg(
-          "Akun dibuat. Cek email buat verifikasi (kalau confirm email aktif), lalu masuk."
-        );
+        // Data profil (nama, jabatan, perusahaan, WA) belum bisa langsung
+        // disimpen ke tabel settings/organizations kalau Supabase masih
+        // nunggu verifikasi email dulu (belum ada sesi aktif = belum boleh
+        // nulis ke DB). Disimpen dulu di localStorage - App.jsx bakal
+        // nerapin ini otomatis begitu akunnya beneran login pertama kali
+        // (lihat pending profile check di reload()).
+        try {
+          localStorage.setItem("nexto_pending_profile", JSON.stringify({ fullName: fullName.trim(), jobTitle: jobTitle.trim(), companyName: companyName.trim(), whatsapp: whatsapp.trim() }));
+        } catch {}
+
+        if (!data.session) {
+          setMsg("Akun dibuat. Cek email buat verifikasi, lalu masuk.");
+        }
       }
     } catch (e) {
       setMsg(e.message);
@@ -1381,6 +1412,16 @@ export default function Auth() {
       setLoading(false);
     }
   };
+
+  // Syarat password - dicek LIVE tiap ngetik, ditampilin sbg checklist biar
+  // user tau persis kurang apa (bukan cuma "password terlalu lemah" doang).
+  const pwChecks = (v) => ({
+    length: v.length >= 8,
+    upper: /[A-Z]/.test(v),
+    lower: /[a-z]/.test(v),
+    number: /[0-9]/.test(v),
+    special: /[^A-Za-z0-9]/.test(v),
+  });
 
   const goToSignup = () => {
     setMode("signup");
@@ -2059,6 +2100,63 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-3">
+                    {mode === "signup" && (
+                      <>
+                        <div>
+                          <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
+                            NAMA LENGKAP
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
+                            placeholder="Nama kamu"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
+                              JABATAN
+                            </label>
+                            <input
+                              type="text"
+                              className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
+                              placeholder="Sales Manager"
+                              value={jobTitle}
+                              onChange={(e) => setJobTitle(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
+                              NO. WHATSAPP
+                            </label>
+                            <input
+                              type="tel"
+                              className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
+                              placeholder="0812xxxxxxx"
+                              value={whatsapp}
+                              onChange={(e) => setWhatsapp(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
+                            NAMA PERUSAHAAN
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
+                            placeholder="PT / CV kamu"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                          />
+                        </div>
+                      </>
+                    )}
+
                     <div>
                       <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
                         EMAIL
@@ -2086,6 +2184,26 @@ export default function Auth() {
                           e.key === "Enter" && submit()
                         }
                       />
+                      {mode === "signup" && (() => {
+                        const checks = pwChecks(pw);
+                        const items = [
+                          [checks.length, "Minimal 8 karakter"],
+                          [checks.upper, "Ada huruf besar (A-Z)"],
+                          [checks.lower, "Ada huruf kecil (a-z)"],
+                          [checks.number, "Ada angka (0-9)"],
+                          [checks.special, "Ada karakter spesial (!@#$dll, minimal 1)"],
+                        ];
+                        return (
+                          <div className="mt-2.5 grid grid-cols-1 gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                            {items.map(([ok, label]) => (
+                              <div key={label} className={`flex items-center gap-2 text-[9.5px] ${ok ? "text-emerald-400" : "text-slate-500"}`}>
+                                {ok ? <CheckCircle2 size={12} className="shrink-0" /> : <span className="ml-0.5 mr-0.5 h-3 w-3 shrink-0 rounded-full border border-slate-600" />}
+                                {label}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {msg && (
@@ -2095,9 +2213,27 @@ export default function Auth() {
                       </div>
                     )}
 
+                    {mode === "signup" && (
+                      <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-[9.5px] leading-4 text-slate-400">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-orange-500"
+                          checked={agreedTerms}
+                          onChange={(e) => setAgreedTerms(e.target.checked)}
+                        />
+                        <span>
+                          Saya setuju menggunakan Nexto sesuai{" "}
+                          <button type="button" onClick={(e) => { e.preventDefault(); setLegalModal("tos"); }} className="text-orange-400 underline hover:text-orange-300">ketentuan layanan</button>{" "}
+                          dan{" "}
+                          <button type="button" onClick={(e) => { e.preventDefault(); setLegalModal("privacy"); }} className="text-orange-400 underline hover:text-orange-300">kebijakan privasi</button>{" "}
+                          yang berlaku.
+                        </span>
+                      </label>
+                    )}
+
                     <button
                       onClick={submit}
-                      disabled={loading}
+                      disabled={loading || (mode === "signup" && !agreedTerms)}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-3 text-[11px] font-bold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {loading && (
@@ -2122,13 +2258,15 @@ export default function Auth() {
                     </button>
                   </div>
 
-                  <div className="mt-5 border-t border-white/[0.06] pt-4 text-center text-[8px] leading-4 text-slate-600">
-                    Dengan membuat akun, kamu setuju menggunakan Nexto sesuai{" "}
-                    <button onClick={() => setLegalModal("tos")} className="underline hover:text-slate-400">ketentuan layanan</button>{" "}
-                    dan{" "}
-                    <button onClick={() => setLegalModal("privacy")} className="underline hover:text-slate-400">kebijakan privasi</button>{" "}
-                    yang berlaku.
-                  </div>
+                  {mode === "signin" && (
+                    <div className="mt-5 border-t border-white/[0.06] pt-4 text-center text-[8px] leading-4 text-slate-600">
+                      Dengan masuk, kamu setuju menggunakan Nexto sesuai{" "}
+                      <button onClick={() => setLegalModal("tos")} className="underline hover:text-slate-400">ketentuan layanan</button>{" "}
+                      dan{" "}
+                      <button onClick={() => setLegalModal("privacy")} className="underline hover:text-slate-400">kebijakan privasi</button>{" "}
+                      yang berlaku.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

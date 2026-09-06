@@ -149,13 +149,22 @@ export async function uploadAvatar(file) {
   return data.publicUrl;
 }
 
-export async function saveMyProfile({ avatar_url, job_title, name }) {
+export async function saveMyProfile({ avatar_url, job_title, name, whatsapp }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const patch = { user_id: uid, updated_at: new Date().toISOString() };
   if (avatar_url !== undefined) patch.avatar_url = avatar_url;
   if (job_title !== undefined) patch.job_title = job_title;
   if (name !== undefined) patch.community_display_name = name;
+  if (whatsapp !== undefined) patch.whatsapp = whatsapp;
   const { error } = await supabase.from("settings").upsert(patch);
+  if (error) throw error;
+}
+
+// Ganti nama organisasi (dipake sekali pas isi form daftar - "Nama
+// Perusahaan" - biar gak nyangkut nama default "Organisasi Saya" terus).
+export async function setOrgName(name) {
+  const orgId = await getMyOrgId();
+  const { error } = await supabase.from("organizations").update({ name }).eq("id", orgId);
   if (error) throw error;
 }
 
