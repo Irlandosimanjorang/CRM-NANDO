@@ -1920,18 +1920,15 @@ export default function Auth() {
                 "lo di lapangan" vs "Nexto kerja di belakang layar",
                 pake istilah "plays" (playbook/strategi per lead) biar
                 kesannya lebih strategic daripada "moves" yang generik. */}
-            <h1 className="mx-auto mt-6 max-w-4xl text-[44px] font-bold leading-[1.04] tracking-[-0.055em] text-white sm:text-[56px] lg:text-[68px]">
-              <span className="block whitespace-nowrap">You sell. Nexto thinks.</span>
-              <span className="block whitespace-nowrap text-orange-500">Always know what’s next.</span>
+            <h1 className="mx-auto mt-6 max-w-3xl text-[42px] font-bold leading-[1.02] tracking-[-0.055em] text-white sm:text-[58px] lg:text-[72px]">
+              You sell. Nexto thinks.
+              <span className="block text-orange-500">
+                Always know what’s next.
+              </span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-[15px] leading-7 text-slate-400 sm:text-[16px]">
-              Nexto membantu sales tahu{" "}
-              <strong className="font-semibold text-slate-200">
-                siapa yang harus dihubungi, apa yang harus dilakukan,
-              </strong>{" "}
-              dan apa langkah berikutnya — tanpa harus terus-terusan mikir
-              dan update CRM.
+              Nexto turns your sales data, conversations, and customer activity into your next best action.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
