@@ -1,3 +1,4 @@
+```
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "./lib/supabaseClient";
 import IndustryDemo from "./tabs/IndustryDemo";
@@ -1059,260 +1060,566 @@ function SectionLabel({ children }) {
 }
 
 // ============================================================
-// NEXTO AI ENGINE LOOPS - diagram signature, section sendiri di landing page.
-// 4 node (Context/Decision/Action/Memory) tersambung garis yang "hidup" -
-// titik cahaya ngalir turun terus-menerus, representasiin engine yang gak
-// pernah berhenti muter. Robot NEXTO jadi sumber/inti di paling atas.
+// NEXTO AI ENGINE LOOPS - redesigned as the "AI Core" command center.
+// Flow: Context -> Reason -> Plan -> Act -> Learn.
+// The visual is intentionally closer to a futuristic product console:
+// one central intelligence core, three functional engines, live signals,
+// and a visible feedback loop.
 // ============================================================
-const ENGINE_NODES = [
+
+const LOOP_MODULES = [
   {
-    key: "context",
-    label: "CONTEXT ENGINE",
-    icon: Database,
-    color: "#38bdf8",
-    desc: "Baca semua data lead - CRM, progress notes, deal, customer state, histori percakapan.",
+    key: "memory",
+    label: "MEMORY ENGINE",
+    kicker: "Learn & Remember",
+    icon: Layers,
+    color: "#22d3ee",
+    description:
+      "Simpan hal yang relevan — customer state, histori, outcome menang/kalah, dan insight penting.",
+    items: ["Customer history", "Deal outcomes", "Pattern & insights"],
   },
   {
     key: "decision",
     label: "DECISION ENGINE",
+    kicker: "Plan & Decide",
     icon: BrainCircuit,
-    color: "#f97316",
-    desc: "Nentuin apa yang terjadi, next action apa, kenapa, dan kapan waktu yang tepat.",
+    color: "#f59e0b",
+    description:
+      "Tentukan apa yang sedang terjadi, next action apa, kenapa, dan kapan waktu yang paling tepat.",
+    items: ["Prioritize leads", "Recommend next action", "Optimal timing"],
   },
   {
     key: "action",
-    label: "ACTION ENGINE",
+    label: "ACTION & FEEDBACK",
+    kicker: "Take Action & Improve",
     icon: Zap,
-    color: "#a855f7",
-    desc: "Eksekusi - update CRM, sinkron calendar, bikin draft pesan, jadwalin follow-up.",
-  },
-  {
-    key: "memory",
-    label: "MEMORY ENGINE",
-    icon: Layers,
-    color: "#22d3ee",
-    desc: "Simpen hasilnya - customer state, outcome menang/kalah - buat keputusan besok lebih tajam.",
+    color: "#2dd4bf",
+    description:
+      "Jalankan action, update hasil, ukur performa, lalu bawa hasilnya kembali ke loop.",
+    items: ["Send message", "Update CRM", "Track results"],
   },
 ];
 
 function AiEngineLoopSection({ robotVoice }) {
-  const RADIUS = 300; // radius orbit desktop, px
-  const nodesWithAngle = ENGINE_NODES.map((n, i) => ({ ...n, angle: -90 + i * 90 })); // mulai dari atas, muter searah jarum jam
+  const [pulse, setPulse] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPulse((prev) => (prev + 1) % 4);
+    }, 2600);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <section id="cara-kerja" className="relative overflow-hidden bg-[#05070c] px-5 pb-24 pt-10 text-white sm:px-7 sm:pb-32 sm:pt-14 lg:px-10">
+    <section
+      id="cara-kerja"
+      className="relative overflow-hidden bg-[#05070c] px-5 pb-24 pt-12 text-white sm:px-7 sm:pb-32 sm:pt-16 lg:px-10"
+    >
       <style>{`
-        @keyframes nexto-flow-pulse {
-          0% { top: -8%; opacity: 0; }
-          8% { opacity: 1; }
-          92% { opacity: 1; }
-          100% { top: 100%; opacity: 0; }
-        }
-        @keyframes nexto-orbit-spin {
+        @keyframes nexto-ai-orbit {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes nexto-core-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,.45), 0 0 44px 10px rgba(249,115,22,.28); }
-          50% { box-shadow: 0 0 0 14px rgba(249,115,22,0), 0 0 68px 16px rgba(249,115,22,.45); }
+
+        @keyframes nexto-ai-orbit-reverse {
+          from { transform: rotate(360deg); }
+          to { transform: rotate(0deg); }
         }
-        @keyframes nexto-ring-rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+
+        @keyframes nexto-ai-core {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow:
+              0 0 0 1px rgba(59,130,246,.20),
+              0 0 55px rgba(59,130,246,.22),
+              0 0 110px rgba(168,85,247,.10);
+          }
+          50% {
+            transform: scale(1.035);
+            box-shadow:
+              0 0 0 1px rgba(45,212,191,.32),
+              0 0 75px rgba(59,130,246,.34),
+              0 0 140px rgba(168,85,247,.18);
+          }
         }
-        @keyframes nexto-spoke-travel {
+
+        @keyframes nexto-ai-particle {
+          0% { transform: translateY(0) scale(.7); opacity: .15; }
+          50% { opacity: 1; }
+          100% { transform: translateY(-34px) scale(1); opacity: 0; }
+        }
+
+        @keyframes nexto-ai-flow-left {
           0% { left: 0%; opacity: 0; }
-          15% { opacity: 1; }
-          85% { opacity: 1; }
+          12% { opacity: 1; }
+          86% { opacity: 1; }
           100% { left: 100%; opacity: 0; }
+        }
+
+        @keyframes nexto-ai-flow-right {
+          0% { right: 0%; opacity: 0; }
+          12% { opacity: 1; }
+          86% { opacity: 1; }
+          100% { right: 100%; opacity: 0; }
+        }
+
+        @keyframes nexto-ai-feedback {
+          0% { stroke-dashoffset: 520; opacity: .2; }
+          45% { opacity: .9; }
+          100% { stroke-dashoffset: 0; opacity: .15; }
+        }
+
+        @keyframes nexto-ai-signal {
+          0%, 100% { opacity: .35; transform: scale(.92); }
+          50% { opacity: 1; transform: scale(1); }
+        }
+
+        .nexto-ai-glass {
+          background:
+            linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+          border: 1px solid rgba(255,255,255,.09);
+          box-shadow:
+            0 24px 80px -45px rgba(0,0,0,.95),
+            inset 0 1px 0 rgba(255,255,255,.035);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+        }
+
+        .nexto-ai-grid {
+          background-image:
+            linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+          background-size: 42px 42px;
+          mask-image: radial-gradient(circle at center, black 0%, transparent 78%);
+          -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 78%);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nexto-ai-motion,
+          .nexto-ai-motion * {
+            animation: none !important;
+          }
         }
       `}</style>
 
-      {/* Grid + glow background - lebar penuh, kesan "zoomed out" */}
+      {/* Background atmosphere */}
+      <div className="pointer-events-none absolute inset-0 nexto-ai-grid" />
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        className="pointer-events-none absolute left-1/2 top-[38%] h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[140px]"
         style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
+          background:
+            "radial-gradient(circle, rgba(59,130,246,.17) 0%, rgba(168,85,247,.10) 38%, rgba(249,115,22,.07) 58%, transparent 72%)",
         }}
       />
       <div
-        className="pointer-events-none absolute left-1/2 top-1/3 h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.22] blur-[130px]"
-        style={{ background: "radial-gradient(circle, #f97316, transparent 70%)" }}
+        className="pointer-events-none absolute -bottom-32 -left-20 h-[380px] w-[380px] rounded-full bg-cyan-500/[0.06] blur-[120px]"
       />
       <div
-        className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full opacity-20 blur-[130px]"
-        style={{ background: "radial-gradient(circle, #22d3ee, transparent 70%)" }}
-      />
-      <div
-        className="pointer-events-none absolute bottom-0 left-0 h-[420px] w-[420px] -translate-x-1/3 translate-y-1/3 rounded-full opacity-[0.14] blur-[120px]"
-        style={{ background: "radial-gradient(circle, #a855f7, transparent 70%)" }}
+        className="pointer-events-none absolute -right-24 top-20 h-[420px] w-[420px] rounded-full bg-orange-500/[0.055] blur-[130px]"
       />
 
-      <div className="relative mx-auto max-w-3xl text-center">
-        <SectionLabel>The Engine</SectionLabel>
-        <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] sm:text-[52px]">
-          NEXTO AI Engine Loops
-        </h2>
-        <p className="mt-4 text-[15px] leading-relaxed text-slate-400 sm:text-[16px]">
-          Bukan sekadar chatbot yang jawab pertanyaan. Ini loop yang jalan terus - baca konteks, mutusin next action, eksekusi, simpen hasilnya, terus balik lagi buat mutusin yang lebih tajam besok.
-        </p>
-      </div>
+      <div className="relative mx-auto max-w-7xl">
+        {/* Top console bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+          <div className="flex items-center gap-4">
+            <NextoDarkWordmark width={118} />
+            <span className="hidden h-5 w-px bg-white/10 sm:block" />
+            <span className="hidden text-[9px] font-medium tracking-[0.12em] text-slate-500 sm:block">
+              AI-POWERED CRM
+            </span>
+          </div>
 
-      {/* ---- Diagram orbital (desktop/tablet lebar) - baru nongol dari
-          breakpoint xl (1280px) ke atas, BUKAN md (768px). Diagram ini
-          butuh ruang ~880px biar semua kartu (radius 300px + lebar kartu
-          240px) gak kepotong. Kalau dipaksa muncul dari md, kartu Decision
-          Engine & Memory Engine (paling kiri/kanan) bisa ke-clip invisible
-          di lebar 768-1024px karena section-nya overflow-hidden. ---- */}
-      <div className="relative mx-auto mt-20 hidden xl:block" style={{ width: RADIUS * 2 + 280, height: RADIUS * 2 + 40, maxWidth: "100%" }}>
-        {/* Cincin orbit - muter pelan terus-menerus */}
-        <div
-          className="absolute left-1/2 top-1/2 rounded-full border border-dashed"
-          style={{
-            width: RADIUS * 2, height: RADIUS * 2,
-            marginLeft: -RADIUS, marginTop: -RADIUS,
-            borderColor: "rgba(255,255,255,.14)",
-            animation: "nexto-ring-rotate 40s linear infinite",
-          }}
-        />
-        <div
-          className="absolute left-1/2 top-1/2 rounded-full"
-          style={{
-            width: RADIUS * 2 - 2, height: RADIUS * 2 - 2,
-            marginLeft: -(RADIUS - 1), marginTop: -(RADIUS - 1),
-            background: "conic-gradient(from 0deg, #f9731633, transparent 25%, transparent 75%, #22d3ee33)",
-            animation: "nexto-ring-rotate 14s linear infinite",
-          }}
-        />
+          <div className="flex items-center gap-2 text-[8px] uppercase tracking-[0.16em] text-slate-500">
+            {["Think", "Remember", "Act", "Improve"].map((step, index) => (
+              <span key={step} className="contents">
+                <span
+                  className={`transition-colors duration-500 ${
+                    pulse === index ? "text-white" : ""
+                  }`}
+                >
+                  {step}
+                </span>
+                {index < 3 && <span className="text-slate-700">›</span>}
+              </span>
+            ))}
+          </div>
 
-        {/* Garis spoke dari inti ke tiap node - garis-nya "hidup", ada titik
-            cahaya yang ngalir terus dari robot ke tiap engine, delay beda-beda
-            per node biar keliatan organik (bukan gerak barengan kaku). */}
-        {nodesWithAngle.map((n, i) => {
-          const rad = (n.angle * Math.PI) / 180;
-          const x2 = RADIUS * Math.cos(rad);
-          const y2 = RADIUS * Math.sin(rad);
-          const len = Math.sqrt(x2 * x2 + y2 * y2);
-          const rot = (Math.atan2(y2, x2) * 180) / Math.PI;
-          return (
+          <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-1.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            <span className="text-[8px] font-bold tracking-[0.12em] text-emerald-300">
+              AI AGENT ACTIVE
+            </span>
+          </div>
+        </div>
+
+        {/* Heading */}
+        <div className="mx-auto max-w-3xl pt-14 text-center sm:pt-16">
+          <SectionLabel>The Engine</SectionLabel>
+          <h2 className="mt-4 text-[34px] font-bold leading-[1.02] tracking-[-0.05em] sm:text-[52px]">
+            Bukan cuma AI yang jawab.
+            <span className="block bg-gradient-to-r from-cyan-300 via-blue-300 to-orange-300 bg-clip-text text-transparent">
+              Ini AI yang terus bergerak.
+            </span>
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-[14px] leading-6 text-slate-400 sm:text-[16px] sm:leading-7">
+            Nexto membaca konteks, mengambil keputusan, menjalankan action,
+            melihat hasilnya, lalu membawa hasil itu kembali ke loop.
+            <span className="text-slate-200"> Terus berulang.</span>
+          </p>
+        </div>
+
+        {/* Main command-center canvas */}
+        <div className="relative mt-14 min-h-[860px] sm:mt-16 lg:min-h-[760px]">
+          {/* Decorative orbit / feedback path */}
+          <div className="nexto-ai-motion pointer-events-none absolute left-1/2 top-[48%] hidden h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 lg:block">
             <div
-              key={`spoke-${n.key}`}
-              className="absolute left-1/2 top-1/2 h-px origin-left"
-              style={{ width: len, background: `linear-gradient(90deg, ${n.color}66, ${n.color}22)`, transform: `rotate(${rot}deg)` }}
-            >
+              className="absolute inset-0 rounded-full border border-white/[0.08]"
+              style={{ animation: "nexto-ai-orbit 38s linear infinite" }}
+            />
+            <div
+              className="absolute inset-[34px] rounded-full border border-dashed border-cyan-400/[0.10]"
+              style={{ animation: "nexto-ai-orbit-reverse 24s linear infinite" }}
+            />
+            <div
+              className="absolute inset-[78px] rounded-full border border-blue-400/[0.07]"
+              style={{ animation: "nexto-ai-orbit 18s linear infinite" }}
+            />
+          </div>
+
+          {/* Context inputs — left of core */}
+          <div className="absolute left-0 top-[20%] hidden w-[250px] lg:block">
+            <div className="nexto-ai-glass rounded-[22px] p-5">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.09] text-cyan-300">
+                  <Database size={18} />
+                </span>
+                <div>
+                  <div className="text-[11px] font-bold tracking-[0.08em] text-cyan-300">
+                    CONTEXT
+                  </div>
+                  <div className="mt-0.5 text-[9px] uppercase tracking-[0.14em] text-slate-600">
+                    Everything it knows
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {["Customer Data", "Conversation", "Past Results"].map((item, i) => (
+                  <div
+                    key={item}
+                    className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2"
+                  >
+                    <span className="flex items-center gap-2 text-[9px] text-slate-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                      {item}
+                    </span>
+                    <span className="text-[8px] text-slate-600">
+                      {["1,284", "8,421", "367"][i]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Memory module */}
+          <div className="absolute left-0 top-[50%] hidden w-[290px] -translate-y-1/2 lg:block">
+            <LoopModuleCard module={LOOP_MODULES[0]} />
+          </div>
+
+          {/* Decision module */}
+          <div className="absolute right-0 top-[20%] hidden w-[290px] lg:block">
+            <LoopModuleCard module={LOOP_MODULES[1]} />
+          </div>
+
+          {/* Live insight module */}
+          <div className="absolute right-0 top-[50%] hidden w-[290px] -translate-y-1/2 lg:block">
+            <div className="nexto-ai-glass rounded-[22px] p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={15} className="text-emerald-300" />
+                  <span className="text-[10px] font-bold tracking-[0.12em] text-slate-200">
+                    REAL-TIME INSIGHT
+                  </span>
+                </div>
+                <span className="flex items-center gap-1 text-[8px] text-emerald-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  Live
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {[
+                  ["PT Maju Plastics", "Lead baru", "10:24"],
+                  ["Analisis percakapan", "Pak Budi", "10:22"],
+                  ["Deal negotiation", "Updated", "10:20"],
+                  ["Follow-up", "PT Pralon", "10:18"],
+                ].map(([name, detail, time]) => (
+                  <div
+                    key={`${name}-${time}`}
+                    className="rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate text-[9px] font-semibold text-slate-200">
+                        {name}
+                      </span>
+                      <span className="shrink-0 text-[7px] text-slate-600">
+                        {time}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[8px] text-slate-500">{detail}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Central AI Core */}
+          <div className="absolute left-1/2 top-[3%] z-20 -translate-x-1/2 lg:top-[18%]">
+            <div className="relative flex h-[330px] w-[330px] items-center justify-center sm:h-[370px] sm:w-[370px]">
+              {/* signal rings */}
+              <div className="nexto-ai-motion absolute inset-0 rounded-full border border-blue-400/[0.08]" style={{ animation: "nexto-ai-orbit 18s linear infinite" }} />
+              <div className="nexto-ai-motion absolute inset-[26px] rounded-full border border-purple-400/[0.10]" style={{ animation: "nexto-ai-orbit-reverse 13s linear infinite" }} />
+              <div className="nexto-ai-motion absolute inset-[54px] rounded-full border border-cyan-400/[0.10]" style={{ animation: "nexto-ai-orbit 10s linear infinite" }} />
+
+              {/* orbit particles */}
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <span
+                  key={i}
+                  className="nexto-ai-motion absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-cyan-300"
+                  style={{
+                    transform: `rotate(${i * 60}deg) translateY(-${145 + (i % 2) * 22}px)`,
+                    boxShadow: "0 0 12px rgba(103,232,249,.9)",
+                    animation: `nexto-ai-signal ${1.7 + i * .18}s ease-in-out infinite`,
+                    animationDelay: `${i * .22}s`,
+                  }}
+                />
+              ))}
+
+              {/* core glow */}
+              <div className="absolute h-[210px] w-[210px] rounded-full bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-orange-500/15 blur-[48px]" />
+
+              {/* core */}
+              <div
+                className="nexto-ai-motion relative flex h-[178px] w-[178px] flex-col items-center justify-center rounded-[42%] border border-white/15 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,.18),rgba(20,25,36,.94)_45%,rgba(6,8,14,.98)_100%)]"
+                style={{ animation: "nexto-ai-core 3.2s ease-in-out infinite" }}
+              >
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.07]">
+                  <NextoRobotHead size={35} speaking={robotVoice.speaking} />
+                </div>
+                <div className="text-[10px] font-bold tracking-[0.24em] text-white">
+                  NEXTO AI CORE
+                </div>
+                <div className="mt-1 text-center text-[8px] leading-4 text-slate-500">
+                  Your AI Co-Pilot for
+                  <br />
+                  Sales Growth
+                </div>
+              </div>
+
+              <div className="absolute -bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                <span className="text-cyan-300">Context</span>
+                <span>→</span>
+                <span className="text-blue-300">Reason</span>
+                <span>→</span>
+                <span className="text-orange-300">Plan</span>
+                <span>→</span>
+                <span className="text-emerald-300">Act</span>
+                <span>→</span>
+                <span className="text-purple-300">Learn</span>
+              </div>
+
+              <button
+                onClick={robotVoice.play}
+                disabled={robotVoice.speaking}
+                className="absolute -bottom-12 left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[9px] font-semibold text-slate-300 backdrop-blur-xl transition hover:bg-white/[0.07] disabled:opacity-60"
+              >
+                <Volume2 size={11} className={robotVoice.speaking ? "animate-pulse" : ""} />
+                {robotVoice.speaking ? "Speaking…" : "Listen"}
+              </button>
+            </div>
+          </div>
+
+          {/* Animated connection lines */}
+          <div className="nexto-ai-motion pointer-events-none absolute inset-0 hidden lg:block">
+            <div className="absolute left-[25%] top-[38%] h-px w-[25%] rotate-[8deg] bg-gradient-to-r from-cyan-400/0 via-cyan-400/35 to-cyan-400/10">
               <span
-                className="absolute top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
-                style={{
-                  background: n.color,
-                  boxShadow: `0 0 10px 3px ${n.color}bb`,
-                  animation: `nexto-spoke-travel 2.8s ease-in-out infinite`,
-                  animationDelay: `${i * 0.45}s`,
-                }}
+                className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-cyan-300"
+                style={{ boxShadow: "0 0 12px 3px rgba(103,232,249,.65)", animation: "nexto-ai-flow-left 2.5s linear infinite" }}
               />
             </div>
-          );
-        })}
-
-        {/* Inti / robot - sumber loop-nya, di tengah lingkaran */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border border-orange-400/30 bg-gradient-to-br from-orange-500/25 to-orange-700/10" style={{ animation: "nexto-core-pulse 2.6s ease-in-out infinite" }}>
-            <NextoRobotHead size={34} speaking={robotVoice.speaking} />
+            <div className="absolute right-[25%] top-[38%] h-px w-[25%] -rotate-[8deg] bg-gradient-to-l from-orange-400/0 via-orange-400/35 to-orange-400/10">
+              <span
+                className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-orange-300"
+                style={{ boxShadow: "0 0 12px 3px rgba(253,186,116,.65)", animation: "nexto-ai-flow-right 2.5s linear infinite" }}
+              />
+            </div>
           </div>
-          <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.22em] text-orange-400/80">Nexto AI Core</div>
-          <button
-            onClick={robotVoice.play}
-            disabled={robotVoice.speaking}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-orange-400/30 bg-white/[0.03] px-3 py-1.5 text-[9px] font-semibold text-orange-300 backdrop-blur-xl disabled:opacity-70"
-          >
-            <Volume2 size={11} className={robotVoice.speaking ? "animate-pulse" : ""} />
-            {robotVoice.speaking ? "Speaking…" : "Listen"}
-          </button>
-        </div>
 
-        {/* 4 node engine, disebar keliling lingkaran */}
-        {nodesWithAngle.map((n) => {
-          const Icon = n.icon;
-          const rad = (n.angle * Math.PI) / 180;
-          const x = RADIUS * Math.cos(rad);
-          const y = RADIUS * Math.sin(rad);
-          return (
-            <div
-              key={n.key}
-              className="absolute left-1/2 top-1/2 w-[240px]"
-              style={{ transform: `translate(${x}px, ${y}px) translate(-50%, -50%)` }}
-            >
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 text-left backdrop-blur-sm shadow-[0_20px_50px_-25px_rgba(0,0,0,0.6)]">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: `${n.color}1f`, color: n.color, boxShadow: `0 0 0 1px ${n.color}33` }}>
-                    <Icon size={17} />
-                  </span>
-                  <span className="text-[12px] font-bold tracking-[0.08em]" style={{ color: n.color }}>{n.label}</span>
+          {/* Action & Feedback — bottom center */}
+          <div className="absolute left-1/2 top-[66%] hidden w-[min(92vw,620px)] -translate-x-1/2 lg:block">
+            <LoopActionCard />
+          </div>
+
+          {/* Feedback badge */}
+          <div className="absolute left-1/2 top-[89%] hidden -translate-x-1/2 lg:block">
+            <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.05] px-3 py-2 text-[8px] text-emerald-300 backdrop-blur-xl">
+              <TrendingUp size={11} />
+              Results → Feedback → kembali ke Context
+            </div>
+          </div>
+
+          {/* Mobile/tablet stacked version */}
+          <div className="absolute inset-x-0 top-[455px] space-y-4 lg:hidden">
+            <div className="nexto-ai-glass rounded-[22px] p-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.08] text-cyan-300">
+                  <Database size={16} />
+                </span>
+                <div>
+                  <div className="text-[10px] font-bold tracking-[0.1em] text-cyan-300">CONTEXT ENGINE</div>
+                  <div className="mt-1 text-[8px] text-slate-500">CRM • conversations • past results</div>
                 </div>
-                <p className="mt-2.5 text-[12.5px] leading-relaxed text-slate-400">{n.desc}</p>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* ---- Diagram vertikal (mobile + tablet + laptop kecil, sampe
-          breakpoint xl) - dipake lebih luas dari sebelumnya (dulu cuma
-          sampe md) biar gak ada rentang lebar layar yang kena bug clipping
-          di versi orbital. ---- */}
-      <div className="relative mx-auto mt-16 max-w-md xl:hidden">
-        <div className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-400/30 bg-gradient-to-br from-orange-500/20 to-orange-700/10" style={{ animation: "nexto-core-pulse 2.6s ease-in-out infinite" }}>
-          <NextoRobotHead size={28} speaking={robotVoice.speaking} />
-        </div>
-        <div className="mt-3 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-orange-400/80">Nexto AI Core</div>
-        <div className="text-center">
-          <button
-            onClick={robotVoice.play}
-            disabled={robotVoice.speaking}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-orange-400/30 bg-white/[0.03] px-3 py-1.5 text-[9px] font-semibold text-orange-300 backdrop-blur-xl disabled:opacity-70"
-          >
-            <Volume2 size={11} className={robotVoice.speaking ? "animate-pulse" : ""} />
-            {robotVoice.speaking ? "Speaking…" : "Listen"}
-          </button>
+            <LoopModuleCard module={LOOP_MODULES[0]} compact />
+            <LoopModuleCard module={LOOP_MODULES[1]} compact />
+            <LoopActionCard compact />
+            <div className="flex items-center justify-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.05] px-3 py-2 text-[8px] text-emerald-300">
+              <TrendingUp size={11} />
+              Results → Feedback → kembali ke Context
+            </div>
+          </div>
         </div>
 
-        <div className="relative mx-auto mt-4 w-px" style={{ height: `${ENGINE_NODES.length * 148}px` }}>
-          <div className="absolute inset-0 w-px bg-gradient-to-b from-orange-400/40 via-white/10 to-cyan-400/40" />
-          <div
-            className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-orange-300"
-            style={{ boxShadow: "0 0 12px 3px rgba(251,146,60,.8)", animation: "nexto-flow-pulse 3.6s linear infinite" }}
-          />
-          {ENGINE_NODES.map((n, i) => {
-            const Icon = n.icon;
-            return (
-              <div key={n.key} className="absolute left-1/2 flex -translate-x-1/2 items-start gap-4" style={{ top: `${i * 148 + 24}px`, width: "min(88vw, 420px)" }}>
-                <span className="absolute left-1/2 top-1 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2" style={{ borderColor: n.color, background: "#05070c" }} />
-                <div className="ml-8 flex-1 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 text-left backdrop-blur-sm sm:ml-10">
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl" style={{ background: `${n.color}1f`, color: n.color }}>
-                      <Icon size={16} />
-                    </span>
-                    <span className="text-[12px] font-bold tracking-[0.08em]" style={{ color: n.color }}>{n.label}</span>
-                  </div>
-                  <p className="mt-2 text-[12.5px] leading-relaxed text-slate-400">{n.desc}</p>
-                </div>
-              </div>
-            );
-          })}
+        {/* Bottom philosophy */}
+        <div className="mx-auto mt-10 max-w-4xl border-t border-white/[0.07] pt-8 text-center">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[10px] uppercase tracking-[0.16em] text-slate-600">
+            <span>Context</span>
+            <span className="text-slate-800">→</span>
+            <span>Reason</span>
+            <span className="text-slate-800">→</span>
+            <span>Plan</span>
+            <span className="text-slate-800">→</span>
+            <span>Act</span>
+            <span className="text-slate-800">→</span>
+            <span>Learn</span>
+            <span className="text-slate-800">↺</span>
+          </div>
+          <p className="mx-auto mt-4 max-w-2xl text-[12px] leading-6 text-slate-500">
+            Dari data ke keputusan. Dari keputusan ke action. Dari action ke hasil.
+            Dan setiap hasil membuat loop berikutnya lebih tajam.
+          </p>
         </div>
-      </div>
-
-      {/* Loop-back indicator - dipake di dua ukuran layar */}
-      <div className="relative mx-auto mt-10 flex max-w-[460px] items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/15" style={{ animation: "nexto-orbit-spin 3s linear infinite" }}>
-          <ArrowRight size={12} className="text-slate-300 -rotate-90" />
-        </span>
-        <p className="text-[11.5px] leading-relaxed text-slate-400">
-          Hasil dari Memory Engine balik lagi jadi konteks buat Decision Engine besok - <span className="text-white font-medium">loop-nya gak pernah berhenti.</span>
-        </p>
       </div>
     </section>
+  );
+}
+
+function LoopModuleCard({ module, compact = false }) {
+  const Icon = module.icon;
+
+  return (
+    <div
+      className={`nexto-ai-glass rounded-[22px] ${compact ? "p-4" : "p-5"}`}
+      style={{ boxShadow: `0 24px 70px -40px ${module.color}66` }}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border"
+          style={{
+            color: module.color,
+            background: `${module.color}12`,
+            borderColor: `${module.color}35`,
+          }}
+        >
+          <Icon size={18} />
+        </span>
+        <div className="min-w-0">
+          <div
+            className="text-[10px] font-bold tracking-[0.10em]"
+            style={{ color: module.color }}
+          >
+            {module.label}
+          </div>
+          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-slate-600">
+            {module.kicker}
+          </div>
+        </div>
+      </div>
+
+      <p className={`${compact ? "mt-3 text-[10px]" : "mt-4 text-[10px]"} leading-5 text-slate-400`}>
+        {module.description}
+      </p>
+
+      <div className="mt-4 space-y-2">
+        {module.items.map((item) => (
+          <div
+            key={item}
+            className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2"
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{
+                background: module.color,
+                boxShadow: `0 0 8px ${module.color}`,
+              }}
+            />
+            <span className="text-[8px] text-slate-300">{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LoopActionCard({ compact = false }) {
+  return (
+    <div className="nexto-ai-glass rounded-[24px] border-emerald-400/15 bg-emerald-400/[0.025] p-5">
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-300">
+          <Zap size={18} />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-bold tracking-[0.10em] text-emerald-300">
+            ACTION & FEEDBACK
+          </div>
+          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-slate-600">
+            Take Action & Improve
+          </div>
+        </div>
+
+        <span className="flex items-center gap-1 rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-1 text-[7px] font-bold text-emerald-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          LOOP ACTIVE
+        </span>
+      </div>
+
+      <p className="mt-4 text-[10px] leading-5 text-slate-400">
+        Jalankan action, update hasil, ukur performa, dan bawa hasilnya kembali
+        menjadi konteks untuk keputusan berikutnya.
+      </p>
+
+      <div className={`mt-4 grid ${compact ? "grid-cols-1" : "grid-cols-3"} gap-2`}>
+        {[
+          [MessageCircle, "Send message"],
+          [Database, "Update CRM"],
+          [TrendingUp, "Track results"],
+        ].map(([Icon, label]) => (
+          <div
+            key={label}
+            className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5"
+          >
+            <Icon size={12} className="text-emerald-300" />
+            <span className="text-[8px] font-medium text-slate-300">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -2313,3 +2620,4 @@ export default function Auth() {
     </div>
   );
 }
+```
