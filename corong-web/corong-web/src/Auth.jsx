@@ -26,48 +26,6 @@ Pasted markdown(3).md
 File
 bro ini codenya, tolong lu ganti page NEXTO AI Engine Loops dengan design yang kedua yang lu buat
 
-Bisa bro. Gue udah ganti section NEXTO AI Engine Loops di code lu dengan konsep design kedua yang tadi gue buat. 
-
-
-Yang berubah:
-
-NEXTO AI CORE jadi pusat visual utama
-
-Flow atas: Think → Remember → Act → Improve
-
-Context masuk ke AI Core
-
-Memory Engine di kiri
-
-Decision Engine di kanan
-
-Action & Feedback di bawah
-
-Ada Real-time Insight
-
-Orbit dan particle animation
-
-Gradient cyan → blue → purple → orange
-
-Ada visual loop:
-Context → Reason → Plan → Act → Learn
-
-Responsive untuk mobile/tablet
-
-Tombol Listen robot tetap gue pertahankan
-
-Section lama gue replace, jadi nggak perlu bongkar bagian lain
-
-Full code yang sudah direvisi
-
-
-Menurut gue ini jauh lebih cocok dengan positioning Nexto yang lagi kita bangun: bukan sekadar CRM dengan AI, tapi sebuah AI Sales Engine yang punya loop sendiri. 🔥 
-
-
-
-
-bro kok malah eror bro gak bisa di deploy
-
 Iya bro, ini salah gue. Gue nemu penyebab utamanya.
 
 File yang gue kasih tadi ternyata masih kebawa Markdown code fence:
@@ -108,7 +66,72 @@ Jadi gue saranin kita lakukan cara kedua itu. Ini jauh lebih aman buat deploy ka
 
 
 
-Nexto_Landing_Engine_Loops_Redesign.jsx
+eror masih bro
+
+Iya bro. Gue cek lagi dan gue nggak mau ngarang penyebabnya — file yang tadi memang perlu gue perbaiki lebih proper.
+
+Yang paling aman sekarang: jangan deploy file hasil gue yang tadi dulu. Gue akan pakai code original lu sebagai base, lalu gue replace hanya UI Engine Loop-nya, tanpa mengubah struktur/import/component lain.
+
+Ada satu hal yang juga gue temukan: code original lu memang sudah punya SectionLabel, NextoRobotHead, NextoDarkWordmark, dan import icon yang diperlukan. 
+
+ Jadi kita sebenarnya nggak perlu menambahkan dependency baru sama sekali.
+
+Gue bikin versi berikutnya dengan prinsip:
+
+ORIGINAL CODE LU
+      │
+      ├── Header        ← TETAP
+      ├── Hero          ← TETAP
+      ├── Demo          ← TETAP
+      ├── Pricing       ← TETAP
+      ├── CTA           ← TETAP
+      └── Engine Loops  ← GANTI DESIGN SAJA
+Dan tidak akan gue sentuh bagian Supabase, audio, auth, modal, maupun section lainnya.
+
+Kalau gue kasih full code lagi, gue pastikan formatnya langsung .jsx valid, bukan Markdown yang harus lu bongkar lagi.
+
+
+yudah gass kasih gua full code
+
+Gas bro. Kali ini gue bikin dari code original lu langsung, bukan dari file revisi sebelumnya.
+
+Gue sudah:
+
+pakai full code original 2.317 lines lu sebagai base;
+
+ganti hanya section NEXTO AI ENGINE LOOPS;
+
+bagian Supabase, auth, audio, pricing, industry, legal modal, dan section lain nggak gue ubah;
+
+nggak ada Markdown ``` di dalam file;
+
+nggak nambah dependency/library baru;
+
+design baru: AI Command Center / NEXTO AI CORE;
+
+desktop + mobile responsive;
+
+flow visual: Context → Reason → Plan → Act → Learn → Context;
+
+tetap mempertahankan tombol Listen dan robotVoice lu.
+
+Full code final
+
+Penting: file ini sudah berupa file JSX langsung, jadi lu tinggal replace file component/page lu dengan ini. Jangan copy dari file .md.
+
+Gue juga sengaja nggak mengubah nama AiEngineLoopSection, karena di original lu section ini memang dipanggil sebagai:
+
+<AiEngineLoopSection robotVoice={engineLoopVoice} />
+jadi bagian pemanggilannya tetap kompatibel dengan struktur original lu. 
+
+
+Kalau setelah deploy masih error, kirim error merah dari Vercel/Netlify atau screenshot console-nya ke gue. Dari situ kita bisa pinpoint baris yang bermasalah, bukan tebak-tebakan lagi.
+
+
+
+Library
+/
+Nexto_Landing_Full_Final.jsx
 
 
 1
