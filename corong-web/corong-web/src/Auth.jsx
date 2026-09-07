@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import LegalModal from "./components/LegalModal";
 import {
@@ -1659,30 +1659,8 @@ export default function Auth() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "tos" | "privacy" | null
 
-  // ---- AUTO-PLAY ROBOT NGOMONG ----
-  // Browser blokir audio bersuara yang muter sendiri TANPA interaksi user
-  // sama sekali (aturan platform, bukan batasan Nexto). Solusinya: putus
-  // audionya di INTERAKSI PERTAMA pengunjung (scroll/klik/sentuh pertama),
-  // bukan nunggu tombol khusus - kerasanya udah kayak "langsung jalan
-  // sendiri" karena hampir semua orang scroll begitu buka halaman.
-  // Robot chatbot ngomong duluan, abis kelar baru robot AI Engine Loops.
   const chatbotVoice = useRobotVoice(ROBOT_CHATBOT_AUDIO);
   const engineLoopVoice = useRobotVoice(ROBOT_ENGINE_LOOP_AUDIO);
-  const autoPlayedRef = useRef(false);
-
-  useEffect(() => {
-    const triggerAutoPlay = () => {
-      if (autoPlayedRef.current) return;
-      autoPlayedRef.current = true;
-      chatbotVoice.play(() => {
-        setTimeout(() => engineLoopVoice.play(), 500);
-      });
-    };
-    const events = ["scroll", "click", "touchstart", "keydown"];
-    events.forEach((evt) => window.addEventListener(evt, triggerAutoPlay, { once: true, passive: true }));
-    return () => events.forEach((evt) => window.removeEventListener(evt, triggerAutoPlay));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const submit = async () => {
     setMsg("");
@@ -1835,7 +1813,7 @@ export default function Auth() {
               onClick={goToSignup}
               className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
             >
-              Mulai Gratis
+              Start Free
               <ArrowRight size={13} />
             </button>
           </div>
@@ -1875,7 +1853,7 @@ export default function Auth() {
                 }}
                 className="mt-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white"
               >
-                Mulai Gratis
+                Start Free
               </button>
             </div>
           </div>
@@ -1931,9 +1909,9 @@ export default function Auth() {
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
               <button
                 onClick={goToSignup}
-                className="group inline-flex items-center gap-2.5 rounded-xl bg-orange-600 px-5 py-3.5 text-[12px] font-bold text-white shadow-[0_12px_30px_-12px_rgba(234,88,12,0.6)] transition hover:-translate-y-0.5 hover:bg-orange-500"
+                className="group inline-flex items-center gap-2.5 rounded-xl bg-orange-600 px-5 py-3.5 text-[12px] font-bold text-white shadow-[0_14px_34px_-12px_rgba(234,88,12,0.6)] transition hover:-translate-y-0.5 hover:bg-orange-500"
               >
-                Mulai Gratis
+                Start Free
                 <ArrowRight
                   size={14}
                   className="transition group-hover:translate-x-0.5"
@@ -1952,7 +1930,7 @@ export default function Auth() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] font-medium text-slate-500">
               <span className="flex items-center gap-1.5">
                 <CircleCheck size={12} className="text-emerald-500" />
-                Mulai gratis
+                Start Free
               </span>
               <span className="flex items-center gap-1.5">
                 <CircleCheck size={12} className="text-emerald-500" />
@@ -1964,71 +1942,6 @@ export default function Auth() {
               </span>
             </div>
 
-            {/* Hero product moment: show the actual "next best action" instead of a generic dashboard. */}
-
-            <style>{`
-              @keyframes nexto-hero-pulse {
-                0%, 100% { opacity: .25; transform: scale(.75); }
-                50% { opacity: 1; transform: scale(1); }
-              }
-            `}</style>
-            <div className="mx-auto mt-10 w-full max-w-4xl">
-              <div className="relative overflow-hidden rounded-[28px] border border-white/[0.10] bg-[linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018))] p-4 shadow-[0_30px_100px_-45px_rgba(249,115,22,.35)] backdrop-blur-xl sm:p-5">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,.12),transparent_55%)] pointer-events-none" />
-                <div className="relative grid gap-3 md:grid-cols-[1fr_1.35fr_1fr] md:items-stretch">
-                  <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-left">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">Customer context</span>
-                      <span className="flex items-center gap-1.5 rounded-full border border-cyan-400/15 bg-cyan-400/[0.05] px-2 py-1 text-[7px] font-semibold text-cyan-300">
-                        LIVE
-                      </span>
-                    </div>
-                    <div className="mt-3 text-[13px] font-semibold text-white">PT ABC</div>
-                    <div className="mt-1 text-[9px] text-slate-500">Opportunity · Rp280M</div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-[8px]">
-                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] px-2.5 py-2">
-                        <div className="text-slate-600">Last contact</div>
-                        <div className="mt-1 font-semibold text-slate-300">11 days ago</div>
-                      </div>
-                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] px-2.5 py-2">
-                        <div className="text-slate-600">Signal</div>
-                        <div className="mt-1 font-semibold text-slate-300">No response</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-center justify-center rounded-2xl border border-white/[0.08] bg-[#0b1018]/90 p-5 text-center">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(59,130,246,.12),transparent_62%)]" />
-                    <div className="relative">
-                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.12] bg-white/[0.07]">
-                        <NextoRobotHead size={31} />
-                      </div>
-                      <div className="mt-3 text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500">NEXTO AI</div>
-                      <div className="mt-1 text-[10px] text-slate-400">Reasoning over context</div>
-                      <div className="mx-auto mt-3 flex items-center justify-center gap-1.5">
-                        {[0,1,2,3].map((i) => (
-                          <span key={i} className="h-1.5 w-1.5 rounded-full bg-cyan-300" style={{ animation: `nexto-hero-pulse ${1.2 + i * .18}s ease-in-out infinite`, animationDelay: `${i * .14}s`, boxShadow: "0 0 10px rgba(103,232,249,.6)" }} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-orange-400/20 bg-orange-400/[0.045] p-4 text-left shadow-[0_0_45px_-30px_rgba(249,115,22,.8)]">
-                    <div className="text-[8px] font-bold uppercase tracking-[0.18em] text-orange-300">Next best action</div>
-                    <div className="mt-3 text-[14px] font-bold text-white">Follow up today</div>
-                    <div className="mt-1.5 text-[9px] leading-4 text-slate-500">Quotation was sent 11 days ago and there’s still no response.</div>
-                    <div className="mt-4 flex items-center justify-between rounded-xl border border-orange-400/15 bg-orange-400/[0.06] px-3 py-2.5">
-                      <span className="text-[8px] font-semibold text-orange-200">Recommended by Nexto</span>
-                      <ArrowRight size={12} className="text-orange-300" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="relative mt-3 flex flex-wrap items-center justify-center gap-2 text-[7px] font-medium uppercase tracking-[0.16em] text-slate-600">
-                  <span>Context</span><span className="text-cyan-400/60">→</span><span>Reason</span><span className="text-blue-400/60">→</span><span>Next action</span><span className="text-orange-400/60">→</span><span>Result</span>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -2382,7 +2295,7 @@ export default function Auth() {
                 </h2>
 
                 <p className="mt-5 max-w-xl text-[13px] leading-6 text-slate-400">
-                  Mulai gratis dan biarkan Nexto membantu sales kamu tahu
+                  Start Free dan biarkan Nexto membantu sales kamu tahu
                   apa yang harus dilakukan berikutnya.
                 </p>
 
