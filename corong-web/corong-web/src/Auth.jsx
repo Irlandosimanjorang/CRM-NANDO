@@ -1920,11 +1920,9 @@ export default function Auth() {
                 "lo di lapangan" vs "Nexto kerja di belakang layar",
                 pake istilah "plays" (playbook/strategi per lead) biar
                 kesannya lebih strategic daripada "moves" yang generik. */}
-            <h1 className="mx-auto mt-6 max-w-3xl text-[42px] font-bold leading-[1.02] tracking-[-0.055em] text-white sm:text-[58px] lg:text-[72px]">
-              You sell. Nexto thinks.
-              <span className="block text-orange-500">
-                Always know what's next.
-              </span>
+            <h1 className="mx-auto mt-6 max-w-4xl text-[44px] font-bold leading-[1.04] tracking-[-0.055em] text-white sm:text-[56px] lg:text-[68px]">
+              <span className="block whitespace-nowrap">You sell. Nexto thinks.</span>
+              <span className="block whitespace-nowrap text-orange-500">Always know what’s next.</span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-[15px] leading-7 text-slate-400 sm:text-[16px]">
