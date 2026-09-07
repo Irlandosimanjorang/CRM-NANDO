@@ -1257,7 +1257,7 @@ function AiEngineLoopSection({ robotVoice }) {
             <div className="mt-1 text-center text-[8px] text-slate-500">Observe → Reason → Act → Learn</div>
             <div className="text-center"><button onClick={robotVoice.play} disabled={robotVoice.speaking} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[8px] text-slate-300 disabled:opacity-60"><Volume2 size={11} />{robotVoice.speaking ? "Speaking…" : "Listen"}</button></div>
           </div>
-          {ENGINE_NODES.map((n) => <EngineCard key={n.key} node={n} />)}
+          {ENGINE_NODES.map((n) => <EngineLoopCard key={n.key} node={n} />)}
           <div className="flex items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-400/[0.05] px-4 py-2.5 text-[8px] font-semibold text-emerald-300">RESULT → FEEDBACK → CONTEXT ↺</div>
         </div>
 
@@ -1283,7 +1283,7 @@ function EngineCardHeader({ icon: Icon, label, color }) {
   );
 }
 
-function EngineCard({ node }) {
+function EngineLoopCard({ node }) {
   return (
     <div className="nexto-engine-card rounded-[22px] p-5">
       <EngineCardHeader icon={node.icon} label={node.label} color={node.color} />
