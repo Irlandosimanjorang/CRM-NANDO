@@ -1910,9 +1910,9 @@ export default function Auth() {
 
           {/* Single-column, di-tengahin - headline jadi fokus utama, gak
               kebagi perhatian sama mockup produk lagi. */}
-          <div className="relative mx-auto max-w-4xl px-5 py-24 text-center sm:px-7 sm:py-32 lg:px-10 lg:py-40">
+          <div className="relative mx-auto max-w-5xl px-5 py-20 text-center sm:px-7 sm:py-24 lg:px-10 lg:py-28">
             <div className="flex justify-center">
-              <SectionLabel>AI Sales Operating System</SectionLabel>
+              <SectionLabel>AI Sales Loop Engine</SectionLabel>
             </div>
 
             {/* === HEADLINE UPDATE (5 Sep 2026) ===
@@ -1920,7 +1920,7 @@ export default function Auth() {
                 "lo di lapangan" vs "Nexto kerja di belakang layar",
                 pake istilah "plays" (playbook/strategi per lead) biar
                 kesannya lebih strategic daripada "moves" yang generik. */}
-            <h1 className="mx-auto mt-6 max-w-3xl text-[42px] font-bold leading-[1.02] tracking-[-0.055em] text-white sm:text-[58px] lg:text-[72px]">
+            <h1 className="mx-auto mt-5 max-w-none text-[40px] font-bold leading-[1.0] tracking-[-0.055em] text-white sm:text-[56px] lg:text-[68px]">
               You sell. Nexto thinks.
               <span className="block text-orange-500">
                 Always know what’s next.
