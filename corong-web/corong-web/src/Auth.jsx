@@ -1,4 +1,78 @@
-```
+
+Today 1:59 PM
+a93d0d8d-5a98-4031-a917-d48cc8e0e9f9.png
+bro lu punya design lain gak yang lebih menarik untuk ini
+
+Edit
+
+
+ada yang lain?
+
+Edit
+
+Nah bro, yang kedua ini menurut gue lebih kuat. Flow-nya lebih jelas: Context → Reason → Plan → Act → Learn, jadi konsep agentic loop-nya langsung kebaca.
+
+Kalau buat landing page Nexto, gue malah akan lanjut eksplor 2–3 arah:
+
+AI Brain / Neural Core — lebih futuristik dan “AI-first”.
+
+Sales Command Center — lebih enterprise, banyak live opportunity yang bergerak.
+
+Agentic Loop Visualization — fokus 100% ke loop, dengan customer → AI → action → result → learning yang muter terus.
+
+Kalau lu mau, gue bisa bikin versi nomor 2: Sales Command Center yang jauh lebih “wow” dan kelihatan seperti dashboard perusahaan masa depan, bukan sekadar infographic.
+
+
+
+Pasted markdown(3).md
+File
+bro ini codenya, tolong lu ganti page NEXTO AI Engine Loops dengan design yang kedua yang lu buat
+
+Bisa bro. Gue udah ganti section NEXTO AI Engine Loops di code lu dengan konsep design kedua yang tadi gue buat. 
+
+
+Yang berubah:
+
+NEXTO AI CORE jadi pusat visual utama
+
+Flow atas: Think → Remember → Act → Improve
+
+Context masuk ke AI Core
+
+Memory Engine di kiri
+
+Decision Engine di kanan
+
+Action & Feedback di bawah
+
+Ada Real-time Insight
+
+Orbit dan particle animation
+
+Gradient cyan → blue → purple → orange
+
+Ada visual loop:
+Context → Reason → Plan → Act → Learn
+
+Responsive untuk mobile/tablet
+
+Tombol Listen robot tetap gue pertahankan
+
+Section lama gue replace, jadi nggak perlu bongkar bagian lain
+
+Full code yang sudah direvisi
+
+
+Menurut gue ini jauh lebih cocok dengan positioning Nexto yang lagi kita bangun: bukan sekadar CRM dengan AI, tapi sebuah AI Sales Engine yang punya loop sendiri. 🔥 
+
+
+
+
+Library
+/
+Nexto_Landing_Engine_Loops_Redesign.md
+
+
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "./lib/supabaseClient";
 import IndustryDemo from "./tabs/IndustryDemo";
@@ -2620,4 +2694,3 @@ export default function Auth() {
     </div>
   );
 }
-```
