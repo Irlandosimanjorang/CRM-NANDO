@@ -1060,321 +1060,590 @@ function SectionLabel({ children }) {
 
 // ============================================================
 // NEXTO AI ENGINE LOOPS
-// AI Command Center design — Context -> Reason -> Plan -> Act -> Learn.
-// No extra dependencies: uses only icons already imported above.
+// AI Command Center visual:
+// Context -> Reason -> Plan -> Act -> Learn -> back to Context.
 // ============================================================
-const ENGINE_LOOP_STEPS = [
+const ENGINE_NODES = [
   {
+    key: "context",
     label: "CONTEXT",
-    title: "Baca situasi",
-    desc: "Gabungkan data CRM, percakapan, aktivitas, deal, dan histori customer.",
+    title: "Live Context",
     icon: Database,
-    tone: "cyan",
+    color: "#38bdf8",
+    position: "top",
   },
   {
+    key: "reason",
     label: "REASON",
-    title: "Pahami pola",
-    desc: "Cari sinyal penting, risiko, peluang, dan perubahan yang perlu diperhatikan.",
-    icon: BrainCircuit,
-    tone: "blue",
+    title: "Memory Engine",
+    icon: Layers,
+    color: "#22d3ee",
+    position: "left",
   },
   {
+    key: "plan",
     label: "PLAN",
-    title: "Tentukan langkah",
-    desc: "Pilih prioritas dan next action yang paling masuk akal untuk setiap opportunity.",
-    icon: Target,
-    tone: "orange",
+    title: "Decision Engine",
+    icon: BrainCircuit,
+    color: "#f97316",
+    position: "right",
   },
   {
+    key: "act",
     label: "ACT",
-    title: "Jalankan",
-    desc: "Buat task, follow-up, update CRM, dan action lain sesuai aturan bisnis.",
+    title: "Action Engine",
     icon: Zap,
-    tone: "violet",
+    color: "#a855f7",
+    position: "bottom",
   },
   {
+    key: "learn",
     label: "LEARN",
-    title: "Belajar dari hasil",
-    desc: "Hasil action kembali menjadi konteks untuk membuat keputusan berikutnya lebih tajam.",
+    title: "Feedback Loop",
     icon: TrendingUp,
-    tone: "emerald",
+    color: "#34d399",
+    position: "bottom",
   },
 ];
 
-const ENGINE_TONE = {
-  cyan: {
-    text: "text-cyan-300",
-    border: "border-cyan-400/20",
-    bg: "bg-cyan-400/[0.07]",
-    dot: "bg-cyan-300",
-  },
-  blue: {
-    text: "text-blue-300",
-    border: "border-blue-400/20",
-    bg: "bg-blue-400/[0.07]",
-    dot: "bg-blue-300",
-  },
-  orange: {
-    text: "text-orange-300",
-    border: "border-orange-400/20",
-    bg: "bg-orange-400/[0.07]",
-    dot: "bg-orange-300",
-  },
-  violet: {
-    text: "text-violet-300",
-    border: "border-violet-400/20",
-    bg: "bg-violet-400/[0.07]",
-    dot: "bg-violet-300",
-  },
-  emerald: {
-    text: "text-emerald-300",
-    border: "border-emerald-400/20",
-    bg: "bg-emerald-400/[0.07]",
-    dot: "bg-emerald-300",
-  },
-};
-
 function AiEngineLoopSection({ robotVoice }) {
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeLoop, setActiveLoop] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveStep((current) => (current + 1) % ENGINE_LOOP_STEPS.length);
-    }, 2200);
+      setActiveLoop((prev) => (prev + 1) % 5);
+    }, 1800);
     return () => clearInterval(timer);
   }, []);
 
-  const active = ENGINE_LOOP_STEPS[activeStep];
-  const ActiveIcon = active.icon;
-  const activeTone = ENGINE_TONE[active.tone];
+  const activeNode = ENGINE_NODES[activeLoop];
 
   return (
     <section
       id="cara-kerja"
-      className="relative overflow-hidden bg-[#05070c] px-5 py-20 text-white sm:px-7 sm:py-28 lg:px-10"
+      className="relative overflow-hidden bg-[#05070c] px-5 pb-24 pt-14 text-white sm:px-7 sm:pb-32 sm:pt-20 lg:px-10"
     >
       <style>{`
-        @keyframes nexto-core-pulse {
-          0%,100% { transform: scale(1); opacity:.72; }
-          50% { transform: scale(1.06); opacity:1; }
+        @keyframes nexto-command-pulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow:
+              0 0 0 1px rgba(255,255,255,.10),
+              0 0 45px rgba(59,130,246,.16),
+              0 0 110px rgba(168,85,247,.08);
+          }
+          50% {
+            transform: scale(1.025);
+            box-shadow:
+              0 0 0 1px rgba(255,255,255,.18),
+              0 0 65px rgba(59,130,246,.28),
+              0 0 140px rgba(168,85,247,.13);
+          }
         }
-        @keyframes nexto-orbit {
+
+        @keyframes nexto-command-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes nexto-flow {
-          0% { transform: translateX(-20px); opacity:0; }
-          15% { opacity:1; }
-          85% { opacity:1; }
-          100% { transform: translateX(240px); opacity:0; }
+
+        @keyframes nexto-command-spin-reverse {
+          from { transform: rotate(360deg); }
+          to { transform: rotate(0deg); }
         }
-        @keyframes nexto-node-pulse {
-          0%,100% { box-shadow:0 0 0 0 rgba(59,130,246,.0); }
-          50% { box-shadow:0 0 0 8px rgba(59,130,246,.07); }
+
+        @keyframes nexto-command-flow {
+          0% { left: 0%; opacity: 0; }
+          12% { opacity: 1; }
+          82% { opacity: 1; }
+          100% { left: 100%; opacity: 0; }
         }
+
+        @keyframes nexto-command-flow-reverse {
+          0% { right: 0%; opacity: 0; }
+          12% { opacity: 1; }
+          82% { opacity: 1; }
+          100% { right: 100%; opacity: 0; }
+        }
+
+        @keyframes nexto-command-dot {
+          0%, 100% { opacity: .25; transform: scale(.75); }
+          50% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes nexto-command-scan {
+          0% { transform: translateY(-180px); opacity: 0; }
+          18% { opacity: .8; }
+          75% { opacity: .35; }
+          100% { transform: translateY(180px); opacity: 0; }
+        }
+
+        @keyframes nexto-command-card-in {
+          from { opacity: .45; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nexto-command-grid {
+          background-image:
+            linear-gradient(rgba(255,255,255,.038) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.038) 1px, transparent 1px);
+          background-size: 42px 42px;
+          mask-image: radial-gradient(circle at center, black 0%, transparent 82%);
+          -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 82%);
+        }
+
+        .nexto-command-glass {
+          background:
+            linear-gradient(145deg, rgba(255,255,255,.065), rgba(255,255,255,.018));
+          border: 1px solid rgba(255,255,255,.085);
+          box-shadow:
+            0 28px 90px -45px rgba(0,0,0,.95),
+            inset 0 1px 0 rgba(255,255,255,.035);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+        }
+
+        .nexto-command-noise {
+          background-image: radial-gradient(rgba(255,255,255,.16) .6px, transparent .6px);
+          background-size: 13px 13px;
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          .nexto-engine-motion, .nexto-engine-motion * { animation:none !important; }
+          .nexto-command-motion,
+          .nexto-command-motion * {
+            animation: none !important;
+          }
         }
       `}</style>
 
-      <div className="pointer-events-none absolute inset-0 opacity-70" style={{
-        backgroundImage: "linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px)",
-        backgroundSize: "44px 44px",
-        maskImage: "radial-gradient(circle at 50% 45%, black, transparent 72%)",
-        WebkitMaskImage: "radial-gradient(circle at 50% 45%, black, transparent 72%)",
-      }} />
+      {/* Background */}
+      <div className="pointer-events-none absolute inset-0 nexto-command-grid" />
+      <div className="pointer-events-none absolute left-1/2 top-[42%] h-[760px] w-[760px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/[0.07] blur-[120px]" />
+      <div className="pointer-events-none absolute left-[8%] top-[28%] h-[330px] w-[330px] rounded-full bg-cyan-500/[0.055] blur-[120px]" />
+      <div className="pointer-events-none absolute right-[5%] top-[32%] h-[360px] w-[360px] rounded-full bg-orange-500/[0.05] blur-[125px]" />
 
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/[0.08] blur-[130px]" />
-      <div className="pointer-events-none absolute left-[12%] top-[24%] h-[260px] w-[260px] rounded-full bg-cyan-400/[0.05] blur-[100px]" />
-      <div className="pointer-events-none absolute right-[8%] top-[20%] h-[300px] w-[300px] rounded-full bg-orange-400/[0.05] blur-[110px]" />
-
-      <div className="relative mx-auto max-w-7xl">
-        <div className="flex items-center justify-between border-b border-white/[0.07] pb-5">
-          <div className="flex items-center gap-3">
-            <NextoDarkWordmark width={108} />
-            <span className="hidden h-4 w-px bg-white/10 sm:block" />
-            <span className="hidden text-[8px] font-semibold uppercase tracking-[0.18em] text-slate-600 sm:block">
-              AI SALES ENGINE
-            </span>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.05] px-3 py-1.5">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            </span>
-            <span className="text-[8px] font-bold uppercase tracking-[0.14em] text-emerald-300">
-              Engine Active
-            </span>
-          </div>
-        </div>
-
-        <div className="mx-auto max-w-3xl pt-14 text-center sm:pt-16">
-          <SectionLabel>The Loop</SectionLabel>
-          <h2 className="mt-4 text-[34px] font-bold leading-[1.04] tracking-[-0.05em] sm:text-[52px]">
-            AI yang bukan cuma menjawab.
-            <span className="block bg-gradient-to-r from-cyan-300 via-blue-300 to-orange-300 bg-clip-text text-transparent">
-              Tapi terus bekerja.
-            </span>
+      <div className="relative mx-auto max-w-[1400px]">
+        {/* Section heading */}
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionLabel>The Engine</SectionLabel>
+          <h2 className="mt-4 text-[34px] font-bold leading-[1.02] tracking-[-0.05em] sm:text-[52px]">
+            NEXTO AI Engine Loops
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-[14px] leading-6 text-slate-400 sm:text-[16px] sm:leading-7">
-            Nexto membaca situasi, memahami apa yang terjadi, menentukan langkah,
-            menjalankan action, lalu belajar dari hasilnya. Setelah itu, loop mulai lagi.
+            Bukan cuma AI yang jawab. Nexto membaca apa yang terjadi,
+            menentukan apa yang harus dilakukan, menjalankannya, melihat hasilnya,
+            lalu memakai hasil itu untuk keputusan berikutnya.
           </p>
         </div>
 
-        <div className="mt-14 lg:mt-16">
-          {/* Desktop command center */}
-          <div className="relative hidden min-h-[650px] lg:block">
-            {/* left signal panel */}
-            <div className="absolute left-0 top-[170px] w-[255px] rounded-[24px] border border-white/[0.08] bg-white/[0.025] p-5 backdrop-blur-xl">
+        {/* Command-center canvas */}
+        <div className="relative mx-auto mt-14 min-h-[780px] max-w-[1260px] lg:mt-16">
+          {/* Main atmospheric orbit */}
+          <div className="nexto-command-motion pointer-events-none absolute left-1/2 top-[44%] hidden h-[610px] w-[610px] -translate-x-1/2 -translate-y-1/2 lg:block">
+            <div
+              className="absolute inset-0 rounded-full border border-white/[0.075]"
+              style={{ animation: "nexto-command-spin 42s linear infinite" }}
+            />
+            <div
+              className="absolute inset-[48px] rounded-full border border-dashed border-cyan-400/[0.09]"
+              style={{ animation: "nexto-command-spin-reverse 27s linear infinite" }}
+            />
+            <div
+              className="absolute inset-[106px] rounded-full border border-blue-400/[0.075]"
+              style={{ animation: "nexto-command-spin 19s linear infinite" }}
+            />
+          </div>
+
+          {/* top context card */}
+          <div className="absolute left-1/2 top-0 hidden w-[270px] -translate-x-1/2 lg:block">
+            <EngineContextCard active={activeLoop === 0} />
+          </div>
+
+          {/* left memory/reason card */}
+          <div className="absolute left-0 top-[34%] hidden w-[285px] lg:block">
+            <EngineMemoryCard active={activeLoop === 1} />
+          </div>
+
+          {/* right decision/next action card */}
+          <div className="absolute right-0 top-[34%] hidden w-[300px] lg:block">
+            <EngineDecisionCard active={activeLoop === 2} />
+          </div>
+
+          {/* bottom action card */}
+          <div className="absolute left-1/2 bottom-[8px] hidden w-[580px] -translate-x-1/2 lg:block">
+            <EngineActionCard active={activeLoop === 3} />
+          </div>
+
+          {/* core */}
+          <div className="absolute left-1/2 top-[35%] z-20 -translate-x-1/2 lg:top-[42%]">
+            <div className="relative flex h-[330px] w-[330px] items-center justify-center sm:h-[360px] sm:w-[360px]">
+              <div
+                className="nexto-command-motion absolute inset-[40px] rounded-full border border-blue-300/[0.08]"
+                style={{ animation: "nexto-command-spin 16s linear infinite" }}
+              />
+              <div
+                className="nexto-command-motion absolute inset-[68px] rounded-full border border-orange-300/[0.08]"
+                style={{ animation: "nexto-command-spin-reverse 11s linear infinite" }}
+              />
+
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <span
+                  key={i}
+                  className="nexto-command-motion absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-cyan-300"
+                  style={{
+                    transform: `rotate(${i * 45}deg) translateY(-${128 + (i % 2) * 28}px)`,
+                    boxShadow: "0 0 14px 3px rgba(103,232,249,.75)",
+                    animation: `nexto-command-dot ${1.6 + (i % 3) * .35}s ease-in-out infinite`,
+                    animationDelay: `${i * .15}s`,
+                  }}
+                />
+              ))}
+
+              <div className="absolute h-[250px] w-[250px] rounded-full bg-blue-500/[0.09] blur-[55px]" />
+
+              <div
+                className="nexto-command-motion relative flex h-[205px] w-[205px] flex-col items-center justify-center rounded-[48px] border border-white/[0.14] bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,.12),rgba(16,21,31,.96)_45%,rgba(5,7,12,.99)_100%)]"
+                style={{ animation: "nexto-command-pulse 3s ease-in-out infinite" }}
+              >
+                <div className="absolute inset-0 rounded-[48px] bg-gradient-to-br from-cyan-400/[0.04] via-transparent to-orange-400/[0.05]" />
+
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.14] bg-white/[0.07]">
+                  <NextoRobotHead size={42} speaking={robotVoice.speaking} />
+                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#111722] bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,.8)]" />
+                </div>
+
+                <div className="relative mt-4 text-[11px] font-bold uppercase tracking-[0.24em] text-white">
+                  NEXTO AI CORE
+                </div>
+                <div className="relative mt-1 text-[8px] uppercase tracking-[0.16em] text-slate-600">
+                  Observe · Think · Act · Learn
+                </div>
+
+                <button
+                  onClick={robotVoice.play}
+                  disabled={robotVoice.speaking}
+                  className="relative mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.045] px-3.5 py-1.5 text-[9px] font-semibold text-slate-300 transition hover:bg-white/[0.08] disabled:opacity-60"
+                >
+                  <Volume2 size={11} className={robotVoice.speaking ? "animate-pulse" : ""} />
+                  {robotVoice.speaking ? "Speaking…" : "Listen"}
+                </button>
+              </div>
+
+              {/* live status */}
+              <div className="absolute -bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-emerald-400/15 bg-emerald-400/[0.045] px-3 py-1.5 backdrop-blur-xl">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                </span>
+                <span className="text-[8px] font-bold tracking-[0.12em] text-emerald-300">
+                  LOOP ACTIVE
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* connection lines */}
+          <div className="nexto-command-motion pointer-events-none absolute inset-0 hidden lg:block">
+            {/* Context -> Core */}
+            <div className="absolute left-1/2 top-[19%] h-[23%] w-px -translate-x-1/2 bg-gradient-to-b from-cyan-400/30 via-cyan-400/20 to-white/5">
+              <span
+                className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-cyan-300"
+                style={{
+                  boxShadow: "0 0 14px 4px rgba(103,232,249,.7)",
+                  animation: "nexto-command-scan 2.6s linear infinite",
+                }}
+              />
+            </div>
+
+            {/* Core -> Decision */}
+            <div className="absolute left-[57%] top-[46%] h-px w-[20%] rotate-[-4deg] origin-left bg-gradient-to-r from-blue-400/25 to-orange-400/20">
+              <span
+                className="absolute top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-orange-300"
+                style={{
+                  boxShadow: "0 0 14px 4px rgba(253,186,116,.7)",
+                  animation: "nexto-command-flow 2.5s ease-in-out infinite",
+                }}
+              />
+            </div>
+
+            {/* Memory -> Core */}
+            <div className="absolute right-[57%] top-[46%] h-px w-[20%] -rotate-[-4deg] origin-right bg-gradient-to-l from-cyan-400/25 to-blue-400/10">
+              <span
+                className="absolute right-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-cyan-300"
+                style={{
+                  boxShadow: "0 0 14px 4px rgba(103,232,249,.7)",
+                  animation: "nexto-command-flow-reverse 2.5s ease-in-out infinite",
+                }}
+              />
+            </div>
+
+            {/* Core -> Action */}
+            <div className="absolute left-1/2 top-[57%] h-[29%] w-px -translate-x-1/2 bg-gradient-to-b from-purple-400/25 via-purple-400/18 to-emerald-400/20">
+              <span
+                className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-purple-300"
+                style={{
+                  boxShadow: "0 0 14px 4px rgba(192,132,252,.7)",
+                  animation: "nexto-command-scan 2.9s linear infinite",
+                }}
+              />
+            </div>
+
+            {/* feedback arc — visual cue that the result returns to context */}
+            <div className="absolute left-1/2 top-[73%] h-[150px] w-[650px] -translate-x-1/2 rounded-[50%] border-b border-emerald-400/[0.18]" />
+          </div>
+
+          {/* bottom loop label */}
+          <div className="absolute bottom-[-4px] left-1/2 hidden -translate-x-1/2 items-center gap-3 whitespace-nowrap lg:flex">
+            {["CONTEXT", "REASON", "PLAN", "ACT", "LEARN"].map((item, i) => (
+              <span key={item} className="contents">
+                <span
+                  className={`text-[8px] font-bold tracking-[0.17em] transition-colors duration-500 ${
+                    activeLoop === i ? "text-white" : "text-slate-700"
+                  }`}
+                >
+                  {item}
+                </span>
+                {i < 4 && <span className="text-slate-800">→</span>}
+              </span>
+            ))}
+            <span className="text-slate-800">↺</span>
+          </div>
+
+          {/* Mobile: same composition, stacked cleanly */}
+          <div className="absolute inset-x-0 top-[405px] space-y-3 lg:hidden">
+            <div className="nexto-command-glass rounded-2xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Live context</div>
-                  <div className="mt-1 text-[17px] font-semibold text-white">1,284 customers</div>
+                  <div className="text-[9px] font-bold tracking-[0.14em] text-cyan-300">
+                    LIVE CONTEXT
+                  </div>
+                  <div className="mt-1 text-[19px] font-bold tracking-[-0.03em] text-white">
+                    1,284 customers
+                  </div>
                 </div>
-                <Database size={18} className="text-cyan-300" />
+                <Database size={20} className="text-cyan-300" />
               </div>
-              <div className="mt-5 space-y-2">
-                {["Percakapan", "Opportunity", "Aktivitas", "Riwayat deal"].map((item, i) => (
-                  <div key={item} className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
-                    <span className="flex items-center gap-2 text-[8px] text-slate-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
-                      {item}
-                    </span>
-                    <span className="text-[8px] text-slate-600">{["8.4K", "367", "2.1K", "12.8K"][i]}</span>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {[
+                  ["Percakapan", "8.4K"],
+                  ["Opportunity", "367"],
+                  ["Aktivitas", "2.1K"],
+                  ["Riwayat deal", "12.8K"],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
+                    <div className="text-[8px] text-slate-500">{label}</div>
+                    <div className="mt-0.5 text-[9px] font-semibold text-slate-300">{value}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* right action panel */}
-            <div className="absolute right-0 top-[170px] w-[255px] rounded-[24px] border border-white/[0.08] bg-white/[0.025] p-5 backdrop-blur-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Next best action</div>
-                  <div className="mt-1 text-[17px] font-semibold text-white">Follow-up hari ini</div>
-                </div>
-                <Target size={18} className="text-orange-300" />
-              </div>
-              <div className="mt-5 rounded-2xl border border-orange-400/15 bg-orange-400/[0.045] p-3">
-                <div className="text-[8px] uppercase tracking-[0.12em] text-orange-300">High priority</div>
-                <div className="mt-1 text-[11px] font-semibold text-slate-200">PT ABC · Rp280 Juta</div>
-                <div className="mt-1 text-[8px] leading-4 text-slate-500">Quotation 11 hari lalu · belum ada respons</div>
-              </div>
-              <div className="mt-2 flex items-center gap-2 text-[8px] text-emerald-300">
-                <CircleCheck size={11} /> Siap dieksekusi
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <EngineMemoryCard active={activeLoop === 1} compact />
+              <EngineDecisionCard active={activeLoop === 2} compact />
             </div>
 
-            {/* center loop */}
-            <div className="absolute left-1/2 top-[48%] h-[430px] w-[430px] -translate-x-1/2 -translate-y-1/2">
-              <div className="nexto-engine-motion absolute inset-0 rounded-full border border-white/[0.07]" style={{ animation: "nexto-orbit 32s linear infinite" }} />
-              <div className="nexto-engine-motion absolute inset-[35px] rounded-full border border-dashed border-cyan-300/[0.10]" style={{ animation: "nexto-orbit 22s linear infinite reverse" }} />
-              <div className="nexto-engine-motion absolute inset-[78px] rounded-full border border-blue-300/[0.08]" style={{ animation: "nexto-orbit 15s linear infinite" }} />
+            <EngineActionCard active={activeLoop === 3} compact />
 
-              {/* orbit labels */}
-              <div className="absolute left-1/2 top-0 -translate-x-1/2 rounded-full border border-cyan-400/15 bg-cyan-400/[0.05] px-3 py-1.5 text-[8px] font-bold tracking-[0.14em] text-cyan-300">CONTEXT</div>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full border border-orange-400/15 bg-orange-400/[0.05] px-3 py-1.5 text-[8px] font-bold tracking-[0.14em] text-orange-300">PLAN</div>
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.05] px-3 py-1.5 text-[8px] font-bold tracking-[0.14em] text-emerald-300">LEARN</div>
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full border border-blue-400/15 bg-blue-400/[0.05] px-3 py-1.5 text-[8px] font-bold tracking-[0.14em] text-blue-300">REASON</div>
-
-              {/* core */}
-              <div className="absolute left-1/2 top-1/2 flex h-[185px] w-[185px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[46px] border border-white/15 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,.16),rgba(18,23,34,.96)_48%,rgba(5,7,12,.99)_100%)] shadow-[0_0_80px_rgba(59,130,246,.22)]" style={{ animation: "nexto-core-pulse 3.2s ease-in-out infinite" }}>
-                <div className="text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06]">
-                    <NextoRobotHead size={34} speaking={robotVoice.speaking} />
-                  </div>
-                  <div className="mt-3 text-[10px] font-bold tracking-[0.22em] text-white">NEXTO AI CORE</div>
-                  <div className="mt-1 text-[8px] leading-4 text-slate-500">Observe · Think · Act · Learn</div>
-                </div>
-              </div>
-
-              {/* moving signals */}
-              <span className="nexto-engine-motion absolute left-[84px] top-[115px] h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_3px_rgba(103,232,249,.55)]" style={{ animation: "nexto-flow 2.4s linear infinite" }} />
-              <span className="nexto-engine-motion absolute right-[80px] top-[300px] h-1.5 w-1.5 rounded-full bg-orange-300 shadow-[0_0_12px_3px_rgba(253,186,116,.5)]" style={{ animation: "nexto-flow 2.7s linear infinite .6s" }} />
-            </div>
-
-            {/* bottom status strip */}
-            <div className="absolute bottom-0 left-1/2 flex w-[620px] -translate-x-1/2 items-center justify-between rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-4 backdrop-blur-xl">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${activeTone.border} ${activeTone.bg}`}>
-                  <ActiveIcon size={16} className={activeTone.text} />
-                </div>
-                <div>
-                  <div className={`text-[8px] font-bold tracking-[0.15em] ${activeTone.text}`}>{active.label}</div>
-                  <div className="mt-1 text-[11px] font-semibold text-slate-200">{active.title}</div>
-                </div>
-              </div>
-              <div className="max-w-[330px] text-right text-[9px] leading-4 text-slate-500">{active.desc}</div>
-            </div>
-          </div>
-
-          {/* Mobile / tablet */}
-          <div className="lg:hidden">
-            <div className="mx-auto max-w-xl rounded-[28px] border border-white/[0.08] bg-white/[0.025] p-5 shadow-[0_30px_100px_-50px_rgba(59,130,246,.5)] backdrop-blur-xl sm:p-7">
-              <div className="relative flex min-h-[270px] items-center justify-center overflow-hidden rounded-[22px] border border-white/[0.06] bg-black/20">
-                <div className="nexto-engine-motion absolute h-[245px] w-[245px] rounded-full border border-white/[0.08]" style={{ animation: "nexto-orbit 24s linear infinite" }} />
-                <div className="nexto-engine-motion absolute h-[180px] w-[180px] rounded-full border border-dashed border-cyan-300/[0.10]" style={{ animation: "nexto-orbit 16s linear infinite reverse" }} />
-                <div className="absolute flex h-[135px] w-[135px] flex-col items-center justify-center rounded-[34px] border border-white/15 bg-[#0b0f18] shadow-[0_0_60px_rgba(59,130,246,.22)]" style={{ animation: "nexto-core-pulse 3.2s ease-in-out infinite" }}>
-                  <NextoRobotHead size={30} speaking={robotVoice.speaking} />
-                  <div className="mt-2 text-[8px] font-bold tracking-[0.18em] text-white">NEXTO AI CORE</div>
-                  <div className="mt-1 text-[7px] text-slate-600">Loop active</div>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center justify-between gap-3">
-                <div>
-                  <div className={`text-[9px] font-bold tracking-[0.15em] ${activeTone.text}`}>{active.label}</div>
-                  <div className="mt-1 text-[14px] font-semibold text-white">{active.title}</div>
-                </div>
-                <button
-                  onClick={robotVoice.play}
-                  disabled={robotVoice.speaking}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[8px] font-semibold text-slate-300 transition hover:bg-white/[0.08] disabled:opacity-60"
-                >
-                  <Volume2 size={11} />
-                  {robotVoice.speaking ? "Speaking…" : "Listen"}
-                </button>
-              </div>
-              <p className="mt-2 text-[9px] leading-4 text-slate-500">{active.desc}</p>
-            </div>
-
-            <div className="mx-auto mt-5 grid max-w-xl grid-cols-1 gap-2 sm:grid-cols-5">
-              {ENGINE_LOOP_STEPS.map((step, index) => {
-                const tone = ENGINE_TONE[step.tone];
-                const Icon = step.icon;
-                return (
-                  <button
-                    key={step.label}
-                    onClick={() => setActiveStep(index)}
-                    className={`rounded-2xl border p-3 text-left transition ${index === activeStep ? `${tone.border} ${tone.bg}` : "border-white/[0.06] bg-white/[0.02]"}`}
+            <div className="nexto-command-glass rounded-2xl px-4 py-3 text-center">
+              <div className="flex flex-wrap items-center justify-center gap-2 text-[8px] font-bold tracking-[0.13em]">
+                {["CONTEXT", "REASON", "PLAN", "ACT", "LEARN"].map((item, i) => (
+                  <span
+                    key={item}
+                    className={activeLoop === i ? "text-white" : "text-slate-600"}
                   >
-                    <div className="flex items-center gap-2">
-                      <Icon size={13} className={index === activeStep ? tone.text : "text-slate-600"} />
-                      <span className={`text-[8px] font-bold tracking-[0.12em] ${index === activeStep ? tone.text : "text-slate-500"}`}>{step.label}</span>
-                    </div>
-                  </button>
-                );
-              })}
+                    {item}{i < 4 ? " →" : " ↺"}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                Hasil hari ini menjadi konteks untuk keputusan berikutnya.
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="mx-auto mt-12 max-w-3xl border-t border-white/[0.07] pt-8 text-center">
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-600">
-            <span className="text-cyan-300">Context</span><span>→</span>
-            <span className="text-blue-300">Reason</span><span>→</span>
-            <span className="text-orange-300">Plan</span><span>→</span>
-            <span className="text-violet-300">Act</span><span>→</span>
-            <span className="text-emerald-300">Learn</span><span>↺</span>
-          </div>
-          <p className="mx-auto mt-4 max-w-xl text-[11px] leading-5 text-slate-600">
-            Setiap hasil masuk kembali ke loop. Jadi Nexto tidak cuma membantu sales hari ini —
-            tapi menggunakan hasil hari ini untuk membuat keputusan berikutnya lebih tajam.
+        {/* Active loop readout */}
+        <div className="mx-auto mt-2 flex max-w-3xl flex-col items-center justify-center gap-3 text-center sm:mt-4 sm:flex-row sm:text-left">
+          <div
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{
+              background: activeNode.color,
+              boxShadow: `0 0 14px 4px ${activeNode.color}66`,
+            }}
+          />
+          <p className="text-[11px] leading-5 text-slate-500">
+            Sekarang:{" "}
+            <span className="font-semibold text-slate-300">{activeNode.label}</span>
+            {" — "}
+            Nexto terus menjalankan loop ini tanpa harus menunggu sales membuka CRM.
           </p>
         </div>
       </div>
     </section>
+  );
+}
+
+function EngineContextCard({ active = false }) {
+  return (
+    <div
+      className={`nexto-command-glass rounded-[22px] p-4 transition-all duration-500 ${
+        active ? "border-cyan-400/25 shadow-[0_0_45px_-25px_rgba(56,189,248,.65)]" : ""
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[9px] font-bold tracking-[0.14em] text-cyan-300">
+            LIVE CONTEXT
+          </div>
+          <div className="mt-1 text-[20px] font-bold tracking-[-0.035em] text-white">
+            1,284 customers
+          </div>
+        </div>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.08] text-cyan-300">
+          <Database size={17} />
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {[
+          ["Percakapan", "8.4K"],
+          ["Opportunity", "367"],
+          ["Aktivitas", "2.1K"],
+          ["Riwayat deal", "12.8K"],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
+            <div className="text-[8px] text-slate-500">{label}</div>
+            <div className="mt-0.5 text-[9px] font-semibold text-slate-300">{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EngineMemoryCard({ active = false, compact = false }) {
+  return (
+    <div
+      className={`nexto-command-glass rounded-[22px] ${compact ? "p-4" : "p-5"} transition-all duration-500 ${
+        active ? "border-cyan-400/25 shadow-[0_0_50px_-25px_rgba(34,211,238,.6)]" : ""
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.08] text-cyan-300">
+          <Layers size={18} />
+        </span>
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.12em] text-cyan-300">
+            MEMORY ENGINE
+          </div>
+          <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-slate-600">
+            Understand the past
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-4 text-[10px] leading-5 text-slate-400">
+        Simpan customer state, histori, dan outcome supaya keputusan berikutnya
+        tidak mulai dari nol.
+      </p>
+
+      <div className="mt-3 space-y-2">
+        {["Customer state", "Outcome menang / kalah", "Pattern yang ditemukan"].map((item) => (
+          <div key={item} className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
+            <CheckCircle2 size={11} className="text-cyan-300" />
+            <span className="text-[8px] text-slate-300">{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EngineDecisionCard({ active = false, compact = false }) {
+  return (
+    <div
+      className={`nexto-command-glass rounded-[22px] ${compact ? "p-4" : "p-5"} transition-all duration-500 ${
+        active ? "border-orange-400/25 shadow-[0_0_50px_-25px_rgba(249,115,22,.65)]" : ""
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-400/20 bg-orange-400/[0.08] text-orange-300">
+          <BrainCircuit size={18} />
+        </span>
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.12em] text-orange-300">
+            NEXT BEST ACTION
+          </div>
+          <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-slate-600">
+            Decide what matters
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-orange-400/15 bg-orange-400/[0.035] p-3">
+        <div className="text-[8px] font-bold uppercase tracking-[0.14em] text-orange-300">
+          High Priority
+        </div>
+        <div className="mt-1.5 text-[12px] font-bold text-white">
+          PT ABC · Rp280 Juta
+        </div>
+        <div className="mt-1 text-[8px] leading-4 text-slate-500">
+          Quotation 11 hari lalu · belum ada respons
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <span className="flex items-center gap-2 text-[8px] text-emerald-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Follow-up hari ini
+        </span>
+        <ArrowRight size={12} className="text-orange-300" />
+      </div>
+    </div>
+  );
+}
+
+function EngineActionCard({ active = false, compact = false }) {
+  return (
+    <div
+      className={`nexto-command-glass rounded-[22px] ${compact ? "p-4" : "p-5"} transition-all duration-500 ${
+        active ? "border-purple-400/25 shadow-[0_0_50px_-25px_rgba(168,85,247,.65)]" : ""
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/20 bg-purple-400/[0.08] text-purple-300">
+          <Zap size={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-bold tracking-[0.12em] text-purple-300">
+            ACTION ENGINE
+          </div>
+          <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-slate-600">
+            Execute & measure
+          </div>
+        </div>
+        <span className="rounded-full border border-emerald-400/15 bg-emerald-400/[0.05] px-2 py-1 text-[7px] font-bold tracking-[0.12em] text-emerald-300">
+          ACTIVE
+        </span>
+      </div>
+
+      <p className="mt-4 text-[10px] leading-5 text-slate-400">
+        Dari keputusan menjadi action nyata — tanpa kehilangan hasilnya dari loop.
+      </p>
+
+      <div className={`mt-4 grid ${compact ? "grid-cols-1" : "grid-cols-3"} gap-2`}>
+        {[
+          [MessageCircle, "Kirim follow-up"],
+          [Calendar, "Jadwalkan"],
+          [TrendingUp, "Ukur hasil"],
+        ].map(([Icon, label]) => (
+          <div key={label} className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
+            <Icon size={12} className="text-purple-300" />
+            <span className="text-[8px] font-medium text-slate-300">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
