@@ -415,8 +415,8 @@ function NextoAISalesEngine({ robotVoice }) {
           "radial-gradient(circle at 50% 42%, rgba(15,30,48,.92) 0%, #080b11 34%, #05070c 72%)",
       }}
     >
-      {/* Shared Nexto dark-world grid */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.075]">
+      {/* Background grid */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.12]">
         <div
           className="absolute inset-0"
           style={{
@@ -431,10 +431,10 @@ function NextoAISalesEngine({ robotVoice }) {
         />
       </div>
 
-      {/* Ambient intelligence glows — same visual language as the AI Core */}
-      <div className="absolute left-1/2 top-[43%] w-[560px] h-[560px] -translate-x-1/2 rounded-full bg-blue-500/[0.09] blur-[125px] pointer-events-none" />
-      <div className="absolute left-[7%] top-[24%] w-[260px] h-[260px] rounded-full bg-cyan-400/[0.045] blur-[110px] pointer-events-none" />
-      <div className="absolute right-[7%] top-[24%] w-[260px] h-[260px] rounded-full bg-orange-500/[0.05] blur-[110px] pointer-events-none" />
+      {/* Ambient glows */}
+      <div className="absolute left-1/2 top-[45%] -translate-x-1/2 w-[480px] h-[480px] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute left-[8%] top-[25%] w-[220px] h-[220px] rounded-full bg-cyan-400/5 blur-[100px] pointer-events-none" />
+      <div className="absolute right-[8%] top-[25%] w-[220px] h-[220px] rounded-full bg-orange-500/5 blur-[100px] pointer-events-none" />
 
       <div className="relative max-w-6xl mx-auto px-4 md:px-6 py-20 md:py-28">
         {/* Section heading */}
@@ -1257,7 +1257,7 @@ function AiEngineLoopSection({ robotVoice }) {
             <div className="mt-1 text-center text-[8px] text-slate-500">Observe → Reason → Act → Learn</div>
             <div className="text-center"><button onClick={robotVoice.play} disabled={robotVoice.speaking} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[8px] text-slate-300 disabled:opacity-60"><Volume2 size={11} />{robotVoice.speaking ? "Speaking…" : "Listen"}</button></div>
           </div>
-          {ENGINE_NODES.map((n) => <EngineLoopCard key={n.key} node={n} />)}
+          {ENGINE_NODES.map((n) => <EngineCard key={n.key} node={n} />)}
           <div className="flex items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-400/[0.05] px-4 py-2.5 text-[8px] font-semibold text-emerald-300">RESULT → FEEDBACK → CONTEXT ↺</div>
         </div>
 
@@ -1283,7 +1283,7 @@ function EngineCardHeader({ icon: Icon, label, color }) {
   );
 }
 
-function EngineLoopCard({ node }) {
+function EngineCard({ node }) {
   return (
     <div className="nexto-engine-card rounded-[22px] p-5">
       <EngineCardHeader icon={node.icon} label={node.label} color={node.color} />
@@ -1639,7 +1639,6 @@ export default function Auth() {
           id="industri"
           className="bg-[#f8f7f4] px-5 py-20 sm:px-7 sm:py-28 lg:px-10"
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#05070c]/[0.05] to-transparent" />
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
               <SectionLabel>Universal sales engine</SectionLabel>
@@ -1747,9 +1746,8 @@ export default function Auth() {
         {/* =========================================================
             KEAMANAN AKUN
         ========================================================== */}
-        <section id="keamanan" className="relative overflow-hidden bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/70 to-transparent" />
-          <div className="mx-auto max-w-7xl relative">
+        <section id="keamanan" className="bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
+          <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
               <SectionLabel>Keamanan akun</SectionLabel>
 
