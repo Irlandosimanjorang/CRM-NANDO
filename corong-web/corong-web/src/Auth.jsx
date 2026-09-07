@@ -1921,9 +1921,9 @@ export default function Auth() {
                 pake istilah "plays" (playbook/strategi per lead) biar
                 kesannya lebih strategic daripada "moves" yang generik. */}
             <h1 className="mx-auto mt-6 max-w-3xl text-[42px] font-bold leading-[1.02] tracking-[-0.055em] text-white sm:text-[58px] lg:text-[72px]">
-              Go out and sell.
+              You sell. Nexto thinks.
               <span className="block text-orange-500">
-                We run your plays.
+                Always know what's next.
               </span>
             </h1>
 
