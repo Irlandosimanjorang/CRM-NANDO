@@ -1,0 +1,71 @@
+import { X, CheckCircle2, Copy, StickyNote, Sparkles } from "lucide-react";
+
+// Ringkasan hasil import Excel/CSV - dulu cuma alert() polos "Import selesai:
+// X lead" tanpa detail apa aja yang beneran masuk atau yang dilewatin karena
+// udah ada (duplikat). Sekarang ditampilin lengkap: daftar yang berhasil
+// masuk (+ tanda kalau ada catatan yang ikut kesimpen sebagai progress note),
+// dan daftar yang DITOLAK karena nama company/lead-nya udah ada di CRM
+// (exact match ATAU mirip banget - sama threshold kayak fitur "Cek Duplikat"),
+// biar user gak nyangka "kok kurang" pas jumlahnya beda dari total baris di Excel.
+export default function ImportSummaryModal({ summary, onClose }) {
+  const { imported, duplicates, usedAiFallback } = summary;
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-bold text-lg flex items-center gap-2">
+            <CheckCircle2 size={18} className="text-emerald-500" /> Ringkasan Import
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+        </div>
+
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <span className="text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full px-2.5 py-1">✅ {imported.length} masuk</span>
+          {duplicates.length > 0 && (
+            <span className="text-xs font-medium bg-amber-50 text-amber-700 rounded-full px-2.5 py-1">⚠️ {duplicates.length} dilewati (udah ada)</span>
+          )}
+          {usedAiFallback && (
+            <span className="text-xs font-medium bg-violet-50 text-violet-700 rounded-full px-2.5 py-1 flex items-center gap-1"><Sparkles size={11} /> dibantu AI baca formatnya</span>
+          )}
+        </div>
+
+        {imported.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-slate-500 mb-1.5">Berhasil masuk ({imported.length})</p>
+            <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+              {imported.map((l, i) => (
+                <div key={i} className="flex items-center justify-between text-xs bg-slate-50 rounded-lg px-2.5 py-1.5">
+                  <span className="truncate">{l.name}</span>
+                  {l.hasNote && <span title="Catatan dari Excel ikut kesimpen sebagai progress note" className="shrink-0 ml-2 text-slate-400"><StickyNote size={12} /></span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {duplicates.length > 0 && (
+          <div className="mb-1">
+            <p className="text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><Copy size={12} /> Dilewati - nama ini udah ada di CRM ({duplicates.length})</p>
+            <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+              {duplicates.map((d, i) => (
+                <div key={i} className="text-xs bg-amber-50/60 rounded-lg px-2.5 py-1.5">
+                  <span className="text-amber-800">{d.name}</span>
+                  {d.matchedName && d.matchedName.toLowerCase() !== d.name.toLowerCase() && (
+                    <span className="text-amber-500"> → mirip "{d.matchedName}"</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {imported.length === 0 && duplicates.length === 0 && (
+          <p className="text-sm text-slate-400 py-6 text-center">Ga ada baris yang diproses.</p>
+        )}
+
+        <div className="mt-4"><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 w-full">Tutup</button></div>
+      </div>
+    </div>
+  );
+}

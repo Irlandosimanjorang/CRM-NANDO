@@ -38,10 +38,12 @@ import {
   prettyDomain,
   isNewLead,
   todayISO,
+  nameSimilarity,
 } from "../lib/helpers";
 
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
+import ImportSummaryModal from "../components/ImportSummaryModal";
 import AiDraftPopup from "../components/AiDraftPopup";
 import ProgressPopup from "../components/ProgressPopup";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
@@ -211,6 +213,20 @@ function mapRow(
       "公司背景",
       "background",
       "海关",
+    ]),
+
+    // Kolom catatan/keterangan bebas di Excel (kalau ada) - BUKAN kolom lead
+    // (leads gak punya kolom "notes"), ditulis terpisah sebagai progress note
+    // begitu lead-nya berhasil dibikin (lihat importFile di bawah).
+    notes: val(row, [
+      "备注",
+      "catatan",
+      "keterangan",
+      "notes",
+      "note",
+      "remark",
+      "riwayat",
+      "progress",
     ]),
 
     source: "import",
@@ -442,6 +458,12 @@ export default function Leads({
   const [showDup, setShowDup] =
     useState(false);
 
+  // Ringkasan hasil import terakhir - ditampilin di ImportSummaryModal
+  // (gantiin alert polos "Import selesai: X lead" yang sebelumnya gak
+  // ngasih tau detail apa aja yang masuk atau yang dilewatin karena duplikat).
+  const [importSummary, setImportSummary] =
+    useState(null);
+
   const [draftPopup, setDraftPopup] =
     useState(null);
 
@@ -468,6 +490,14 @@ export default function Leads({
       clearOpenModal("progress");
     }
     if (getOpenModal("dupcheck")) setShowDup(true);
+    // Import selesai -> onChanged() (= reload() di App.jsx) langsung nyalain
+    // loading spinner App-level, yang UNMOUNT total komponen Leads ini (ganti
+    // ke <Splash/>) sebelum sempet render popup ringkasannya - state lokal
+    // `importSummary` abis di-set langsung ikut ke-wipe. Makanya ringkasannya
+    // ikut disimpen ke localStorage (pola yang sama kayak draft/progress/
+    // dupcheck di atas) dan di-restore di sini begitu Leads remount.
+    const importSaved = getOpenModal("importSummary");
+    if (importSaved) setImportSummary(importSaved);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leads.length > 0]);
 
@@ -824,402 +854,169 @@ export default function Leads({
      IMPORT
   ========================================================= */
 
-  const importFile =
-    async (file) => {
+  // Threshold sama persis kayak DuplicateModal ("Cek Duplikat" manual) - biar
+  // konsisten: dua nama yang dianggap "mirip banget" di satu tempat juga
+  // dianggap gitu di tempat lain.
+  const IMPORT_DUP_THRESHOLD = 0.72;
 
-      if (!file) return;
+  const importFile = async (file) => {
+    if (!file) return;
+    setBusy(true);
 
-      setBusy(true);
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const firstStage = stages[0]?.key;
 
-      try {
+      // Dulu dedup import cuma cek EXACT match nama (trim+lowercase) - lead
+      // yang namanya udah ada tapi ditulis agak beda ("PT ABC" vs "PT ABC
+      // Indonesia") lolos dan bikin data dobel. Sekarang dicek dua lapis:
+      // exact match (persis kayak sebelumnya) DAN fuzzy match pake fungsi
+      // yang sama dipakai "Cek Duplikat". `knownNames` mulai dari nama lead
+      // yang udah ada, lalu BERTAMBAH tiap kali satu baris diterima - biar
+      // baris-baris baru DALAM satu file import yang sama-sama mirip juga
+      // ketangkep, bukan cuma yang mirip sama lead lama.
+      const existingByKey = new Map(leads.map((l) => [l.name.trim().toLowerCase(), l.name]));
+      const knownNames = leads.map((l) => l.name);
+      const seenThisImport = new Set();
 
-        const buf =
-          new Uint8Array(
-            await file.arrayBuffer()
-          );
+      const toInsert = []; // { lead, notes }
+      const duplicates = []; // { name, matchedName, score }
+      let usedAiFallback = false;
 
-        const wb =
-          XLSX.read(
-            buf,
-            {
-              type: "array",
-              cellDates: true,
-            }
-          );
+      for (const sn of wb.SheetNames) {
+        const headerRows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: "" });
+        const nonEmptyRows = headerRows.filter((r) => Object.values(r).some((v) => String(v).trim()));
 
-        const firstStage =
-          stages[0]?.key;
+        let sheetOut = [];
+        for (const r of headerRows) {
+          const m = mapRow(r, "Lainnya", firstStage);
+          if (m) sheetOut.push(m);
+        }
 
-        const existing =
-          new Set(
-            leads.map(
-              (l) =>
-                l.name
-                  .trim()
-                  .toLowerCase()
-            )
-          );
+        // Fallback AI kalau rule-based cuma berhasil baca <50% baris - AI
+        // baca sample mentah & tentuin sendiri kolom keberapa isinya apa
+        // (lihat smart-import-map-ts, sekarang industry-aware).
+        if (nonEmptyRows.length > 0 && sheetOut.length < nonEmptyRows.length * 0.5) {
+          const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: "" });
+          const nonEmptyAoa = aoa.filter((r) => r.some((v) => String(v).trim()));
 
-        const out = [];
+          if (nonEmptyAoa.length > 0) {
+            try {
+              const sample = nonEmptyAoa.slice(0, 8);
+              const { data_start_row, mapping } = await db.smartImportMap(sample);
 
-        let usedAiFallback =
-          false;
+              if (mapping && mapping.name !== null && mapping.name !== undefined) {
+                const startAt = Math.min(Math.max(data_start_row || 0, 0), nonEmptyAoa.length);
+                const dataRows = nonEmptyAoa.slice(startAt);
+                const aiOut = [];
 
+                for (const row of dataRows) {
+                  const get = (idx) => (idx === null || idx === undefined) ? "" : String(row[idx] ?? "").trim();
+                  const name = get(mapping.name);
+                  if (!name || /^(xxx|yyyy-mm-dd|mr\/ms xxx)$/i.test(name.trim())) continue;
 
-        for (
-          const sn of
-          wb.SheetNames
-        ) {
-
-          const headerRows =
-            XLSX.utils.sheet_to_json(
-              wb.Sheets[sn],
-              {
-                defval: "",
-              }
-            );
-
-          const nonEmptyRows =
-            headerRows.filter(
-              (r) =>
-                Object.values(
-                  r
-                ).some(
-                  (v) =>
-                    String(
-                      v
-                    ).trim()
-                )
-            );
-
-          let sheetOut = [];
-
-
-          for (
-            const r of
-            headerRows
-          ) {
-
-            const m =
-              mapRow(
-                r,
-                "Lainnya",
-                firstStage
-              );
-
-            if (m) {
-              sheetOut.push(m);
-            }
-
-          }
-
-
-          if (
-            nonEmptyRows.length >
-              0 &&
-            sheetOut.length <
-              nonEmptyRows.length *
-                0.5
-          ) {
-
-            const aoa =
-              XLSX.utils.sheet_to_json(
-                wb.Sheets[sn],
-                {
-                  header: 1,
-                  defval: "",
-                }
-              );
-
-            const nonEmptyAoa =
-              aoa.filter(
-                (r) =>
-                  r.some(
-                    (v) =>
-                      String(
-                        v
-                      ).trim()
-                  )
-              );
-
-
-            if (
-              nonEmptyAoa.length >
-              0
-            ) {
-
-              try {
-
-                const sample =
-                  nonEmptyAoa.slice(
-                    0,
-                    8
-                  );
-
-                const {
-                  data_start_row,
-                  mapping,
-                } =
-                  await db.smartImportMap(
-                    sample
-                  );
-
-
-                if (
-                  mapping &&
-                  (
-                    mapping.name !==
-                      null &&
-                    mapping.name !==
-                      undefined
-                  )
-                ) {
-
-                  const startAt =
-                    Math.min(
-                      Math.max(
-                        data_start_row ||
-                          0,
-                        0
-                      ),
-                      nonEmptyAoa.length
-                    );
-
-                  const dataRows =
-                    nonEmptyAoa.slice(
-                      startAt
-                    );
-
-                  const aiOut =
-                    [];
-
-
-                  for (
-                    const row of
-                    dataRows
-                  ) {
-
-                    const get =
-                      (idx) =>
-                        (
-                          idx ===
-                            null ||
-                          idx ===
-                            undefined
-                        )
-                          ? ""
-                          : String(
-                              row[
-                                idx
-                              ] ??
-                                ""
-                            ).trim();
-
-
-                    const name =
-                      get(
-                        mapping.name
-                      );
-
-
-                    if (
-                      !name ||
-                      /^(xxx|yyyy-mm-dd|mr\/ms xxx)$/i.test(
-                        name.trim()
-                      )
-                    ) {
-                      continue;
-                    }
-
-
-                    aiOut.push({
-                      name,
-                      category:
-                        "Lainnya",
-                      stage_key:
-                        firstStage,
-
-                      company_type:
-                        get(
-                          mapping.company_type
-                        ),
-
-                      email:
-                        get(
-                          mapping.email
-                        ),
-
-                      phone:
-                        get(
-                          mapping.phone
-                        ),
-
-                      key_person:
-                        get(
-                          mapping.key_person
-                        ),
-
-                      key_person_title:
-                        get(
-                          mapping.key_person_title
-                        ),
-
-                      product:
-                        get(
-                          mapping.product
-                        ),
-
-                      city:
-                        get(
-                          mapping.city
-                        ),
-
-                      province:
-                        get(
-                          mapping.province
-                        ),
-
-                      website:
-                        get(
-                          mapping.website
-                        ),
-
-                      background:
-                        get(
-                          mapping.background
-                        ),
-
-                      source:
-                        "import",
-                    });
-
-                  }
-
-
-                  if (
-                    aiOut.length >
-                    sheetOut.length
-                  ) {
-
-                    sheetOut =
-                      aiOut;
-
-                    usedAiFallback =
-                      true;
-
-                  }
-
+                  aiOut.push({
+                    name,
+                    category: "Lainnya",
+                    stage_key: firstStage,
+                    company_type: get(mapping.company_type),
+                    email: get(mapping.email),
+                    phone: get(mapping.phone),
+                    key_person: get(mapping.key_person),
+                    key_person_title: get(mapping.key_person_title),
+                    product: get(mapping.product),
+                    city: get(mapping.city),
+                    province: get(mapping.province),
+                    website: get(mapping.website),
+                    background: get(mapping.background),
+                    notes: get(mapping.notes),
+                    source: "import",
+                  });
                 }
 
-              } catch (
-                aiErr
-              ) {
-
-                console.error(
-                  "Smart import AI gagal:",
-                  aiErr
-                );
-
+                if (aiOut.length > sheetOut.length) {
+                  sheetOut = aiOut;
+                  usedAiFallback = true;
+                }
               }
-
+            } catch (aiErr) {
+              console.error("Smart import AI gagal:", aiErr);
             }
+          }
+        }
 
+        for (const m of sheetOut) {
+          const name = (m.name || "").trim();
+          if (!name) continue;
+          const key = name.toLowerCase();
+
+          const existingExact = existingByKey.get(key);
+          if (existingExact || seenThisImport.has(key)) {
+            duplicates.push({ name, matchedName: existingExact || name, score: 1 });
+            continue;
           }
 
-
-          for (
-            const m of
-            sheetOut
-          ) {
-
-            const key =
-              (
-                m.name ||
-                ""
-              )
-                .trim()
-                .toLowerCase();
-
-
-            if (
-              key &&
-              !existing.has(
-                key
-              )
-            ) {
-
-              existing.add(
-                key
-              );
-
-              out.push({
-                ...m,
-                name:
-                  m.name.trim(),
-              });
-
-            }
-
+          const fuzzyMatchName = knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD);
+          if (fuzzyMatchName) {
+            duplicates.push({ name, matchedName: fuzzyMatchName, score: nameSimilarity(fuzzyMatchName, name) });
+            continue;
           }
 
+          seenThisImport.add(key);
+          knownNames.push(name);
+          const { notes, ...leadPayload } = m;
+          toInsert.push({ lead: { ...leadPayload, name }, notes });
         }
-
-
-        if (
-          out.length ===
-          0
-        ) {
-
-          alert(
-            "Ga ada baris kebaca. Pastikan ada data nama perusahaan."
-          );
-
-          return;
-
-        }
-
-
-        for (
-          let i = 0;
-          i < out.length;
-          i += 200
-        ) {
-
-          await db.bulkInsertLeads(
-            out.slice(
-              i,
-              i + 200
-            )
-          );
-
-        }
-
-
-        alert(
-          `✅ Import selesai${
-            usedAiFallback
-              ? " (dibantu AI baca formatnya)"
-              : ""
-          }. Masuk: ${out.length} lead.`
-        );
-
-
-        onChanged();
-
-      } catch (e) {
-
-        alert(
-          "Gagal import: " +
-            e.message
-        );
-
-      } finally {
-
-        setBusy(false);
-
       }
 
-    };
+      if (toInsert.length === 0 && duplicates.length === 0) {
+        alert("Ga ada baris kebaca. Pastikan ada data nama perusahaan/lead.");
+        return;
+      }
+
+      const insertedPairs = []; // { id, name, notes }
+      for (let i = 0; i < toInsert.length; i += 200) {
+        const chunk = toInsert.slice(i, i + 200);
+        const inserted = await db.bulkInsertLeads(chunk.map((c) => c.lead));
+        const notesByName = new Map(chunk.map((c) => [c.lead.name.toLowerCase(), c.notes]));
+        for (const row of inserted) {
+          insertedPairs.push({ id: row.id, name: row.name, notes: notesByName.get(row.name.toLowerCase()) || "" });
+        }
+      }
+
+      // Kolom catatan/keterangan dari Excel (kalau ada, lihat mapRow &
+      // smart-import-map-ts) BUKAN kolom lead - ditulis di sini sebagai
+      // progress note di lead yang baru dibikin. Dikirim 20 sekaligus biar
+      // gak nge-spam request tapi tetep cepet buat import ratusan baris.
+      const withNotes = insertedPairs.filter((p) => p.notes && p.notes.trim());
+      for (let i = 0; i < withNotes.length; i += 20) {
+        const chunk = withNotes.slice(i, i + 20);
+        await Promise.all(
+          chunk.map((p) =>
+            db.addProgress(p.id, p.notes.trim()).catch((e) => console.error("Gagal simpan note import buat", p.name, e))
+          )
+        );
+      }
+
+      const summary = {
+        imported: insertedPairs.map((p) => ({ name: p.name, hasNote: !!(p.notes && p.notes.trim()) })),
+        duplicates,
+        usedAiFallback,
+      };
+      // Disimpen ke localStorage SEBELUM onChanged() dipanggil - onChanged()
+      // (reload()) unmount komponen ini sesaat lagi, jadi kalau urutannya
+      // kebalik, popup ringkasan gak akan pernah sempet muncul sama sekali.
+      saveOpenModal("importSummary", summary);
+      setImportSummary(summary);
+
+      onChanged();
+    } catch (e) {
+      alert("Gagal import: " + e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
 
   /* =========================================================
@@ -2172,6 +1969,16 @@ export default function Leads({
           }
         />
 
+      )}
+
+      {importSummary && (
+        <ImportSummaryModal
+          summary={importSummary}
+          onClose={() => {
+            setImportSummary(null);
+            clearOpenModal("importSummary");
+          }}
+        />
       )}
 
     </div>
