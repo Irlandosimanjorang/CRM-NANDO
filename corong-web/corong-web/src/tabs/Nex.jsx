@@ -340,7 +340,7 @@ export default function Nex({ dummy }) {
 
   useEffect(() => {
     if (dummy) {
-      setMyId("dummy-me"); setMyName("Kamu"); setMyBio("Sales B2B"); setProfileLoaded(true);
+      setMyId("dummy-me"); setMyName("Anda"); setMyBio("Sales B2B"); setProfileLoaded(true);
       load();
       return;
     }
@@ -371,7 +371,7 @@ export default function Nex({ dummy }) {
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => { setShowComposer(true); saveOpenModal("nexpost", {}); }}>
-        <div className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm text-slate-400">Apa yang mau kamu share, {myName ? myName.split(" ")[0] : ""}?</div>
+        <div className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm text-slate-400">Apa yang mau Anda share, {myName ? myName.split(" ")[0] : ""}?</div>
         <ImageIcon size={20} className="text-emerald-500 shrink-0" />
       </div>
 

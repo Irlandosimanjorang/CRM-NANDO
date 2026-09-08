@@ -174,7 +174,7 @@ export default function LeadModal({ lead, stages, settings, industry, myLevel = 
 
   const saveLocation = () => {
     if (!lead.id) { alert("Simpan lead-nya dulu sebelum simpan lokasi."); return; }
-    if (!navigator.geolocation) { alert("HP/browser kamu ga dukung GPS."); return; }
+    if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
     setLocBusy(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -320,7 +320,7 @@ export default function LeadModal({ lead, stages, settings, industry, myLevel = 
             <div className="flex items-center justify-between border border-slate-200 rounded-2xl p-3 bg-slate-50">
               <div className="text-xs">
                 <div className="font-semibold text-slate-600 flex items-center gap-1.5"><MapPin size={13} /> Titik lokasi GPS</div>
-                <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas kamu lagi di lokasi"}</div>
+                <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas Anda lagi di lokasi"}</div>
               </div>
               <button onClick={saveLocation} disabled={locBusy || !lead.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-xl px-3 py-1.5 hover:bg-orange-50 disabled:opacity-50 shrink-0 font-medium">
                 {locBusy ? "Menyimpan…" : f.latitude ? "Check In" : "Simpan Lokasi Ini"}

@@ -50,7 +50,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
   const [staleChecked, setStaleChecked] = useState({});
   const [staleBusy, setStaleBusy] = useState(false);
   const applyStale = async () => {
-    if (!lostStage) { alert("Ga ada tahap bertipe 'Lost' di pengaturan pipeline kamu."); return; }
+    if (!lostStage) { alert("Ga ada tahap bertipe 'Lost' di pengaturan pipeline Anda."); return; }
     const ids = staleLeads.filter((l) => staleChecked[l.id]).map((l) => l.id);
     if (ids.length === 0) return;
     setStaleBusy(true);
@@ -72,7 +72,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
           <h2 className="font-bold text-lg flex items-center gap-2"><Sparkles size={18} className="text-orange-500" /> Rapihin Data</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
         </div>
-        <p className="text-sm text-slate-500 mb-4">Semua perubahan tetap butuh persetujuan kamu — ga ada yang dieksekusi otomatis.</p>
+        <p className="text-sm text-slate-500 mb-4">Semua perubahan tetap butuh persetujuan Anda — ga ada yang dieksekusi otomatis.</p>
 
         <div className="flex gap-2 mb-4 border-b border-slate-200">
           <button onClick={() => setTab("kategori")} className={`text-sm px-3 py-2 border-b-2 -mb-px ${tab === "kategori" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500"}`}>Kategori</button>
@@ -135,7 +135,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
               <p className="text-sm text-slate-400 py-8 text-center">Semua lead aktif punya data kota & telepon lengkap. 👍</p>
             ) : (
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-                <p className="text-xs text-slate-500 mb-2">Ga bisa diisi otomatis (biar ga ada data ngarang) — ini daftar buat kamu lengkapin manual:</p>
+                <p className="text-xs text-slate-500 mb-2">Ga bisa diisi otomatis (biar ga ada data ngarang) — ini daftar buat Anda lengkapin manual:</p>
                 {incompleteLeads.map((l) => (
                   <div key={l.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
                     <Phone size={14} className="text-slate-300 shrink-0" />

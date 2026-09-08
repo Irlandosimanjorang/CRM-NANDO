@@ -146,7 +146,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       if (challengeErr) throw challengeErr;
       const { error: verifyErr } = await supabase.auth.mfa.verify({ factorId: mfaPendingFactorId, challengeId: challenge.id, code: mfaCode });
       if (verifyErr) throw verifyErr;
-      setMfaMsg("✅ 2FA berhasil diaktifkan! Login berikutnya bakal minta kode dari app authenticator kamu."); setMfaMsgOk(true);
+      setMfaMsg("✅ 2FA berhasil diaktifkan! Login berikutnya bakal minta kode dari app authenticator Anda."); setMfaMsgOk(true);
       setMfaEnrolling(false); setMfaPendingFactorId(null); setMfaQrCode(""); setMfaSecret(""); setMfaCode("");
       loadMfaFactors();
       generateRecoveryCodes(); // langsung siapin kode recovery begitu 2FA aktif - jangan sampe user lupa/gak pernah punya kode cadangan
@@ -229,7 +229,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
   const [leaveBusy, setLeaveBusy] = useState(false);
   const leaveOrganization = async () => {
-    if (!window.confirm(`Keluar dari organisasi "${org?.name}"? Kamu bakal balik punya ruang kerja sendiri (kosong).`)) return;
+    if (!window.confirm(`Keluar dari organisasi "${org?.name}"? Anda bakal balik punya ruang kerja sendiri (kosong).`)) return;
     setLeaveBusy(true);
     try { await db.leaveOrg(); loadOrg(); onChanged(); }
     catch (e) { alert("Gagal keluar: " + e.message); }
@@ -362,7 +362,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
               </div>
               <div>
                 <div className="text-[13px] font-semibold text-slate-800">
-                  {settings.plan === "standard" ? "Kamu sedang memakai Nexto Standard" : "Kamu sedang memakai Nexto Free"}
+                  {settings.plan === "standard" ? "Anda sedang memakai Nexto Standard" : "Anda sedang memakai Nexto Free"}
                 </div>
                 <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
                   {settings.plan === "standard"
@@ -392,7 +392,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
                 <div key={m.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
                   <div className="text-xs flex items-center gap-1.5">
                     {m.role === "owner" && <Crown size={12} className="text-amber-500" />}
-                    {m.user_id === myUid ? "Kamu" : (m.display_name || `Anggota ${m.user_id.slice(0, 8)}`)} <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>
+                    {m.user_id === myUid ? "Anda" : (m.display_name || `Anggota ${m.user_id.slice(0, 8)}`)} <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>
                   </div>
                   {isOwner && m.user_id !== myUid && (
                     <button onClick={() => removeMember(m.id, ROLE_LABEL[m.role])} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
@@ -405,7 +405,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
               // Dia anggota organisasi ORANG LAIN (udah pernah gabung pake kode) -
               // kolom "gabung" disembunyiin, gantiin sama tombol keluar.
               <div className="border-t border-slate-100 mt-1 pt-3">
-                <p className="text-xs text-slate-500 mb-2">Kamu anggota organisasi <b>{org?.name || "ini"}</b>.</p>
+                <p className="text-xs text-slate-500 mb-2">Anda anggota organisasi <b>{org?.name || "ini"}</b>.</p>
                 <button onClick={leaveOrganization} disabled={leaveBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">
                   {leaveBusy ? "Keluar..." : "Keluar dari Organisasi"}
                 </button>
@@ -413,7 +413,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
             ) : (
               <>
                 {isIndividualPaid ? (
-                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Paket kamu <b>Individual</b> - fitur undang anggota khusus paket Enterprise.</p>
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Paket Anda <b>Individual</b> - fitur undang anggota khusus paket Enterprise.</p>
                 ) : isEnterprise ? (
                   members.length >= (org?.member_limit || 1) ? (
                     <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
@@ -482,7 +482,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Sparkles size={15} className="text-orange-500" /> Rapihin Data</h3>
-        <p className="text-xs text-slate-500 mb-3">Cari saran kategori buat lead "Lainnya", lead yang udah lama ga aktif, dan data kontak yang kurang lengkap. Semua perubahan tetap kamu yang approve.</p>
+        <p className="text-xs text-slate-500 mb-3">Cari saran kategori buat lead "Lainnya", lead yang udah lama ga aktif, dan data kontak yang kurang lengkap. Semua perubahan tetap Anda yang approve.</p>
         <button onClick={() => { setShowCleanup(true); saveOpenModal("datacleanup", {}); }} className="text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
           <Sparkles size={15} /> Buka Rapihin Data
         </button>
@@ -499,7 +499,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Send size={15} className="text-sky-500" /> Telegram Bot</h3>
         <p className="text-xs text-slate-500 mb-3">
-          Sambungin akun Telegram kamu buat tambah lead, jadwalin visit, dan catat progress langsung dari chat. Nama bot-nya{" "}
+          Sambungin akun Telegram Anda buat tambah lead, jadwalin visit, dan catat progress langsung dari chat. Nama bot-nya{" "}
           <a href={TELEGRAM_BOT_LINK} target="_blank" rel="noreferrer" className="font-semibold text-sky-600 hover:underline">@{TELEGRAM_BOT_USERNAME}</a>.
         </p>
         {myLevel < 2 ? (
@@ -543,13 +543,13 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
-        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar kamu biar jadwal visit & follow-up dari bot Telegram otomatis masuk ke calendar.</p>
+        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar Anda biar jadwal visit & follow-up dari bot Telegram otomatis masuk ke calendar.</p>
         {myLevel < 2 ? (
           <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
             <div className="text-sm">
               <div className="font-medium text-rose-900">Google Calendar itu fitur Professional</div>
-              <div className="text-xs text-rose-700 mt-0.5">Upgrade ke Professional buat bisa nyambungin Google Calendar kamu.</div>
+              <div className="text-xs text-rose-700 mt-0.5">Upgrade ke Professional buat bisa nyambungin Google Calendar Anda.</div>
             </div>
           </div>
         ) : gcalLoading ? (
@@ -634,7 +634,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
           <div className="mt-4 pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="text-xs text-slate-600">
-                <span className="font-semibold">Kode Recovery</span> — buat jaga-jaga kalau HP/app authenticator kamu ilang atau rusak, jadi gak kekunci permanen dari akun sendiri.
+                <span className="font-semibold">Kode Recovery</span> — buat jaga-jaga kalau HP/app authenticator Anda ilang atau rusak, jadi gak kekunci permanen dari akun sendiri.
               </div>
               <button onClick={generateRecoveryCodes} disabled={recoveryBusy} className="text-xs border border-slate-300 text-slate-700 rounded-xl px-3 py-1.5 hover:bg-slate-100 disabled:opacity-60 shrink-0 flex items-center gap-1.5">
                 {recoveryBusy ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} {recoveryCodes ? "Buat ulang" : "Buat kode recovery"}
@@ -643,7 +643,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
             {recoveryMsg && <div className="text-xs rounded-lg p-2 mt-2 bg-rose-50 text-rose-700">{recoveryMsg}</div>}
             {recoveryCodes && (
               <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 max-w-sm">
-                <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang — ini CUMA ditampilin sekali. Tiap kode cuma bisa dipake 1x buat masuk kalau HP kamu hilang.</p>
+                <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang — ini CUMA ditampilin sekali. Tiap kode cuma bisa dipake 1x buat masuk kalau HP Anda hilang.</p>
                 <div className="grid grid-cols-2 gap-1.5 font-mono text-[12px] bg-white rounded-lg p-2.5 border border-amber-100">
                   {recoveryCodes.map((c) => <div key={c}>{c}</div>)}
                 </div>
@@ -672,7 +672,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><KeyRound size={15} className="text-slate-500" /> Ganti Password</h3>
-        <p className="text-xs text-slate-500 mb-3">Ganti password akun kamu kapan aja. Minimal 8 karakter.</p>
+        <p className="text-xs text-slate-500 mb-3">Ganti password akun Anda kapan aja. Minimal 8 karakter.</p>
         <div className="space-y-2 max-w-sm">
           <input type="password" className={inp} placeholder="Password lama" value={pwOld} onChange={(e) => setPwOld(e.target.value)} />
           <input type="password" className={inp} placeholder="Password baru" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
@@ -686,7 +686,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
         <h3 className="font-semibold text-sm mb-1">Backup data</h3>
-        <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori AI Advisor) jadi 1 file — simpen di komputer/HP kamu sesekali biar aman.</p>
+        <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori AI Advisor) jadi 1 file — simpen di komputer/HP Anda sesekali biar aman.</p>
         <button onClick={exportBackup} disabled={exporting} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
           {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export semua data"}
         </button>

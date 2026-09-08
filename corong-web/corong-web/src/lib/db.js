@@ -138,7 +138,7 @@ export async function uploadAvatar(file) {
     throw new Error("Format file harus JPG, PNG, WEBP, atau GIF ya.");
   }
   if (file.size > AVATAR_MAX_SIZE_MB * 1024 * 1024) {
-    throw new Error(`Ukuran file maksimal ${AVATAR_MAX_SIZE_MB}MB (file kamu ${(file.size / 1024 / 1024).toFixed(1)}MB).`);
+    throw new Error(`Ukuran file maksimal ${AVATAR_MAX_SIZE_MB}MB (file Anda ${(file.size / 1024 / 1024).toFixed(1)}MB).`);
   }
   const uid = (await supabase.auth.getUser()).data.user.id;
   const ext = file.name.split(".").pop() || "jpg";

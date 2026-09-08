@@ -50,7 +50,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-1"><Lightbulb size={20} className="text-orange-500" /><h1 className="text-2xl font-bold tracking-tight">AI Advisor</h1></div>
-      <p className="text-sm text-slate-500 mb-4">Rekomendasi lead paling potensial, dikirim otomatis tiap jam 8 pagi ke email kamu. Histori 7 hari terakhir bisa dilihat di sini.</p>
+      <p className="text-sm text-slate-500 mb-4">Rekomendasi lead paling potensial, dikirim otomatis tiap jam 8 pagi ke email Anda. Histori 7 hari terakhir bisa dilihat di sini.</p>
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-slate-400 py-10 justify-center"><Loader2 size={16} className="animate-spin" /> Memuat histori…</div>
@@ -59,7 +59,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
       ) : history.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400">
           <Calendar size={32} className="mx-auto text-slate-300 mb-3" />
-          Belum ada rekomendasi. Analisis otomatis jalan tiap jam 8 pagi — cek lagi besok, atau lihat email kamu.
+          Belum ada rekomendasi. Analisis otomatis jalan tiap jam 8 pagi — cek lagi besok, atau lihat email Anda.
         </div>
       ) : (
         <>

@@ -276,7 +276,7 @@ const SECURITY_FEATURES = [
   {
     icon: KeyRound,
     title: "Kode Recovery",
-    desc: "Begitu 2FA aktif, kamu dikasih 10 kode cadangan sekali-pakai. HP hilang atau app authenticator-nya kehapus? Tinggal pakai satu kode itu buat tetep bisa masuk — gak pernah kekunci permanen dari akun sendiri.",
+    desc: "Begitu 2FA aktif, Anda dikasih 10 kode cadangan sekali-pakai. HP hilang atau app authenticator-nya kehapus? Tinggal pakai satu kode itu buat tetep bisa masuk — gak pernah kekunci permanen dari akun sendiri.",
   },
   {
     icon: Lock,
@@ -454,14 +454,14 @@ function NextoAISalesEngine({ robotVoice }) {
           </div>
 
           <h2 className="mt-5 text-3xl md:text-5xl font-bold tracking-[-0.045em] leading-[1.05]">
-            Kamu cukup{" "}
+            Anda cukup{" "}
             <span className="text-orange-500">ngomong.</span>
             <br />
             Nexto yang kerja.
           </h2>
 
           <p className="mt-5 text-sm md:text-base leading-7 text-stone-400 max-w-2xl mx-auto">
-            Chatbot Nexto menjadi pusat kendali sales kamu. Satu chat bisa
+            Chatbot Nexto menjadi pusat kendali sales Anda. Satu chat bisa
             mengatur visit, memperbarui progress, mengedit CRM, bahkan
             <span className="text-orange-400 font-medium"> menyuruh Nexto kirim email follow-up ke lead secara otomatis</span> —
             tanpa harus buka satu-satu.
@@ -500,7 +500,7 @@ function NextoAISalesEngine({ robotVoice }) {
               icon={<Calendar size={19} />}
               title="Setting Visit"
               accent="Google Calendar"
-              description="Cukup bilang kapan dan siapa yang mau kamu visit. Nexto otomatis membuat jadwal dan menyinkronkannya ke Google Calendar."
+              description="Cukup bilang kapan dan siapa yang mau Anda visit. Nexto otomatis membuat jadwal dan menyinkronkannya ke Google Calendar."
             >
               <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/30 p-3">
                 <div className="flex items-center justify-between mb-3">
@@ -784,7 +784,7 @@ function NextoAISalesEngine({ robotVoice }) {
         ========================================================== */}
         <div className="mt-16 flex flex-col items-center gap-3 text-center">
           <p className="max-w-xs text-[11px] leading-relaxed text-slate-500">
-            Itu yang kamu liat & ajak ngobrol.
+            Itu yang Anda liat & ajak ngobrol.
             <span className="block text-white font-medium">Ini yang jalan di baliknya.</span>
           </p>
           <span
@@ -1674,7 +1674,7 @@ export default function Auth() {
 
               <p className="mt-5 text-[13px] leading-6 text-slate-500">
                 Fundamental sales problem-nya sama. Nexto menyesuaikan konteks
-                dan proses penjualan perusahaan kamu.
+                dan proses penjualan perusahaan Anda.
               </p>
             </div>
 
@@ -1737,7 +1737,7 @@ export default function Auth() {
                     </span>
                     <span className="relative text-left">
                       <span className="block text-[15px] font-bold leading-tight">Coba Demo Interaktif</span>
-                      <span className="block text-[10px] font-medium text-orange-100">Klik industri kamu, lihat langsung isinya</span>
+                      <span className="block text-[10px] font-medium text-orange-100">Klik industri Anda, lihat langsung isinya</span>
                     </span>
                   </button>
                 </div>
@@ -1749,7 +1749,7 @@ export default function Auth() {
                     </div>
                     <div className="mt-2 flex items-center justify-center gap-3">
                       <h3 className="text-[20px] font-bold tracking-[-0.02em] text-slate-950 sm:text-[24px]">
-                        Klik industri kamu, lihat langsung isinya
+                        Klik industri Anda, lihat langsung isinya
                       </h3>
                       <button
                         onClick={() => setShowIndustryDemo(false)}
@@ -1776,12 +1776,12 @@ export default function Auth() {
               <SectionLabel>Keamanan akun</SectionLabel>
 
               <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[48px]">
-                Data lead kamu,
+                Data lead Anda,
                 <span className="block text-orange-600">dijaga kayak brankas.</span>
               </h2>
 
               <p className="mt-5 text-[13px] leading-6 text-slate-500">
-                Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis kamu. Makanya keamanan akun bukan fitur tempelan.
+                Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis Anda. Makanya keamanan akun bukan fitur tempelan.
               </p>
             </div>
 
@@ -1808,10 +1808,10 @@ export default function Auth() {
 
             <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
               <div className="text-[12px] font-bold text-slate-800">
-                Transparan soal data kamu
+                Transparan soal data Anda
               </div>
               <div className="mt-1 text-[10px] leading-5 text-slate-400">
-                Data lead/progress tetap milikmu, gak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) &amp; OpenAI untuk diproses — kami sebutkan jelas apa & kenapa di{" "}
+                Data lead/progress tetap milik Anda, gak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) &amp; OpenAI untuk diproses — kami sebutkan jelas apa & kenapa di{" "}
                 <button onClick={() => setLegalModal("privacy")} className="font-semibold text-orange-600 underline hover:text-orange-700">
                   Kebijakan Privasi
                 </button>.
@@ -1844,7 +1844,7 @@ export default function Auth() {
 
               <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-white sm:text-[46px]">
                 Berapa banyak "karyawan AI"
-                <span className="block text-slate-500">yang mau kamu pekerjakan?</span>
+                <span className="block text-slate-500">yang mau Anda pekerjakan?</span>
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-[13px] leading-relaxed text-slate-500">
                 Standard udah dibekelin AI ringan (import & rekomendasi harian). Dari Professional ke atas, AI Sales Engine-nya nyala penuh — analisis, draft pesan, dan eksekusi jalan sendiri di belakang layar.
@@ -2010,7 +2010,7 @@ export default function Auth() {
             </div>
 
             <p className="mx-auto mt-8 max-w-xl text-center text-[10px] leading-relaxed text-slate-500">
-              Penting: pas isi form di halaman pembayaran, pakai <b className="text-slate-300">email yang sama persis</b> dengan email akun Nexto kamu — supaya akunmu otomatis ke-upgrade begitu pembayaran selesai.
+              Penting: pas isi form di halaman pembayaran, pakai <b className="text-slate-300">email yang sama persis</b> dengan email akun Nexto Anda — supaya akun Anda otomatis ke-upgrade begitu pembayaran selesai.
             </p>
           </div>
         </section>
@@ -2038,7 +2038,7 @@ export default function Auth() {
                 </h2>
 
                 <p className="mt-5 max-w-xl text-[13px] leading-6 text-slate-400">
-                  Mulai gratis dan biarkan Nexto membantu sales kamu tahu
+                  Mulai gratis dan biarkan Nexto membantu sales Anda tahu
                   apa yang harus dilakukan berikutnya.
                 </p>
 
@@ -2082,8 +2082,8 @@ export default function Auth() {
 
                     <p className="mt-1 text-[10px] leading-5 text-slate-500">
                       {mode === "signin"
-                        ? "Lanjutkan mengelola sales loop kamu."
-                        : "Gratis buat mulai. Upgrade kapan kamu siap."}
+                        ? "Lanjutkan mengelola sales loop Anda."
+                        : "Gratis buat mulai. Upgrade kapan Anda siap."}
                     </p>
 
                     {mode === "signup" && (() => {
@@ -2093,7 +2093,7 @@ export default function Auth() {
                       if (!label) return null;
                       return (
                         <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/[0.06] px-3 py-2 text-[10px] leading-4 text-orange-300">
-                          Kamu pilih paket <b>{label}</b> — daftar gratis dulu di sini, abis itu kita arahin buat pembayarannya.
+                          Anda pilih paket <b>{label}</b> — daftar gratis dulu di sini, abis itu kita arahin buat pembayarannya.
                         </div>
                       );
                     })()}
@@ -2109,7 +2109,7 @@ export default function Auth() {
                           <input
                             type="text"
                             className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
-                            placeholder="Nama kamu"
+                            placeholder="Nama Anda"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                           />
@@ -2149,7 +2149,7 @@ export default function Auth() {
                           <input
                             type="text"
                             className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
-                            placeholder="PT / CV kamu"
+                            placeholder="PT / CV Anda"
                             value={companyName}
                             onChange={(e) => setCompanyName(e.target.value)}
                           />
@@ -2260,7 +2260,7 @@ export default function Auth() {
 
                   {mode === "signin" && (
                     <div className="mt-5 border-t border-white/[0.06] pt-4 text-center text-[8px] leading-4 text-slate-600">
-                      Dengan masuk, kamu setuju menggunakan Nexto sesuai{" "}
+                      Dengan masuk, Anda setuju menggunakan Nexto sesuai{" "}
                       <button onClick={() => setLegalModal("tos")} className="underline hover:text-slate-400">ketentuan layanan</button>{" "}
                       dan{" "}
                       <button onClick={() => setLegalModal("privacy")} className="underline hover:text-slate-400">kebijakan privasi</button>{" "}

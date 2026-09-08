@@ -768,7 +768,7 @@ export default function App() {
                   </div>
                   <div>
                     <div className="text-[12px] font-semibold text-slate-800">
-                      {intendedTierLabel ? `Kamu pilih paket ${intendedTierLabel}` : myLevel === 1 ? "Kamu sedang memakai Nexto Standard" : "Kamu sedang memakai Nexto Free"}
+                      {intendedTierLabel ? `Anda pilih paket ${intendedTierLabel}` : myLevel === 1 ? "Anda sedang memakai Nexto Standard" : "Anda sedang memakai Nexto Free"}
                     </div>
                     <div className="mt-0.5 text-[10px] leading-4 text-slate-500">
                       {intendedTierLabel
@@ -1143,7 +1143,7 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
           <ShieldCheck size={22} className="mx-auto text-orange-600 mb-2" />
           <h1 className="text-lg font-bold">Verifikasi 2FA</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {mode === "totp" ? "Masukin kode 6 digit dari app authenticator kamu." : "Masukin salah satu kode recovery yang kamu simpan pas aktifin 2FA."}
+            {mode === "totp" ? "Masukin kode 6 digit dari app authenticator Anda." : "Masukin salah satu kode recovery yang Anda simpan pas aktifin 2FA."}
           </p>
         </div>
         {mode === "totp" ? (
@@ -1184,7 +1184,7 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
           {mode === "totp" ? "HP hilang? Pakai kode recovery" : "Punya akses ke app authenticator? Pakai kode 6 digit"}
         </button>
         <button onClick={onCancel} className="w-full mt-1 text-xs text-slate-400 hover:text-slate-600 py-2">
-          Bukan kamu? Ganti akun
+          Bukan Anda? Ganti akun
         </button>
       </div>
     </div>

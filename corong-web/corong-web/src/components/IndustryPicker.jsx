@@ -38,7 +38,7 @@ export default function IndustryPicker({ onSelect, busy }) {
       <div className="w-full max-w-2xl">
         <div className="flex flex-col items-center text-center mb-8">
           <Badge size={48} />
-          <h1 className="text-white text-2xl font-bold mt-4">Industri bisnis kamu apa?</h1>
+          <h1 className="text-white text-2xl font-bold mt-4">Industri bisnis Anda apa?</h1>
           <p className="text-slate-400 text-sm mt-2 max-w-md">
             Nexto bakal nyiapin pipeline & istilah yang sesuai. Bisa diubah lagi kapan aja lewat Pengaturan.
           </p>

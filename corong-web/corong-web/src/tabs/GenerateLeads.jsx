@@ -121,7 +121,7 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
             <Info size={14} />
           </button>
         </div>
-        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk lo — bukan cuma perusahaan sejenis. Provinsi opsional (kosongin buat cari se-Indonesia), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 1x seminggu.</p>
+        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk Anda — bukan cuma perusahaan sejenis. Provinsi opsional (kosongin buat cari se-Indonesia), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 4x sebulan.</p>
 
         {showInfo && (
           <div className="mt-3 bg-orange-50/60 border border-orange-100 rounded-2xl p-4 relative">
@@ -129,11 +129,11 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
             <div className="text-sm font-bold text-slate-800 mb-2 pr-6">Gimana cara AI-nya nyari lead?</div>
             <ul className="space-y-1.5 text-xs text-slate-600 list-disc list-inside">
               <li><b>Cari dari 4 sumber publik</b>: Google Maps, cuplikan LinkedIn (company page & profil, bukan buka halamannya), Instagram/TikTok bisnis, dan direktori resmi (Kemenperin, dst).</li>
-              <li><b>Diarahin ke calon PEMBELI</b>, bukan sesama penjual — kalau lo isi "barang yang dijual", AI khusus nyari perusahaan yang kemungkinan BUTUH BELI itu, bukan kompetitor.</li>
+              <li><b>Diarahin ke calon PEMBELI</b>, bukan sesama penjual — kalau Anda isi "barang yang dijual", AI khusus nyari perusahaan yang kemungkinan BUTUH BELI itu, bukan kompetitor.</li>
               <li><b>Ngerti kalau customer-nya individu</b> (misal Asuransi, Property, Automotive) — AI gak nyari data pribadi orang, tapi nyari organisasi PERANTARA (HRD perusahaan, komunitas, koperasi) yang punya akses ke banyak calon individu sekaligus.</li>
-              <li><b>Belajar dari deal yang udah closing</b> — kalau lo udah punya lead yang statusnya "Menang" di pipeline, AI jadiin itu contoh "ideal customer" biar hasil generate makin mirip yang beneran closing.</li>
+              <li><b>Belajar dari deal yang udah closing</b> — kalau Anda udah punya lead yang statusnya "Menang" di pipeline, AI jadiin itu contoh "ideal customer" biar hasil generate makin mirip yang beneran closing.</li>
               <li><b>Cari sinyal lagi berkembang</b> — lowongan kerja baru, buka cabang, ekspansi — biar diprioritasin ke yang lagi butuh, bukan yang stagnan.</li>
-              <li><b>Otomatis skip yang udah ada</b> di daftar lead lo, biar gak muncul dobel buang-buang kuota.</li>
+              <li><b>Otomatis skip yang udah ada</b> di daftar lead Anda, biar gak muncul dobel buang-buang kuota.</li>
               <li><b>Kalau hasilnya kesikit</b> (kebanyakan kena skip karena dobel), AI otomatis coba nyari lagi 1x dengan sudut pencarian yang beda.</li>
               <li><b>Tiap lead dikasih skor 3 komponen</b> (match industri, kelengkapan kontak, sinyal butuh beli) + skor keseluruhan, diurutin dari yang paling tinggi.</li>
               <li>AI dilarang keras <b>ngarang data</b> — kalau info kayak nama PIC gak ketemu di sumber publik, dikosongin aja, bukan ditebak.</li>
@@ -157,7 +157,7 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Barang/jasa yang lo jual <span className="text-rose-500">*</span></span>
+                <span className="text-xs font-medium text-slate-500">Barang/jasa yang Anda jual <span className="text-rose-500">*</span></span>
                 <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: resin PVC, kompon kabel" value={productSold} onChange={(e) => setProductSold(e.target.value)} />
               </label>
               <label className="block">

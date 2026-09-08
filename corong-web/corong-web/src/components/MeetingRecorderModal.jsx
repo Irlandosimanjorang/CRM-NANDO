@@ -55,7 +55,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       setSeconds(0);
       timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
     } catch (e) {
-      alert("Gagal akses mic. Pastikan izin mikrofon diaktifkan di browser/HP kamu.");
+      alert("Gagal akses mic. Pastikan izin mikrofon diaktifkan di browser/HP Anda.");
     }
   };
 

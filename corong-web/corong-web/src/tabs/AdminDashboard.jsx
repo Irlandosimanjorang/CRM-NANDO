@@ -299,7 +299,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="mt-4 text-center text-[9px] font-mono text-slate-700 uppercase tracking-widest">
-          auto-sync tiap {REFRESH_INTERVAL_MS / 1000}s · platform-wide, bukan cuma org kamu
+          auto-sync tiap {REFRESH_INTERVAL_MS / 1000}s · platform-wide, bukan cuma org Anda
         </div>
       </div>
     </div>

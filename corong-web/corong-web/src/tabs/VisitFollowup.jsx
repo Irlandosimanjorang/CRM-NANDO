@@ -112,7 +112,7 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
   };
 
   const askSavePin = (lead) => {
-    if (!navigator.geolocation) { alert("HP/browser kamu ga dukung GPS."); return; }
+    if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
     setPendingCheckin({
       leadId: lead.id,
       leadName: lead.name,
@@ -162,7 +162,7 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
               <div className="min-w-0">
                 <div className="font-medium text-sm truncate">{c.name}</div>
                 <div className="text-[11px] text-slate-400 mt-0.5">
-                  {!hasCoords ? "Belum ada titik lokasi tersimpan" : distance === null ? "Nyari posisi kamu…" : canCheckIn ? "Kamu udah di lokasi ✓" : `${distance >= 1000 ? (distance / 1000).toFixed(1) + " km" : distance + " m"} lagi`}
+                  {!hasCoords ? "Belum ada titik lokasi tersimpan" : distance === null ? "Nyari posisi Anda…" : canCheckIn ? "Anda udah di lokasi ✓" : `${distance >= 1000 ? (distance / 1000).toFixed(1) + " km" : distance + " m"} lagi`}
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
