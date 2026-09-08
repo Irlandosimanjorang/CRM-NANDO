@@ -17,10 +17,42 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
 
 const CHECKIN_RADIUS_M = 100;
 
+// Konfirmasi lokasi SEBELUM minta foto - dulu langsung loncat ke ambil foto
+// begitu tombol diklik, user gak pernah eksplisit ngeliat/ngonfirmasi data
+// GPS-nya sendiri. Sekarang ada jeda 1 langkah: tunjukkin jarak/apa yang
+// bakal kesimpen, user harus klik "Ya, Lanjut" dulu baru foto diminta.
+function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
+  const { mode, lead, distance } = confirmData;
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onCancel}>
+      <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-bold text-base flex items-center gap-1.5"><MapPin size={16} className="text-orange-500" /> Konfirmasi Lokasi</h3>
+          <button onClick={onCancel} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+        </div>
+        {mode === "checkin" ? (
+          <p className="text-sm text-slate-600 mt-2">
+            GPS Anda kedeteksi <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi Anda beneran ada di lokasi ini sekarang, baru lanjut lampirin foto.
+          </p>
+        ) : (
+          <p className="text-sm text-slate-600 mt-2">
+            Nexto bakal nyimpen posisi GPS Anda SAAT INI juga sebagai titik lokasi <b>"{lead.name}"</b> buat verifikasi kunjungan berikutnya. Pastikan Anda beneran lagi di lokasi customer ini sebelum lanjut.
+          </p>
+        )}
+        <div className="flex gap-2 mt-4">
+          <button onClick={onCancel} className="flex-1 text-sm px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
+          <button onClick={onConfirm} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-sm px-4 py-2.5 rounded-xl font-medium">Ya, Lanjut Foto</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PhotoCheckinModal({ pending, onClose, onDone }) {
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [busyLabel, setBusyLabel] = useState("Menyimpan…");
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -33,7 +65,26 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
     if (!photo) { alert("Foto wajib dilampirin buat check-in."); return; }
     setBusy(true);
     try {
+      setBusyLabel("Ngupload foto…");
       const photo_url = await db.uploadCheckinPhoto(photo);
+
+      // Verifikasi AI - pastiin fotonya beneran ada orangnya (selfie di
+      // lokasi), bukan foto struk/random dari galeri. Kalau AI-nya SENDIRI
+      // gagal diproses (API down dst), fail-OPEN (tetep lanjut) - jangan
+      // sampe check-in beneran keblokir gara-gara layanan verifikasi lagi
+      // bermasalah, itu bukan salah user.
+      setBusyLabel("Ngecek fotonya…");
+      const verify = await db.verifySelfiePhoto(photo_url).catch((e) => {
+        console.error("Verifikasi foto gagal (fail-open):", e);
+        return { isSelfie: true };
+      });
+      if (!verify.isSelfie) {
+        alert(`❌ Foto ini kelihatannya bukan foto diri Anda di lokasi.${verify.reason ? " (" + verify.reason + ")" : ""}\n\nTolong upload ulang foto selfie Anda di lokasi kunjungan.`);
+        setBusy(false);
+        return;
+      }
+
+      setBusyLabel("Menyimpan…");
       await pending.run(photo_url);
       onDone();
     } catch (e) { alert("Gagal check-in: " + e.message); }
@@ -47,20 +98,20 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
           <h3 className="font-bold text-base">Foto Bukti Check-in</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Wajib lampirin foto buat "{pending.leadName}".</p>
+        <p className="text-xs text-slate-500 mb-4">Wajib selfie di lokasi buat "{pending.leadName}" - foto bakal dicek AI, pastiin keliatan wajah Anda.</p>
         <label className="block cursor-pointer">
           {preview ? (
             <img src={preview} alt="" className="w-full h-48 object-cover rounded-2xl border border-slate-200" />
           ) : (
             <div className="w-full h-48 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 gap-2">
               <Camera size={28} />
-              <span className="text-xs font-medium">Ambil / pilih foto</span>
+              <span className="text-xs font-medium">Ambil selfie</span>
             </div>
           )}
-          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+          <input type="file" accept="image/*" capture="user" className="hidden" onChange={handleFile} />
         </label>
         <button onClick={confirm} disabled={busy || !photo} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} {busy ? "Menyimpan…" : "Konfirmasi Check-in"}
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} {busy ? busyLabel : "Konfirmasi Check-in"}
         </button>
       </div>
     </div>
@@ -75,6 +126,7 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
   const [recordingLead, setRecordingLead] = useState(null);
   const [pendingCheckin, setPendingCheckin] = useState(null);
   const [checkedInToday, setCheckedInToday] = useState(new Set());
+  const [locationConfirm, setLocationConfirm] = useState(null);
 
   useEffect(() => {
     if (!isEnterprise) return;
@@ -95,9 +147,20 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
     return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
   }, [todayVisits.length]);
 
+  // Dulu klik tombol langsung loncat ke minta foto - user gak pernah
+  // eksplisit ngonfirmasi data GPS-nya sendiri dulu. Sekarang ask* CUMA
+  // munculin LocationConfirmModal; proceed* (logic aslinya, gak berubah)
+  // baru jalan abis user klik "Ya, Lanjut Foto" di situ - proceed*
+  // baru munculin PhotoCheckinModal (yang sekarang juga verifikasi AI).
+  const askCheckIn = (lead, distance) => setLocationConfirm({ mode: "checkin", lead, distance });
+  const askSavePin = (lead) => {
+    if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
+    setLocationConfirm({ mode: "savepin", lead, distance: null });
+  };
+
   // Kedua alur (udah ada titik lokasi ATAU baru pertama kali) sama-sama minta
   // foto dulu sebelum check-in beneran kesimpen - lewat PhotoCheckinModal.
-  const askCheckIn = (lead, distance) => {
+  const proceedCheckIn = (lead, distance) => {
     setPendingCheckin({
       leadId: lead.id,
       leadName: lead.name,
@@ -111,8 +174,7 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
     });
   };
 
-  const askSavePin = (lead) => {
-    if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
+  const proceedSavePin = (lead) => {
     setPendingCheckin({
       leadId: lead.id,
       leadName: lead.name,
@@ -194,6 +256,18 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
         })}
       </div>
       {recordingLead && <MeetingRecorderModal lead={recordingLead} onClose={() => setRecordingLead(null)} onSaved={onChanged} />}
+      {locationConfirm && (
+        <LocationConfirmModal
+          confirmData={locationConfirm}
+          onCancel={() => setLocationConfirm(null)}
+          onConfirm={() => {
+            const { mode, lead, distance } = locationConfirm;
+            setLocationConfirm(null);
+            if (mode === "checkin") proceedCheckIn(lead, distance);
+            else proceedSavePin(lead);
+          }}
+        />
+      )}
       {pendingCheckin && (
         <PhotoCheckinModal
           pending={pendingCheckin}

@@ -484,6 +484,20 @@ export async function uploadCheckinPhoto(file) {
   return data.publicUrl;
 }
 
+// AI ngecek foto check-in beneran ada orangnya (selfie), bukan foto struk/
+// random dari galeri - dulu siapapun bisa "check-in terverifikasi" cuma
+// dengan upload foto apapun, gak ada yang beneran dicek isinya.
+export async function verifySelfiePhoto(photo_url) {
+  const { data, error } = await supabase.functions.invoke("verify-selfie-photo", { body: { photo_url } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal verifikasi foto");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data; // { isSelfie, reason }
+}
+
 export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters, photo_url }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
