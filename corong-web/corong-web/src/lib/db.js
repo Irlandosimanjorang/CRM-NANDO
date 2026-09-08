@@ -535,9 +535,39 @@ export async function verifySelfiePhoto(photo_url) {
   return data; // { isSelfie, reason }
 }
 
+// Kuota check-in GPS - 20x/bulan PER USER (bukan per org), soalnya check-in
+// itu tindakan personal tiap sales rep ngunjungin customer, bukan hal yang
+// masuk akal dibagi rata se-org. Dihitung per bulan kalender WIB, sama pola
+// kayak GEN_LEADS_QUOTA_MAX di atas. Dicek di DUA tempat: checkIn() (di sini,
+// SUMBER KEBENARAN - nolak insert kalo udah abis, gak bisa dibypass lewat
+// panggilan API langsung) dan getCheckinCooldown() (buat UI nampilin sisa
+// kuota SEBELUM user buka kamera, biar gak buang-buang usaha foto duluan).
+const CHECKIN_QUOTA_MAX = 20;
+async function countCheckinsThisMonth(uid) {
+  const monthStart = wibMonthStartUTC().toISOString();
+  const { count, error } = await supabase
+    .from("visit_checkins")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", uid)
+    .gte("checked_in_at", monthStart);
+  if (error) throw error;
+  return count || 0;
+}
+export async function getCheckinCooldown() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const usedThisMonth = await countCheckinsThisMonth(uid);
+  const canCheckIn = usedThisMonth < CHECKIN_QUOTA_MAX;
+  const nextAvailableAt = canCheckIn ? null : wibNextMonthStartUTC().toISOString();
+  return { canCheckIn, usedThisMonth, quotaMax: CHECKIN_QUOTA_MAX, nextAvailableAt };
+}
+
 export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters, photo_url }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
+  const usedThisMonth = await countCheckinsThisMonth(uid);
+  if (usedThisMonth >= CHECKIN_QUOTA_MAX) {
+    throw new Error(`Kuota check-in GPS bulan ini udah abis (maks ${CHECKIN_QUOTA_MAX}x/bulan per user). Bisa lagi awal bulan depan.`);
+  }
   const { data, error } = await supabase
     .from("visit_checkins")
     .insert({ user_id: uid, org_id: orgId, lead_id, lead_name, latitude, longitude, distance_meters, photo_url: photo_url || null })

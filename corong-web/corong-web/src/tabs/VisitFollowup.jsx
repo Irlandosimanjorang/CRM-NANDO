@@ -221,10 +221,14 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
   const [pendingCheckin, setPendingCheckin] = useState(null);
   const [checkedInToday, setCheckedInToday] = useState(new Set());
   const [locationConfirm, setLocationConfirm] = useState(null);
+  const [quota, setQuota] = useState(null); // { canCheckIn, usedThisMonth, quotaMax }
+
+  const refreshQuota = () => db.getCheckinCooldown().then(setQuota).catch(() => {});
 
   useEffect(() => {
     if (!isEnterprise) return;
     db.getTodayCheckedInLeadIds().then((ids) => setCheckedInToday(new Set(ids))).catch(() => {});
+    refreshQuota();
   }, [isEnterprise]);
   const watchIdRef = useRef(null);
 
@@ -250,6 +254,7 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
   const geoReqIdRef = useRef(0);
 
   const askCheckIn = (lead, distance) => {
+    if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
     const reqId = ++geoReqIdRef.current;
     setLocationConfirm({ mode: "checkin", lead, distance, scanning: true, address: null, coords: myPos });
     db.reverseGeocode(myPos.lat, myPos.lng).then((address) => {
@@ -260,6 +265,7 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
 
   const askSavePin = (lead) => {
     if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
+    if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
     const reqId = ++geoReqIdRef.current;
     setLocationConfirm({ mode: "savepin", lead, distance: null, scanning: true, address: null, coords: null });
     navigator.geolocation.getCurrentPosition(
@@ -290,6 +296,7 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
         try {
           await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude: myPos.lat, longitude: myPos.lng, distance_meters: distance, photo_url });
           onChanged();
+          refreshQuota();
         } finally { setCheckingIn(null); }
       },
     });
@@ -308,6 +315,7 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
           await db.saveLeadLocation(lead.id, latitude, longitude);
           await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0, photo_url });
           onChanged();
+          refreshQuota();
         } finally { setCheckingIn(null); }
       },
     });
@@ -318,9 +326,16 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
 
   return (
     <div className="bg-white border border-orange-200 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 mb-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-3">
-        <span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Navigation size={14} /></span>
-        Kunjungan Hari Ini
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Navigation size={14} /></span>
+          Kunjungan Hari Ini
+        </div>
+        {quota && (
+          <span className={`text-[11px] font-medium px-2 py-1 rounded-lg ${quota.canCheckIn ? "bg-slate-100 text-slate-500" : "bg-rose-50 text-rose-600"}`}>
+            Check-in: {quota.usedThisMonth}/{quota.quotaMax} bulan ini
+          </span>
+        )}
       </div>
       {geoError && <p className="text-xs text-rose-500 mb-2">Gagal akses GPS. Pastikan izin lokasi diaktifkan buat browser/app ini.</p>}
       <div className="space-y-2">
@@ -346,7 +361,8 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
                 ) : !hasCoords ? (
                   <button
                     onClick={() => askSavePin(c)}
-                    disabled={checkingIn === c.id}
+                    disabled={checkingIn === c.id || (quota && !quota.canCheckIn)}
+                    title={quota && !quota.canCheckIn ? `Kuota check-in bulan ini abis (maks ${quota.quotaMax}x)` : undefined}
                     className="text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60"
                   >
                     <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Simpan Lokasi Ini"}
@@ -354,8 +370,9 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
                 ) : (
                   <button
                     onClick={() => askCheckIn(c, distance)}
-                    disabled={!canCheckIn || checkingIn === c.id}
-                    className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${canCheckIn ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-slate-100 text-slate-400"}`}
+                    disabled={!canCheckIn || checkingIn === c.id || (quota && !quota.canCheckIn)}
+                    title={quota && !quota.canCheckIn ? `Kuota check-in bulan ini abis (maks ${quota.quotaMax}x)` : undefined}
+                    className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${canCheckIn && !(quota && !quota.canCheckIn) ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-slate-100 text-slate-400"}`}
                   >
                     <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Saya Sudah Sampai"}
                   </button>
