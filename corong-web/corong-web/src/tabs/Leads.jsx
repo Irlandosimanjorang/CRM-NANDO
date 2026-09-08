@@ -103,12 +103,32 @@ function mapRow(
   category,
   firstStageKey
 ) {
+  // Kata kunci kolom "nama" DILUASIN (8 Sep 2026) - sebelumnya cuma nyocokin
+  // "company name"/"nama perusahaan"/"company"/"nama", jadi Excel dari
+  // industri non-PVC (Property, Otomotif, Asuransi, dst) yang leads-nya
+  // PERORANGAN (header cuma "Name"/"Customer"/"Client"/"Nasabah", tanpa kata
+  // "company"/"nama") gagal total ke-import - baik lewat mapper ini MAUPUN
+  // fallback AI di bawah (yang promptnya jadi ikut diperbaiki biar gak
+  // hardcode "perusahaan" doang, lihat db.smartImportMap).
   const name = val(row, [
     "公司名称",
     "company name",
+    "customer name",
+    "client name",
+    "full name",
     "nama perusahaan",
+    "nama customer",
+    "nama klien",
+    "nama nasabah",
+    "nama pembeli",
     "company",
+    "customer",
+    "client",
+    "klien",
+    "nasabah",
+    "pembeli",
     "nama",
+    "name",
   ]);
 
   if (!name) return null;
