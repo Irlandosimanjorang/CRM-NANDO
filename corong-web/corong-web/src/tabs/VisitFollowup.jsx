@@ -19,30 +19,46 @@ const CHECKIN_RADIUS_M = 100;
 
 // Konfirmasi lokasi SEBELUM minta foto - dulu langsung loncat ke ambil foto
 // begitu tombol diklik, user gak pernah eksplisit ngeliat/ngonfirmasi data
-// GPS-nya sendiri. Sekarang ada jeda 1 langkah: tunjukkin jarak/apa yang
-// bakal kesimpen, user harus klik "Ya, Lanjut" dulu baru foto diminta.
+// GPS-nya sendiri. Sekarang ada jeda: pas modal kebuka, kelihatan animasi
+// "scanning" dulu sambil reverse-geocode koordinat jadi alamat asli (bukan
+// teks generik "GPS Anda saat ini") - baru abis itu tombol konfirmasi muncul.
 function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
-  const { mode, lead, distance } = confirmData;
+  const { mode, lead, distance, scanning, address, coords } = confirmData;
+  const locationLabel = address || (coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "");
   return (
-    <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={scanning ? undefined : onCancel}>
       <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-base flex items-center gap-1.5"><MapPin size={16} className="text-orange-500" /> Konfirmasi Lokasi</h3>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+          {!scanning && <button onClick={onCancel} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>}
         </div>
-        {mode === "checkin" ? (
-          <p className="text-sm text-slate-600 mt-2">
-            GPS Anda kedeteksi <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi Anda beneran ada di lokasi ini sekarang, baru lanjut lampirin foto.
-          </p>
+        {scanning ? (
+          <div className="py-6 flex flex-col items-center justify-center gap-3 text-center">
+            <span className="relative flex h-12 w-12 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-30 animate-ping" />
+              <span className="relative inline-flex rounded-full h-10 w-10 bg-orange-100 items-center justify-center"><Navigation size={18} className="text-orange-600" /></span>
+            </span>
+            <p className="text-sm text-slate-500">Nyari posisi & alamat Anda sekarang…</p>
+          </div>
         ) : (
-          <p className="text-sm text-slate-600 mt-2">
-            Nexto bakal nyimpen posisi GPS Anda SAAT INI juga sebagai titik lokasi <b>"{lead.name}"</b> buat verifikasi kunjungan berikutnya. Pastikan Anda beneran lagi di lokasi customer ini sebelum lanjut.
-          </p>
+          <>
+            {mode === "checkin" ? (
+              <p className="text-sm text-slate-600 mt-2">
+                Anda kedeteksi di <b>{locationLabel}</b>, sekitar <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi Anda beneran ada di lokasi ini sekarang, baru lanjut lampirin foto.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-600 mt-2">
+                Nexto bakal nyimpen alamat berikut sebagai titik lokasi <b>"{lead.name}"</b> buat verifikasi kunjungan berikutnya:
+                <br /><b>{locationLabel}</b>
+                <br />Pastikan Anda beneran lagi di lokasi customer ini sebelum lanjut.
+              </p>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button onClick={onCancel} className="flex-1 text-sm px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
+              <button onClick={onConfirm} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-sm px-4 py-2.5 rounded-xl font-medium">Ya, Lanjut Foto</button>
+            </div>
+          </>
         )}
-        <div className="flex gap-2 mt-4">
-          <button onClick={onCancel} className="flex-1 text-sm px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
-          <button onClick={onConfirm} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-sm px-4 py-2.5 rounded-xl font-medium">Ya, Lanjut Foto</button>
-        </div>
       </div>
     </div>
   );
@@ -148,14 +164,41 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
   }, [todayVisits.length]);
 
   // Dulu klik tombol langsung loncat ke minta foto - user gak pernah
-  // eksplisit ngonfirmasi data GPS-nya sendiri dulu. Sekarang ask* CUMA
-  // munculin LocationConfirmModal; proceed* (logic aslinya, gak berubah)
-  // baru jalan abis user klik "Ya, Lanjut Foto" di situ - proceed*
-  // baru munculin PhotoCheckinModal (yang sekarang juga verifikasi AI).
-  const askCheckIn = (lead, distance) => setLocationConfirm({ mode: "checkin", lead, distance });
+  // eksplisit ngonfirmasi data GPS-nya sendiri dulu. Sekarang ask* munculin
+  // LocationConfirmModal dalam mode scanning, reverse-geocode koordinatnya
+  // jadi alamat asli, baru tunjukkin tombol konfirmasi. proceed* (logic
+  // aslinya, gak berubah) baru jalan abis user klik "Ya, Lanjut Foto" -
+  // proceed* baru munculin PhotoCheckinModal (yang sekarang juga verifikasi AI).
+  const geoReqIdRef = useRef(0);
+
+  const askCheckIn = (lead, distance) => {
+    const reqId = ++geoReqIdRef.current;
+    setLocationConfirm({ mode: "checkin", lead, distance, scanning: true, address: null, coords: myPos });
+    db.reverseGeocode(myPos.lat, myPos.lng).then((address) => {
+      if (geoReqIdRef.current !== reqId) return; // dibatalin/diganti request lain
+      setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, scanning: false, address } : prev));
+    });
+  };
+
   const askSavePin = (lead) => {
     if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
-    setLocationConfirm({ mode: "savepin", lead, distance: null });
+    const reqId = ++geoReqIdRef.current;
+    setLocationConfirm({ mode: "savepin", lead, distance: null, scanning: true, address: null, coords: null });
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        if (geoReqIdRef.current !== reqId) return;
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const address = await db.reverseGeocode(coords.lat, coords.lng);
+        if (geoReqIdRef.current !== reqId) return;
+        setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, scanning: false, address, coords } : prev));
+      },
+      () => {
+        if (geoReqIdRef.current !== reqId) return;
+        setLocationConfirm(null);
+        alert("Gagal ambil lokasi. Kalau ini dari laptop, laptop emang gak punya GPS asli (beda sama HP) - cek Windows Settings > Privacy > Location harus nyala, dan izin lokasi Chrome buat nexto.site harus \"Allow\". Coba pake HP kalau masih gagal.");
+      },
+      { enableHighAccuracy: true, timeout: 25000, maximumAge: 30000 }
+    );
   };
 
   // Kedua alur (udah ada titik lokasi ATAU baru pertama kali) sama-sama minta
@@ -174,32 +217,21 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
     });
   };
 
-  const proceedSavePin = (lead) => {
+  // coords udah didapet pas askSavePin nge-scan lokasi buat modal konfirmasi -
+  // dipake ulang di sini biar gak minta GPS 2x (dulu getCurrentPosition lagi).
+  const proceedSavePin = (lead, coords) => {
     setPendingCheckin({
       leadId: lead.id,
       leadName: lead.name,
-      run: (photo_url) => new Promise((resolve, reject) => {
+      run: async (photo_url) => {
         setCheckingIn(lead.id);
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            try {
-              const { latitude, longitude } = pos.coords;
-              await db.saveLeadLocation(lead.id, latitude, longitude);
-              await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0, photo_url });
-              onChanged();
-              resolve();
-            } catch (e) { reject(e); }
-            finally { setCheckingIn(null); }
-          },
-          () => {
-            setCheckingIn(null);
-            // Laptop gak punya GPS asli (beda sama HP), jadi lebih sering gagal/lambat -
-            // kasih pesan yang ngearahin ke setting, bukan cuma bilang gagal doang.
-            reject(new Error("Gagal ambil lokasi. Kalau ini dari laptop, laptop emang gak punya GPS asli (beda sama HP) - cek Windows Settings > Privacy > Location harus nyala, dan izin lokasi Chrome buat nexto.site harus \"Allow\". Coba pake HP kalau masih gagal."));
-          },
-          { enableHighAccuracy: true, timeout: 25000, maximumAge: 30000 }
-        );
-      }),
+        try {
+          const { lat: latitude, lng: longitude } = coords;
+          await db.saveLeadLocation(lead.id, latitude, longitude);
+          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0, photo_url });
+          onChanged();
+        } finally { setCheckingIn(null); }
+      },
     });
   };
 
@@ -261,10 +293,10 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
           confirmData={locationConfirm}
           onCancel={() => setLocationConfirm(null)}
           onConfirm={() => {
-            const { mode, lead, distance } = locationConfirm;
+            const { mode, lead, distance, coords } = locationConfirm;
             setLocationConfirm(null);
             if (mode === "checkin") proceedCheckIn(lead, distance);
-            else proceedSavePin(lead);
+            else proceedSavePin(lead, coords);
           }}
         />
       )}

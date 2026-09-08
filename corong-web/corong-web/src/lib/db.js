@@ -474,6 +474,24 @@ export async function saveLeadLocation(id, latitude, longitude) {
   if (error) throw error;
 }
 
+// Ubah lat/lng jadi alamat yang bisa dibaca manusia (pakai Nominatim OSM,
+// gratis tanpa API key) - biar popup konfirmasi lokasi nunjukin alamat
+// asli, bukan cuma teks generik "GPS Anda saat ini". Fail-open: kalau
+// gagal (network/rate-limit), balikin null biar caller fallback ke koordinat.
+export async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=0`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.display_name || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 export async function uploadCheckinPhoto(file) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const ext = file.name.split(".").pop() || "jpg";
