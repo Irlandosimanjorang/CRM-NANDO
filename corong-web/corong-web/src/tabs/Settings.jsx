@@ -5,7 +5,7 @@ import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
 import RecycleBinModal from "../components/RecycleBinModal";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
-import { PLAN_LEVEL } from "../lib/plans";
+import { PLAN_LEVEL, TIER_LABEL } from "../lib/plans";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
@@ -385,7 +385,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
         ) : (
           <>
             <p className="text-xs text-slate-500 mb-3">
-              Paket: <b>{isEnterprise ? "Enterprise" : "Free/Premium (solo)"}</b> · {members.length}/{org?.member_limit || 1} anggota
+              Paket: <b>{isEnterprise ? "Enterprise" : (TIER_LABEL[settings.plan] || "Free")}</b> · {members.length}/{org?.member_limit || 1} anggota
             </p>
             <div className="space-y-1.5 mb-3">
               {members.map((m) => (

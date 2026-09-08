@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, Fragment } from "react";
 import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
@@ -215,8 +215,8 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
                   const isOpen = expanded.has(g.leadId);
                   const groupTotalRp = g.txs.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
                   return (
-                  <>
-                    <tr key={g.leadId} className="border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer" onClick={() => lead && onEdit(lead)}>
+                  <Fragment key={g.leadId}>
+                    <tr className="border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer" onClick={() => lead && onEdit(lead)}>
                       <td className="px-3 py-2" onClick={(e) => { e.stopPropagation(); toggleExpand(g.leadId); }}>
                         {g.txs.length > 1 && (isOpen ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />)}
                       </td>
@@ -253,7 +253,7 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
                         </td>
                       </tr>
                     ))}
-                  </>
+                  </Fragment>
                   ); })}
               </tbody>
             </table>

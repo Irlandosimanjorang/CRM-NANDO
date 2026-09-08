@@ -191,28 +191,38 @@ export async function getGeneratedLeads() {
   return data || [];
 }
 
+// QUOTA FIX (8 Sep 2026): sebelumnya ini ngitung "1x/minggu" (malah ada sisa
+// logic "2x/minggu" yang lebih tua lagi) - gak nyambung sama backend
+// (generate-leads edge function) yang udah lama diubah jadi 4x/BULAN
+// kalender WIB. Sekarang dihitung sama persis kayak backend: awal bulan
+// kalender WIB, maks 4x, biar counter "X/4 bulan ini" di UI gak bohong.
+const GEN_LEADS_QUOTA_MAX = 4;
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+function wibMonthStartUTC(d = new Date()) {
+  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
+  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth();
+  return new Date(Date.UTC(y, m, 1, 0, 0, 0) - WIB_OFFSET_MS);
+}
+function wibNextMonthStartUTC(d = new Date()) {
+  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
+  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth();
+  return new Date(Date.UTC(y, m + 1, 1, 0, 0, 0) - WIB_OFFSET_MS);
+}
 export async function getLeadGenCooldown() {
   const orgId = await getMyOrgId();
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const monthStart = wibMonthStartUTC().toISOString();
   const { data, error } = await supabase
     .from("lead_gen_runs")
     .select("generated_at")
     .eq("org_id", orgId)
-    .gte("generated_at", sevenDaysAgo)
+    .gte("generated_at", monthStart)
     .order("generated_at", { ascending: true });
   if (error) throw error;
   const runs = data || [];
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const usedToday = runs.some((r) => r.generated_at.slice(0, 10) === todayStr);
-  const usedThisWeek = runs.length;
-  let nextAvailableAt = null;
-  if (usedToday) {
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(0, 0, 0, 0);
-    nextAvailableAt = tomorrow.toISOString();
-  } else if (usedThisWeek >= 2) {
-    nextAvailableAt = new Date(new Date(runs[0].generated_at).getTime() + 7 * 24 * 3600 * 1000).toISOString();
-  }
-  return { canGenerate: !usedToday && usedThisWeek < 2, usedThisWeek, nextAvailableAt };
+  const usedThisMonth = runs.length;
+  const canGenerate = usedThisMonth < GEN_LEADS_QUOTA_MAX;
+  const nextAvailableAt = canGenerate ? null : wibNextMonthStartUTC().toISOString();
+  return { canGenerate, usedThisMonth, quotaMax: GEN_LEADS_QUOTA_MAX, nextAvailableAt };
 }
 
 export async function importGeneratedLead(genLead, defaultStageKey) {

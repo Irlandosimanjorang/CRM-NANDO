@@ -59,7 +59,7 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
   const [msg, setMsg] = useState("");
   const [results, setResults] = useState([]);
   const [loadingResults, setLoadingResults] = useState(true);
-  const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisWeek: 0, nextAvailableAt: null });
+  const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisMonth: 0, quotaMax: 4, nextAvailableAt: null });
   const [importingId, setImportingId] = useState(null);
 
   const defaultStageKey = stages?.[0]?.key || "";
@@ -144,8 +144,13 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
         <div className="flex items-center gap-2 mb-4">
-          <div className={`h-1.5 flex-1 rounded-full ${cooldown.usedThisWeek >= 1 ? "bg-orange-500" : "bg-slate-100"}`} />
-          <span className="text-[11px] text-slate-400 shrink-0 ml-1">{cooldown.usedThisWeek}/1 minggu ini</span>
+          <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-orange-500 transition-all"
+              style={{ width: `${Math.min(100, (cooldown.usedThisMonth / (cooldown.quotaMax || 4)) * 100)}%` }}
+            />
+          </div>
+          <span className="text-[11px] text-slate-400 shrink-0 ml-1">{cooldown.usedThisMonth}/{cooldown.quotaMax || 4} bulan ini</span>
         </div>
 
         {!cooldown.canGenerate ? (
