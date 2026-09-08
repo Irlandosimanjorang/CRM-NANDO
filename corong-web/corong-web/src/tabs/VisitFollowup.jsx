@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
@@ -425,9 +426,34 @@ function GpsCheckinLocked() {
   );
 }
 
+// Popup lightbox foto bukti check-in - klik thumbnail di Riwayat Check-in
+// buka foto ukuran penuh, biar owner/manager bisa beneran cek jelas fotonya
+// (bukan cuma thumbnail kecil 44px yang susah diliat detailnya).
+function CheckinPhotoLightbox({ ci, onClose }) {
+  return createPortal(
+    <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-2 text-white">
+          <div className="min-w-0">
+            <div className="font-medium text-sm truncate">{ci.lead_name}</div>
+            <div className="text-xs text-white/60 truncate">
+              {ci.rep_name || "Sales rep"} · {new Date(ci.checked_in_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </div>
+          </div>
+          <button onClick={onClose} className="shrink-0 text-white/70 hover:text-white p-1"><X size={22} /></button>
+        </div>
+        <img src={ci.photo_url} alt="" className="w-full rounded-2xl object-contain max-h-[75vh] bg-black" />
+        <a href={`https://maps.google.com/?q=${ci.latitude},${ci.longitude}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm text-orange-400 hover:underline"><MapPin size={13} /> Lihat lokasi di Maps</a>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function CheckinHistory({ isEnterprise }) {
   const [month, setMonth] = useState(todayISO().slice(0, 7));
   const [items, setItems] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     if (!isEnterprise) return;
@@ -450,7 +476,9 @@ function CheckinHistory({ isEnterprise }) {
           {items.map((ci) => (
             <div key={ci.id} className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center gap-3">
               {ci.photo_url ? (
-                <img src={ci.photo_url} alt="" className="w-11 h-11 rounded-2xl object-cover shrink-0 border border-slate-200" />
+                <button onClick={() => setLightbox(ci)} className="shrink-0">
+                  <img src={ci.photo_url} alt="" className="w-11 h-11 rounded-2xl object-cover border border-slate-200 hover:opacity-80 transition-opacity" />
+                </button>
               ) : (
                 <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-300"><Camera size={16} /></div>
               )}
@@ -465,6 +493,7 @@ function CheckinHistory({ isEnterprise }) {
           ))}
         </div>
       )}
+      {lightbox && <CheckinPhotoLightbox ci={lightbox} onClose={() => setLightbox(null)} />}
     </div>
   );
 }
