@@ -163,11 +163,11 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Barang/jasa yang Anda jual <span className="text-rose-500">*</span></span>
-                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: resin PVC, kompon kabel" value={productSold} onChange={(e) => setProductSold(e.target.value)} />
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: jasa katering, unit apartemen, produk asuransi" value={productSold} onChange={(e) => setProductSold(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Kata kunci / industri <span className="text-rose-500">*</span></span>
-                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: distributor kabel listrik" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: distributor elektronik, agen properti" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Provinsi (opsional - kosongin buat cari se-Indonesia)</span>

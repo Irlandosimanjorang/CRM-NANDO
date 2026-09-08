@@ -271,8 +271,8 @@ function PostCard({ post, myId, onDeleted }) {
 }
 
 const DUMMY_POSTS = [
-  { id: "np-1", user_id: "dummy", author_name: "Rizal - Sales PVC Jakarta", body: "Ada yang punya kontak supplier CaZn stabilizer buat area Cikarang? Client gua lagi cari yang bisa kirim cepet.", image_urls: [], created_at: new Date(Date.now() - 3600000).toISOString(), replyCount: 3, likeCount: 5, likedByMe: false, share_count: 1 },
-  { id: "np-2", user_id: "dummy", author_name: "Dewi - Sales Bandung", body: "Baru closing 8 ton bulan ini ke pabrik kabel di Soreang! Semangat terus tim 🔥", image_urls: [], created_at: new Date(Date.now() - 86400000).toISOString(), replyCount: 7, likeCount: 12, likedByMe: true, share_count: 2 },
+  { id: "np-1", user_id: "dummy", author_name: "Rizal - Sales Jakarta", body: "Ada yang punya tips buat closing lead yang udah lama gak respon? Ada beberapa lead gua yang stuck banget.", image_urls: [], created_at: new Date(Date.now() - 3600000).toISOString(), replyCount: 3, likeCount: 5, likedByMe: false, share_count: 1 },
+  { id: "np-2", user_id: "dummy", author_name: "Dewi - Sales Bandung", body: "Baru closing 3 deal bulan ini di area Soreang! Semangat terus tim 🔥", image_urls: [], created_at: new Date(Date.now() - 86400000).toISOString(), replyCount: 7, likeCount: 12, likedByMe: true, share_count: 2 },
 ];
 
 export default function Nex({ dummy, settings }) {

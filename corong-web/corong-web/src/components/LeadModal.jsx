@@ -30,9 +30,9 @@ const EMAIL_TEMPLATES = {
     subject: "Perkenalan dari Nexto - Solusi untuk {{nama}}",
     body: `Selamat siang {{pic}},
 
-Perkenalkan, saya dari tim sales yang ingin memperkenalkan produk kami yang mungkin relevan untuk kebutuhan produksi {{nama}}.
+Perkenalkan, saya dari tim sales yang ingin memperkenalkan produk/layanan kami yang mungkin relevan untuk kebutuhan {{nama}}.
 
-Kami melayani kebutuhan bahan baku PVC/kimia dengan kualitas terjamin dan harga kompetitif. Boleh saya jadwalkan waktu singkat untuk diskusi lebih lanjut?
+Kami siap membantu dengan kualitas terjamin dan harga kompetitif. Boleh saya jadwalkan waktu singkat untuk diskusi lebih lanjut?
 
 Terima kasih atas waktunya.`,
   },

@@ -3,6 +3,7 @@ import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, Chev
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
+import { getFieldLabel } from "../lib/industryTemplates";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 const DRAFT_KEY = "nexto_add_deal_draft";
@@ -26,7 +27,9 @@ function clearDraft() {
   try { localStorage.removeItem(DRAFT_KEY); } catch {}
 }
 
-function AddDealModal({ leads, stages, onClose, onSaved }) {
+function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
+  const productLabel = getFieldLabel(industry, "product", "Produk");
+  const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
   const wonStages = stages.filter((s) => s.type === "won");
   const draft = loadDraft();
   const [q, setQ] = useState("");
@@ -96,10 +99,10 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
             </label>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal deal</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
-              <label className="block"><span className="text-xs font-medium text-slate-500">Chemical</span><input className={inp} value={chemical} onChange={(e) => setChemical(e.target.value)} /></label>
+              <label className="block"><span className="text-xs font-medium text-slate-500">{productLabel}</span><input className={inp} value={chemical} onChange={(e) => setChemical(e.target.value)} /></label>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <label className="block col-span-2"><span className="text-xs font-medium text-slate-500">Quantity</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
+              <label className="block col-span-2"><span className="text-xs font-medium text-slate-500">{quantityLabel}</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">Satuan</span>
                 <select className={inp} value={tonnageUnit} onChange={(e) => setTonnageUnit(e.target.value)}>
                   <option value="ton">Ton</option>
@@ -124,7 +127,9 @@ function AddDealModal({ leads, stages, onClose, onSaved }) {
   );
 }
 
-export default function Deal({ leads, stages, dealTransactions, onEdit, onChanged }) {
+export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged }) {
+  const productLabel = getFieldLabel(industry, "product", "Produk");
+  const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
   // BUG FIX (6 Sep 2026): modal ini udah lama punya sistem draft field
   // (lihat DRAFT_KEY di atas) - tapi visibilitas modal-nya sendiri belum
   // ke-restore abis reload paksa, jadi orangnya harus klik "+Tambah Deal"
@@ -181,7 +186,7 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
 
             <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3">
               <div className="flex items-center justify-between mb-1">
-                <div className="text-xs text-slate-400 flex items-center gap-1"><Building2 size={13} /> Total Quantity</div>
+                <div className="text-xs text-slate-400 flex items-center gap-1"><Building2 size={13} /> Total {quantityLabel}</div>
                 <button onClick={() => setQtyRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>
                   {qtyRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
@@ -205,7 +210,7 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
                 <th className="px-3 py-2 font-medium" style={{ width: "28px" }}></th>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="text-left px-3 py-2 font-medium">Chemical</th><th className="text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">Quantity<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
+                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="text-left px-3 py-2 font-medium">{productLabel}</th><th className="text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
               <tbody>
                 {groups.map((g) => {
@@ -260,7 +265,7 @@ export default function Deal({ leads, stages, dealTransactions, onEdit, onChange
           </div>
         </>
       )}
-      {add && <AddDealModal leads={leads} stages={stages} onClose={() => { setAdd(false); clearOpenModal("deal"); }} onSaved={() => { setAdd(false); clearOpenModal("deal"); onChanged(); }} />}
+      {add && <AddDealModal leads={leads} stages={stages} industry={industry} onClose={() => { setAdd(false); clearOpenModal("deal"); }} onSaved={() => { setAdd(false); clearOpenModal("deal"); onChanged(); }} />}
     </div>
   );
 }
