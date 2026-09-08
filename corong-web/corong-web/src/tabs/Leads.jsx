@@ -367,6 +367,7 @@ export default function Leads({
   stages,
   settings,
   industry,
+  myLevel,
   onChanged,
 }) {
 
@@ -2076,6 +2077,9 @@ export default function Leads({
           }
           industry={
             industry
+          }
+          myLevel={
+            myLevel
           }
           onClose={() =>
             setEdit(null)

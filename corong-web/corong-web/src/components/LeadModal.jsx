@@ -80,7 +80,13 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Gak ada budget", "G
 // dipake buat ngunci tombol AI yang backend-nya udah di-gate Professional
 // (guess-outcome-reason.ts), biar user Free/Standard liat versi "terkunci"
 // yang rapi, bukan klik terus dapet error 403 mentah.
-export default function LeadModal({ lead, stages, settings, industry, myLevel = 2, onClose, onSaved }) {
+//
+// BUG FIX (8 Sep 2026): default-nya dulu 2 (Professional) - kalau ada
+// pemanggil yang lupa nge-pass prop ini (kejadian di Leads.jsx, ketauan pas
+// audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
+// backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
+// (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
+export default function LeadModal({ lead, stages, settings, industry, myLevel = 0, onClose, onSaved }) {
   const [f, setF] = useState({ ...lead });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
@@ -380,7 +386,9 @@ export default function LeadModal({ lead, stages, settings, industry, myLevel = 
             </button>
             {showEmail && (
               <div className="mt-3 space-y-2.5">
-                {!f.email ? (
+                {myLevel < 1 ? (
+                  <p className="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg p-2 flex items-center gap-1.5"><Lock size={12} className="shrink-0 text-slate-400" /> Kirim Email itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan.</p>
+                ) : !f.email ? (
                   <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2">Lead ini belum punya alamat email — isi dulu di field Email di atas.</p>
                 ) : (
                   <>
