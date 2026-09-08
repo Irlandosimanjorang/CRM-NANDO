@@ -178,6 +178,16 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     }
   };
 
+  // BUG FIX (8 Sep 2026): dulu tombol ini SELALU manggil db.checkIn() juga -
+  // walau labelnya ganti jadi "Check In" abis pin pertama tersimpan, gak ada
+  // verifikasi jarak/foto SAMA SEKALI (distance_meters di-hardcode 0 setiap
+  // klik) - beda banget sama check-in di tab Visit & Follow-up yang beneran
+  // ngitung jarak (Haversine, radius 100m) + wajib foto. Klik tombol ini dari
+  // rumah pun bakal ke-log sebagai "check-in terverifikasi (0m)" - defeat
+  // total tujuan fitur ini (buat mastiin sales BENERAN dateng ke lokasi
+  // customer). Sekarang tombol ini CUMA nyimpen titik alamat (fungsinya
+  // jujur sesuai namanya) - gak ada lagi klaim "check-in" palsu. Check-in
+  // yang beneran terverifikasi tetep di tab Visit & Follow-up.
   const saveLocation = () => {
     if (!lead.id) { alert("Simpan lead-nya dulu sebelum simpan lokasi."); return; }
     if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
@@ -187,9 +197,8 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
         try {
           const { latitude, longitude } = pos.coords;
           await db.saveLeadLocation(lead.id, latitude, longitude);
-          await db.checkIn({ lead_id: lead.id, lead_name: f.name, latitude, longitude, distance_meters: 0 });
           setF((p) => ({ ...p, latitude, longitude }));
-          alert("✅ Lokasi tersimpan & check-in tercatat.");
+          alert("✅ Titik lokasi tersimpan.");
         } catch (e) { alert("Gagal simpan lokasi: " + e.message); }
         finally { setLocBusy(false); }
       },
@@ -323,14 +332,19 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             </div>
           )}
           {!hidden("location") && (
-            <div className="flex items-center justify-between border border-slate-200 rounded-2xl p-3 bg-slate-50">
-              <div className="text-xs">
-                <div className="font-semibold text-slate-600 flex items-center gap-1.5"><MapPin size={13} /> Titik lokasi GPS</div>
-                <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas Anda lagi di lokasi"}</div>
+            <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs">
+                  <div className="font-semibold text-slate-600 flex items-center gap-1.5"><MapPin size={13} /> Titik lokasi GPS</div>
+                  <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas Anda lagi di lokasi"}</div>
+                </div>
+                <button onClick={saveLocation} disabled={locBusy || !lead.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-xl px-3 py-1.5 hover:bg-orange-50 disabled:opacity-50 shrink-0 font-medium">
+                  {locBusy ? "Menyimpan…" : f.latitude ? "Update Titik Lokasi" : "Simpan Lokasi Ini"}
+                </button>
               </div>
-              <button onClick={saveLocation} disabled={locBusy || !lead.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-xl px-3 py-1.5 hover:bg-orange-50 disabled:opacity-50 shrink-0 font-medium">
-                {locBusy ? "Menyimpan…" : f.latitude ? "Check In" : "Simpan Lokasi Ini"}
-              </button>
+              {f.latitude && (
+                <p className="text-[11px] text-slate-400">Ini cuma nyimpen titik alamat. Buat check-in kunjungan yang beneran diverifikasi jarak & foto, pakai tab "Visit & Follow-up".</p>
+              )}
             </div>
           )}
           {!hidden("website") && (
