@@ -110,40 +110,58 @@ function EmployeeCard({ icon: Icon, title, subtitle, accentColor, glowClass, gau
 // Rincian PER-SINYAL yang dicek RAKA (health-check) - dulu Command Center
 // cuma nampilin status gabungan ("nihil temuan" / "N temuan"), gak keliatan
 // SEMUA sinyal apa aja yang dipantau dan kondisi masing-masing satu-satu.
-// Collapsible (default ketutup) biar gak bikin card RAKA jomplang jauh lebih
-// tinggi dibanding 3 card lain di grid yang sama.
+// SELALU KEBUKA by default (bukan collapsed lagi) - datanya udah otomatis
+// paling baru sendiri kok, gak perlu nunggu diklik: RAKA jalan sendiri tiap
+// 4 jam via cron, dan dashboard ini polling admin-status tiap 45 detik
+// (lihat REFRESH_INTERVAL_MS) - jadi begitu ada run baru, panel ini ikut
+// keupdate otomatis tanpa siapapun perlu pencet "Panggil". Toggle tetep ada
+// buat yang mau nyembunyiin doang kalau kepanjangan.
 function ChecksDetailPanel({ checks }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   if (!checks || checks.length === 0) return null;
   const okCount = checks.filter((c) => c.ok).length;
+  const allOk = okCount === checks.length;
 
   return (
-    <div className="mt-3 pt-3 border-t border-white/[0.05]">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between text-[10px] font-mono uppercase tracking-wide text-slate-500 hover:text-slate-300 transition-colors"
-      >
-        <span>{okCount}/{checks.length} sinyal aman - lihat rincian tiap fitur</span>
-        <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+    <div className="mt-4 pt-4 border-t border-white/[0.08]">
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between group">
+        <div className="flex items-center gap-2.5">
+          <span className="relative inline-flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full rounded-full ${allOk ? "bg-emerald-400" : "bg-amber-400"} opacity-70 animate-ping`} />
+            <span className={`relative inline-flex rounded-full h-full w-full ${allOk ? "bg-emerald-400" : "bg-amber-400"}`} />
+          </span>
+          <span className="font-mono text-[13px] font-bold uppercase tracking-[0.12em] text-slate-200 group-hover:text-white transition-colors">
+            {okCount}<span className="text-slate-600">/{checks.length}</span> Sinyal Termonitor
+          </span>
+        </div>
+        <ChevronDown size={15} className={`text-slate-500 group-hover:text-white transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="mt-2.5 space-y-2">
+        <div className="mt-3 grid gap-2">
           {checks.map((c) => (
-            <div key={c.key} className="flex items-start gap-2 text-[11px]">
-              {c.ok ? (
-                <CheckCircle2 size={13} className="text-emerald-400 shrink-0 mt-0.5" />
-              ) : (
-                <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="font-mono font-semibold text-slate-300">{c.label}</div>
-                <div className="text-slate-500 text-[10px] mt-0.5 font-sans">{c.desc}</div>
-                {!c.ok && (
-                  <div className="text-amber-300/90 text-[10px] mt-1 bg-amber-500/[0.06] border border-amber-500/15 rounded-lg p-1.5 font-sans whitespace-pre-wrap">
-                    {c.detail}
-                  </div>
+            <div
+              key={c.key}
+              className={`relative rounded-xl border p-3 overflow-hidden transition-colors ${
+                c.ok
+                  ? "border-emerald-500/[0.12] bg-emerald-500/[0.025]"
+                  : "border-amber-500/30 bg-amber-500/[0.07] shadow-[0_0_28px_-10px_rgba(245,158,11,0.5)]"
+              }`}
+            >
+              {!c.ok && <div className="absolute inset-y-0 left-0 w-[3px] bg-amber-400 shadow-[0_0_10px_2px_rgba(245,158,11,0.6)]" />}
+              <div className="flex items-center gap-2.5 pl-1">
+                {c.ok ? (
+                  <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle size={16} className="text-amber-400 shrink-0" />
                 )}
+                <span className="font-mono text-[14px] font-bold tracking-wide text-white">{c.label}</span>
               </div>
+              <div className="text-slate-500 text-[11.5px] mt-1 pl-[30px] font-sans leading-relaxed">{c.desc}</div>
+              {!c.ok && (
+                <div className="mt-2 ml-[30px] text-amber-100 text-[12px] bg-amber-500/10 border border-amber-500/25 rounded-lg p-2.5 font-sans leading-relaxed whitespace-pre-wrap">
+                  {c.detail}
+                </div>
+              )}
             </div>
           ))}
         </div>
