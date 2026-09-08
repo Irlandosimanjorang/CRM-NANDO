@@ -1764,10 +1764,7 @@ export default function Auth() {
   };
 
   return (
-    <div
-      className="min-h-screen overflow-x-hidden bg-white text-slate-900 selection:bg-orange-100 selection:text-orange-900"
-      style={{ fontFamily: "'Sora', ui-sans-serif, system-ui, -apple-system, sans-serif" }}
-    >
+    <div className="min-h-screen overflow-x-hidden bg-white text-slate-900 selection:bg-orange-100 selection:text-orange-900">
       {/* =========================================================
           NAVIGATION
       ========================================================== */}
