@@ -310,6 +310,19 @@ export async function callAdminTrigger(target) {
   return data;
 }
 
+// Tandain 1 sinyal RAKA buat ditindaklanjuti - CUMA nyatet + notif Telegram,
+// BUKAN eksekusi perbaikan otomatis (lihat komentar di edge function-nya).
+export async function flagHealthIssue(check_key, label, detail) {
+  const { data, error } = await supabase.functions.invoke("flag-health-issue", { body: { check_key, label, detail } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal nandain sinyal");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // ---- OUTCOME MEMORY - dicatet pas lead ditutup Menang/Kalah, dipake AI
 // Advisor besok-besok buat belajar pola "apa yang biasanya berhasil/gagal"
 // di bisnis org ini (nutup loop Context->Decision->Action->Memory->Decision). ----

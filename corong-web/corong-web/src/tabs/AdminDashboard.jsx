@@ -127,6 +127,19 @@ function EmployeeCard({ icon: Icon, title, subtitle, accentColor, glowClass, gau
 // (misal "Sinkron Google Calendar") udah nampilin penjelasan lengkapnya.
 function CheckDetailModal({ check, aiSummary, onClose }) {
   const bodyText = !check.ok && aiSummary ? aiSummary : check.detail;
+  const [flagState, setFlagState] = useState("idle"); // idle | busy | done | error
+
+  const doFlag = async () => {
+    setFlagState("busy");
+    try {
+      await db.flagHealthIssue(check.key, check.label, bodyText);
+      setFlagState("done");
+    } catch (e) {
+      alert("Gagal nandain: " + e.message);
+      setFlagState("idle");
+    }
+  };
+
   return createPortal(
     <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -154,6 +167,21 @@ function CheckDetailModal({ check, aiSummary, onClose }) {
         >
           {bodyText}
         </div>
+        {!check.ok && (
+          <button
+            onClick={doFlag}
+            disabled={flagState === "busy" || flagState === "done"}
+            className="mt-3 w-full flex items-center justify-center gap-2 text-[12px] font-mono font-bold uppercase tracking-wide rounded-xl px-3 py-2.5 border transition-colors disabled:cursor-default border-amber-500/40 bg-amber-500/[0.08] hover:bg-amber-500/[0.15] text-amber-300 disabled:opacity-60"
+          >
+            {flagState === "busy" ? (
+              <><Loader2 size={13} className="animate-spin" /> Nandain…</>
+            ) : flagState === "done" ? (
+              <><CheckCircle2 size={13} /> Ditandai - notif Telegram udah dikirim</>
+            ) : (
+              <><Zap size={13} /> Tandai buat ditindaklanjuti</>
+            )}
+          </button>
+        )}
       </div>
     </div>,
     document.body
