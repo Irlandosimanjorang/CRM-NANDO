@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -116,8 +117,46 @@ function EmployeeCard({ icon: Icon, title, subtitle, accentColor, glowClass, gau
 // (lihat REFRESH_INTERVAL_MS) - jadi begitu ada run baru, panel ini ikut
 // keupdate otomatis tanpa siapapun perlu pencet "Panggil". Toggle tetep ada
 // buat yang mau nyembunyiin doang kalau kepanjangan.
+// Popup detail 1 sinyal - munculin isi lengkap "detail" (temuan masalah, atau
+// pesan aman) pas kartu-nya diklik, alih-alih ditumpuk mentah di bawah tiap
+// kartu (yang bikin panelnya kepanjangan begitu ada beberapa temuan sekaligus).
+function CheckDetailModal({ check, onClose }) {
+  return createPortal(
+    <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className={`relative w-full max-w-md rounded-2xl border p-5 overflow-hidden ${
+          check.ok ? "border-emerald-500/25 bg-[#070b12]" : "border-amber-500/35 bg-[#0d0a05] shadow-[0_0_60px_-15px_rgba(245,158,11,0.5)]"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {check.ok ? (
+              <CheckCircle2 size={20} className="text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle size={20} className="text-amber-400 shrink-0" />
+            )}
+            <span className="font-mono text-base font-bold tracking-wide text-white truncate">{check.label}</span>
+          </div>
+          <button onClick={onClose} className="shrink-0 text-slate-500 hover:text-white"><X size={18} /></button>
+        </div>
+        <div className="text-slate-500 text-[12px] font-sans leading-relaxed mb-3">{check.desc}</div>
+        <div
+          className={`text-[13px] font-sans leading-relaxed whitespace-pre-wrap rounded-xl p-3 border ${
+            check.ok ? "text-emerald-200 bg-emerald-500/[0.06] border-emerald-500/20" : "text-amber-100 bg-amber-500/10 border-amber-500/25"
+          }`}
+        >
+          {check.detail}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function ChecksDetailPanel({ checks }) {
   const [open, setOpen] = useState(true);
+  const [selected, setSelected] = useState(null);
   if (!checks || checks.length === 0) return null;
   const okCount = checks.filter((c) => c.ok).length;
   const allOk = okCount === checks.length;
@@ -139,9 +178,10 @@ function ChecksDetailPanel({ checks }) {
       {open && (
         <div className="mt-3 grid gap-2">
           {checks.map((c) => (
-            <div
+            <button
               key={c.key}
-              className={`relative rounded-xl border p-3 overflow-hidden transition-colors ${
+              onClick={() => setSelected(c)}
+              className={`relative rounded-xl border p-3 overflow-hidden transition-colors text-left w-full hover:brightness-125 ${
                 c.ok
                   ? "border-emerald-500/[0.12] bg-emerald-500/[0.025]"
                   : "border-amber-500/30 bg-amber-500/[0.07] shadow-[0_0_28px_-10px_rgba(245,158,11,0.5)]"
@@ -157,15 +197,11 @@ function ChecksDetailPanel({ checks }) {
                 <span className="font-mono text-[14px] font-bold tracking-wide text-white">{c.label}</span>
               </div>
               <div className="text-slate-500 text-[11.5px] mt-1 pl-[30px] font-sans leading-relaxed">{c.desc}</div>
-              {!c.ok && (
-                <div className="mt-2 ml-[30px] text-amber-100 text-[12px] bg-amber-500/10 border border-amber-500/25 rounded-lg p-2.5 font-sans leading-relaxed whitespace-pre-wrap">
-                  {c.detail}
-                </div>
-              )}
-            </div>
+            </button>
           ))}
         </div>
       )}
+      {selected && <CheckDetailModal check={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
