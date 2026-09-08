@@ -66,18 +66,87 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
   );
 }
 
+// Kamera live in-app (getUserMedia) - dulu pake <input type=file capture>
+// yang di sebagian HP/browser tetep nyediain opsi "pilih dari galeri" di
+// samping kamera, jadi orang bisa upload foto lama/nyari foto orang lain.
+// Sekarang bener-bener buka feed kamera depan langsung di dalam modal,
+// user jepret dari situ - gak ada jalan buat milih file dari galeri.
+// Fallback ke <input capture> cuma kalo getUserMedia gak didukung/ditolak.
+function LiveCamera({ onCapture, onFallback }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    navigator.mediaDevices?.getUserMedia?.({ video: { facingMode: "user" }, audio: false })
+      .then((stream) => {
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  useEffect(() => { if (error) onFallback(); }, [error]);
+
+  const shoot = () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1); // mirror biar sesuai apa yang keliatan di preview
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      onCapture(new File([blob], `checkin-${Date.now()}.jpg`, { type: "image/jpeg" }));
+    }, "image/jpeg", 0.9);
+  };
+
+  if (error) return null;
+  return (
+    <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-slate-900">
+      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
+      <button
+        type="button"
+        onClick={shoot}
+        className="absolute bottom-2.5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-white border-4 border-orange-500 shadow-lg active:scale-95"
+        aria-label="Jepret foto"
+      />
+    </div>
+  );
+}
+
 function PhotoCheckinModal({ pending, onClose, onDone }) {
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState("Menyimpan…");
+  const [cameraFailed, setCameraFailed] = useState(false);
 
-  const handleFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleCapture = (file) => {
     setPhoto(file);
     setPreview(URL.createObjectURL(file));
   };
+
+  // Fallback doang kalo getUserMedia gak jalan (browser lama/HP tanpa kamera
+  // depan kedetek/dst) - capture="user" masih ngarahin ke app kamera native,
+  // bukan langsung ke galeri.
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleCapture(file);
+  };
+
+  const retake = () => { setPhoto(null); setPreview(null); };
 
   const confirm = async () => {
     if (!photo) { alert("Foto wajib dilampirin buat check-in."); return; }
@@ -116,18 +185,25 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
           <h3 className="font-bold text-base">Foto Bukti Check-in</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Wajib selfie di lokasi buat "{pending.leadName}" - foto bakal dicek AI, pastiin keliatan wajah Anda.</p>
-        <label className="block cursor-pointer">
-          {preview ? (
+        <p className="text-xs text-slate-500 mb-4">Wajib selfie langsung dari kamera buat "{pending.leadName}" - foto bakal dicek AI, pastiin keliatan wajah Anda. Gak bisa pilih foto dari galeri.</p>
+        {preview ? (
+          <div className="relative">
             <img src={preview} alt="" className="w-full h-48 object-cover rounded-2xl border border-slate-200" />
-          ) : (
+            {!busy && (
+              <button onClick={retake} className="absolute top-2 right-2 text-xs font-medium bg-white/90 backdrop-blur px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-white">Foto Ulang</button>
+            )}
+          </div>
+        ) : cameraFailed ? (
+          <label className="block cursor-pointer">
             <div className="w-full h-48 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 gap-2">
               <Camera size={28} />
-              <span className="text-xs font-medium">Ambil selfie</span>
+              <span className="text-xs font-medium">Buka kamera</span>
             </div>
-          )}
-          <input type="file" accept="image/*" capture="user" className="hidden" onChange={handleFile} />
-        </label>
+            <input type="file" accept="image/*" capture="user" className="hidden" onChange={handleFile} />
+          </label>
+        ) : (
+          <LiveCamera onCapture={handleCapture} onFallback={() => setCameraFailed(true)} />
+        )}
         <button onClick={confirm} disabled={busy || !photo} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
           {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} {busy ? busyLabel : "Konfirmasi Check-in"}
         </button>
