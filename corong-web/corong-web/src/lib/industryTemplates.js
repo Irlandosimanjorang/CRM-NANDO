@@ -234,13 +234,19 @@ export function isFieldHidden(industryKey, fieldName) {
   return (tpl.hiddenFields || []).includes(fieldName);
 }
 
-// 3 slot field bebas (custom_field_1/2/3 di tabel leads) - tiap template industri
+// 5 slot field bebas (custom_field_1..5 di tabel leads) - tiap template industri
 // bisa "ngasih nama" ke slot ini (misal Property: "Luas tanah"). Kalau template
 // gak ngedefinisiin nama buat slot tertentu, slot itu disembunyiin di form -
 // biar gak keliatan "field kosong gak jelas" pas industri gak butuh semuanya.
-export function getCustomFieldSlots(industryKey) {
+//
+// `orgOverrides` (opsional, dari organizations.custom_field_labels) - user
+// bisa "ngerebut" slot yang belum kepake lewat "+ Custom..." pas import
+// Excel (lihat ManualColumnMapModal), namanya sendiri, BUKAN dari template
+// industri yang hardcode di kode ini. Override menang kalau ada bentrok nama
+// (misal org udah rename custom_field_1 sendiri, beda dari default industri).
+export function getCustomFieldSlots(industryKey, orgOverrides) {
   const tpl = getIndustryTemplate(industryKey);
-  const labels = tpl.customFieldLabels || {};
+  const labels = { ...(tpl.customFieldLabels || {}), ...(orgOverrides || {}) };
   return ["custom_field_1", "custom_field_2", "custom_field_3", "custom_field_4", "custom_field_5"]
     .filter((key) => labels[key])
     .map((key) => ({ key, label: labels[key] }));

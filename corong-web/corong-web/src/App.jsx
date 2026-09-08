@@ -807,7 +807,7 @@ export default function App() {
                 <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
-                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onChanged={reload} />
+                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} />
               </div>
               <div style={{ display: effectiveTab === "generateleads" ? "block" : "none" }}>
                 <PreviewLock locked={isLocked("generateleads")}>

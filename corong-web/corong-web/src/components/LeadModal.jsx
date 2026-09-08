@@ -86,7 +86,7 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Gak ada budget", "G
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, myLevel = 0, onClose, onSaved }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved }) {
   const [f, setF] = useState({ ...lead });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
@@ -139,7 +139,7 @@ export default function LeadModal({ lead, stages, settings, industry, myLevel = 
   // industri pas onboarding). Org PVC lama gak kerasa bedanya - labelnya persis sama.
   const lbl = (field, fallback) => getFieldLabel(industry, field, fallback);
   const hidden = (field) => isFieldHidden(industry, field);
-  const customSlots = getCustomFieldSlots(industry);
+  const customSlots = getCustomFieldSlots(industry, customFieldLabels);
   const categories = getCategories(industry);
   const companyTypeOptions = getCompanyTypeOptions(industry);
   // Warna header ngikutin tahap pipeline lead ini (real-time ngikutin pilihan

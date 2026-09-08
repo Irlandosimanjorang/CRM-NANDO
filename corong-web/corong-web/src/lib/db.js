@@ -168,6 +168,21 @@ export async function setOrgName(name) {
   if (error) throw error;
 }
 
+// Nambahin/nge-update nama slot custom_field_1..5 punya org - dipake pas user
+// klik "+ Custom..." di ManualColumnMapModal buat namain kolom Excel yang gak
+// ada padanannya di field bawaan (misal "Production Lines"). MERGE ke label
+// yang udah ada (bukan replace total), biar slot lain yang udah dinamain
+// sebelumnya (dari import lain atau template industri) gak ke-reset.
+export async function mergeCustomFieldLabels(newLabels) {
+  const orgId = await getMyOrgId();
+  const { data: orgRow, error: getErr } = await supabase.from("organizations").select("custom_field_labels").eq("id", orgId).single();
+  if (getErr) throw getErr;
+  const merged = { ...(orgRow?.custom_field_labels || {}), ...newLabels };
+  const { error } = await supabase.from("organizations").update({ custom_field_labels: merged }).eq("id", orgId);
+  if (error) throw error;
+  return merged;
+}
+
 // ---- GENERATE LEADS (AI cari calon lead lewat web search) ----
 export async function generateLeads({ keyword, province, targetRole, productSold, companyScale } = {}) {
   const { data, error } = await supabase.functions.invoke("generate-leads", { body: { keyword, province, targetRole, productSold, companyScale } });

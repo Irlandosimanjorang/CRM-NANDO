@@ -80,26 +80,6 @@ function getOpenDraftPopup() {
    IMPORT MAPPING
 ========================================================= */
 
-const val = (row, keys) => {
-  const lk = Object.keys(row);
-
-  for (const k of keys) {
-    const hit = lk.find((h) =>
-      h.toLowerCase().includes(k.toLowerCase())
-    );
-
-    if (
-      hit &&
-      row[hit] != null &&
-      String(row[hit]).trim()
-    ) {
-      return String(row[hit]).trim();
-    }
-  }
-
-  return "";
-};
-
 // Kata kunci kolom nama - dipisah "kuat" (spesifik, aman dicocokin biasa) vs
 // "lemah" (kata tunggal umum kayak "customer"/"nama"). BUG DITEMUKAN (8 Sep
 // 2026): kata kunci lemah "customer" nyantol ke header "Customer Products"
@@ -123,161 +103,95 @@ const NAME_QUALIFIER_BLACKLIST = [
   "supplier", "usage", "line", "position", "jabatan",
 ];
 
-function findNameValue(row) {
-  const lk = Object.keys(row);
+// BUG DITEMUKAN (8 Sep 2026): matching pake .includes() polos bikin "product"
+// nyantol ke header "Production Lines" (substring "product" ada di dalam
+// "production"!) - kolom itu ke-tebak jadi "Produk" padahal harusnya gak
+// ke-tebak sama sekali (biar user bisa pilih "+ Custom..."). Sekarang match
+// pake batas kata (karakter sebelum/sesudahnya HARUS bukan huruf/angka),
+// biar "product" gak lagi nyantol ke "production". Kata kunci CJK (Chinese)
+// dikecualiin dari aturan batas kata ini (gak ada spasi antar kata di CJK,
+// jadi tetep pake substring biasa).
+function headerMatchesKey(header, key) {
+  const h = String(header ?? "").toLowerCase();
+  const k = key.toLowerCase();
+  if (!/^[a-z0-9 ]+$/.test(k)) return h.includes(k);
+  const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i");
+  return re.test(h);
+}
 
+function findColIndex(headers, keys) {
+  for (const k of keys) {
+    const idx = headers.findIndex((h) => headerMatchesKey(h, k));
+    if (idx !== -1) return idx;
+  }
+  return null;
+}
+
+function guessNameColIndex(headers) {
   for (const k of NAME_STRONG_KEYS) {
-    const hit = lk.find((h) => h.toLowerCase().includes(k.toLowerCase()));
-    if (hit && row[hit] != null && String(row[hit]).trim()) return String(row[hit]).trim();
+    const idx = headers.findIndex((h) => headerMatchesKey(h, k));
+    if (idx !== -1) return idx;
   }
-
   for (const k of NAME_WEAK_KEYS) {
-    const hit = lk.find((h) => {
-      const hl = h.toLowerCase();
-      if (!hl.includes(k.toLowerCase())) return false;
-      return !NAME_QUALIFIER_BLACKLIST.some((bad) => hl.includes(bad));
+    const idx = headers.findIndex((h) => {
+      if (!headerMatchesKey(h, k)) return false;
+      return !NAME_QUALIFIER_BLACKLIST.some((bad) => headerMatchesKey(h, bad));
     });
-    if (hit && row[hit] != null && String(row[hit]).trim()) return String(row[hit]).trim();
+    if (idx !== -1) return idx;
   }
-
-  return "";
+  return null;
 }
 
+const FIELD_KEY_MAP = {
+  email: ["邮箱", "email"],
+  phone: ["电话", "phone", "telepon", "wa", "hp"],
+  key_person: ["联系人", "key person", "contact", "pic", "nama kontak"],
+  key_person_title: ["jabatan", "job title", "position", "title"],
+  product: ["产品", "product", "produk"],
+  city: ["城市", "city", "kota"],
+  province: ["省", "province", "provinsi"],
+  website: ["网站", "website", "web"],
+  background: ["公司背景", "background", "海关"],
+  notes: ["备注", "catatan", "keterangan", "notes", "note", "remark", "riwayat", "progress"],
+};
 
-function mapRow(
-  row,
-  category,
-  firstStageKey
-) {
-  const name = findNameValue(row);
-
-  if (!name) return null;
-
-  return {
-    name,
-    category,
-    stage_key: firstStageKey,
-
-    company_type: (() => {
-      const t = val(row, [
-        "公司类型",
-        "company type",
-      ]).toLowerCase();
-
-      if (
-        t.includes("man") &&
-        t.includes("trad")
-      ) {
-        return "Both";
-      }
-
-      if (t.includes("man")) {
-        return "Manufacturer";
-      }
-
-      if (t.includes("trad")) {
-        return "Trader";
-      }
-
-      return "";
-    })(),
-
-    email: val(row, [
-      "邮箱",
-      "email",
-    ]),
-
-    phone: val(row, [
-      "电话",
-      "phone",
-      "telepon",
-      "wa",
-      "hp",
-    ]),
-
-    key_person: val(row, [
-      "联系人",
-      "key person",
-      "contact",
-      "pic",
-      "nama kontak",
-    ]),
-
-    product: val(row, [
-      "产品",
-      "product",
-      "produk",
-    ]),
-
-    city: val(row, [
-      "城市",
-      "city",
-      "kota",
-    ]),
-
-    province: val(row, [
-      "省",
-      "province",
-      "provinsi",
-    ]),
-
-    website: val(row, [
-      "网站",
-      "website",
-      "web",
-    ]),
-
-    background: val(row, [
-      "公司背景",
-      "background",
-      "海关",
-    ]),
-
-    // Kolom catatan/keterangan bebas di Excel (kalau ada) - BUKAN kolom lead
-    // (leads gak punya kolom "notes"), ditulis terpisah sebagai progress note
-    // begitu lead-nya berhasil dibikin (lihat importFile di bawah).
-    notes: val(row, [
-      "备注",
-      "catatan",
-      "keterangan",
-      "notes",
-      "note",
-      "remark",
-      "riwayat",
-      "progress",
-    ]),
-
-    source: "import",
-  };
+// Nebak petaan kolom -> field langsung dari baris header (row pertama
+// sheet) - dipake buat PRE-FILL ImportColumnMapModal (lihat importFile).
+// Ini CUMA tebakan awal - user SELALU harus review & konfirmasi dulu
+// sebelum data beneran masuk (dulu sistemnya auto-import diam-diam kalau
+// tebakan ini "keliatan yakin", sekarang gak ada lagi jalur silent kayak
+// gitu - meleset di sini paling-paling cuma bikin user perlu benerin
+// dropdown, bukan bikin data salah masuk).
+function guessMappingFromHeaders(headers) {
+  const mapping = {};
+  const nameIdx = guessNameColIndex(headers);
+  if (nameIdx !== null) mapping.name = nameIdx;
+  for (const [field, keys] of Object.entries(FIELD_KEY_MAP)) {
+    const idx = findColIndex(headers, keys);
+    if (idx !== null && idx !== mapping.name) mapping[field] = idx;
+  }
+  return mapping;
 }
 
-// Sama kayak mapRow, tapi dari MAPPING kolom (index) -> field, bukan dari
-// nama header. Dipake buat 2 sumber: hasil pemetaan AI (smart-import-map-ts)
-// DAN pemetaan MANUAL yang user pilih sendiri lewat ManualColumnMapModal
-// (fallback kalau baik rule-based maupun AI gagal baca kolom nama-nya).
+// Dari MAPPING kolom (index) -> field, bangun objek lead per baris data.
+// Dipake buat SEMUA sumber mapping: tebakan header, hasil AI
+// (smart-import-map-ts), MAUPUN pemetaan yang user tentuin/betulin sendiri
+// lewat ImportColumnMapModal - generic, jalan buat field custom_field_1..5
+// juga (bukan cuma field bawaan) karena cuma nurutin key apa aja yang ada
+// di `mapping`, gak hardcode daftar field.
 function extractRowsFromMapping(dataRows, mapping, firstStage) {
   const get = (row, idx) => (idx === null || idx === undefined || idx === "") ? "" : String(row[idx] ?? "").trim();
   const out = [];
   for (const row of dataRows) {
     const name = get(row, mapping.name);
     if (!name || /^(xxx|yyyy-mm-dd|mr\/ms xxx)$/i.test(name.trim())) continue;
-    out.push({
-      name,
-      category: "Lainnya",
-      stage_key: firstStage,
-      company_type: get(row, mapping.company_type),
-      email: get(row, mapping.email),
-      phone: get(row, mapping.phone),
-      key_person: get(row, mapping.key_person),
-      key_person_title: get(row, mapping.key_person_title),
-      product: get(row, mapping.product),
-      city: get(row, mapping.city),
-      province: get(row, mapping.province),
-      website: get(row, mapping.website),
-      background: get(row, mapping.background),
-      notes: get(row, mapping.notes),
-      source: "import",
-    });
+    const obj = { name, category: "Lainnya", stage_key: firstStage, source: "import" };
+    for (const [field, idx] of Object.entries(mapping)) {
+      if (field === "name") continue;
+      obj[field] = get(row, idx);
+    }
+    out.push(obj);
   }
   return out;
 }
@@ -452,6 +366,7 @@ export default function Leads({
   stages,
   settings,
   industry,
+  customFieldLabels,
   myLevel,
   onChanged,
 }) {
@@ -1001,6 +916,12 @@ export default function Leads({
     onChanged();
   };
 
+  // Import SEKARANG SELALU lewat layar konfirmasi petaan kolom (dulu auto-
+  // import diam-diam kalau "keliatan yakin", user baru ketauan ada yang
+  // salah SETELAH data kelanjur masuk - lihat percakapan soal "Customer
+  // Products" ke-anggep nama lead). Rule-based/AI di importFile cuma buat
+  // PRE-FILL tebakan, ManualColumnMapModal yang nentuin apa yang beneran
+  // diimport, lewat handleManualMapConfirm.
   const importFile = async (file) => {
     if (!file) return;
     setBusy(true);
@@ -1010,87 +931,129 @@ export default function Leads({
       const wb = XLSX.read(buf, { type: "array", cellDates: true });
       const firstStage = stages[0]?.key;
 
-      const allLeadRows = [];
-      let usedAiFallback = false;
-      // Sheet PERTAMA yang gagal ke-baca rule-based MAUPUN AI - disimpen
-      // (bukan langsung dibuang) buat ditawarin ke user lewat
-      // ManualColumnMapModal, TAPI CUMA kalau gak ada satupun sheet lain yang
-      // berhasil (kalau ada sheet lain yang berhasil, cukup laporin di
-      // ringkasan seperti biasa - gak perlu ganggu user buat tiap sheet).
-      let unmappedSheet = null;
-
+      // Ambil sheet PERTAMA yang punya data - kalau file punya beberapa
+      // sheet (umumnya cuma "Sheet2" kosong bawaan Excel), yang lain
+      // diabaikan. Sheet lain bisa diimport terpisah kalau memang perlu.
+      let sheetName = null;
+      let rawRows = [];
       for (const sn of wb.SheetNames) {
-        const headerRows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: "" });
-        const nonEmptyRows = headerRows.filter((r) => Object.values(r).some((v) => String(v).trim()));
-
-        let sheetOut = [];
-        for (const r of headerRows) {
-          const m = mapRow(r, "Lainnya", firstStage);
-          if (m) sheetOut.push(m);
-        }
-
         const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: "" });
-        const nonEmptyAoa = aoa.filter((r) => r.some((v) => String(v).trim()));
+        const nonEmpty = aoa.filter((r) => r.some((v) => String(v).trim()));
+        if (nonEmpty.length > 0) { sheetName = sn; rawRows = nonEmpty; break; }
+      }
 
-        // Fallback AI kalau rule-based cuma berhasil baca <50% baris - AI
-        // baca sample mentah & tentuin sendiri kolom keberapa isinya apa
-        // (lihat smart-import-map-ts, sekarang industry-aware).
-        if (nonEmptyRows.length > 0 && sheetOut.length < nonEmptyRows.length * 0.5 && nonEmptyAoa.length > 0) {
-          try {
-            const sample = nonEmptyAoa.slice(0, 8);
-            const { data_start_row, mapping } = await db.smartImportMap(sample);
+      if (rawRows.length === 0) {
+        alert("File-nya kosong, ga ada data sama sekali yang kebaca.");
+        return;
+      }
 
-            if (mapping && mapping.name !== null && mapping.name !== undefined) {
-              const startAt = Math.min(Math.max(data_start_row || 0, 0), nonEmptyAoa.length);
-              const aiOut = extractRowsFromMapping(nonEmptyAoa.slice(startAt), mapping, firstStage);
-              if (aiOut.length > sheetOut.length) {
-                sheetOut = aiOut;
-                usedAiFallback = true;
-              }
-            }
-          } catch (aiErr) {
-            console.error("Smart import AI gagal:", aiErr);
+      // Tebak petaan dari baris header (row pertama) dulu - GRATIS, gak
+      // perlu manggil AI. Kalau gagal nemuin kolom nama (misal ada baris
+      // judul di atas header asli), baru minta AI baca sample & tentuin
+      // sendiri kolom + baris data mulai dari mana.
+      let guessedMapping = guessMappingFromHeaders(rawRows[0]);
+      let guessedDataStartRow = 1;
+      let usedAiGuess = false;
+
+      if (guessedMapping.name === undefined || guessedMapping.name === null) {
+        try {
+          const sample = rawRows.slice(0, 8);
+          const { data_start_row, mapping } = await db.smartImportMap(sample);
+          if (mapping && mapping.name !== null && mapping.name !== undefined) {
+            guessedMapping = mapping;
+            guessedDataStartRow = Math.min(Math.max(data_start_row || 0, 0), rawRows.length);
+            usedAiGuess = true;
+          } else {
+            guessedMapping = {};
+            guessedDataStartRow = 0;
           }
-        }
-
-        if (sheetOut.length > 0) {
-          allLeadRows.push(...sheetOut);
-        } else if (!unmappedSheet && nonEmptyAoa.length > 0) {
-          unmappedSheet = { sheetName: sn, rawRows: nonEmptyAoa, firstStage };
+        } catch (aiErr) {
+          console.error("Smart import AI gagal nebak:", aiErr);
+          guessedMapping = {};
+          guessedDataStartRow = 0;
         }
       }
 
-      if (allLeadRows.length > 0) {
-        await finalizeImport(allLeadRows, usedAiFallback);
-        return;
-      }
-
-      // Baik rule-based maupun AI gagal total buat SEMUA sheet - dulu
-      // langsung nyerah (alert "Ga ada baris kebaca"). Sekarang dilempar ke
-      // ManualColumnMapModal biar user sendiri yang petain kolomnya, bukan
-      // maksa nebak-nebak otomatis mulu.
-      if (unmappedSheet) {
-        setManualMapRequest(unmappedSheet);
-        return;
-      }
-
-      alert("File-nya kosong, ga ada data sama sekali yang kebaca.");
+      setManualMapRequest({
+        sheetName,
+        rawRows,
+        firstStage,
+        initialMapping: guessedMapping,
+        initialDataStartRow: guessedDataStartRow,
+        usedAiGuess,
+        // Slot custom_field_1..5 yang UDAH ada namanya (dari template industri
+        // atau import sebelumnya) - ditawarin sebagai pilihan langsung di
+        // dropdown, biar import berikutnya dengan kolom yang sama gak perlu
+        // bikin ulang custom field baru.
+        existingCustomSlots: getCustomFieldSlots(industry, customFieldLabels),
+      });
     } catch (e) {
-      alert("Gagal import: " + e.message);
+      alert("Gagal baca file: " + e.message);
     } finally {
       setBusy(false);
     }
   };
 
-  const handleManualMapConfirm = async (mapping, dataStartRow) => {
+  const handleManualMapConfirm = async (mapping, dataStartRow, customEntries) => {
     if (!manualMapRequest) return;
-    const { rawRows, firstStage } = manualMapRequest;
+    const { rawRows, firstStage, usedAiGuess } = manualMapRequest;
+
+    // ---- RESOLVE "+ Custom..." ke slot custom_field_1..5 ----
+    // Label yang PERSIS sama (case-insensitive) dengan slot yang udah ada
+    // dipakai ulang slotnya (biar import berulang kali dengan kolom yang
+    // sama nyambung ke field yang sama, gak numpuk field baru tiap import).
+    // Label baru dikasih slot kosong pertama yang ketemu. Cuma ada 5 slot -
+    // kalau abis, import DIBATALIN (bukan diem-diem buang datanya) biar user
+    // sadar & bisa pilih mau reuse slot lain atau lewatin kolom itu.
+    const currentLabels = { ...(customFieldLabels || {}) };
+    const usedSlotKeys = new Set(Object.keys(currentLabels).filter((k) => currentLabels[k]));
+    const newLabelAssignments = {};
+    const finalMapping = { ...mapping };
+    const overflow = [];
+
+    for (const entry of customEntries || []) {
+      const label = (entry.label || "").trim();
+      if (!label) continue;
+
+      const existingSlotKey = Object.entries(currentLabels).find(
+        ([, v]) => String(v || "").trim().toLowerCase() === label.toLowerCase()
+      )?.[0];
+
+      if (existingSlotKey) {
+        finalMapping[existingSlotKey] = entry.colIndex;
+        continue;
+      }
+
+      const freeSlotKey = ["custom_field_1", "custom_field_2", "custom_field_3", "custom_field_4", "custom_field_5"]
+        .find((k) => !usedSlotKeys.has(k));
+
+      if (!freeSlotKey) {
+        overflow.push(label);
+        continue;
+      }
+
+      usedSlotKeys.add(freeSlotKey);
+      currentLabels[freeSlotKey] = label;
+      newLabelAssignments[freeSlotKey] = label;
+      finalMapping[freeSlotKey] = entry.colIndex;
+    }
+
+    if (overflow.length > 0) {
+      alert(
+        `Maks 5 kolom custom per organisasi, slotnya udah penuh semua. Kolom ini gak kebagian slot: ${overflow.join(", ")}.\n\nCoba pakai nama yang SAMA PERSIS dengan salah satu custom field yang udah ada, atau abaikan kolom itu dulu.`
+      );
+      return;
+    }
+
     setManualMapRequest(null);
     setBusy(true);
     try {
+      if (Object.keys(newLabelAssignments).length > 0) {
+        await db.mergeCustomFieldLabels(newLabelAssignments);
+      }
       const dataRows = rawRows.slice(Math.max(0, dataStartRow));
-      const leadRows = extractRowsFromMapping(dataRows, mapping, firstStage);
-      await finalizeImport(leadRows, false);
+      const leadRows = extractRowsFromMapping(dataRows, finalMapping, firstStage);
+      await finalizeImport(leadRows, usedAiGuess);
     } catch (e) {
       alert("Gagal import: " + e.message);
     } finally {
@@ -1974,6 +1937,9 @@ export default function Leads({
           }
           industry={
             industry
+          }
+          customFieldLabels={
+            customFieldLabels
           }
           myLevel={
             myLevel
