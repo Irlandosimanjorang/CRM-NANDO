@@ -31,7 +31,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, MessageCircle, Bell,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -703,14 +703,6 @@ export default function App() {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 nexto-status-dot" />
             <span>Semua perubahan tersimpan</span>
           </div>
-          <a
-            href={`https://wa.me/6281273059284?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}`}
-            target="_blank"
-            rel="noreferrer"
-            className="mb-1.5 flex w-full items-center gap-2.5 rounded-[14px] border border-emerald-500/[0.15] bg-emerald-500/[0.06] px-3.5 py-2.5 text-[12px] text-emerald-300 hover:bg-emerald-500/[0.12] transition-colors"
-          >
-            <MessageCircle size={14} /> Butuh Bantuan?
-          </a>
           <button
             onClick={() => supabase.auth.signOut()}
             className="w-full px-3.5 py-2.5 rounded-[14px] bg-white/[0.035] border border-white/[0.06] text-[12px] text-slate-400 hover:bg-white/[0.07] hover:text-white flex items-center gap-2.5 transition-colors"

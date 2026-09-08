@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, MessageCircle } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -696,6 +696,19 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
         <button onClick={exportBackup} disabled={exporting} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
           {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export semua data"}
         </button>
+      </div>
+
+      <div className="bg-white border border-emerald-200 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
+        <h3 className="font-semibold text-sm mb-1">Butuh Bantuan?</h3>
+        <p className="text-xs text-slate-500 mb-3">Ada kendala pakai Nexto atau mau tanya-tanya? Chat langsung ke tim support kami.</p>
+        <a
+          href={`https://wa.me/6281273059284?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm border border-emerald-300 text-emerald-700 rounded-xl px-3 py-2 hover:bg-emerald-50"
+        >
+          <MessageCircle size={15} /> Chat via WhatsApp
+        </a>
       </div>
 
       <div className="bg-white border border-rose-200 rounded-2xl shadow-sm p-4">
