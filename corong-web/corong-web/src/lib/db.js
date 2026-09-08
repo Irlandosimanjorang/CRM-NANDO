@@ -438,12 +438,28 @@ export async function upsertLead(lead) {
     deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
     last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
   };
+  let saved;
   if (lead.id) {
     const { data, error } = await supabase.from("leads").update(row).eq("id", lead.id).select().single();
-    if (error) throw error; return data;
+    if (error) throw error; saved = data;
+  } else {
+    const { data, error } = await supabase.from("leads").insert(row).select().single();
+    if (error) throw error; saved = data;
   }
-  const { data, error } = await supabase.from("leads").insert(row).select().single();
-  if (error) throw error; return data;
+
+  // Auto-sync ke Google Calendar - dulu HARUS diinget manual buat buka
+  // Pengaturan terus klik "Sync" tiap kali ada jadwal visit/next action baru
+  // atau berubah (gampang kelupaan - persis kejadian yang bikin RAKA salah
+  // nuduh "sinkronisasi gagal diam-diam" padahal emang belum pernah di-sync
+  // manual). Sekarang otomatis fire-and-forget tiap upsertLead yang nyentuh
+  // visit_date/next_action - gagal (belum connect Calendar, bukan Professional+,
+  // dst) DIABAIKAN diem-diem, fail-open, gak boleh bikin simpen lead-nya gagal
+  // cuma gara-gara sync Calendar-nya bermasalah.
+  if (row.visit_date || row.next_action) {
+    bulkSyncCalendar().catch(() => {});
+  }
+
+  return saved;
 }
 
 export async function deleteLead(id) {
