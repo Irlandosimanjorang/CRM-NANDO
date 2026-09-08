@@ -212,6 +212,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [triggering, setTriggering] = useState(null);
   const [lastSync, setLastSync] = useState(null);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [, forceTick] = useState(0);
   const intervalRef = useRef(null);
 
@@ -342,11 +343,33 @@ export default function AdminDashboard() {
                 <>
                   terakhir dicek <span className="text-slate-200">{timeAgo(security.checked_at)}</span> ·{" "}
                   {securityHealthy ? <span className="text-emerald-400">nihil temuan</span> : <span className="text-amber-400">{security.issue_count} temuan</span>}
-                  {!securityHealthy && security.summary && <div className="mt-1.5 text-slate-400 bg-amber-500/[0.06] border border-amber-500/20 rounded-lg p-2 whitespace-pre-wrap font-sans">{security.summary}</div>}
+                  {!securityHealthy && security.summary && (
+                    <button
+                      onClick={() => setSummaryModalOpen(true)}
+                      className="mt-1.5 w-full text-left text-amber-300 bg-amber-500/[0.06] border border-amber-500/20 hover:bg-amber-500/[0.1] rounded-lg p-2 font-sans transition-colors flex items-center justify-between gap-2"
+                    >
+                      <span className="truncate">Baca laporan lengkap RAKA →</span>
+                    </button>
+                  )}
                 </>
               ) : "belum pernah dicek - klik Panggil buat tes pertama"}
             </div>
             <ChecksDetailPanel checks={security?.checks_detail} />
+            {summaryModalOpen && security?.summary && createPortal(
+              <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSummaryModalOpen(false)}>
+                <div
+                  className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl border border-amber-500/35 bg-[#0d0a05] shadow-[0_0_60px_-15px_rgba(245,158,11,0.5)] p-5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <span className="font-mono text-base font-bold tracking-wide text-white">Laporan RAKA</span>
+                    <button onClick={() => setSummaryModalOpen(false)} className="shrink-0 text-slate-500 hover:text-white"><X size={18} /></button>
+                  </div>
+                  <div className="text-[13px] text-amber-100 font-sans leading-relaxed whitespace-pre-wrap">{security.summary}</div>
+                </div>
+              </div>,
+              document.body
+            )}
           </EmployeeCard>
 
           <EmployeeCard
