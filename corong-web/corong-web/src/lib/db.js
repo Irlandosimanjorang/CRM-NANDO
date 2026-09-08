@@ -907,22 +907,6 @@ export async function getCommunityDisplayName() {
   const s = await getSettings();
   return s.community_display_name || "";
 }
-export async function saveCommunityDisplayName(name) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
-  const { error } = await supabase.from("settings").upsert({ user_id: uid, community_display_name: name, updated_at: new Date().toISOString() });
-  if (error) throw error;
-}
-
-export async function getCommunityProfile() {
-  const s = await getSettings();
-  return { name: s.community_display_name || "", bio: s.community_bio || "" };
-}
-export async function saveCommunityProfile({ name, bio }) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
-  const { error } = await supabase.from("settings").upsert({ user_id: uid, community_display_name: name, community_bio: bio, updated_at: new Date().toISOString() });
-  if (error) throw error;
-}
-
 export async function uploadCommunityImage(file) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const ext = file.name.split(".").pop() || "jpg";

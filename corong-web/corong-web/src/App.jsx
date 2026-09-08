@@ -833,7 +833,7 @@ export default function App() {
               </div>
               <div style={{ display: effectiveTab === "komunitas" ? "block" : "none" }}>
                 <PreviewLock locked={isLocked("komunitas")}>
-                  <Nex dummy={isLocked("komunitas")} />
+                  <Nex dummy={isLocked("komunitas")} settings={settings} />
                 </PreviewLock>
               </div>
               <div style={{ display: effectiveTab === "advisor" ? "block" : "none" }}>

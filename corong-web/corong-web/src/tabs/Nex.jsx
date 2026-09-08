@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, MessageCircle, Trash2, Loader2, Send, ThumbsUp, Share2, Image as ImageIcon, Pencil } from "lucide-react";
+import { X, MessageCircle, Trash2, Loader2, Send, ThumbsUp, Share2, Image as ImageIcon } from "lucide-react";
 import * as db from "../lib/db";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
@@ -22,8 +22,11 @@ function avatarColor(name) {
   for (let i = 0; i < s.length; i++) h = (h + s.charCodeAt(i)) % AVATAR_COLORS.length;
   return AVATAR_COLORS[h];
 }
-function Avatar({ name, size = 38 }) {
+function Avatar({ name, url, size = 38 }) {
   const initial = (name || "?").trim()[0]?.toUpperCase() || "?";
+  if (url) {
+    return <img src={url} alt="" className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />;
+  }
   return (
     <div className={`rounded-full font-bold flex items-center justify-center shrink-0 ${avatarColor(name)}`} style={{ width: size, height: size, fontSize: size * 0.42 }}>
       {initial}
@@ -31,79 +34,29 @@ function Avatar({ name, size = 38 }) {
   );
 }
 
-function ProfileCard({ myName, myBio, postCount, totalLikes, onEdit }) {
+// Profil di Nex IKUTIN profil akun Nexto (nama, foto, jabatan dari Settings/
+// avatar pojok kanan atas) - dulu ada form edit nama+bio TERPISAH khusus Nex
+// doang, ganda-nya bikin bingung + rawan gak sinkron. Sekarang gak ada
+// setup/edit sendiri di sini - kalau mau ganti nama/foto, edit di profil akun
+// (avatar pojok kanan atas), otomatis kepakai juga di Nex.
+function ProfileCard({ myName, myAvatarUrl, myJobTitle, postCount, totalLikes }) {
   return (
     <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center gap-3">
-      <Avatar name={myName} size={44} />
+      <Avatar name={myName} url={myAvatarUrl} size={44} />
       <div className="min-w-0 flex-1">
         <div className="font-bold text-sm text-slate-900 truncate">{myName || "User Nexto"}</div>
-        {myBio ? (
-          <div className="text-[11px] text-slate-500 truncate">{myBio}</div>
+        {myJobTitle ? (
+          <div className="text-[11px] text-slate-500 truncate">{myJobTitle}</div>
         ) : null}
         <div className="text-[11px] text-slate-400 mt-0.5">
           <span className="font-semibold text-slate-600">{postCount}</span> Post · <span className="font-semibold text-slate-600">{totalLikes}</span> Suka
         </div>
       </div>
-      <button onClick={onEdit} className="text-xs border border-slate-300 rounded-xl px-2.5 py-1.5 hover:bg-slate-50 font-medium flex items-center gap-1 shrink-0">
-        <Pencil size={11} /> Edit
-      </button>
     </div>
   );
 }
 
-function ProfileEditModal({ initialName, initialBio, onClose, onSaved }) {
-  const [name, setName] = useState(initialName);
-  const [bio, setBio] = useState(initialBio);
-  const [busy, setBusy] = useState(false);
-
-  const save = async () => {
-    if (!name.trim()) { alert("Nama gak boleh kosong."); return; }
-    setBusy(true);
-    try {
-      await db.saveCommunityProfile({ name: name.trim(), bio: bio.trim() });
-      onSaved(name.trim(), bio.trim());
-      onClose();
-    } catch (e) { alert("Gagal simpan: " + e.message); }
-    finally { setBusy(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-base">Edit Profil Nex</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
-        </div>
-        <div className="space-y-3">
-          <label className="block">
-            <span className="text-xs font-medium text-slate-500">Nama tampilan</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Misal: Nando"
-              className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-              autoFocus
-            />
-          </label>
-          <label className="block">
-            <span className="text-xs font-medium text-slate-500">Bio / jabatan (opsional)</span>
-            <input
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Misal: Sales di PT Sinar Plastindo"
-              className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
-            />
-          </label>
-        </div>
-        <button onClick={save} disabled={busy} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium">
-          {busy ? "Menyimpan…" : "Simpan"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ComposerModal({ displayName, onClose, onPosted }) {
+function ComposerModal({ displayName, avatarUrl, onClose, onPosted }) {
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -143,7 +96,7 @@ function ComposerModal({ displayName, onClose, onPosted }) {
         </div>
 
         <div className="flex items-center gap-2.5 mb-3">
-          <Avatar name={displayName} />
+          <Avatar name={displayName} url={avatarUrl} />
           <div className="font-semibold text-sm text-slate-800">{displayName}</div>
         </div>
 
@@ -301,7 +254,7 @@ function PostCard({ post, myId, onDeleted }) {
             ))
           )}
           <div className="flex items-center gap-2 pt-1">
-            <Avatar name={post.__myName} size={28} />
+            <Avatar name={post.__myName} url={post.__myAvatarUrl} size={28} />
             <input
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
@@ -322,15 +275,18 @@ const DUMMY_POSTS = [
   { id: "np-2", user_id: "dummy", author_name: "Dewi - Sales Bandung", body: "Baru closing 8 ton bulan ini ke pabrik kabel di Soreang! Semangat terus tim 🔥", image_urls: [], created_at: new Date(Date.now() - 86400000).toISOString(), replyCount: 7, likeCount: 12, likedByMe: true, share_count: 2 },
 ];
 
-export default function Nex({ dummy }) {
+export default function Nex({ dummy, settings }) {
   const [posts, setPosts] = useState(null);
   // BUG FIX (6 Sep 2026): otomatis kebuka lagi abis app di-reload paksa.
   const [showComposer, setShowComposer] = useState(() => !!getOpenModal("nexpost"));
   const [myId, setMyId] = useState(null);
-  const [myName, setMyName] = useState("");
-  const [myBio, setMyBio] = useState("");
-  const [showProfileEdit, setShowProfileEdit] = useState(false);
-  const [profileLoaded, setProfileLoaded] = useState(false);
+
+  // Profil Nex IKUTIN profil akun (nama/foto/jabatan dari Settings, prop
+  // `settings` yang sama dipake ProfileAvatar di topbar) - gak ada lagi
+  // form setup/edit nama+bio TERPISAH khusus di sini.
+  const myName = dummy ? "Anda" : (settings?.community_display_name || "");
+  const myAvatarUrl = dummy ? null : (settings?.avatar_url || null);
+  const myJobTitle = dummy ? "Sales B2B" : (settings?.job_title || "");
 
   const load = async () => {
     if (dummy) { setPosts(DUMMY_POSTS); return; }
@@ -339,16 +295,8 @@ export default function Nex({ dummy }) {
   };
 
   useEffect(() => {
-    if (dummy) {
-      setMyId("dummy-me"); setMyName("Anda"); setMyBio("Sales B2B"); setProfileLoaded(true);
-      load();
-      return;
-    }
+    if (dummy) { setMyId("dummy-me"); load(); return; }
     db.getCurrentUserId().then(setMyId);
-    db.getCommunityProfile().then((p) => {
-      setMyName(p.name); setMyBio(p.bio); setProfileLoaded(true);
-      if (!p.name) setShowProfileEdit(true);
-    });
     load();
   }, [dummy]);
 
@@ -358,17 +306,12 @@ export default function Nex({ dummy }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-violet-700">Nex</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Share info sesama sales.</p>
-        </div>
-        {profileLoaded && (
-          <button onClick={() => setShowProfileEdit(true)} className="shrink-0" title={`${myName || "User Nexto"} · ${postCount} Post · ${totalLikes} Suka`}>
-            <Avatar name={myName || "?"} size={40} />
-          </button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-violet-700">Nex</h1>
+        <p className="text-xs text-slate-400 mt-0.5">Share info sesama sales.</p>
       </div>
+
+      <ProfileCard myName={myName} myAvatarUrl={myAvatarUrl} myJobTitle={myJobTitle} postCount={postCount} totalLikes={totalLikes} />
 
       <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => { setShowComposer(true); saveOpenModal("nexpost", {}); }}>
         <div className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm text-slate-400">Apa yang mau Anda share, {myName ? myName.split(" ")[0] : ""}?</div>
@@ -382,21 +325,12 @@ export default function Nex({ dummy }) {
       ) : (
         <div className="space-y-3">
           {posts.map((p) => (
-            <PostCard key={p.id} post={{ ...p, __myName: myName }} myId={myId} onDeleted={(id) => setPosts((prev) => prev.filter((x) => x.id !== id))} />
+            <PostCard key={p.id} post={{ ...p, __myName: myName, __myAvatarUrl: myAvatarUrl }} myId={myId} onDeleted={(id) => setPosts((prev) => prev.filter((x) => x.id !== id))} />
           ))}
         </div>
       )}
 
-      {showComposer && <ComposerModal displayName={myName || "User Nexto"} onClose={() => { setShowComposer(false); clearOpenModal("nexpost"); }} onPosted={load} />}
-
-      {showProfileEdit && (
-        <ProfileEditModal
-          initialName={myName}
-          initialBio={myBio}
-          onClose={() => setShowProfileEdit(false)}
-          onSaved={(n, b) => { setMyName(n); setMyBio(b); }}
-        />
-      )}
+      {showComposer && <ComposerModal displayName={myName || "User Nexto"} avatarUrl={myAvatarUrl} onClose={() => { setShowComposer(false); clearOpenModal("nexpost"); }} onPosted={load} />}
     </div>
   );
 }
