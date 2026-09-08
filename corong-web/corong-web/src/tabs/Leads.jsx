@@ -99,39 +99,56 @@ const val = (row, keys) => {
   return "";
 };
 
+// Kata kunci kolom nama - dipisah "kuat" (spesifik, aman dicocokin biasa) vs
+// "lemah" (kata tunggal umum kayak "customer"/"nama"). BUG DITEMUKAN (8 Sep
+// 2026): kata kunci lemah "customer" nyantol ke header "Customer Products"
+// (daftar PRODUK yang dibeli customer, BUKAN nama customer-nya!) di sebuah
+// Excel laporan visit sales - hasilnya lead ke-import dengan "nama" = "PVC
+// pipe" dst, bukan nama company aslinya. Sekarang header yang JUGA
+// mengandung kata "kualifikasi atribut" (product/type/id/status/dst) ditolak
+// KHUSUS buat kata kunci lemah - header "Company"/"Nama Perusahaan" polos
+// tetep aman karena dicek duluan lewat NAME_STRONG_KEYS.
+const NAME_STRONG_KEYS = [
+  "公司名称", "company name", "customer name", "client name", "full name",
+  "nama perusahaan", "nama customer", "nama klien", "nama nasabah", "nama pembeli",
+  "company", "perusahaan",
+];
+const NAME_WEAK_KEYS = ["customer", "client", "klien", "nasabah", "pembeli", "nama", "name"];
+const NAME_QUALIFIER_BLACKLIST = [
+  "product", "produk", "type", "tipe", "category", "kategori", "id", "status",
+  "date", "tanggal", "note", "catatan", "keterangan", "email", "phone",
+  "telepon", "hp", "wa", "website", "web", "city", "kota", "province",
+  "provinsi", "price", "harga", "qty", "quantity", "jumlah", "total",
+  "supplier", "usage", "line", "position", "jabatan",
+];
+
+function findNameValue(row) {
+  const lk = Object.keys(row);
+
+  for (const k of NAME_STRONG_KEYS) {
+    const hit = lk.find((h) => h.toLowerCase().includes(k.toLowerCase()));
+    if (hit && row[hit] != null && String(row[hit]).trim()) return String(row[hit]).trim();
+  }
+
+  for (const k of NAME_WEAK_KEYS) {
+    const hit = lk.find((h) => {
+      const hl = h.toLowerCase();
+      if (!hl.includes(k.toLowerCase())) return false;
+      return !NAME_QUALIFIER_BLACKLIST.some((bad) => hl.includes(bad));
+    });
+    if (hit && row[hit] != null && String(row[hit]).trim()) return String(row[hit]).trim();
+  }
+
+  return "";
+}
+
 
 function mapRow(
   row,
   category,
   firstStageKey
 ) {
-  // Kata kunci kolom "nama" DILUASIN (8 Sep 2026) - sebelumnya cuma nyocokin
-  // "company name"/"nama perusahaan"/"company"/"nama", jadi Excel dari
-  // industri non-PVC (Property, Otomotif, Asuransi, dst) yang leads-nya
-  // PERORANGAN (header cuma "Name"/"Customer"/"Client"/"Nasabah", tanpa kata
-  // "company"/"nama") gagal total ke-import - baik lewat mapper ini MAUPUN
-  // fallback AI di bawah (yang promptnya jadi ikut diperbaiki biar gak
-  // hardcode "perusahaan" doang, lihat db.smartImportMap).
-  const name = val(row, [
-    "公司名称",
-    "company name",
-    "customer name",
-    "client name",
-    "full name",
-    "nama perusahaan",
-    "nama customer",
-    "nama klien",
-    "nama nasabah",
-    "nama pembeli",
-    "company",
-    "customer",
-    "client",
-    "klien",
-    "nasabah",
-    "pembeli",
-    "nama",
-    "name",
-  ]);
+  const name = findNameValue(row);
 
   if (!name) return null;
 
