@@ -25,7 +25,7 @@ const ICONS = {
 // Ditampilin SEKALI doang ke org yang belum pernah milih industri (org.industry
 // masih null) DAN belum punya pipeline sama sekali. Pilihan ini nentuin pipeline
 // + label field bawaan yang di-seed - bisa diedit lagi belakangan lewat Settings.
-export default function IndustryPicker({ onSelect, busy }) {
+export default function IndustryPicker({ onSelect, busy, onLogout }) {
   const [picked, setPicked] = useState(null);
 
   const confirm = () => {
@@ -34,7 +34,16 @@ export default function IndustryPicker({ onSelect, busy }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b101a] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0b101a] flex items-center justify-center p-4 relative">
+      {onLogout && (
+        <button
+          onClick={onLogout}
+          disabled={busy}
+          className="absolute top-4 right-4 text-xs text-slate-500 hover:text-slate-300 disabled:opacity-40 transition-colors"
+        >
+          Keluar
+        </button>
+      )}
       <div className="w-full max-w-2xl">
         <div className="flex flex-col items-center text-center mb-8">
           <Badge size={48} />

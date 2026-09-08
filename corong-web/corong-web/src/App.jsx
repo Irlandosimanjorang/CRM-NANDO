@@ -443,7 +443,7 @@ export default function App() {
   // Org baru yang belum pernah milih industri bisnisnya - tampilin picker dulu
   // sebelum masuk ke dashboard. Org lama (industry udah keisi lewat SQL backfill)
   // gak bakal pernah kena kondisi ini.
-  if (org && !org.industry) return <IndustryPicker onSelect={handlePickIndustry} busy={pickingIndustry} />;
+  if (org && !org.industry) return <IndustryPicker onSelect={handlePickIndustry} busy={pickingIndustry} onLogout={() => supabase.auth.signOut()} />;
 
   // Dashboard Karyawan AI - FULLSCREEN TAKEOVER, terpisah dari layout biasa
   // (sidebar & topbar ilang sementara) biar berasa "masuk command center
