@@ -8,25 +8,38 @@ import Auth from "./Auth";
 import EngineHeaderMini from "./components/EngineHeaderMini";
 import { todayISO } from "./lib/helpers";
 import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
+// Dashboard/Leads/Settings tetep IMPORT STATIS - hampir semua user langsung
+// buka salah satu dari ini begitu login, jadi lazy-load-nya cuma nambah
+// flicker Suspense tanpa beneran ngirit apa-apa (chunk-nya bakal langsung
+// diambil ulang beberapa detik kemudian).
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
-import GenerateLeads from "./tabs/GenerateLeads";
-import Deal from "./tabs/Deal";
-import VisitFollowup from "./tabs/VisitFollowup";
-import Kompetitor from "./tabs/Kompetitor";
-import Nex from "./tabs/Nex";
-import Advisor from "./tabs/Advisor";
 import SettingsTab from "./tabs/Settings";
-// Lazy load - AdminDashboard cuma dirender buat platform admin (lihat
-// gerbang `settings?.is_platform_admin && tab === "adminops"` di bawah),
-// tapi dulu ke-bundle statis buat SEMUA user termasuk yang bukan admin,
-// bawa serta "recharts" (lumayan berat) yang gak kepake sama sekali kalau
-// bukan admin. Dynamic import biar chunk-nya baru diambil kalau beneran
-// dibuka.
+// BUNDLE SIZE FIX (9 Sep 2026): sebelumnya SEMUA tab (termasuk yang jarang
+// dibuka kayak Kompetitor/Nex/IndustryDemo) ke-bundle statis ke chunk utama -
+// padahal arsitektur "SEMUA TAB SELALU KE-MOUNT" (liat komentar di bawah)
+// bikin lazy-load doang gak cukup: React.lazy tetep bakal langsung minta
+// SEMUA chunk-nya begitu app kebuka, soalnya semua tab langsung dirender
+// (cuma disembunyiin CSS), bukan nunggu diklik. Makanya sekarang DIGABUNG 2
+// teknik: (1) React.lazy - chunk-nya kepisah dari bundle utama, DAN (2)
+// visitedTabs (liat state-nya di bawah) - tab yang BELUM PERNAH dibuka sama
+// sekali gak dirender dulu (jadi lazy-nya beneran nunda fetch chunk-nya),
+// begitu udah pernah dibuka sekali baru dia nempel permanen (biar proses
+// async yang lagi jalan gak keputus pas pindah tab, sama kayak sebelumnya).
+const GenerateLeads = lazy(() => import("./tabs/GenerateLeads"));
+const Deal = lazy(() => import("./tabs/Deal"));
+const VisitFollowup = lazy(() => import("./tabs/VisitFollowup"));
+const Kompetitor = lazy(() => import("./tabs/Kompetitor"));
+const Nex = lazy(() => import("./tabs/Nex"));
+const Advisor = lazy(() => import("./tabs/Advisor"));
+const IndustryDemo = lazy(() => import("./tabs/IndustryDemo"));
+// AdminDashboard cuma dirender buat platform admin (lihat gerbang
+// `settings?.is_platform_admin && tab === "adminops"` di bawah), tapi dulu
+// ke-bundle statis buat SEMUA user termasuk yang bukan admin, bawa serta
+// "recharts" (lumayan berat) yang gak kepake sama sekali kalau bukan admin.
 const AdminDashboard = lazy(() => import("./tabs/AdminDashboard"));
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
-import IndustryDemo from "./tabs/IndustryDemo";
 import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
@@ -171,6 +184,16 @@ export default function App() {
     } catch {}
     return "dashboard";
   });
+  // Tab mana aja yang UDAH PERNAH dibuka minimal sekali - dipake bareng
+  // React.lazy() di atas biar tab yang belum pernah disentuh beneran gak
+  // nge-fetch chunk-nya sama sekali (bukan cuma disembunyiin CSS kayak yang
+  // udah pernah dibuka). Sekali masuk sini, tab-nya nempel PERMANEN (gak
+  // pernah dihapus lagi) - itu yang jaga proses async gak keputus pas
+  // pindah tab, sama kayak alasan "SEMUA TAB SELALU KE-MOUNT" sebelumnya.
+  const [visitedTabs, setVisitedTabs] = useState(() => new Set([tab]));
+  useEffect(() => {
+    setVisitedTabs((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
+  }, [tab]);
   const [stages, setStages] = useState([]);
   const [settings, setSettings] = useState({ sales_names: [] });
   const [leads, setLeads] = useState([]);
@@ -811,39 +834,55 @@ export default function App() {
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
                 <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} />
               </div>
-              <div style={{ display: effectiveTab === "generateleads" ? "block" : "none" }}>
-                <PreviewLock locked={isLocked("generateleads")}>
-                  <GenerateLeads stages={stageList} onChanged={reload} onNotify={pushToast} />
-                </PreviewLock>
-              </div>
-              <div style={{ display: effectiveTab === "deal" ? "block" : "none" }}>
-                <PreviewLock locked={isLocked("deal")}>
-                  <Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} />
-                </PreviewLock>
-              </div>
-              <div style={{ display: effectiveTab === "visitfollowup" ? "block" : "none" }}>
-                <PreviewLock locked={isLocked("visitfollowup")}>
-                  <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} />
-                </PreviewLock>
-              </div>
-              <div style={{ display: effectiveTab === "kompetitor" ? "block" : "none" }}>
-                <PreviewLock locked={isLocked("kompetitor")}>
-                  <Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} />
-                </PreviewLock>
-              </div>
-              <div style={{ display: effectiveTab === "komunitas" ? "block" : "none" }}>
-                <PreviewLock locked={isLocked("komunitas")}>
-                  <Nex dummy={isLocked("komunitas")} settings={settings} />
-                </PreviewLock>
-              </div>
-              <div style={{ display: effectiveTab === "advisor" ? "block" : "none" }}>
-                <PreviewLock locked={isLocked("advisor")}>
-                  <Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} />
-                </PreviewLock>
-              </div>
-              <div style={{ display: effectiveTab === "industridemo" ? "block" : "none" }}>
-                <IndustryDemo />
-              </div>
+              <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
+                {visitedTabs.has("generateleads") && (
+                  <div style={{ display: effectiveTab === "generateleads" ? "block" : "none" }}>
+                    <PreviewLock locked={isLocked("generateleads")}>
+                      <GenerateLeads stages={stageList} onChanged={reload} onNotify={pushToast} />
+                    </PreviewLock>
+                  </div>
+                )}
+                {visitedTabs.has("deal") && (
+                  <div style={{ display: effectiveTab === "deal" ? "block" : "none" }}>
+                    <PreviewLock locked={isLocked("deal")}>
+                      <Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} onEdit={setEditLead} onChanged={reload} />
+                    </PreviewLock>
+                  </div>
+                )}
+                {visitedTabs.has("visitfollowup") && (
+                  <div style={{ display: effectiveTab === "visitfollowup" ? "block" : "none" }}>
+                    <PreviewLock locked={isLocked("visitfollowup")}>
+                      <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} />
+                    </PreviewLock>
+                  </div>
+                )}
+                {visitedTabs.has("kompetitor") && (
+                  <div style={{ display: effectiveTab === "kompetitor" ? "block" : "none" }}>
+                    <PreviewLock locked={isLocked("kompetitor")}>
+                      <Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} />
+                    </PreviewLock>
+                  </div>
+                )}
+                {visitedTabs.has("komunitas") && (
+                  <div style={{ display: effectiveTab === "komunitas" ? "block" : "none" }}>
+                    <PreviewLock locked={isLocked("komunitas")}>
+                      <Nex dummy={isLocked("komunitas")} settings={settings} />
+                    </PreviewLock>
+                  </div>
+                )}
+                {visitedTabs.has("advisor") && (
+                  <div style={{ display: effectiveTab === "advisor" ? "block" : "none" }}>
+                    <PreviewLock locked={isLocked("advisor")}>
+                      <Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} />
+                    </PreviewLock>
+                  </div>
+                )}
+                {visitedTabs.has("industridemo") && (
+                  <div style={{ display: effectiveTab === "industridemo" ? "block" : "none" }}>
+                    <IndustryDemo />
+                  </div>
+                )}
+              </Suspense>
               <div style={{ display: effectiveTab === "settings" ? "block" : "none" }}>
                 <PreviewLock locked={isLocked("settings")}>
                   <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} mayarLink={MAYAR_PAYMENT_LINK} userEmail={session?.user?.email} />
