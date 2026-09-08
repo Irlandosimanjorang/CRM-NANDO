@@ -476,17 +476,36 @@ export async function saveLeadLocation(id, latitude, longitude) {
 
 // Ubah lat/lng jadi alamat yang bisa dibaca manusia (pakai Nominatim OSM,
 // gratis tanpa API key) - biar popup konfirmasi lokasi nunjukin alamat
-// asli, bukan cuma teks generik "GPS Anda saat ini". Fail-open: kalau
-// gagal (network/rate-limit), balikin null biar caller fallback ke koordinat.
+// asli, bukan cuma teks generik "GPS Anda saat ini". Susun manual dari
+// addressdetails (bukan pake display_name mentah) biar nama jalan/gang
+// ditaro paling depan kalo datanya ada di OSM - kalo OSM emang belum
+// punya data jalan/gang buat titik itu (umum di area yang belum lengkap
+// dipetain), gak ada API gratis manapun yang bisa "ngarang" nama jalannya,
+// jadi fallback ke bagian paling detail yang tersedia (dusun/RT-RW/desa).
+// Fail-open: kalau gagal (network/rate-limit), balikin null biar caller
+// fallback ke koordinat mentah.
 export async function reverseGeocode(lat, lng) {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=0`,
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
       { headers: { Accept: "application/json" } }
     );
     if (!res.ok) return null;
     const data = await res.json();
-    return data?.display_name || null;
+    const a = data?.address;
+    if (!a) return data?.display_name || null;
+    const jalan = [a.road, a.house_number].filter(Boolean).join(" No. ");
+    const parts = [
+      jalan,
+      a.hamlet, // dusun/gang kecil, kalo ke-mapping di OSM
+      a.neighbourhood || a.suburb,
+      a.village || a.town,
+      a.city_district,
+      a.city || a.county,
+    ].filter(Boolean);
+    // Buang duplikat berurutan (misal suburb & village kebetulan sama nama)
+    const dedup = parts.filter((p, i) => p !== parts[i - 1]);
+    return dedup.length ? dedup.join(", ") : data?.display_name || null;
   } catch (_) {
     return null;
   }

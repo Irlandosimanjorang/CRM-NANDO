@@ -24,7 +24,8 @@ const CHECKIN_RADIUS_M = 100;
 // teks generik "GPS Anda saat ini") - baru abis itu tombol konfirmasi muncul.
 function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
   const { mode, lead, distance, scanning, address, coords } = confirmData;
-  const locationLabel = address || (coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "");
+  const coordLabel = coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "";
+  const locationLabel = address || coordLabel;
   return (
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={scanning ? undefined : onCancel}>
       <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
@@ -44,13 +45,14 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
           <>
             {mode === "checkin" ? (
               <p className="text-sm text-slate-600 mt-2">
-                Anda kedeteksi di <b>{locationLabel}</b>, sekitar <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi Anda beneran ada di lokasi ini sekarang, baru lanjut lampirin foto.
+                Anda kedeteksi di <b>{locationLabel}</b>{address && <span className="text-slate-400"> (koordinat: {coordLabel})</span>}, sekitar <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi Anda beneran ada di lokasi ini sekarang, baru lanjut lampirin foto.
               </p>
             ) : (
               <p className="text-sm text-slate-600 mt-2">
-                Nexto bakal nyimpen alamat berikut sebagai titik lokasi <b>"{lead.name}"</b> buat verifikasi kunjungan berikutnya:
+                Nexto bakal nyimpen titik berikut sebagai lokasi <b>"{lead.name}"</b> buat verifikasi kunjungan berikutnya:
                 <br /><b>{locationLabel}</b>
-                <br />Pastikan Anda beneran lagi di lokasi customer ini sebelum lanjut.
+                {address && <span className="text-slate-400 text-xs block mt-0.5">Koordinat presisi: {coordLabel}</span>}
+                <br />Kalau alamat di atas belum sampe nama jalan/gang (data peta di area ini emang belum lengkap), gapapa - titik GPS presisinya tetep kesimpen buat verifikasi kunjungan berikutnya. Pastikan Anda beneran lagi di lokasi customer ini sebelum lanjut.
               </p>
             )}
             <div className="flex gap-2 mt-4">
