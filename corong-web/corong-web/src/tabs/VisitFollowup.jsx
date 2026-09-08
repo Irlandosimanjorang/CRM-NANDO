@@ -448,12 +448,19 @@ function CheckinHistory({ isEnterprise }) {
       ) : (
         <div className="space-y-2">
           {items.map((ci) => (
-            <div key={ci.id} className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
+            <div key={ci.id} className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3 flex items-center gap-3">
+              {ci.photo_url ? (
+                <img src={ci.photo_url} alt="" className="w-11 h-11 rounded-2xl object-cover shrink-0 border border-slate-200" />
+              ) : (
+                <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-300"><Camera size={16} /></div>
+              )}
+              <div className="min-w-0 flex-1">
                 <div className="font-medium text-sm truncate">{ci.lead_name}</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">{new Date(ci.checked_in_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+                  {ci.rep_name ? <span className="text-slate-500 font-medium">{ci.rep_name}</span> : "Sales rep"} · {new Date(ci.checked_in_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </div>
               </div>
-              <a href={`https://maps.google.com/?q=${ci.latitude},${ci.longitude}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-orange-600 hover:underline flex items-center gap-1"><MapPin size={12} /> Lihat peta</a>
+              <a href={`https://maps.google.com/?q=${ci.latitude},${ci.longitude}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-orange-600 hover:underline flex items-center gap-1"><MapPin size={12} /> Peta</a>
             </div>
           ))}
         </div>

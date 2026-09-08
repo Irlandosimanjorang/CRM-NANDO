@@ -31,7 +31,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, MessageCircle,
+  CheckCircle2, XCircle, Info as InfoIcon, MessageCircle, Bell,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -733,6 +733,7 @@ export default function App() {
               <div className="font-extrabold tracking-[-0.03em] text-[14px]">NE<span className="text-orange-500">X</span>TO</div>
               <div className="text-[9px] font-medium text-slate-400 truncate">{NAV.find((n) => n.key === effectiveTab)?.label}</div>
             </div>
+            <NotificationBell org={org} onNavigate={setTab} />
             <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={34} />
           </div>
         </header>
@@ -757,6 +758,7 @@ export default function App() {
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Data tersinkron
             </div>
+            <NotificationBell org={org} onNavigate={setTab} />
           </div>
         </header>
 
@@ -1088,6 +1090,107 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
     <div className={`relative ${className}`}>
       <button ref={btnRef} onClick={toggleOpen} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
         {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
+      </button>
+      {open && createPortal(card, document.body)}
+    </div>
+  );
+}
+
+// Notif in-app (bell) - sumbernya sekarang cuma GPS check-in (owner/manager
+// dapet notif pas sales rep check-in ke lokasi customer, lihat notify-checkin
+// edge function + db.checkIn()), makanya cuma dirender buat org Enterprise -
+// gak ada gunanya nampilin lonceng kosong buat tier yang gak punya fitur ini.
+// Polling tiap 45 detik (bukan realtime) - simpel, cukup buat kebutuhan
+// "keliatan gak lama-lama amat abis kejadian", gak perlu websocket buat ini.
+function NotificationBell({ org, onNavigate }) {
+  const isEnterprise = org?.plan === "enterprise";
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
+  const CARD_WIDTH = 340;
+
+  useEffect(() => {
+    if (!isEnterprise) return;
+    const refresh = () => db.getUnreadNotificationCount().then(setUnread).catch(() => {});
+    refresh();
+    const id = setInterval(refresh, 45000);
+    return () => clearInterval(id);
+  }, [isEnterprise]);
+
+  if (!isEnterprise) return null;
+
+  const toggleOpen = () => {
+    if (!open) {
+      db.getMyNotifications(20).then(setItems).catch(() => {});
+      if (btnRef.current) {
+        const rect = btnRef.current.getBoundingClientRect();
+        const rawLeft = rect.right - CARD_WIDTH;
+        const clampedLeft = Math.max(12, Math.min(rawLeft, window.innerWidth - CARD_WIDTH - 12));
+        setPos({ top: rect.bottom + 10, left: clampedLeft });
+      }
+    }
+    setOpen((v) => !v);
+  };
+
+  const openItem = (n) => {
+    if (!n.read_at) {
+      db.markNotificationRead(n.id).catch(() => {});
+      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
+      setUnread((u) => Math.max(0, u - 1));
+    }
+    setOpen(false);
+    if (n.link_tab) onNavigate?.(n.link_tab);
+  };
+
+  const markAll = () => {
+    db.markAllNotificationsRead().catch(() => {});
+    setItems((prev) => prev.map((x) => ({ ...x, read_at: x.read_at || new Date().toISOString() })));
+    setUnread(0);
+  };
+
+  const card = (
+    <>
+      <div className="fixed inset-0 z-[999]" onClick={() => setOpen(false)} />
+      <div
+        className="fixed w-[340px] max-w-[calc(100vw-1.5rem)] bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-[1000] overflow-hidden border border-slate-100 max-h-[70vh] flex flex-col"
+        style={{ top: pos.top, left: pos.left }}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+          <span className="font-bold text-sm">Notifikasi</span>
+          {items.some((n) => !n.read_at) && (
+            <button onClick={markAll} className="text-[11px] text-orange-600 hover:underline font-medium">Tandai semua dibaca</button>
+          )}
+        </div>
+        <div className="overflow-y-auto flex-1">
+          {items.length === 0 ? (
+            <div className="text-center text-xs text-slate-400 py-10">Belum ada notifikasi.</div>
+          ) : (
+            items.map((n) => (
+              <button key={n.id} onClick={() => openItem(n)} className={`w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 flex gap-3 ${!n.read_at ? "bg-orange-50/60" : ""}`}>
+                {n.photo_url && <img src={n.photo_url} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0 border border-slate-200" />}
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold text-slate-800 line-clamp-2">{n.title}</div>
+                  {n.body && <div className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{n.body}</div>}
+                  <div className="text-[10px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                </div>
+                {!n.read_at && <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0 mt-1.5" />}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="relative">
+      <button ref={btnRef} onClick={toggleOpen} className="relative shrink-0 w-9 h-9 rounded-full border border-slate-200/80 bg-white/75 flex items-center justify-center text-slate-500 hover:text-orange-600 hover:border-orange-200 shadow-sm transition-colors">
+        <Bell size={16} />
+        {unread > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">{unread > 9 ? "9+" : unread}</span>
+        )}
       </button>
       {open && createPortal(card, document.body)}
     </div>

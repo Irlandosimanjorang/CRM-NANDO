@@ -583,6 +583,15 @@ export async function checkIn({ lead_id, lead_name, latitude, longitude, distanc
     text: `Check-in GPS terverifikasi${jarak ? " (" + jarak + ")" : ""}${photo_url ? " + foto bukti" : ""}.`,
   });
   await supabase.from("leads").update({ last_contact: today }).eq("id", lead_id);
+
+  // Notif in-app ke owner/manager - FIRE AND FORGET. Ini fitur tambahan
+  // (bukan inti check-in), jadi kalau gagal (network dst) JANGAN sampai
+  // bikin check-in si sales rep keliatan error - .catch aja, gak di-await
+  // dan gak throw ke pemanggil.
+  supabase.functions.invoke("notify-checkin", { body: { checkin_id: data.id } }).catch((e) => {
+    console.error("notify-checkin gagal (fail-open):", e);
+  });
+
   return data;
 }
 
@@ -597,6 +606,10 @@ export async function getTodayCheckedInLeadIds() {
   return (data || []).map((r) => r.lead_id);
 }
 
+// Dulu cuma nunjukkin lead_name + waktu - buat tim isinya lebih dari 1 orang
+// (owner/manager review kunjungan tim), penting keliatan SIAPA yang check-in,
+// gak cuma di lead mana. Narik nama tampilan tiap rep dari settings, sama pola
+// kayak getOrgMembers().
 export async function getCheckins(monthFilter) {
   let q = supabase.from("visit_checkins").select("*").order("checked_in_at", { ascending: false });
   if (monthFilter) {
@@ -607,7 +620,42 @@ export async function getCheckins(monthFilter) {
   }
   const { data, error } = await q;
   if (error) throw error;
+  const rows = data || [];
+  if (rows.length === 0) return rows;
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const { data: settingsRows } = await supabase.from("settings").select("user_id, community_display_name").in("user_id", userIds);
+  const nameByUid = {};
+  for (const s of settingsRows || []) nameByUid[s.user_id] = s.community_display_name;
+  return rows.map((r) => ({ ...r, rep_name: nameByUid[r.user_id] || null }));
+}
+
+// ---- NOTIFIKASI IN-APP (bell) ----
+// Baris-barisnya diinsert dari edge function pake service role (liat
+// notify-checkin) - RLS di sini cuma izinin select/update MILIK SENDIRI.
+export async function getMyNotifications(limit = 30) {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
   return data || [];
+}
+export async function getUnreadNotificationCount() {
+  const { count, error } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .is("read_at", null);
+  if (error) throw error;
+  return count || 0;
+}
+export async function markNotificationRead(id) {
+  const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id).is("read_at", null);
+  if (error) throw error;
+}
+export async function markAllNotificationsRead() {
+  const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).is("read_at", null);
+  if (error) throw error;
 }
 
 // ---- PROGRESS ----
