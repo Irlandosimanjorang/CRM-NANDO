@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
+    <!-- Font landing page (Sora) - cuma dipake di Auth.jsx (landing/login),
+         bukan buat seluruh app - preconnect biar fetch font-nya gak nunggu
+         DNS lookup dulu. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
     <!-- PWA: biar bisa di-install ke HP kayak app native -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0b101a" />
