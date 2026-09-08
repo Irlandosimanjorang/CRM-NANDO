@@ -386,6 +386,12 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
           <>
             <p className="text-xs text-slate-500 mb-3">
               Paket: <b>{isEnterprise ? "Enterprise" : (TIER_LABEL[settings.plan] || "Free")}</b> · {members.length}/{org?.member_limit || 1} anggota
+              {(() => {
+                const expiresAt = isEnterprise ? org?.plan_expires_at : settings.plan_expires_at;
+                if (!expiresAt) return null;
+                const tanggal = new Date(expiresAt).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", year: "numeric" });
+                return <> · Berlaku sampai <b>{tanggal}</b></>;
+              })()}
             </p>
             <div className="space-y-1.5 mb-3">
               {members.map((m) => (
