@@ -71,9 +71,25 @@ function TrendSparkline({ data, dataKey, color }) {
   );
 }
 
+// 4 bracket sudut kayak reticle HUD sci-fi (Jarvis-style) - murni dekoratif,
+// dikasih warna sesuai status card-nya biar kerasa "di-scan" bukan cuma kotak biasa.
+function HudCorners({ color }) {
+  const base = "absolute w-3 h-3 border-white/0";
+  const style = { borderColor: color };
+  return (
+    <>
+      <span className={`${base} top-2 left-2 border-t-2 border-l-2 rounded-tl-[6px]`} style={style} />
+      <span className={`${base} top-2 right-2 border-t-2 border-r-2 rounded-tr-[6px]`} style={style} />
+      <span className={`${base} bottom-2 left-2 border-b-2 border-l-2 rounded-bl-[6px]`} style={style} />
+      <span className={`${base} bottom-2 right-2 border-b-2 border-r-2 rounded-br-[6px]`} style={style} />
+    </>
+  );
+}
+
 function EmployeeCard({ icon: Icon, title, subtitle, accentColor, glowClass, gaugeValue, trend, trendKey, children, onTrigger, triggering, triggerKey, noTrigger, noTriggerNote }) {
   return (
     <div className={`relative rounded-[22px] border border-white/[0.07] bg-white/[0.02] p-4 overflow-hidden ${glowClass}`}>
+      <HudCorners color={`${accentColor}55`} />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
@@ -240,6 +256,58 @@ function ChecksDetailPanel({ checks, aiSummary }) {
   );
 }
 
+// "Jarvis Core" - orb HUD berputar di header, gaya visual sama persis kayak
+// "NEXTO AI CORE" di landing page (Auth.jsx, section AiEngineLoopSection) -
+// keyframes-nya SENGAJA dipake ulang nama & bentuknya biar konsisten (App ini
+// gak share <style> global sama Auth.jsx, jadi didefinisiin lokal di sini).
+// Warnanya ngikutin status RAKA: emerald kalo semua sistem normal, amber
+// kalo ada temuan - biar orb-nya sendiri jadi indikator kesehatan platform,
+// bukan cuma dekorasi doang.
+function JarvisCore({ ok, gaugeValue }) {
+  const glow = ok ? "52,211,153" : "245,158,11"; // emerald / amber, RGB
+  const dotColor = ok ? "#34d399" : "#f59e0b";
+  return (
+    <div className="relative shrink-0 flex items-center justify-center" style={{ width: 96, height: 96 }}>
+      <style>{`
+        @keyframes jarvis-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes jarvis-spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        @keyframes jarvis-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.04); }
+        }
+        @keyframes jarvis-dot { 0%, 100% { opacity: .3; transform: scale(.7); } 50% { opacity: 1; transform: scale(1); } }
+        @media (prefers-reduced-motion: reduce) { .jarvis-motion, .jarvis-motion * { animation: none !important; } }
+      `}</style>
+      <div className="jarvis-motion absolute inset-0 rounded-full border border-dashed" style={{ borderColor: `rgba(${glow},.35)`, animation: "jarvis-spin 14s linear infinite" }} />
+      <div className="jarvis-motion absolute inset-[10px] rounded-full border" style={{ borderColor: `rgba(${glow},.22)`, animation: "jarvis-spin-reverse 9s linear infinite" }} />
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <span
+          key={i}
+          className="jarvis-motion absolute left-1/2 top-1/2 h-1 w-1 rounded-full"
+          style={{
+            background: dotColor,
+            boxShadow: `0 0 8px 2px rgba(${glow},.7)`,
+            transform: `rotate(${i * 60}deg) translateY(-42px)`,
+            animation: `jarvis-dot ${1.6 + (i % 3) * .3}s ease-in-out infinite`,
+            animationDelay: `${i * .12}s`,
+          }}
+        />
+      ))}
+      <div className="absolute h-14 w-14 rounded-full blur-xl" style={{ background: `rgba(${glow},.18)` }} />
+      <div
+        className="jarvis-motion relative flex h-[58px] w-[58px] flex-col items-center justify-center rounded-full border border-white/[0.14]"
+        style={{
+          background: "radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), rgba(16,21,31,.96) 45%, rgba(5,7,12,.99) 100%)",
+          animation: "jarvis-pulse 3s ease-in-out infinite",
+        }}
+      >
+        <span className="font-mono text-[13px] font-bold" style={{ color: dotColor }}>{Math.round(gaugeValue)}</span>
+        <span className="text-[6px] uppercase tracking-[0.14em] text-slate-500">health</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -324,15 +392,18 @@ export default function AdminDashboard() {
 
       <div className="relative">
         {/* HEADER */}
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <StatusOrb ok={allSystemsGo} size={9} />
-              <h1 className="font-mono text-lg font-bold tracking-tight text-white">AI OPS COMMAND CENTER</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-4">
+            <JarvisCore ok={allSystemsGo} gaugeValue={securityGauge} />
+            <div>
+              <div className="flex items-center gap-2">
+                <StatusOrb ok={allSystemsGo} size={9} />
+                <h1 className="font-mono text-lg font-bold tracking-tight text-white">AI OPS COMMAND CENTER</h1>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                {allSystemsGo ? "SEMUA SISTEM NORMAL" : "ADA YANG PERLU DICEK"} · sync terakhir {lastSync ? timeAgo(lastSync.toISOString()) : "…"}
+              </p>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 font-mono">
-              {allSystemsGo ? "SEMUA SISTEM NORMAL" : "ADA YANG PERLU DICEK"} · sync terakhir {lastSync ? timeAgo(lastSync.toISOString()) : "…"}
-            </p>
           </div>
           <button onClick={() => load(false)} className="text-[10px] font-mono uppercase tracking-wide border border-white/10 bg-white/[0.03] text-slate-400 rounded-xl px-3 py-2 hover:bg-white/[0.07] hover:text-white flex items-center gap-1.5 transition-colors">
             <RefreshCw size={11} /> Sync Manual
