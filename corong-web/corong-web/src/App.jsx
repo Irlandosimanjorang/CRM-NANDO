@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
@@ -17,7 +17,13 @@ import Kompetitor from "./tabs/Kompetitor";
 import Nex from "./tabs/Nex";
 import Advisor from "./tabs/Advisor";
 import SettingsTab from "./tabs/Settings";
-import AdminDashboard from "./tabs/AdminDashboard";
+// Lazy load - AdminDashboard cuma dirender buat platform admin (lihat
+// gerbang `settings?.is_platform_admin && tab === "adminops"` di bawah),
+// tapi dulu ke-bundle statis buat SEMUA user termasuk yang bukan admin,
+// bawa serta "recharts" (lumayan berat) yang gak kepake sama sekali kalau
+// bukan admin. Dynamic import biar chunk-nya baru diambil kalau beneran
+// dibuka.
+const AdminDashboard = lazy(() => import("./tabs/AdminDashboard"));
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
 import IndustryDemo from "./tabs/IndustryDemo";
@@ -474,7 +480,9 @@ export default function App() {
               <NextoDarkWordmark width={62} />
             </div>
           </div>
-          <AdminDashboard />
+          <Suspense fallback={<div className="text-sm text-slate-400 py-10 text-center">Memuat…</div>}>
+            <AdminDashboard />
+          </Suspense>
         </div>
       </div>
     );

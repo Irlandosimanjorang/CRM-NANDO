@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import {
   Search,
@@ -927,6 +926,11 @@ export default function Leads({
     setBusy(true);
 
     try {
+      // xlsx dimuat DINAMIS di sini (bukan static import di atas) - library
+      // ini lumayan berat (~500KB+), padahal cuma kepake pas user beneran
+      // klik import. Nunda loadingnya sampai titik ini bikin bundle awal
+      // Nexto lebih ringan buat SEMUA user, termasuk yang gak pernah import.
+      const XLSX = await import("xlsx");
       const buf = new Uint8Array(await file.arrayBuffer());
       const wb = XLSX.read(buf, { type: "array", cellDates: true });
       const firstStage = stages[0]?.key;
