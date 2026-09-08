@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Table2, AlertTriangle, Sparkles } from "lucide-react";
 
 // Layar konfirmasi petaan kolom - SEKARANG SELALU muncul tiap kali import
@@ -103,7 +104,13 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
     onConfirm(mapping, dataStartRow, customEntries);
   };
 
-  return (
+  // Di-render lewat portal langsung ke document.body - BUKAN inline di dalam
+  // tree Leads.jsx. Kalau dirender inline, ancestor tab Leads (yang punya
+  // banyak elemen positioned/sticky) bisa ngekurung posisi "fixed" ini jadi
+  // relatif ke situ doang, bukan ke viewport beneran - bikin modal keliatan
+  // "nempel ke kiri"/kepotong (lihat catatan serupa di App.jsx buat kartu
+  // profil ProfileAvatar - pola yang sama dipake di sini).
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onCancel}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl min-w-0 my-8 p-5" style={{ maxWidth: "min(56rem, calc(100vw - 2rem))" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
@@ -194,6 +201,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { X, CheckCircle2, Copy, StickyNote, Sparkles } from "lucide-react";
 
 // Ringkasan hasil import Excel/CSV - dulu cuma alert() polos "Import selesai:
@@ -10,7 +11,10 @@ import { X, CheckCircle2, Copy, StickyNote, Sparkles } from "lucide-react";
 export default function ImportSummaryModal({ summary, onClose }) {
   const { imported, duplicates, usedAiFallback } = summary;
 
-  return (
+  // Portal ke document.body - biar gak kena bug "kepotong/nempel ke kiri"
+  // kalau dirender inline di dalam tree Leads.jsx (lihat catatan di
+  // ManualColumnMapModal.jsx yang lebih lengkap).
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
@@ -66,6 +70,7 @@ export default function ImportSummaryModal({ summary, onClose }) {
 
         <div className="mt-4"><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 w-full">Tutup</button></div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
