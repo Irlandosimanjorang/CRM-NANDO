@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -101,6 +101,51 @@ function EmployeeCard({ icon: Icon, title, subtitle, accentColor, glowClass, gau
       {trend && (
         <div className="mt-2 pt-2 border-t border-white/[0.05]">
           <TrendSparkline data={trend} dataKey={trendKey} color={accentColor} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Rincian PER-SINYAL yang dicek RAKA (health-check) - dulu Command Center
+// cuma nampilin status gabungan ("nihil temuan" / "N temuan"), gak keliatan
+// SEMUA sinyal apa aja yang dipantau dan kondisi masing-masing satu-satu.
+// Collapsible (default ketutup) biar gak bikin card RAKA jomplang jauh lebih
+// tinggi dibanding 3 card lain di grid yang sama.
+function ChecksDetailPanel({ checks }) {
+  const [open, setOpen] = useState(false);
+  if (!checks || checks.length === 0) return null;
+  const okCount = checks.filter((c) => c.ok).length;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-white/[0.05]">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between text-[10px] font-mono uppercase tracking-wide text-slate-500 hover:text-slate-300 transition-colors"
+      >
+        <span>{okCount}/{checks.length} sinyal aman - lihat rincian tiap fitur</span>
+        <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-2.5 space-y-2">
+          {checks.map((c) => (
+            <div key={c.key} className="flex items-start gap-2 text-[11px]">
+              {c.ok ? (
+                <CheckCircle2 size={13} className="text-emerald-400 shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="font-mono font-semibold text-slate-300">{c.label}</div>
+                <div className="text-slate-500 text-[10px] mt-0.5 font-sans">{c.desc}</div>
+                {!c.ok && (
+                  <div className="text-amber-300/90 text-[10px] mt-1 bg-amber-500/[0.06] border border-amber-500/15 rounded-lg p-1.5 font-sans whitespace-pre-wrap">
+                    {c.detail}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -247,6 +292,7 @@ export default function AdminDashboard() {
                 </>
               ) : "belum pernah dicek - klik Panggil buat tes pertama"}
             </div>
+            <ChecksDetailPanel checks={security?.checks_detail} />
           </EmployeeCard>
 
           <EmployeeCard
