@@ -97,11 +97,13 @@ function NextoWordmark({ width = 108, className = "" }) {
   );
 }
 
-// Redesign (9 Sep 2026): bezel-nya sekarang 3-stop metal + garis highlight
-// tipis di sudut kiri-atas (efek "brushed metal" kena cahaya) - dulu flat
-// 2-stop gradient doang. Mata diganti dari lingkaran polos jadi kapsul lonjong
-// dengan titik highlight kecil di pojok (efek "kaca memantul cahaya") biar
-// kerasa lebih hidup/premium, bukan cuma 2 titik oranye statis.
+// Redesign shape (9 Sep 2026): dulu 2 mata bulat kecil, sekarang 1 visor
+// scanner - garis energi oranye ngelewatin visor gelap + 1 inti terang di
+// tengah, kesannya lebih "AI futuristic" (kayak lensa/sensor tunggal) daripada
+// "robot kartun 2 mata". Pas ngomong, ada cahaya yang nyapu bolak-balik di
+// visornya (efek scanning), bukan cuma pulsing biasa. Bezel-nya sendiri
+// (metal 3-stop + highlight kaca pojok kiri-atas) tetap dipertahanin dari
+// redesign sebelumnya.
 export function NextoRobotHead({ size = 32, className = "", speaking = false }) {
   return (
     <div
@@ -111,15 +113,19 @@ export function NextoRobotHead({ size = 32, className = "", speaking = false }) 
     >
       {speaking && (
         <style>{`
-          @keyframes nexto-talk-eye {
-            0%, 100% { transform: scaleY(0.55); }
-            50% { transform: scaleY(1.1); }
+          @keyframes nexto-scan-sweep {
+            0%, 100% { left: -35%; }
+            50% { left: 100%; }
+          }
+          @keyframes nexto-core-pulse {
+            0%, 100% { transform: scale(0.85); }
+            50% { transform: scale(1.2); }
           }
         `}</style>
       )}
       {/* Bezel - metal 3-stop + highlight tipis di pojok kiri-atas */}
       <div
-        className="absolute rounded-[30%] border"
+        className="absolute rounded-[26%] border"
         style={{
           inset: "8%",
           background: "linear-gradient(150deg, #fafbfc 0%, #dde2e8 42%, #b8c0ca 78%, #98a2ae 100%)",
@@ -128,42 +134,47 @@ export function NextoRobotHead({ size = 32, className = "", speaking = false }) 
         }}
       />
       <div
-        className="absolute rounded-[30%]"
+        className="absolute rounded-[26%]"
         style={{
           inset: "8%",
           background: "radial-gradient(circle at 30% 22%, rgba(255,255,255,.65), transparent 45%)",
         }}
       />
 
-      {/* Visor gelap - sedikit lebih ramping dari sebelumnya */}
+      {/* Visor scanner - 1 garis energi + 1 inti terang di tengah */}
       <div
-        className="absolute flex items-center justify-center gap-[9%] rounded-full"
+        className="absolute flex items-center justify-center overflow-hidden rounded-full"
         style={{
-          width: "56%",
-          height: "27%",
-          background: "linear-gradient(165deg, #232323, #121212)",
-          boxShadow: "inset 0 1px 3px rgba(0,0,0,.45)",
+          width: "62%",
+          height: "24%",
+          background: "linear-gradient(165deg, #232323, #101010)",
+          boxShadow: "inset 0 1px 3px rgba(0,0,0,.5)",
         }}
       >
-        {[0.08, 0].map((delay, i) => (
-          <span
-            key={i}
-            className="relative rounded-[45%]"
+        <div
+          className="absolute inset-y-0 inset-x-0"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(249,115,22,.6) 50%, transparent)" }}
+        />
+        {speaking && (
+          <div
+            className="absolute inset-y-0"
             style={{
-              width: "16%",
-              height: "60%",
-              background: "linear-gradient(160deg, #fdba74, #f97316)",
-              boxShadow: "0 0 5px rgba(249,115,22,.75)",
-              animation: speaking ? "nexto-talk-eye 0.42s ease-in-out infinite" : "none",
-              animationDelay: speaking ? `${delay}s` : "0s",
+              width: "32%",
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent)",
+              animation: "nexto-scan-sweep 1s ease-in-out infinite",
             }}
-          >
-            <span
-              className="absolute rounded-full bg-white/80"
-              style={{ width: "34%", height: "22%", top: "12%", left: "18%" }}
-            />
-          </span>
-        ))}
+          />
+        )}
+        <span
+          className="relative rounded-full"
+          style={{
+            width: "17%",
+            height: "58%",
+            background: "radial-gradient(circle at 35% 30%, #ffffff, #fdba74 42%, #f97316 78%)",
+            boxShadow: "0 0 6px rgba(249,115,22,.85)",
+            animation: speaking ? "nexto-core-pulse 0.42s ease-in-out infinite" : "none",
+          }}
+        />
       </div>
 
       {/* Status online */}
