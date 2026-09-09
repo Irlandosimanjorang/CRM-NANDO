@@ -310,6 +310,21 @@ export async function callAdminTrigger(target) {
   return data;
 }
 
+// Kirim 1 pesan ke widget chat publik landing page (karyawan AI SASA -
+// Customer Support). Dipanggil TANPA login (visitor anonim) - beda dari
+// fungsi lain di file ini yang butuh sesi user, makanya invoke-nya polos
+// tanpa perlu Authorization header khusus (customer-chat verify_jwt: false).
+export async function sendSupportChatMessage(sessionId, message) {
+  const { data, error } = await supabase.functions.invoke("customer-chat", { body: { sessionId, message } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal kirim pesan");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // Approve/reject 1 draft konten NOVA (Marketing & Content) - "approve" bikin
 // function-nya LANGSUNG coba publish ke Instagram (kalau kredensial IG udah
 // di-set), "reject" cuma nandain gak dipake. Satu-satunya titik di mana

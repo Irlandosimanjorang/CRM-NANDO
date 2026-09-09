@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import LegalModal from "./components/LegalModal";
+import SupportChatWidget from "./components/SupportChatWidget";
 import {
   Loader2,
   ArrowRight,
@@ -2614,6 +2615,7 @@ export default function Auth() {
       </footer>
 
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} supportWaNumber={SUPPORT_WA_NUMBER} />}
+      <SupportChatWidget />
     </div>
   );
 }
