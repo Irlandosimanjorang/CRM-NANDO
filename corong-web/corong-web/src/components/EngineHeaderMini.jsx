@@ -1,13 +1,54 @@
 // ============================================================
-// ENGINE HEADER MINI (5 Sep 2026) - versi final setelah beberapa iterasi
-// (ticker horizontal, orbital circle, reactor strip - semua ditolak karena
-// nambah tinggi/kesan "page sendiri"). Ini numpang di ruang KOSONG yang
-// UDAH ADA di header desktop (antara label "Sales Workspace" dan pill
-// "Data tersinkron") - JADI GAK NAMBAH TINGGI SAMA SEKALI. Robot mini +
-// 4 chip statistik (Lead/Follow-up/Visit/Deal), warna sama persis kayak
-// Context/Decision/Action/Memory di landing page - statistik ASLI dari
-// data yang udah dimuat App.jsx, bukan karangan.
+// ENGINE HEADER MINI (5 Sep 2026, redesign 9 Sep 2026) - numpang di
+// ruang KOSONG yang UDAH ADA di header desktop (antara label "Sales
+// Workspace" dan pill "Data tersinkron") - JADI GAK NAMBAH TINGGI
+// SAMA SEKALI. Robot mini + 4 chip statistik (Lead/Follow-up/Visit/
+// Deal), warna sama persis kayak Context/Decision/Action/Memory di
+// landing page - statistik ASLI dari data yang udah dimuat App.jsx,
+// bukan karangan.
+//
+// Angka-nya ngitung naik dari 0 tiap kartu ini nongol (buka tab
+// Dashboard), bukan langsung muncul jadi - biar kerasa "hidup".
 // ============================================================
+
+import { useEffect, useRef, useState } from "react";
+
+function useCountUp(target, delayMs) {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const to = Number(target) || 0;
+    const duration = 700;
+    let start = null;
+
+    const tick = (t) => {
+      if (start === null) start = t;
+      const progress = Math.min(1, (t - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      setValue(Math.round(eased * to));
+      if (progress < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+
+    const startTimer = setTimeout(() => { rafRef.current = requestAnimationFrame(tick); }, delayMs);
+    return () => { clearTimeout(startTimer); if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target, delayMs]);
+
+  return value;
+}
+
+function StatChip({ label, value, color, delayMs, first }) {
+  const animated = useCountUp(value, delayMs);
+  return (
+    <div className={`flex flex-col items-start px-3 leading-[1.05] ${first ? "" : "border-l border-slate-200"}`}>
+      <div className="flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 6px 1px ${color}` }} />
+        <span className="text-sm font-extrabold text-slate-900 tabular-nums">{animated}</span>
+      </div>
+      <span className="mt-0.5 text-[10px] text-slate-400">{label}</span>
+    </div>
+  );
+}
 
 export default function EngineHeaderMini({ stats }) {
   const chips = [
@@ -31,13 +72,7 @@ export default function EngineHeaderMini({ stats }) {
 
       <div className="flex items-center">
         {chips.map((c, i) => (
-          <div key={c.key} className={`flex flex-col items-start px-3 leading-[1.05] ${i > 0 ? "border-l border-slate-200" : ""}`}>
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: c.color, boxShadow: `0 0 6px 1px ${c.color}` }} />
-              <span className="text-sm font-extrabold text-slate-900">{stats?.[c.key] ?? 0}</span>
-            </div>
-            <span className="mt-0.5 text-[8.5px] font-bold uppercase tracking-wide text-slate-400">{c.label}</span>
-          </div>
+          <StatChip key={c.key} label={c.label} value={stats?.[c.key] ?? 0} color={c.color} delayMs={i * 90} first={i === 0} />
         ))}
       </div>
 
