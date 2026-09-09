@@ -2102,20 +2102,24 @@ export default function Auth() {
             </div>
 
             <div className="mt-12 grid gap-4 sm:grid-cols-2">
-              {SECURITY_FEATURES.map((f) => {
+              {SECURITY_FEATURES.map((f, i) => {
                 const Icon = f.icon;
+                // Jumlah item ganjil (5) - kartu terakhir sendirian di baris
+                // paling bawah kalau grid 2 kolom, jadi ke-dorong ke kiri.
+                // Bentangin wrapper-nya 2 kolom terus di-center manual biar
+                // gak nyempil di pojok.
+                const isLastOdd = i === SECURITY_FEATURES.length - 1 && SECURITY_FEATURES.length % 2 === 1;
                 return (
-                  <div
-                    key={f.title}
-                    className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 transition hover:border-orange-200"
-                  >
-                    <div className="absolute right-[-40px] top-[-40px] h-32 w-32 rounded-full bg-orange-100/50 blur-2xl transition group-hover:bg-orange-200/60" />
-                    <div className="relative">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-                        <Icon size={18} />
+                  <div key={f.title} className={isLastOdd ? "sm:col-span-2 sm:flex sm:justify-center" : undefined}>
+                    <div className={`group relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 transition hover:border-orange-200 ${isLastOdd ? "sm:w-[calc(50%-0.5rem)]" : ""}`}>
+                      <div className="absolute right-[-40px] top-[-40px] h-32 w-32 rounded-full bg-orange-100/50 blur-2xl transition group-hover:bg-orange-200/60" />
+                      <div className="relative">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                          <Icon size={18} />
+                        </div>
+                        <div className="mt-4 text-[14px] font-bold tracking-tight text-slate-900">{f.title}</div>
+                        <p className="mt-2 text-[12px] leading-5 text-slate-500">{f.desc}</p>
                       </div>
-                      <div className="mt-4 text-[14px] font-bold tracking-tight text-slate-900">{f.title}</div>
-                      <p className="mt-2 text-[12px] leading-5 text-slate-500">{f.desc}</p>
                     </div>
                   </div>
                 );
