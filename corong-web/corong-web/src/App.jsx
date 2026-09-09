@@ -504,7 +504,7 @@ export default function App() {
             >
               <ArrowLeft size={13} /> Kembali ke Workspace
             </button>
-            <h1 className="justify-self-center font-mono text-[13px] font-bold uppercase tracking-[0.2em] text-slate-300">
+            <h1 className="justify-self-center font-mono text-[20px] md:text-[24px] font-bold uppercase tracking-[0.15em] text-white">
               Command Center
             </h1>
             <div className="flex items-center gap-2 justify-self-end">
