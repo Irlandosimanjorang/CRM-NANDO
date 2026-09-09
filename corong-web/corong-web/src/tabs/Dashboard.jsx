@@ -5,6 +5,7 @@ import { todayISO, fmtRp } from "../lib/helpers";
 import { NextoRobotHead } from "../Auth";
 import AiDraftPopup from "../components/AiDraftPopup";
 import GettingStartedChecklist from "../components/GettingStartedChecklist";
+import TeamLeaderboard from "../components/TeamLeaderboard";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 // === BUG FIX (5 Sep 2026, dipindah ke lib/uiPersist.js bareng modal lain 6
@@ -544,6 +545,8 @@ export default function Dashboard({ leads, stages, dealTransactions, settings, o
         <RevenueTrendChart months={s.months} />
         <PipelineFunnel stages={stages} counts={s.stageCounts} />
       </div>
+
+      <TeamLeaderboard leads={leads} />
 
       <StatsStrip items={statItems} />
 
