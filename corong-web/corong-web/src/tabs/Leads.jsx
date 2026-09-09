@@ -34,6 +34,7 @@ import {
   typeBadge,
   waLink,
   daysSince,
+  fmtRp,
   prettyDomain,
   isNewLead,
   todayISO,
@@ -193,6 +194,175 @@ function extractRowsFromMapping(dataRows, mapping, firstStage) {
     out.push(obj);
   }
   return out;
+}
+
+
+/* =========================================================
+   LEAD CARD
+========================================================= */
+
+// Warna avatar konsisten per lead (hash nama) - bukan acak tiap render,
+// biar lead yang sama selalu keliatan sama tiap kali list di-reload.
+const AVATAR_PALETTE = ["#0ea5e9", "#a855f7", "#22c55e", "#f59e0b", "#6366f1", "#ec4899"];
+function avatarColor(name) {
+  let hash = 0;
+  for (let i = 0; i < (name || "").length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress }) {
+  // Progress bar mulai dari 0% terus animasi jalan ke posisi asli begitu
+  // kartu ini muncul di layar - kesan "hidup", bukan langsung nongol jadi.
+  const [barReady, setBarReady] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setBarReady(true)));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const sm = stageMeta(stages, c.stage_key);
+  const wa = waLink(c.phone);
+
+  const stageIndex = Math.max(0, stages.findIndex((s) => s.key === c.stage_key));
+  const stageNumber = stages.length > 0 ? stageIndex + 1 : 1;
+  const progressPercent = stages.length > 1 ? Math.min(100, Math.max(0, (stageIndex / (stages.length - 1)) * 100)) : 0;
+
+  const lastProgress = c.progressLog?.[0];
+  const lastContact = lastProgress?.created_at || lastProgress?.date || lastProgress?.updated_at || null;
+  const daysSinceContact = daysSince(lastContact);
+
+  // Outline kartu ikut warna urgensi kontak - kartu overdue kelihatan
+  // beda dari jauh (border merah), gak perlu buka satu-satu buat tau
+  // mana yang perlu diprioritasin duluan.
+  const urgency =
+    daysSinceContact === null
+      ? { stripe: "#cbd5e1", text: "#94a3b8", note: "Belum pernah dihubungi" }
+      : daysSinceContact <= 3
+      ? { stripe: "#10b981", text: "#059669", note: `Dihubungi ${daysSinceContact} hari lalu` }
+      : daysSinceContact <= 7
+      ? { stripe: "#f59e0b", text: "#b45309", note: `${daysSinceContact} hari sejak kontak terakhir` }
+      : { stripe: "#e11d48", text: "#be123c", note: `${daysSinceContact} hari - perlu ditindaklanjuti` };
+
+  return (
+    <div
+      onClick={() => onEdit(c)}
+      className="rounded-2xl bg-white cursor-pointer overflow-hidden transition-all hover:shadow-[0_10px_30px_-16px_rgba(15,23,42,0.3)]"
+      style={{ border: `1.5px solid ${urgency.stripe}` }}
+    >
+      <div className="p-4 sm:p-5">
+        {/* HEADER */}
+        <div className="flex items-start gap-3">
+          <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-white font-extrabold text-[13px] shrink-0" style={{ background: avatarColor(c.name) }}>
+            {initials(c.name)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <div className="font-bold text-slate-900 text-[17px] leading-snug tracking-tight truncate">{c.name}</div>
+              {c.priority === "high" && <Flame size={14} className="text-orange-500 shrink-0" fill="currentColor" />}
+            </div>
+            <div className="text-[12.5px] text-slate-400 mt-0.5 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {c.verified ? <ShieldCheck size={18} className="text-emerald-500" /> : <ShieldAlert size={18} className="text-slate-300" />}
+            {c.deal_value > 0 && (
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                {fmtRp(c.deal_value)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* TAHAP PIPELINE */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: `${sm.hex}17`, color: sm.hex }}>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: sm.hex }} />
+              {sm.label}
+            </span>
+            <span className="text-[11px] text-slate-400 shrink-0">Tahap {stageNumber} dari {Math.max(stages.length, 1)}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${barReady ? progressPercent : 0}%`, background: sm.hex }} />
+          </div>
+        </div>
+
+        {/* KONTAK / PRODUK */}
+        <div className="mt-4 flex items-stretch gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] text-slate-400">{c.phone ? "Telepon" : "Key person"}</div>
+            <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.phone || c.key_person || "—"}</div>
+          </div>
+          <div className="w-px bg-slate-100" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] text-slate-400">{productLabel || "Produk"}</div>
+            <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.product || "—"}</div>
+          </div>
+        </div>
+
+        {c.email && (
+          <div className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-400 truncate">
+            <Mail size={12} className="shrink-0" />
+            <span className="truncate">{c.email}</span>
+          </div>
+        )}
+
+        {/* NEXT ACTION - satu momen yang paling ditonjolkan di kartu ini */}
+        <div className="mt-4 pl-3 border-l-2 border-orange-400">
+          <div className="text-[13px] font-medium text-slate-800 line-clamp-2">{c.next_action || "Belum ada rencana tindak lanjut"}</div>
+          <div className="text-[11px] mt-1 font-medium" style={{ color: urgency.text }}>{urgency.note}</div>
+        </div>
+
+        {/* FOOTER ACTIONS */}
+        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          {c.phone && (
+            wa ? (
+              <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone}>
+                <Phone size={13} />
+              </a>
+            ) : (
+              <span className="p-1.5 text-slate-300" title={c.phone}>
+                <Phone size={13} />
+              </span>
+            )
+          )}
+
+          {c.email && (
+            <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50" title={c.email}>
+              <Mail size={13} />
+            </a>
+          )}
+
+          <button onClick={(e) => onDraft(c, e.currentTarget.getBoundingClientRect())} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50" title="Draft follow-up (AI)">
+            <Sparkles size={13} />
+          </button>
+
+          <div className="ml-auto flex items-center gap-0.5">
+            <button onClick={() => onEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50" title="Edit lead">
+              <Pencil size={13} />
+            </button>
+            <button onClick={() => onDelete(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" title="Hapus lead">
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* PROGRESS UPDATE */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onProgress(c); }}
+          className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border-2 border-l-[3px] border-slate-200 border-l-orange-400 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-300 hover:border-l-orange-500 hover:text-orange-700 hover:bg-orange-50/60 transition-colors"
+          title="Update progress harian"
+        >
+          <ClipboardList size={13} className="shrink-0 text-slate-400" />
+          <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "Update progress hari ini…"}</span>
+        </button>
+      </div>
+    </div>
+  );
 }
 
 
@@ -1358,134 +1528,18 @@ export default function Leads({
           backgroundSize: "18px 18px",
         }}
       >
-        {pageItems.map((c) => {
-          const sm = stageMeta(stages, c.stage_key);
-          const wa = waLink(c.phone);
-
-          const stageIndex = Math.max(0, stages.findIndex((s) => s.key === c.stage_key));
-          const stageNumber = stages.length > 0 ? stageIndex + 1 : 1;
-          const progressPercent = stages.length > 1 ? Math.min(100, Math.max(0, (stageIndex / (stages.length - 1)) * 100)) : 0;
-
-          const lastProgress = c.progressLog?.[0];
-          const lastContact = lastProgress?.created_at || lastProgress?.date || lastProgress?.updated_at || null;
-          const daysSinceContact = daysSince(lastContact);
-
-          // Outline kartu ikut warna urgensi kontak - kartu overdue kelihatan
-          // beda dari jauh (border merah), gak perlu buka satu-satu buat tau
-          // mana yang perlu diprioritasin duluan.
-          const urgency =
-            daysSinceContact === null
-              ? { stripe: "#cbd5e1", text: "#94a3b8", note: "Belum pernah dihubungi" }
-              : daysSinceContact <= 3
-              ? { stripe: "#10b981", text: "#059669", note: `Dihubungi ${daysSinceContact} hari lalu` }
-              : daysSinceContact <= 7
-              ? { stripe: "#f59e0b", text: "#b45309", note: `${daysSinceContact} hari sejak kontak terakhir` }
-              : { stripe: "#e11d48", text: "#be123c", note: `${daysSinceContact} hari - perlu ditindaklanjuti` };
-
-          return (
-            <div
-              key={c.id}
-              onClick={() => setEdit(c)}
-              className="rounded-2xl bg-white cursor-pointer overflow-hidden transition-all hover:shadow-[0_10px_30px_-16px_rgba(15,23,42,0.3)]"
-              style={{ border: `1.5px solid ${urgency.stripe}` }}
-            >
-              <div className="p-4 sm:p-5">
-                {/* HEADER */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-bold text-slate-900 text-[17px] leading-snug tracking-tight truncate">{c.name}</div>
-                    <div className="text-[12.5px] text-slate-400 mt-1 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
-                  </div>
-                  {c.verified ? <ShieldCheck size={18} className="text-emerald-500 shrink-0 mt-0.5" /> : <ShieldAlert size={18} className="text-slate-300 shrink-0 mt-0.5" />}
-                </div>
-
-                {/* TAHAP PIPELINE */}
-                <div className="mt-4">
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: `${sm.hex}17`, color: sm.hex }}>
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: sm.hex }} />
-                      {sm.label}
-                    </span>
-                    <span className="text-[11px] text-slate-400 shrink-0">Tahap {stageNumber} dari {Math.max(stages.length, 1)}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${progressPercent}%`, background: sm.hex }} />
-                  </div>
-                </div>
-
-                {/* KONTAK / PRODUK */}
-                <div className="mt-4 flex items-stretch gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] text-slate-400">{c.phone ? "Telepon" : "Key person"}</div>
-                    <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.phone || c.key_person || "—"}</div>
-                  </div>
-                  <div className="w-px bg-slate-100" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] text-slate-400">{productLabel || "Produk"}</div>
-                    <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.product || "—"}</div>
-                  </div>
-                </div>
-
-                {c.email && (
-                  <div className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-400 truncate">
-                    <Mail size={12} className="shrink-0" />
-                    <span className="truncate">{c.email}</span>
-                  </div>
-                )}
-
-                {/* NEXT ACTION - satu momen yang paling ditonjolkan di kartu ini */}
-                <div className="mt-4 pl-3 border-l-2 border-orange-400">
-                  <div className="text-[13px] font-medium text-slate-800 line-clamp-2">{c.next_action || "Belum ada rencana tindak lanjut"}</div>
-                  <div className="text-[11px] mt-1 font-medium" style={{ color: urgency.text }}>{urgency.note}</div>
-                </div>
-
-                {/* FOOTER ACTIONS */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  {c.phone && (
-                    wa ? (
-                      <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone}>
-                        <Phone size={13} />
-                      </a>
-                    ) : (
-                      <span className="p-1.5 text-slate-300" title={c.phone}>
-                        <Phone size={13} />
-                      </span>
-                    )
-                  )}
-
-                  {c.email && (
-                    <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50" title={c.email}>
-                      <Mail size={13} />
-                    </a>
-                  )}
-
-                  <button onClick={(e) => openDraftPopup(c, e.currentTarget.getBoundingClientRect())} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50" title="Draft follow-up (AI)">
-                    <Sparkles size={13} />
-                  </button>
-
-                  <div className="ml-auto flex items-center gap-0.5">
-                    <button onClick={() => setEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50" title="Edit lead">
-                      <Pencil size={13} />
-                    </button>
-                    <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" title="Hapus lead">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* PROGRESS UPDATE */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, autoFocus: true }); saveOpenModal("progress", { leadId: c.id }); }}
-                  className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border-2 border-l-[3px] border-slate-200 border-l-orange-400 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-300 hover:border-l-orange-500 hover:text-orange-700 hover:bg-orange-50/60 transition-colors"
-                  title="Update progress harian"
-                >
-                  <ClipboardList size={13} className="shrink-0 text-slate-400" />
-                  <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "Update progress hari ini…"}</span>
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {pageItems.map((c) => (
+          <LeadCard
+            key={c.id}
+            c={c}
+            stages={stages}
+            productLabel={productLabel}
+            onEdit={setEdit}
+            onDelete={del}
+            onDraft={openDraftPopup}
+            onProgress={(lead) => { setProgressPopup({ lead, autoFocus: true }); saveOpenModal("progress", { leadId: lead.id }); }}
+          />
+        ))}
 
         {filtered.length === 0 && (
           <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-3xl">
