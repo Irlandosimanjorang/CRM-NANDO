@@ -1982,8 +1982,8 @@ export default function Auth() {
               kebagi perhatian sama mockup produk lagi. */}
           <div className="relative mx-auto max-w-5xl px-5 py-20 text-center sm:px-7 sm:py-24 lg:px-10 lg:py-28">
             <div className="flex justify-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
-                <Users size={11} className="text-orange-500" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[8px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                <Users size={9} className="text-orange-500" />
                 Built by Salesperson
               </span>
             </div>
