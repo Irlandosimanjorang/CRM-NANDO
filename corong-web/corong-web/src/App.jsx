@@ -480,7 +480,7 @@ export default function App() {
   // sini kalau admin beneran pilih tab ini - selain itu app jalan normal.
   if (settings?.is_platform_admin && tab === "adminops") {
     return (
-      <div className="min-h-screen bg-[#05070c]">
+      <div className="h-screen overflow-y-auto bg-[#05070c]">
         <div
           className="pointer-events-none fixed inset-0 opacity-[0.35]"
           style={{
@@ -490,8 +490,11 @@ export default function App() {
             WebkitMaskImage: "radial-gradient(circle at 50% 0%, rgba(0,0,0,.8), transparent 70%)",
           }}
         />
-        <div className="relative max-w-[1400px] mx-auto px-4 py-5 md:px-8 md:py-8">
-          <div className="flex items-center justify-between gap-3 mb-5">
+        {/* h-screen + overflow-y-auto (bukan min-h-screen) - biar Command
+            Center KEBUKA PENUH 1 LAYAR (permintaan Nando), scroll cuma jadi
+            fallback kalau layarnya beneran pendek/di-zoom, bukan default. */}
+        <div className="relative max-w-[1400px] mx-auto h-full flex flex-col px-4 py-3.5 md:px-8 md:py-5">
+          <div className="flex items-center justify-between gap-3 mb-3.5 shrink-0">
             <button
               onClick={() => setTab("dashboard")}
               className="flex items-center gap-2 text-[12px] font-mono text-slate-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl px-3.5 py-2 transition-colors"

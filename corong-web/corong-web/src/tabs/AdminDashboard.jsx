@@ -600,7 +600,7 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
   };
 
   return (
-    <div className="relative mx-auto w-full max-w-[560px] aspect-square select-none">
+    <div className="relative mx-auto w-full aspect-square select-none shrink-0" style={{ maxWidth: "min(560px, 62vh, 92vw)" }}>
       <style>{`
         @keyframes orbit-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes orbit-ring-spin-slow { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
@@ -969,7 +969,7 @@ export default function AdminDashboard() {
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
 
   return (
-    <div className="relative rounded-[28px] bg-[#05070c] border border-white/[0.06] p-5 md:p-6 overflow-hidden">
+    <div className="relative flex h-full min-h-0 flex-col rounded-[28px] bg-[#05070c] border border-white/[0.06] p-4 md:p-5 overflow-hidden">
       {/* Grid background + glow, konsisten sama estetika landing page */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -982,9 +982,9 @@ export default function AdminDashboard() {
       />
       <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-orange-500/10 blur-[90px]" />
 
-      <div className="relative">
+      <div className="relative flex h-full min-h-0 flex-col overflow-y-auto">
         {/* HEADER */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0">
           <div className="flex items-center gap-4">
             <JarvisCore ok={allSystemsGo} gaugeValue={securityGauge} />
             <div>
@@ -1019,7 +1019,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* RINGKASAN PLATFORM */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4 shrink-0">
           {[
             { label: "Total Leads", value: status?.platform?.total_leads ?? 0, icon: Users, color: "#f97316" },
             { label: "Organisasi", value: status?.platform?.total_orgs ?? 0, icon: Building2, color: "#a78bfa" },
@@ -1042,7 +1042,7 @@ export default function AdminDashboard() {
             Grid klasik (semua kartu kebuka sekaligus, lebih gampang discan
             cepat kalau lagi buru-buru) - 9 Sep 2026. */}
         {viewMode === "orbit" ? (
-          <div>
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
             <OrbitCommandMap
               employees={employees}
               selectedKey={selectedEmployeeKey}
@@ -1051,7 +1051,7 @@ export default function AdminDashboard() {
               overallOk={allSystemsGo}
               overallGauge={securityGauge}
             />
-            <div className="mt-1 text-center text-[9.5px] font-mono text-slate-600">klik salah satu node buat liat detail lengkapnya</div>
+            <div className="mt-1 shrink-0 text-center text-[9.5px] font-mono text-slate-600">klik salah satu node buat liat detail lengkapnya</div>
             {detailOpen && selectedEmployee && (
               <EmployeeDetailModal
                 employee={selectedEmployee}
@@ -1089,7 +1089,7 @@ export default function AdminDashboard() {
           <CheckDetailModal check={selectedCheck} aiSummary={security?.summary} onClose={() => setSelectedCheck(null)} />
         )}
 
-        <div className="mt-4 text-center text-[9px] font-mono text-slate-700 uppercase tracking-widest">
+        <div className="mt-3 shrink-0 text-center text-[9px] font-mono text-slate-700 uppercase tracking-widest">
           auto-sync tiap {REFRESH_INTERVAL_MS / 1000}s · platform-wide, bukan cuma org Anda
         </div>
       </div>
