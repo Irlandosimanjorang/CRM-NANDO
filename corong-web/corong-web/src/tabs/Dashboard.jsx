@@ -4,6 +4,7 @@ import * as db from "../lib/db";
 import { todayISO, fmtRp } from "../lib/helpers";
 import { NextoRobotHead } from "../Auth";
 import AiDraftPopup from "../components/AiDraftPopup";
+import GettingStartedChecklist from "../components/GettingStartedChecklist";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 // === BUG FIX (5 Sep 2026, dipindah ke lib/uiPersist.js bareng modal lain 6
@@ -470,7 +471,7 @@ function PerformanceInsight({ leads, stages }) {
   );
 }
 
-export default function Dashboard({ leads, stages, dealTransactions, settings, onGo, onOpenLead }) {
+export default function Dashboard({ leads, stages, dealTransactions, settings, onGo, onOpenLead, myLevel }) {
   const s = useMemo(() => {
     const won = stages.filter((x) => x.type === "won").map((x) => x.key);
     const activeKeys = stages.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
@@ -532,6 +533,8 @@ export default function Dashboard({ leads, stages, dealTransactions, settings, o
       <div>
         <p className="text-xs text-slate-400 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
+
+      <GettingStartedChecklist leads={leads} myLevel={myLevel} onGo={onGo} />
 
       <GoodMorningCard settings={settings} onGo={onGo} onOpenLead={onOpenLead} leads={leads} />
 
