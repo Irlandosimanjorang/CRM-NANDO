@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid, Megaphone } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -256,6 +256,111 @@ function ChecksDetailPanel({ checks, aiSummary }) {
   );
 }
 
+// Popup detail 1 karyawan AI - dulu detailnya nongol di panel bawah Peta
+// Orbit terus-menerus, sekarang diubah jadi popup begitu node-nya diklik
+// (9 Sep 2026) biar gak perlu scroll ke bawah tiap ganti-ganti karyawan yang
+// mau dicek, dan Peta Orbit-nya sendiri tetep bersih gak numpuk konten.
+function EmployeeDetailModal({ employee, onTrigger, triggering, onClose }) {
+  if (!employee) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-[22px] pt-9"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button onClick={onClose} className="absolute top-2 right-2 z-30 text-slate-400 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] rounded-lg p-1.5 transition-colors">
+          <X size={16} />
+        </button>
+        <EmployeeCard
+          icon={employee.icon}
+          title={`${employee.title} · ${employee.subtitle}`}
+          accentColor={employee.accentColor}
+          glowClass={employee.glowClass}
+          gaugeValue={employee.gaugeValue}
+          trend={employee.trend}
+          trendKey={employee.trendKey}
+          onTrigger={onTrigger}
+          triggering={triggering}
+          triggerKey={employee.triggerKey}
+          noTrigger={employee.noTrigger}
+          noTriggerNote={employee.noTriggerNote}
+        >
+          {employee.content}
+        </EmployeeCard>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// Panel review draft konten NOVA - tiap draft nunjukkin gambar+caption, dan
+// kalau statusnya masih "pending" ada tombol Approve & Post / Reject. Approve
+// manggil content-action yang LANGSUNG coba publish ke Instagram (lihat
+// komentar di content-action edge function) - satu-satunya jalan konten NOVA
+// bisa tayang ke publik, gak ada yang otomatis dari cron content-drafter.
+function ContentDraftsPanel({ drafts, onReviewed }) {
+  const [busyId, setBusyId] = useState(null);
+  if (!drafts || drafts.length === 0) {
+    return <div className="mt-3 text-[11px] text-slate-500 font-mono">Belum ada draft konten - NOVA jalan tiap Senin, atau klik Panggil buat generate sekarang.</div>;
+  }
+  const doAction = async (id, action) => {
+    setBusyId(id);
+    try {
+      const result = await db.reviewContentDraft(id, action);
+      if (action === "approve" && result?.posted === false && result?.error) {
+        alert("Draft udah di-approve tapi BELUM ke-post:\n\n" + result.error);
+      }
+      onReviewed();
+    } catch (e) {
+      alert("Gagal proses draft: " + e.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+  const STATUS_STYLE = {
+    pending: "bg-amber-500/15 text-amber-300",
+    approved: "bg-sky-500/15 text-sky-300",
+    posted: "bg-emerald-500/15 text-emerald-300",
+    rejected: "bg-slate-500/15 text-slate-400",
+    failed: "bg-rose-500/15 text-rose-300",
+  };
+  return (
+    <div className="mt-3 grid gap-2">
+      {drafts.map((d) => (
+        <div key={d.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-2.5 flex gap-2.5">
+          {d.image_url && <img src={d.image_url} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0 border border-white/[0.08]" />}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className={`px-1.5 py-0.5 rounded uppercase tracking-wide text-[9px] font-bold ${STATUS_STYLE[d.status] || STATUS_STYLE.rejected}`}>{d.status}</span>
+              <span className="text-[10px] font-mono text-slate-600">{timeAgo(d.created_at)}</span>
+            </div>
+            <div className="text-[11px] text-slate-300 leading-relaxed">{d.caption.length > 140 ? `${d.caption.slice(0, 140)}…` : d.caption}</div>
+            {d.status === "approved" && d.error && <div className="mt-1.5 text-[10px] text-amber-400 font-mono">{d.error}</div>}
+            {d.status === "pending" && (
+              <div className="mt-2 flex gap-1.5">
+                <button
+                  onClick={() => doAction(d.id, "approve")}
+                  disabled={busyId === d.id}
+                  className="text-[10px] font-mono uppercase font-bold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors"
+                >
+                  {busyId === d.id ? "…" : "Approve & Post"}
+                </button>
+                <button
+                  onClick={() => doAction(d.id, "reject")}
+                  disabled={busyId === d.id}
+                  className="text-[10px] font-mono uppercase font-bold px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 disabled:opacity-50 transition-colors"
+                >
+                  Reject
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // "Jarvis Core" - orb HUD berputar di header, gaya visual sama persis kayak
 // "NEXTO AI CORE" di landing page (Auth.jsx, section AiEngineLoopSection) -
 // keyframes-nya SENGAJA dipake ulang nama & bentuknya biar konsisten (App ini
@@ -325,7 +430,8 @@ function JarvisCore({ ok, gaugeValue, size = 96 }) {
 // departemen di video referensi. Posisi dihitung pake trigonometri
 // (sudut tetap per node) dalam persen 0-100 biar responsif tanpa perlu
 // ukur pixel manual - lihat polarPoint().
-const ORBIT_ANGLES = { atom: 215, adi: 305, nexa: 35, memo: 125 };
+// 5 node disebar rata 72 derajat (9 Sep 2026: + NOVA - Marketing & Content).
+const ORBIT_ANGLES = { atom: 216, nova: 288, adi: 0, nexa: 72, memo: 144 };
 const ORBIT_MAIN_RADIUS = 36;
 const ORBIT_SUB_RADIUS = 13;
 
@@ -466,6 +572,7 @@ export default function AdminDashboard() {
   const [, forceTick] = useState(0);
   const [viewMode, setViewMode] = useState("orbit"); // "orbit" | "grid"
   const [selectedEmployeeKey, setSelectedEmployeeKey] = useState("atom");
+  const [detailOpen, setDetailOpen] = useState(false);
   const [selectedCheck, setSelectedCheck] = useState(null);
   const intervalRef = useRef(null);
 
@@ -613,6 +720,29 @@ export default function AdminDashboard() {
         </div>
       ),
     },
+    {
+      key: "nova",
+      title: "NOVA",
+      subtitle: "Marketing & Content",
+      icon: Megaphone,
+      accentColor: "#ec4899",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(236,72,153,0.6)]",
+      ok: (status?.content_studio?.pending_count ?? 0) === 0,
+      gaugeValue: (status?.content_studio?.pending_count ?? 0) === 0 ? 100 : Math.max(30, 100 - (status.content_studio.pending_count) * 20),
+      triggerKey: "content-drafter",
+      content: (
+        <>
+          <div className="text-[11px] text-slate-400 font-mono">
+            {(status?.content_studio?.pending_count ?? 0) > 0 ? (
+              <span className="text-amber-400">{status.content_studio.pending_count} draft nunggu direview</span>
+            ) : (
+              <span className="text-emerald-400">gak ada draft yang nunggu</span>
+            )}
+          </div>
+          <ContentDraftsPanel drafts={status?.content_studio?.recent_drafts} onReviewed={() => load(true)} />
+        </>
+      ),
+    },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
 
@@ -695,30 +825,19 @@ export default function AdminDashboard() {
               employees={employees}
               atomChecks={atomChecks}
               selectedKey={selectedEmployeeKey}
-              onSelectEmployee={setSelectedEmployeeKey}
+              onSelectEmployee={(key) => { setSelectedEmployeeKey(key); setDetailOpen(true); }}
               onSelectCheck={setSelectedCheck}
               overallOk={allSystemsGo}
               overallGauge={securityGauge}
             />
-            {selectedEmployee && (
-              <div className="mt-2 max-w-lg mx-auto">
-                <EmployeeCard
-                  icon={selectedEmployee.icon}
-                  title={`${selectedEmployee.title} · ${selectedEmployee.subtitle}`}
-                  accentColor={selectedEmployee.accentColor}
-                  glowClass={selectedEmployee.glowClass}
-                  gaugeValue={selectedEmployee.gaugeValue}
-                  trend={selectedEmployee.trend}
-                  trendKey={selectedEmployee.trendKey}
-                  onTrigger={trigger}
-                  triggering={triggering}
-                  triggerKey={selectedEmployee.triggerKey}
-                  noTrigger={selectedEmployee.noTrigger}
-                  noTriggerNote={selectedEmployee.noTriggerNote}
-                >
-                  {selectedEmployee.content}
-                </EmployeeCard>
-              </div>
+            <div className="mt-1 text-center text-[9.5px] font-mono text-slate-600">klik salah satu node buat liat detail lengkapnya</div>
+            {detailOpen && selectedEmployee && (
+              <EmployeeDetailModal
+                employee={selectedEmployee}
+                onTrigger={trigger}
+                triggering={triggering}
+                onClose={() => setDetailOpen(false)}
+              />
             )}
           </div>
         ) : (

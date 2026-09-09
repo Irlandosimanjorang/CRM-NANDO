@@ -310,6 +310,21 @@ export async function callAdminTrigger(target) {
   return data;
 }
 
+// Approve/reject 1 draft konten NOVA (Marketing & Content) - "approve" bikin
+// function-nya LANGSUNG coba publish ke Instagram (kalau kredensial IG udah
+// di-set), "reject" cuma nandain gak dipake. Satu-satunya titik di mana
+// konten NOVA beneran bisa tayang ke publik - gak ada jalur otomatis lain.
+export async function reviewContentDraft(draftId, action) {
+  const { data, error } = await supabase.functions.invoke("content-action", { body: { draftId, action } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal proses draft");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // Tandain 1 sinyal ATOM buat ditindaklanjuti - CUMA nyatet + notif Telegram,
 // BUKAN eksekusi perbaikan otomatis (lihat komentar di edge function-nya).
 export async function flagHealthIssue(check_key, label, detail) {
