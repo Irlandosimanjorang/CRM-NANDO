@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nexto</string>
+    <string name="title_activity_main">Nexto</string>
+    <string name="package_name">site.nexto.app</string>
+    <string name="custom_url_scheme">site.nexto.app</string>
+</resources>

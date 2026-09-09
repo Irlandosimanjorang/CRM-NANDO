@@ -1,0 +1,9 @@
+{
+  "appId": "site.nexto.app",
+  "appName": "Nexto",
+  "webDir": "dist",
+  "backgroundColor": "#0b101a",
+  "server": {
+    "androidScheme": "https"
+  }
+}
