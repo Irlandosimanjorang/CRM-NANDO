@@ -397,6 +397,7 @@ const ENTERPRISE_FEATURES = [
   "GPS Check-in (tracking kunjungan tim real-time)",
   "4 anggota tim dalam satu organisasi",
   "Role-based visibility (Owner/Manager/Sales Rep)",
+  "Laporan Performa Tim (leaderboard revenue & win rate)",
   "Undang anggota tim via kode invite",
   "Bot Telegram kirim email otonom",
   "Approval-gate & keamanan tim",
