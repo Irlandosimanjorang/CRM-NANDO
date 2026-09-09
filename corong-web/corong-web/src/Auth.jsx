@@ -97,6 +97,11 @@ function NextoWordmark({ width = 108, className = "" }) {
   );
 }
 
+// Redesign (9 Sep 2026): bezel-nya sekarang 3-stop metal + garis highlight
+// tipis di sudut kiri-atas (efek "brushed metal" kena cahaya) - dulu flat
+// 2-stop gradient doang. Mata diganti dari lingkaran polos jadi kapsul lonjong
+// dengan titik highlight kecil di pojok (efek "kaca memantul cahaya") biar
+// kerasa lebih hidup/premium, bukan cuma 2 titik oranye statis.
 export function NextoRobotHead({ size = 32, className = "", speaking = false }) {
   return (
     <div
@@ -106,54 +111,62 @@ export function NextoRobotHead({ size = 32, className = "", speaking = false }) 
     >
       {speaking && (
         <style>{`
-          @keyframes nexto-talk-bar {
-            0%, 100% { transform: scaleY(0.5); }
-            50% { transform: scaleY(1.15); }
+          @keyframes nexto-talk-eye {
+            0%, 100% { transform: scaleY(0.55); }
+            50% { transform: scaleY(1.1); }
           }
         `}</style>
       )}
+      {/* Bezel - metal 3-stop + highlight tipis di pojok kiri-atas */}
       <div
-        className="absolute rounded-[28%] border"
+        className="absolute rounded-[30%] border"
         style={{
           inset: "8%",
-          background:
-            "linear-gradient(145deg, #f3f5f7 0%, #cbd2da 48%, #9aa5b2 100%)",
-          borderColor: "#7f8b98",
-          boxShadow:
-            "0 3px 8px rgba(15,23,42,.14), inset 0 1px 1px rgba(255,255,255,.9)",
+          background: "linear-gradient(150deg, #fafbfc 0%, #dde2e8 42%, #b8c0ca 78%, #98a2ae 100%)",
+          borderColor: "#8994a1",
+          boxShadow: "0 4px 10px rgba(15,23,42,.16), inset 0 1px 1px rgba(255,255,255,.95)",
         }}
       />
       <div
-        className="absolute flex items-center justify-center rounded-full"
+        className="absolute rounded-[30%]"
         style={{
-          width: "58%",
-          height: "30%",
-          background: "#171717",
-          boxShadow: "inset 0 1px 3px rgba(0,0,0,.35)",
+          inset: "8%",
+          background: "radial-gradient(circle at 30% 22%, rgba(255,255,255,.65), transparent 45%)",
+        }}
+      />
+
+      {/* Visor gelap - sedikit lebih ramping dari sebelumnya */}
+      <div
+        className="absolute flex items-center justify-center gap-[9%] rounded-full"
+        style={{
+          width: "56%",
+          height: "27%",
+          background: "linear-gradient(165deg, #232323, #121212)",
+          boxShadow: "inset 0 1px 3px rgba(0,0,0,.45)",
         }}
       >
-        <span
-          className="mr-1 rounded-full"
-          style={{
-            width: "10%",
-            height: "24%",
-            background: "#f97316",
-            boxShadow: "0 0 5px rgba(249,115,22,.7)",
-            animation: speaking ? "nexto-talk-bar 0.42s ease-in-out infinite" : "none",
-            animationDelay: speaking ? "0.08s" : "0s",
-          }}
-        />
-        <span
-          className="rounded-full"
-          style={{
-            width: "10%",
-            height: "24%",
-            background: "#f97316",
-            boxShadow: "0 0 5px rgba(249,115,22,.7)",
-            animation: speaking ? "nexto-talk-bar 0.42s ease-in-out infinite" : "none",
-          }}
-        />
+        {[0.08, 0].map((delay, i) => (
+          <span
+            key={i}
+            className="relative rounded-[45%]"
+            style={{
+              width: "16%",
+              height: "60%",
+              background: "linear-gradient(160deg, #fdba74, #f97316)",
+              boxShadow: "0 0 5px rgba(249,115,22,.75)",
+              animation: speaking ? "nexto-talk-eye 0.42s ease-in-out infinite" : "none",
+              animationDelay: speaking ? `${delay}s` : "0s",
+            }}
+          >
+            <span
+              className="absolute rounded-full bg-white/80"
+              style={{ width: "34%", height: "22%", top: "12%", left: "18%" }}
+            />
+          </span>
+        ))}
       </div>
+
+      {/* Status online */}
       <span
         className="absolute rounded-full"
         style={{
