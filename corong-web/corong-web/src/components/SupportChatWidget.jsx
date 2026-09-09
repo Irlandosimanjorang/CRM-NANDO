@@ -95,6 +95,18 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
     }
   };
 
+  // Jembatan biar bagian LAIN di landing page (misal link "Butuh tim lebih
+  // dari 4 orang?" di kartu Enterprise) bisa buka widget ini & langsung
+  // kirim pertanyaan tanpa visitor perlu ngetik ulang. Didaftarin ulang
+  // tiap render (sendText berubah tiap render) biar closure-nya gak basi.
+  useEffect(() => {
+    window.__nextoOpenSasaChat = (prefillText) => {
+      setOpen(true);
+      if (prefillText) sendText(prefillText);
+    };
+    return () => { delete window.__nextoOpenSasaChat; };
+  });
+
   const send = () => {
     const text = input.trim();
     if (!text) return;

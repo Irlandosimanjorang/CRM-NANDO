@@ -2374,6 +2374,17 @@ export default function Auth() {
                   >
                     Upgrade ke Enterprise
                   </button>
+
+                  {/* Tim lebih dari 4 orang - bukan harga standar, arahin
+                      langsung ngobrol sama SASA (yang udah dibekelin cara
+                      jawab kasus ini) daripada nyoba masukin harga custom
+                      ke tabel harga publik. */}
+                  <button
+                    onClick={() => window.__nextoOpenSasaChat?.("Saya butuh tim lebih dari 4 orang, ada opsi harga khusus?")}
+                    className="mt-3 w-full text-center text-[10px] text-violet-300/70 underline decoration-dotted transition hover:text-violet-200"
+                  >
+                    Butuh tim lebih dari 4 orang? Hubungi kami
+                  </button>
                 </div>
               </div>
             </div>
