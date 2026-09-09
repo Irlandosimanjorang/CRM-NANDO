@@ -310,7 +310,7 @@ export async function callAdminTrigger(target) {
   return data;
 }
 
-// Tandain 1 sinyal RAKA buat ditindaklanjuti - CUMA nyatet + notif Telegram,
+// Tandain 1 sinyal ATOM buat ditindaklanjuti - CUMA nyatet + notif Telegram,
 // BUKAN eksekusi perbaikan otomatis (lihat komentar di edge function-nya).
 export async function flagHealthIssue(check_key, label, detail) {
   const { data, error } = await supabase.functions.invoke("flag-health-issue", { body: { check_key, label, detail } });
@@ -462,7 +462,7 @@ export async function upsertLead(lead) {
 
   // Auto-sync ke Google Calendar - dulu HARUS diinget manual buat buka
   // Pengaturan terus klik "Sync" tiap kali ada jadwal visit/next action baru
-  // atau berubah (gampang kelupaan - persis kejadian yang bikin RAKA salah
+  // atau berubah (gampang kelupaan - persis kejadian yang bikin ATOM salah
   // nuduh "sinkronisasi gagal diam-diam" padahal emang belum pernah di-sync
   // manual). Sekarang otomatis fire-and-forget tiap upsertLead yang nyentuh
   // visit_date/next_action - gagal (belum connect Calendar, bukan Professional+,

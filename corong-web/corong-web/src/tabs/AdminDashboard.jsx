@@ -124,11 +124,11 @@ function EmployeeCard({ icon: Icon, title, subtitle, accentColor, glowClass, gau
   );
 }
 
-// Rincian PER-SINYAL yang dicek RAKA (health-check) - dulu Command Center
+// Rincian PER-SINYAL yang dicek ATOM (health-check) - dulu Command Center
 // cuma nampilin status gabungan ("nihil temuan" / "N temuan"), gak keliatan
 // SEMUA sinyal apa aja yang dipantau dan kondisi masing-masing satu-satu.
 // SELALU KEBUKA by default (bukan collapsed lagi) - datanya udah otomatis
-// paling baru sendiri kok, gak perlu nunggu diklik: RAKA jalan sendiri tiap
+// paling baru sendiri kok, gak perlu nunggu diklik: ATOM jalan sendiri tiap
 // 4 jam via cron, dan dashboard ini polling admin-status tiap 45 detik
 // (lihat REFRESH_INTERVAL_MS) - jadi begitu ada run baru, panel ini ikut
 // keupdate otomatis tanpa siapapun perlu pencet "Panggil". Toggle tetep ada
@@ -260,7 +260,7 @@ function ChecksDetailPanel({ checks, aiSummary }) {
 // "NEXTO AI CORE" di landing page (Auth.jsx, section AiEngineLoopSection) -
 // keyframes-nya SENGAJA dipake ulang nama & bentuknya biar konsisten (App ini
 // gak share <style> global sama Auth.jsx, jadi didefinisiin lokal di sini).
-// Warnanya ngikutin status RAKA: emerald kalo semua sistem normal, amber
+// Warnanya ngikutin status ATOM: emerald kalo semua sistem normal, amber
 // kalo ada temuan - biar orb-nya sendiri jadi indikator kesehatan platform,
 // bukan cuma dekorasi doang.
 function JarvisCore({ ok, gaugeValue }) {
@@ -427,11 +427,12 @@ export default function AdminDashboard() {
         </div>
 
         {/* KARTU KARYAWAN AI - dikasih nama biar berasa beneran tim, bukan cuma
-            nama function teknis (28 Agt 2026: RAKA/ADI/NEXA/MEMO) */}
+            nama function teknis (28 Agt 2026: RAKA/ADI/NEXA/MEMO - RAKA
+            diganti ATOM 9 Sep 2026) */}
         <div className="grid md:grid-cols-2 gap-3">
           <EmployeeCard
             icon={securityHealthy || !security ? ShieldCheck : ShieldAlert}
-            title="RAKA · Security & Ops"
+            title="ATOM · Security & Ops"
             subtitle="health-check · pantau kesehatan sistem"
             accentColor={allSystemsGo ? "#34d399" : "#f59e0b"}
             glowClass={allSystemsGo ? "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]" : "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]"}
