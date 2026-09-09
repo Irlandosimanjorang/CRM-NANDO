@@ -265,7 +265,7 @@ function EmployeeDetailModal({ employee, onTrigger, triggering, onClose }) {
   return createPortal(
     <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className={`relative w-full ${employee.wide ? "max-w-3xl" : "max-w-lg"} max-h-[85vh] overflow-y-auto rounded-[22px] pt-9`}
+        className={`relative w-full ${employee.wide ? "max-w-6xl" : "max-w-lg"} max-h-[85vh] overflow-y-auto rounded-[22px] pt-9`}
         onClick={(e) => e.stopPropagation()}
       >
         <button onClick={onClose} className="absolute top-2 right-2 z-30 text-slate-400 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] rounded-lg p-1.5 transition-colors">
@@ -408,12 +408,17 @@ function AiAccountsUsagePanel({ features, accounts }) {
   if (!accounts || accounts.length === 0) {
     return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun tim (organization_members kosong).</div>;
   }
+  // Kolom "Akun" dibuat STICKY (nempel di kiri pas di-scroll horizontal) -
+  // sebelumnya kalau tabelnya lebih lebar dari panel (makin banyak fitur AI
+  // makin lebar), nama akunnya ikut ketutup pas scroll ke kanan buat liat
+  // kolom fitur yang jauh - jadi gak kebaca lagi akun siapa yang dilihat.
+  const STICKY_BG = "#0c1018"; // approksimasi warna komposit card (bg-white/[0.02] di atas #05070c)
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse min-w-[640px]">
         <thead>
           <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
-            <th className="pb-1.5 pr-2 font-medium">Akun</th>
+            <th className="sticky left-0 z-10 pb-1.5 pr-2 pl-0 font-medium" style={{ background: STICKY_BG }}>Akun</th>
             <th className="pb-1.5 pr-2 font-medium">Plan</th>
             {meteredFeatures.map((f) => (
               <th key={f.key} className="pb-1.5 pr-2 font-medium whitespace-nowrap">{f.label}</th>
@@ -423,7 +428,7 @@ function AiAccountsUsagePanel({ features, accounts }) {
         <tbody>
           {accounts.map((a) => (
             <tr key={a.user_id} className="border-t border-white/[0.05]">
-              <td className="py-1.5 pr-2">
+              <td className="sticky left-0 z-10 py-1.5 pr-2 pl-0" style={{ background: STICKY_BG }}>
                 <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{a.display_name || a.email || a.user_id.slice(0, 8)}</div>
                 <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{a.org_name} · {a.role}</div>
               </td>
