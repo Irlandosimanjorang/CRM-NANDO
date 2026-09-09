@@ -33,7 +33,7 @@ import {
   prioMeta,
   typeBadge,
   waLink,
-  normUrl,
+  daysSince,
   prettyDomain,
   isNewLead,
   todayISO,
@@ -193,96 +193,6 @@ function extractRowsFromMapping(dataRows, mapping, firstStage) {
     out.push(obj);
   }
   return out;
-}
-
-
-/* =========================================================
-   HUD CORNER BRACKETS
-========================================================= */
-
-function CornerBrackets({
-  color = "#0891b2",
-}) {
-  const armStyle = {
-    position: "absolute",
-    width: 14,
-    height: 14,
-    borderColor: color,
-  };
-
-  return (
-    <>
-      <div
-        style={{
-          ...armStyle,
-          top: -1,
-          left: -1,
-          borderTop: "2px solid",
-          borderLeft: "2px solid",
-          borderTopLeftRadius: 10,
-        }}
-      />
-
-      <div
-        style={{
-          ...armStyle,
-          top: -1,
-          right: -1,
-          borderTop: "2px solid",
-          borderRight: "2px solid",
-          borderTopRightRadius: 10,
-        }}
-      />
-
-      <div
-        style={{
-          ...armStyle,
-          bottom: -1,
-          left: -1,
-          borderBottom: "2px solid",
-          borderLeft: "2px solid",
-          borderBottomLeftRadius: 10,
-        }}
-      />
-
-      <div
-        style={{
-          ...armStyle,
-          bottom: -1,
-          right: -1,
-          borderBottom: "2px solid",
-          borderRight: "2px solid",
-          borderBottomRightRadius: 10,
-        }}
-      />
-    </>
-  );
-}
-
-
-/* =========================================================
-   STAGE CHIP
-========================================================= */
-
-function StageChip({
-  hex,
-  label,
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-
-      <span
-        className="w-1.5 h-1.5 rounded-full shrink-0"
-        style={{
-          background: hex,
-          boxShadow: `0 0 4px ${hex}`,
-        }}
-      />
-
-      {label}
-
-    </span>
-  );
 }
 
 
@@ -1451,304 +1361,128 @@ export default function Leads({
         {pageItems.map((c) => {
           const sm = stageMeta(stages, c.stage_key);
           const wa = waLink(c.phone);
-          const web = normUrl(c.website);
 
-          const stageIndex = Math.max(
-            0,
-            stages.findIndex((s) => s.key === c.stage_key)
-          );
-          const stageNumber =
-            stages.length > 0 ? stageIndex + 1 : 1;
-          const progressPercent =
-            stages.length > 1
-              ? Math.min(
-                  100,
-                  Math.max(
-                    0,
-                    (stageIndex / (stages.length - 1)) * 100
-                  )
-                )
-              : 0;
+          const stageIndex = Math.max(0, stages.findIndex((s) => s.key === c.stage_key));
+          const stageNumber = stages.length > 0 ? stageIndex + 1 : 1;
+          const progressPercent = stages.length > 1 ? Math.min(100, Math.max(0, (stageIndex / (stages.length - 1)) * 100)) : 0;
 
           const lastProgress = c.progressLog?.[0];
-          const lastContact =
-            lastProgress?.created_at ||
-            lastProgress?.date ||
-            lastProgress?.updated_at ||
-            "—";
-          const lastContactBy =
-            lastProgress?.author_name ||
-            lastProgress?.sales_owner ||
-            c.sales_owner ||
-            "Admin";
+          const lastContact = lastProgress?.created_at || lastProgress?.date || lastProgress?.updated_at || null;
+          const daysSinceContact = daysSince(lastContact);
+
+          // Garis status di sisi kiri kartu gantiin ornamen HUD lama - sekarang
+          // WARNANYA BENERAN NGOMONG SESUATU (kapan terakhir dihubungi), bukan
+          // cuma dekorasi sudut yang sama di semua kartu.
+          const urgency =
+            daysSinceContact === null
+              ? { stripe: "#cbd5e1", text: "#94a3b8", note: "Belum pernah dihubungi" }
+              : daysSinceContact <= 3
+              ? { stripe: "#10b981", text: "#059669", note: `Dihubungi ${daysSinceContact} hari lalu` }
+              : daysSinceContact <= 7
+              ? { stripe: "#f59e0b", text: "#b45309", note: `${daysSinceContact} hari sejak kontak terakhir` }
+              : { stripe: "#e11d48", text: "#be123c", note: `${daysSinceContact} hari - perlu ditindaklanjuti` };
 
           return (
             <div
               key={c.id}
               onClick={() => setEdit(c)}
-              className="relative rounded-[24px] cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{
-                boxShadow: "0 8px 24px -14px rgba(15,23,42,0.28)",
-              }}
+              className="flex rounded-2xl bg-white cursor-pointer overflow-hidden border border-slate-200/80 hover:border-slate-300 hover:shadow-[0_10px_30px_-16px_rgba(15,23,42,0.3)] transition-all"
             >
-              <CornerBrackets color="#0f172a" />
+              <div className="w-1 shrink-0" style={{ background: urgency.stripe }} />
 
-              <div
-                className="rounded-[24px] overflow-hidden bg-white h-full"
-                style={{
-                  border: "1px solid rgba(15,23,42,0.10)",
-                }}
-              >
-                {/* orange top accent */}
-                <div
-                  style={{
-                    height: 4,
-                    background:
-                      "linear-gradient(90deg, #f97316, #fb923c)",
-                  }}
-                />
+              <div className="flex-1 min-w-0 p-4 sm:p-5">
+                {/* HEADER */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-900 text-[17px] leading-snug tracking-tight truncate">{c.name}</div>
+                    <div className="text-[12.5px] text-slate-400 mt-1 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
+                  </div>
+                  {c.verified ? <ShieldCheck size={18} className="text-emerald-500 shrink-0 mt-0.5" /> : <ShieldAlert size={18} className="text-slate-300 shrink-0 mt-0.5" />}
+                </div>
 
-                <div className="p-4 sm:p-5">
-                  {/* HEADER */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-[0.16em] px-2 py-1 rounded-full bg-slate-50 text-slate-500 border border-slate-200">
-                          <span className="w-2 h-2 rounded-full bg-slate-400" />
-                          OPEN
-                        </span>
-                      </div>
+                {/* TAHAP PIPELINE */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: `${sm.hex}17`, color: sm.hex }}>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: sm.hex }} />
+                      {sm.label}
+                    </span>
+                    <span className="text-[11px] text-slate-400 shrink-0">Tahap {stageNumber} dari {Math.max(stages.length, 1)}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${progressPercent}%`, background: sm.hex }} />
+                  </div>
+                </div>
 
-                      <div className="font-bold text-slate-950 text-[17px] leading-[1.2] tracking-tight">
-                        {c.name}
-                      </div>
+                {/* KONTAK / PRODUK */}
+                <div className="mt-4 flex items-stretch gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] text-slate-400">{c.phone ? "Telepon" : "Key person"}</div>
+                    <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.phone || c.key_person || "—"}</div>
+                  </div>
+                  <div className="w-px bg-slate-100" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] text-slate-400">{productLabel || "Produk"}</div>
+                    <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.product || "—"}</div>
+                  </div>
+                </div>
 
-                      <div className="text-[11px] text-slate-400 mt-1.5 truncate">
-                        {c.category || "Lainnya"}
-                        <span className="mx-1.5">•</span>
-                        {c.city || c.province || "—"}
-                      </div>
-                    </div>
+                {c.email && (
+                  <div className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-400 truncate">
+                    <Mail size={12} className="shrink-0" />
+                    <span className="truncate">{c.email}</span>
+                  </div>
+                )}
 
-                    {c.verified ? (
-                      <ShieldCheck
-                        size={19}
-                        className="text-emerald-500 shrink-0"
-                      />
+                {/* NEXT ACTION - satu momen yang paling ditonjolkan di kartu ini */}
+                <div className="mt-4 pl-3 border-l-2 border-orange-400">
+                  <div className="text-[13px] font-medium text-slate-800 line-clamp-2">{c.next_action || "Belum ada rencana tindak lanjut"}</div>
+                  <div className="text-[11px] mt-1 font-medium" style={{ color: urgency.text }}>{urgency.note}</div>
+                </div>
+
+                {/* FOOTER ACTIONS */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  {c.phone && (
+                    wa ? (
+                      <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone}>
+                        <Phone size={13} />
+                      </a>
                     ) : (
-                      <ShieldAlert
-                        size={19}
-                        className="text-slate-300 shrink-0"
-                      />
-                    )}
-                  </div>
-
-                  {/* PIPELINE */}
-                  <div className="mt-4 rounded-[22px] bg-slate-50/80 border border-slate-100 p-3.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <StageChip
-                        hex={sm.hex}
-                        label={sm.label}
-                      />
-
-                      <span className="text-[9px] font-mono font-semibold tracking-wider text-slate-400 uppercase">
-                        Stage {stageNumber}/{Math.max(stages.length, 1)}
+                      <span className="p-1.5 text-slate-300" title={c.phone}>
+                        <Phone size={13} />
                       </span>
-                    </div>
-
-                    <div className="mt-3 h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${progressPercent}%`,
-                          background:
-                            "linear-gradient(90deg, #f97316, #fb923c)",
-                        }}
-                      />
-                    </div>
-
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400">
-                        Pipeline
-                      </span>
-                      <span className="text-[9px] font-mono font-bold text-slate-500">
-                        {Math.round(progressPercent)}%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* PRODUCT / PHONE */}
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    {c.phone ? (
-                      <div className="rounded-[18px] bg-slate-50 border border-slate-100 px-3 py-3 min-w-0">
-                        <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400">
-                          Phone
-                        </div>
-                        <div className="text-[12px] text-slate-700 mt-1 truncate">
-                          {c.phone}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded-[18px] bg-slate-50 border border-slate-100 px-3 py-3 min-w-0">
-                        <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400">
-                          Key Person
-                        </div>
-                        <div className="text-[12px] text-slate-700 mt-1 truncate">
-                          {c.key_person || "—"}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="rounded-[18px] bg-slate-50 border border-slate-100 px-3 py-3 min-w-0">
-                      <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400">
-                        {productLabel || "Produk Dominan"}
-                      </div>
-                      <div className="text-[12px] text-slate-700 mt-1 truncate">
-                        {c.product || "—"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* EMAIL */}
-                  {c.email && (
-                    <div className="mt-2.5 flex items-center gap-2 text-[11px] text-slate-500 truncate px-1">
-                      <Mail
-                        size={14}
-                        className="text-slate-400 shrink-0"
-                      />
-                      <span className="truncate">{c.email}</span>
-                    </div>
+                    )
                   )}
 
-                  {/* LAST CONTACT / NEXT ACTION */}
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <div className="rounded-[18px] border border-slate-100 bg-white px-3 py-3 min-w-0">
-                      <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-wider text-slate-400">
-                        <span className="text-[11px]">◷</span>
-                        Last Contact
-                      </div>
+                  {c.email && (
+                    <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50" title={c.email}>
+                      <Mail size={13} />
+                    </a>
+                  )}
 
-                      <div className="text-[12px] font-medium text-slate-700 mt-1.5 truncate">
-                        {lastContact === "—"
-                          ? "—"
-                          : new Date(lastContact).toLocaleDateString(
-                              "id-ID",
-                              {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              }
-                            )}
-                      </div>
-
-                      {lastContact !== "—" && (
-                        <div className="text-[10px] text-slate-400 mt-0.5 truncate">
-                          oleh {lastContactBy}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="rounded-[18px] border border-orange-100 bg-orange-50/60 px-3 py-3 min-w-0">
-                      <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-wider text-orange-500">
-                        ↗ Next Action
-                      </div>
-
-                      <div className="text-[12px] font-medium text-orange-700 mt-1.5 line-clamp-2">
-                        {c.next_action || "Belum ditentukan"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* FOOTER ACTIONS */}
-                  <div
-                    className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {c.phone && (
-                      wa ? (
-                        <a
-                          href={wa}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"
-                          title={c.phone}
-                        >
-                          <Phone size={13} />
-                        </a>
-                      ) : (
-                        <span
-                          className="p-1.5 text-slate-300"
-                          title={c.phone}
-                        >
-                          <Phone size={13} />
-                        </span>
-                      )
-                    )}
-
-                    {c.email && (
-                      <a
-                        href={`mailto:${c.email}`}
-                        className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50"
-                        title={c.email}
-                      >
-                        <Mail size={13} />
-                      </a>
-                    )}
-
-                    <button
-                      onClick={(e) =>
-                        openDraftPopup(c, e.currentTarget.getBoundingClientRect())
-                      }
-                      className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50"
-                      title="Draft follow-up (AI)"
-                    >
-                      <Sparkles size={13} />
-                    </button>
-
-                    <div className="ml-auto flex items-center gap-0.5">
-                      <button
-                        onClick={() => setEdit(c)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                        title="Edit lead"
-                      >
-                        <Pencil size={13} />
-                      </button>
-
-                      <button
-                        onClick={() => del(c.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                        title="Hapus lead"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* PROGRESS UPDATE */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setProgressPopup({
-                        lead: c,
-                        autoFocus: true,
-                      });
-                      saveOpenModal("progress", { leadId: c.id });
-                    }}
-                    className="mt-2.5 w-full flex items-center gap-2 text-left text-[11px] font-mono text-slate-500 border border-slate-200 bg-slate-50 rounded-xl px-3 py-2 hover:border-cyan-400 hover:text-cyan-700 hover:bg-cyan-50 transition-colors"
-                    title="Update progress harian"
-                  >
-                    <ClipboardList
-                      size={13}
-                      className="shrink-0 text-slate-400"
-                    />
-
-                    <span className="truncate">
-                      {c.progressLog?.[0]
-                        ? c.progressLog[0].text
-                        : "> update progress hari ini…"}
-                    </span>
+                  <button onClick={(e) => openDraftPopup(c, e.currentTarget.getBoundingClientRect())} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50" title="Draft follow-up (AI)">
+                    <Sparkles size={13} />
                   </button>
+
+                  <div className="ml-auto flex items-center gap-0.5">
+                    <button onClick={() => setEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50" title="Edit lead">
+                      <Pencil size={13} />
+                    </button>
+                    <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" title="Hapus lead">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
+
+                {/* PROGRESS UPDATE */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, autoFocus: true }); saveOpenModal("progress", { leadId: c.id }); }}
+                  className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border border-slate-200 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-300 hover:text-orange-700 hover:bg-orange-50/60 transition-colors"
+                  title="Update progress harian"
+                >
+                  <ClipboardList size={13} className="shrink-0 text-slate-400" />
+                  <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "Update progress hari ini…"}</span>
+                </button>
               </div>
             </div>
           );
