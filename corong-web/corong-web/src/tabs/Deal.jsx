@@ -181,32 +181,38 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Trophy size={32} className="mx-auto text-slate-300 mb-3" />Belum ada deal. Klik "Tambah Deal" atau ubah tahap lead jadi "Deal (menang)".</div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Trophy size={13} /> Total Deal</div><div className="font-mono font-bold text-2xl text-emerald-600">{groups.length}</div><div className="text-[10px] text-slate-400 mt-0.5">{deals.length} transaksi</div></div>
+          <div className="bg-white border border-slate-100 rounded-[28px] p-4 mb-4">
+            <div className="grid grid-cols-3 divide-x divide-slate-100">
+              <div className="px-3 first:pl-1">
+                <div className="text-xs text-slate-400 flex items-center gap-1.5"><Trophy size={13} /> Total Deal</div>
+                <div className="font-bold text-2xl text-emerald-600 mt-1.5 tabular-nums">{groups.length}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{deals.length} transaksi</div>
+              </div>
 
-            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3">
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-xs text-slate-400 flex items-center gap-1"><Building2 size={13} /> Total {quantityLabel}</div>
-                <button onClick={() => setQtyRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>
-                  {qtyRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+              <div className="px-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-400 flex items-center gap-1.5"><Building2 size={13} /> Total {quantityLabel}</div>
+                  <button onClick={() => setQtyRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>
+                    {qtyRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                <div className="font-bold text-2xl text-slate-800 mt-1.5 tabular-nums">
+                  {qtyRevealed ? <>{(totalTonInKg / 1000).toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></> : "••••••"}
+                </div>
               </div>
-              <div className="font-mono font-bold text-2xl text-slate-800">
-                {qtyRevealed ? <>{(totalTonInKg / 1000).toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></> : "••••••"}
-              </div>
-            </div>
 
-            <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-3">
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-xs text-slate-400 flex items-center gap-1"><TrendingUp size={13} /> Total Rp</div>
-                <button onClick={() => setRpRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={rpRevealed ? "Sembunyikan" : "Tampilkan"}>
-                  {rpRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+              <div className="px-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-400 flex items-center gap-1.5"><TrendingUp size={13} /> Total Rp</div>
+                  <button onClick={() => setRpRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={rpRevealed ? "Sembunyikan" : "Tampilkan"}>
+                    {rpRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                <div className="font-bold text-lg text-slate-800 mt-1.5 tabular-nums">{rpRevealed ? fmtRp(totalValue) : "••••••"}</div>
               </div>
-              <div className="font-mono font-bold text-base text-slate-800">{rpRevealed ? fmtRp(totalValue) : "••••••"}</div>
             </div>
           </div>
-          <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] overflow-x-auto">
+          <div className="bg-white border border-slate-100 rounded-[28px] overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
                 <th className="px-3 py-2 font-medium" style={{ width: "28px" }}></th>

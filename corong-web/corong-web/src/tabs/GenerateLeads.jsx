@@ -144,7 +144,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         )}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
+      <div className="bg-white border border-slate-100 rounded-[28px] p-5">
         <div className="flex items-center gap-2 mb-4">
           <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
             <div
