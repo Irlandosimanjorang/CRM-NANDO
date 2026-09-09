@@ -605,71 +605,62 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
         @keyframes orbit-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes orbit-ring-spin-slow { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
         @keyframes orbit-dash-flow { to { stroke-dashoffset: -12; } }
-        @keyframes orbit-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-4px) scale(1.05); } }
-        @keyframes orbit-ripple { from { transform: scale(0.6); opacity: .55; } to { transform: scale(2.1); opacity: 0; } }
-        @keyframes orbit-core-pulse { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.25); opacity: .85; } }
+        @keyframes orbit-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        @keyframes orbit-ripple { from { transform: scale(0.6); opacity: .5; } to { transform: scale(2.1); opacity: 0; } }
+        @keyframes orbit-pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
         @media (prefers-reduced-motion: reduce) { .orbit-motion, .orbit-motion * { animation: none !important; } }
       `}</style>
 
-      {/* Inti orbit - cuma pendar energi ambient, TANPA angka/teks (dulu ada
-          gauge "100/health" di tengah yang cuma duplikat status ATOM, gak
-          ada info baru). Sekadar penanda gravitasi visual biar node-node di
-          sekelilingnya kerasa "mengorbit sesuatu", bukan cuma ngambang acak. */}
-      <div className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <div
-          className="orbit-motion rounded-full blur-2xl"
-          style={{ width: 130, height: 130, background: overallOk ? "rgba(52,211,153,0.42)" : "rgba(245,158,11,0.42)", animation: "orbit-core-pulse 4.5s ease-in-out infinite" }}
-        />
-        <div className="orbit-motion absolute inset-0 rounded-full border-2" style={{ borderColor: overallOk ? "rgba(52,211,153,0.6)" : "rgba(245,158,11,0.6)", animation: "orbit-ring-spin 22s linear infinite" }} />
-      </div>
+      {/* Inti orbit - satu pendar lembut doang, gak ada border/ring lagi (yang
+          sebelumnya kelihatan kayak lingkaran kosong gak jelas gunanya). Cuma
+          nuansa cahaya di tengah biar node-node kerasa mengelilingi sesuatu. */}
+      <div
+        className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl pointer-events-none"
+        style={{ width: 140, height: 140, background: overallOk ? "rgba(52,211,153,0.09)" : "rgba(245,158,11,0.09)" }}
+      />
 
       <svg viewBox="0 0 100 100" className="orbit-motion absolute inset-0 h-full w-full overflow-visible">
-        <g style={{ transformOrigin: "50px 50px", animation: "orbit-ring-spin-slow 90s linear infinite" }}>
-          <circle cx={cx} cy={cy} r={ORBIT_BOUNDARY_RADIUS} fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="0.3" strokeDasharray="1.2 2" />
+        <g style={{ transformOrigin: "50px 50px", animation: "orbit-ring-spin-slow 140s linear infinite" }}>
+          <circle cx={cx} cy={cy} r={ORBIT_BOUNDARY_RADIUS} fill="none" stroke="rgba(148,163,184,0.12)" strokeWidth="0.25" strokeDasharray="1 2.4" />
         </g>
-        {nodesWithSubRing.map((n) => (
-          <circle key={`ring-${n.key}`} cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke={`${n.accentColor}33`} strokeWidth="0.3" />
-        ))}
-        {/* Mesh jaringan - tiap node nyambung ke TETANGGANYA (bukan ke hub
-            tengah yang udah dihapus), kesannya jadi "jaringan" node yang
-            saling terhubung, bukan hub-and-spoke. Edge yang nempel ke node
-            terpilih ikut nyala lebih terang. */}
+
+        {/* Mesh jaringan - tiap node nyambung ke tetangganya, garis TENANG di
+            keadaan diam (satu warna netral, gak animasi) - baru nyala warna
+            + jalan pas salah satu ujungnya lagi dipilih. Ini yang "narasi"-nya:
+            energi cuma ngalir ke node yang lagi diliat, bukan semua sekaligus. */}
         {nodes.map((n, i) => {
           const next = nodes[(i + 1) % nodes.length];
           if (nodes.length < 2) return null;
           const isActive = selectedKey === n.key || selectedKey === next.key;
           return (
             <g key={`mesh-${n.key}`}>
-              <line x1={n.pos.x} y1={n.pos.y} x2={next.pos.x} y2={next.pos.y} stroke="rgba(148,163,184,0.28)" strokeWidth="0.35" />
-              <line
-                x1={n.pos.x} y1={n.pos.y} x2={next.pos.x} y2={next.pos.y}
-                stroke={isActive ? n.accentColor : "rgba(203,213,225,0.55)"}
-                strokeOpacity={isActive ? 1 : 0.55}
-                strokeWidth={isActive ? 0.7 : 0.45}
-                strokeDasharray="0.4 3.2"
-                strokeLinecap="round"
-                style={{ animation: `orbit-dash-flow ${isActive ? 1.3 : 3.5}s linear infinite`, filter: isActive ? `drop-shadow(0 0 2px ${n.accentColor})` : "none" }}
-              />
+              <line x1={n.pos.x} y1={n.pos.y} x2={next.pos.x} y2={next.pos.y} stroke="rgba(148,163,184,0.16)" strokeWidth="0.3" />
+              {isActive && (
+                <line
+                  x1={n.pos.x} y1={n.pos.y} x2={next.pos.x} y2={next.pos.y}
+                  stroke={n.accentColor} strokeWidth="0.5" strokeDasharray="0.4 3.2" strokeLinecap="round"
+                  style={{ animation: "orbit-dash-flow 1.2s linear infinite" }}
+                />
+              )}
             </g>
           );
         })}
-        {/* Cincin sub-sinyal - muter pelan terus-menerus biar keliatan "hidup",
-            kayak satelit kecil ngorbit. Karyawan mana pun bisa punya ini
-            (lewat prop subSignals), gak di-hardcode buat 1 nama doang. */}
+
+        {/* Cincin sub-sinyal ATOM - titik TENANG kalau aman (steady, gak
+            animasi - dashboard yang baik gak nyala-nyala kalau gak ada apa2),
+            baru berkedip pelan kalau ada temuan yang perlu diliat. */}
         {nodesWithSubRing.map((n) => (
-          <g key={`sub-${n.key}`} style={{ transformOrigin: `${n.pos.x}px ${n.pos.y}px`, animation: "orbit-ring-spin 70s linear infinite" }}>
+          <g key={`sub-${n.key}`}>
+            <circle cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke="rgba(148,163,184,0.15)" strokeWidth="0.25" />
             {n.subSignals.map((sig, i) => {
               const pos = polarPoint(n.pos.x, n.pos.y, ORBIT_SUB_RADIUS, (360 / Math.max(n.subSignals.length, 1)) * i);
               return (
                 <circle
                   key={sig.key || i}
-                  cx={pos.x} cy={pos.y} r={1.1}
+                  cx={pos.x} cy={pos.y} r={0.85}
                   fill={sig.ok ? "#34d399" : "#f59e0b"}
-                  style={{
-                    filter: sig.ok ? "drop-shadow(0 0 4px rgba(52,211,153,1))" : "drop-shadow(0 0 5px rgba(245,158,11,1))",
-                    cursor: "pointer",
-                  }}
-                  className="transition-[filter] hover:brightness-125"
+                  style={{ cursor: "pointer", animation: sig.ok ? "none" : "orbit-pulse-dot 1.8s ease-in-out infinite" }}
+                  className="transition-opacity hover:opacity-70"
                   onClick={() => onSelectSignal(sig)}
                 >
                   <title>{sig.label}</title>
@@ -678,21 +669,15 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
             })}
           </g>
         ))}
-        {/* Cincin energi dekoratif buat node yang gak punya sub-sinyal beneran
-            (semua kecuali ATOM) - 1 lengkungan nyapu berputar per node, warna
-            ngikutin accent-nya sendiri, durasi beda-beda dikit per node biar
-            gak muter serempak kayak jam dinding (kesannya lebih organik). */}
+
+        {/* Node lain - satu tanda kecil yang pelan-pelan ngorbit di tepi
+            ring-nya sendiri (bukan lengkungan nyala gede) - cukup buat kesan
+            "hidup", gak berebut perhatian sama node-nya sendiri. */}
         {nodesWithoutSubRing.map((n, idx) => (
           <g key={`deco-${n.key}`}>
-            <circle cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke={`${n.accentColor}44`} strokeWidth="0.35" />
-            <g style={{ transformOrigin: `${n.pos.x}px ${n.pos.y}px`, animation: `orbit-ring-spin ${9 + idx * 1.6}s linear infinite` }}>
-              <circle
-                cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS}
-                fill="none" stroke={n.accentColor} strokeWidth="1.1" strokeLinecap="round"
-                strokeDasharray="20 62"
-                opacity="1"
-                style={{ filter: `drop-shadow(0 0 5px ${n.accentColor})` }}
-              />
+            <circle cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke="rgba(148,163,184,0.15)" strokeWidth="0.25" />
+            <g style={{ transformOrigin: `${n.pos.x}px ${n.pos.y}px`, animation: `orbit-ring-spin ${26 + idx * 4}s linear infinite` }}>
+              <circle cx={n.pos.x} cy={n.pos.y - ORBIT_SUB_RADIUS} r={0.7} fill={n.accentColor} opacity="0.8" />
             </g>
           </g>
         ))}
@@ -710,28 +695,18 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
             className="group absolute z-20 flex flex-col items-center gap-1.5"
             style={{ left: `${n.pos.x}%`, top: `${n.pos.y}%`, transform: "translate(-50%,-50%)" }}
           >
-            {/* Halo blur di belakang node - inilah yang bikin tiap node kerasa
-                "menyala" dari jauh, bukan cuma outline tipis. */}
             <span
-              className="orbit-motion pointer-events-none absolute rounded-full blur-lg"
+              className="orbit-motion relative flex items-center justify-center rounded-full border transition-all duration-300 group-hover:scale-105"
               style={{
-                width: "clamp(58px, 10vw, 86px)",
-                height: "clamp(58px, 10vw, 86px)",
-                background: n.accentColor,
-                opacity: isSelected ? 0.55 : 0.32,
-                animation: `orbit-core-pulse ${4 + i * 0.3}s ease-in-out infinite`,
-              }}
-            />
-            <span
-              className="orbit-motion relative flex items-center justify-center rounded-full border-2 transition-all group-hover:scale-110"
-              style={{
-                width: "clamp(46px, 8vw, 70px)",
-                height: "clamp(46px, 8vw, 70px)",
-                borderColor: isSelected ? n.accentColor : `${n.accentColor}bb`,
-                background: `radial-gradient(circle at 30% 25%, ${n.accentColor}55, rgba(6,9,15,0.94) 72%)`,
-                boxShadow: isSelected ? `0 0 40px -4px ${n.accentColor}` : `0 0 26px -6px ${n.accentColor}`,
-                animation: `orbit-float ${3.4 + i * 0.4}s ease-in-out infinite`,
-                animationDelay: `${i * 0.3}s`,
+                width: "clamp(46px, 8vw, 68px)",
+                height: "clamp(46px, 8vw, 68px)",
+                borderColor: isSelected ? n.accentColor : "rgba(148,163,184,0.3)",
+                background: isSelected
+                  ? `radial-gradient(circle at 30% 25%, ${n.accentColor}30, rgba(8,11,17,0.96) 72%)`
+                  : "rgba(255,255,255,0.02)",
+                boxShadow: isSelected ? `0 0 24px -6px ${n.accentColor}` : "none",
+                animation: `orbit-float ${4.2 + i * 0.4}s ease-in-out infinite`,
+                animationDelay: `${i * 0.35}s`,
               }}
             >
               {showRipple && (
@@ -742,10 +717,13 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
                   style={{ borderColor: n.accentColor, animation: "orbit-ripple .6s ease-out" }}
                 />
               )}
-              <Icon size={20} style={{ color: n.accentColor, filter: `drop-shadow(0 0 4px ${n.accentColor})` }} />
-              <span className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#05070c] ${n.ok ? "bg-emerald-400" : "bg-amber-400"}`} style={{ boxShadow: n.ok ? "0 0 6px rgba(52,211,153,0.9)" : "0 0 6px rgba(245,158,11,0.9)" }} />
+              <Icon size={18} style={{ color: isSelected ? n.accentColor : `${n.accentColor}cc` }} />
+              <span
+                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-[#05070c]"
+                style={{ background: n.ok ? "#34d399" : "#f59e0b", animation: n.ok ? "none" : "orbit-pulse-dot 1.8s ease-in-out infinite" }}
+              />
             </span>
-            <span className="font-mono text-[10.5px] font-bold uppercase tracking-wider text-white transition-colors" style={{ textShadow: `0 0 8px ${n.accentColor}88` }}>
+            <span className={`font-mono text-[10px] font-bold uppercase tracking-wider transition-colors ${isSelected ? "text-white" : "text-slate-500 group-hover:text-slate-300"}`}>
               {n.title}
             </span>
           </button>
