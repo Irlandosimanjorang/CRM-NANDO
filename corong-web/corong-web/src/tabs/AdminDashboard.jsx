@@ -458,7 +458,8 @@ function AiAccountsUsagePanel({ features, accounts }) {
 // katalog semua fitur AI + limitnya, dan rincian pemakaian per akun.
 function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
   if (!aiLimits) return null;
-  const { features, accounts } = aiLimits;
+  const { features, accounts, trend } = aiLimits;
+  const hasTrend = trend && trend.length > 1;
   return (
     <div className="mt-4 pt-4 border-t border-white/[0.08] grid gap-3">
       <div className="flex items-center gap-2.5">
@@ -477,6 +478,17 @@ function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
           </span>
         )}
       </div>
+      {/* Trend 7 hari terakhir - dicatet tiap run ATOM (cron 4 jam-an) lewat
+          health_check_runs.ai_flagged_count, biar keliatan POLANYA (naik
+          pelan-pelan sebelum kebocoran), bukan cuma snapshot hari ini doang. */}
+      {hasTrend ? (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-2.5">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-1">Tren sinyal butuh perhatian - 7 hari</div>
+          <TrendSparkline data={trend} dataKey="count" color={severity === "critical" ? "#f43f5e" : severity === "warning" ? "#f59e0b" : "#34d399"} />
+        </div>
+      ) : (
+        <div className="text-[10px] text-slate-600 font-mono">tren mulai kekumpul abis beberapa kali ATOM jalan (tiap ~4 jam) - belum cukup data buat grafik</div>
+      )}
       <AiFeatureCatalog features={features} />
       <AiAccountsUsagePanel features={features} accounts={accounts} />
     </div>
