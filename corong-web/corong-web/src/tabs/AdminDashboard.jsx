@@ -344,23 +344,66 @@ function OrbitCommandMap({ employees, atomChecks, selectedKey, onSelectEmployee,
         pos: polarPoint(atomNode.pos.x, atomNode.pos.y, ORBIT_SUB_RADIUS, (360 / Math.max(atomChecks.length, 1)) * i),
       }))
     : [];
+  // Klik node muncul efek "ripple" (cincin ngembang lalu ilang) sesaat -
+  // feedback visual instan tanpa nunggu panel detail di bawah ke-render.
+  const [rippleId, setRippleId] = useState(null);
+  const selectNode = (key) => {
+    onSelectEmployee(key);
+    setRippleId(`${key}-${Date.now()}`);
+  };
 
   return (
     <div className="relative mx-auto w-full max-w-[560px] aspect-square select-none">
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full overflow-visible">
-        <circle cx={cx} cy={cy} r={46} fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="0.3" strokeDasharray="1.2 2" />
+      <style>{`
+        @keyframes orbit-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes orbit-ring-spin-slow { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        @keyframes orbit-dash-flow { to { stroke-dashoffset: -12; } }
+        @keyframes orbit-breathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.06); opacity: .85; } }
+        @keyframes orbit-ripple { from { transform: scale(0.6); opacity: .55; } to { transform: scale(2.1); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .orbit-motion, .orbit-motion * { animation: none !important; } }
+      `}</style>
+      <svg viewBox="0 0 100 100" className="orbit-motion absolute inset-0 h-full w-full overflow-visible">
+        <g style={{ transformOrigin: "50px 50px", animation: "orbit-ring-spin-slow 90s linear infinite" }}>
+          <circle cx={cx} cy={cy} r={46} fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="0.3" strokeDasharray="1.2 2" />
+        </g>
         {atomNode && (
           <circle cx={atomNode.pos.x} cy={atomNode.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke={`${atomNode.accentColor}33`} strokeWidth="0.3" />
         )}
         {nodes.map((n) => (
-          <line
-            key={n.key}
-            x1={cx} y1={cy} x2={n.pos.x} y2={n.pos.y}
-            stroke={n.accentColor}
-            strokeOpacity={selectedKey === n.key ? 0.55 : 0.22}
-            strokeWidth={selectedKey === n.key ? 0.6 : 0.35}
-          />
+          <g key={n.key}>
+            <line x1={cx} y1={cy} x2={n.pos.x} y2={n.pos.y} stroke={n.accentColor} strokeOpacity={selectedKey === n.key ? 0.4 : 0.16} strokeWidth={selectedKey === n.key ? 0.6 : 0.35} />
+            {/* Overlay dash yang ngalir - kesan "energi" ngalir dari node ke hub, lebih terang buat node yang lagi dipilih */}
+            <line
+              x1={n.pos.x} y1={n.pos.y} x2={cx} y2={cy}
+              stroke={n.accentColor}
+              strokeOpacity={selectedKey === n.key ? 0.9 : 0.4}
+              strokeWidth={selectedKey === n.key ? 0.7 : 0.45}
+              strokeDasharray="0.4 3.2"
+              strokeLinecap="round"
+              style={{ animation: `orbit-dash-flow ${selectedKey === n.key ? 1.1 : 2.2}s linear infinite` }}
+            />
+          </g>
         ))}
+        {/* Cincin sub-sinyal ATOM - muter pelan terus-menerus biar keliatan "hidup", kayak satelit kecil ngorbit */}
+        {atomNode && subDots.length > 0 && (
+          <g style={{ transformOrigin: `${atomNode.pos.x}px ${atomNode.pos.y}px`, animation: "orbit-ring-spin 70s linear infinite" }}>
+            {subDots.map(({ check, pos }, i) => (
+              <circle
+                key={check.key || i}
+                cx={pos.x} cy={pos.y} r={0.9}
+                fill={check.ok ? "#34d399" : "#f59e0b"}
+                style={{
+                  filter: check.ok ? "drop-shadow(0 0 2px rgba(52,211,153,0.8))" : "drop-shadow(0 0 3px rgba(245,158,11,0.9))",
+                  cursor: "pointer",
+                }}
+                className="transition-[filter] hover:brightness-125"
+                onClick={() => onSelectCheck(check)}
+              >
+                <title>{check.label}</title>
+              </circle>
+            ))}
+          </g>
+        )}
       </svg>
 
       {/* Hub tengah */}
@@ -369,46 +412,38 @@ function OrbitCommandMap({ employees, atomChecks, selectedKey, onSelectEmployee,
         <div className="mt-1.5 text-center font-mono text-[9px] uppercase tracking-[0.14em] text-slate-500">Nexto AI</div>
       </div>
 
-      {/* Titik sub-sinyal ATOM - klik buka detail sinyal yang sama kayak di panel bawah */}
-      {subDots.map(({ check, pos }, i) => (
-        <button
-          key={check.key || i}
-          onClick={() => onSelectCheck(check)}
-          title={check.label}
-          className="absolute z-10 rounded-full transition-[filter] hover:brightness-125"
-          style={{
-            left: `${pos.x}%`,
-            top: `${pos.y}%`,
-            transform: "translate(-50%,-50%)",
-            width: "clamp(9px, 1.8vw, 13px)",
-            height: "clamp(9px, 1.8vw, 13px)",
-            background: check.ok ? "#34d399" : "#f59e0b",
-            boxShadow: check.ok ? "0 0 6px 1px rgba(52,211,153,0.6)" : "0 0 8px 2px rgba(245,158,11,0.7)",
-          }}
-        />
-      ))}
-
       {/* Node karyawan utama */}
-      {nodes.map((n) => {
+      {nodes.map((n, i) => {
         const Icon = n.icon;
         const isSelected = selectedKey === n.key;
+        const showRipple = rippleId?.startsWith(`${n.key}-`);
         return (
           <button
             key={n.key}
-            onClick={() => onSelectEmployee(n.key)}
+            onClick={() => selectNode(n.key)}
             className="group absolute z-20 flex flex-col items-center gap-1.5"
             style={{ left: `${n.pos.x}%`, top: `${n.pos.y}%`, transform: "translate(-50%,-50%)" }}
           >
             <span
-              className="relative flex items-center justify-center rounded-full border transition-all"
+              className="orbit-motion relative flex items-center justify-center rounded-full border transition-all group-hover:scale-110"
               style={{
                 width: "clamp(52px, 9vw, 78px)",
                 height: "clamp(52px, 9vw, 78px)",
                 borderColor: isSelected ? n.accentColor : `${n.accentColor}55`,
                 background: `radial-gradient(circle at 30% 25%, ${n.accentColor}26, rgba(6,9,15,0.94) 70%)`,
                 boxShadow: isSelected ? `0 0 34px -8px ${n.accentColor}` : `0 0 22px -14px ${n.accentColor}`,
+                animation: `orbit-breathe ${3.4 + i * 0.4}s ease-in-out infinite`,
+                animationDelay: `${i * 0.3}s`,
               }}
             >
+              {showRipple && (
+                <span
+                  key={rippleId}
+                  onAnimationEnd={() => setRippleId(null)}
+                  className="pointer-events-none absolute inset-0 rounded-full border-2"
+                  style={{ borderColor: n.accentColor, animation: "orbit-ripple .6s ease-out" }}
+                />
+              )}
               <Icon size={20} style={{ color: n.accentColor }} />
               <span className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#05070c] ${n.ok ? "bg-emerald-400" : "bg-amber-400"}`} />
             </span>
