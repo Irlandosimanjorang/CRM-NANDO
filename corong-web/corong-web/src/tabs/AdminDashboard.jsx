@@ -500,66 +500,6 @@ function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
   );
 }
 
-// "Jarvis Core" - orb HUD berputar di header, gaya visual sama persis kayak
-// "NEXTO AI CORE" di landing page (Auth.jsx, section AiEngineLoopSection) -
-// keyframes-nya SENGAJA dipake ulang nama & bentuknya biar konsisten (App ini
-// gak share <style> global sama Auth.jsx, jadi didefinisiin lokal di sini).
-// Warnanya ngikutin status ATOM: emerald kalo semua sistem normal, amber
-// kalo ada temuan - biar orb-nya sendiri jadi indikator kesehatan platform,
-// bukan cuma dekorasi doang.
-function JarvisCore({ ok, gaugeValue, size = 96 }) {
-  const glow = ok ? "52,211,153" : "245,158,11"; // emerald / amber, RGB
-  const dotColor = ok ? "#34d399" : "#f59e0b";
-  // Skala semua elemen internal relatif ke ukuran dasar 96px, biar orb ini
-  // bisa dipake ulang lebih gede jadi hub tengah peta orbit (lihat
-  // OrbitCommandMap) tanpa gambar ulang dari nol.
-  const scale = size / 96;
-  return (
-    <div className="relative shrink-0 flex items-center justify-center" style={{ width: size, height: size }}>
-      <style>{`
-        @keyframes jarvis-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes jarvis-spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
-        @keyframes jarvis-pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.04); }
-        }
-        @keyframes jarvis-dot { 0%, 100% { opacity: .3; transform: scale(.7); } 50% { opacity: 1; transform: scale(1); } }
-        @media (prefers-reduced-motion: reduce) { .jarvis-motion, .jarvis-motion * { animation: none !important; } }
-      `}</style>
-      <div className="jarvis-motion absolute inset-0 rounded-full border border-dashed" style={{ borderColor: `rgba(${glow},.35)`, animation: "jarvis-spin 14s linear infinite" }} />
-      <div className="jarvis-motion absolute rounded-full border" style={{ borderColor: `rgba(${glow},.22)`, animation: "jarvis-spin-reverse 9s linear infinite", inset: 10 * scale }} />
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <span
-          key={i}
-          className="jarvis-motion absolute left-1/2 top-1/2 rounded-full"
-          style={{
-            width: 4 * scale,
-            height: 4 * scale,
-            background: dotColor,
-            boxShadow: `0 0 8px 2px rgba(${glow},.7)`,
-            transform: `rotate(${i * 60}deg) translateY(-${42 * scale}px)`,
-            animation: `jarvis-dot ${1.6 + (i % 3) * .3}s ease-in-out infinite`,
-            animationDelay: `${i * .12}s`,
-          }}
-        />
-      ))}
-      <div className="absolute rounded-full blur-xl" style={{ width: 56 * scale, height: 56 * scale, background: `rgba(${glow},.18)` }} />
-      <div
-        className="jarvis-motion relative flex flex-col items-center justify-center rounded-full border border-white/[0.14]"
-        style={{
-          width: 58 * scale,
-          height: 58 * scale,
-          background: "radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), rgba(16,21,31,.96) 45%, rgba(5,7,12,.99) 100%)",
-          animation: "jarvis-pulse 3s ease-in-out infinite",
-        }}
-      >
-        <span className="font-mono font-bold" style={{ color: dotColor, fontSize: 13 * scale }}>{Math.round(gaugeValue)}</span>
-        <span className="uppercase tracking-[0.14em] text-slate-500" style={{ fontSize: 6 * scale }}>health</span>
-      </div>
-    </div>
-  );
-}
-
 // Peta orbit "second brain" - hub AI di tengah dengan tiap karyawan AI
 // mengorbit di sekelilingnya. Sudut per node dihitung OTOMATIS dari jumlah
 // karyawan (360 / total), BUKAN hardcode per nama (9 Sep 2026 - sebelumnya
@@ -613,12 +553,15 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
   // dari sisa ruang dan numpuk ke elemen lain. Diukur beneran = gak akan
   // pernah salah ukuran lagi, di layar berapa pun.
   const wrapRef = useRef(null);
-  const [boxSize, setBoxSize] = useState(480);
+  const [boxSize, setBoxSize] = useState(560);
   useEffect(() => {
     const parent = wrapRef.current?.parentElement;
     if (!parent) return;
     const measure = () => {
-      const size = Math.max(300, Math.min(520, parent.clientWidth, parent.clientHeight));
+      // Cap dinaikin ke 680 (dari 520) - sekarang toolbar+judul+strip ringkasan
+      // di atasnya udah jauh lebih ringkas, jadi ada sisa ruang lebih buat
+      // orbit gede tanpa nyodok elemen lain (tetep diukur beneran, gak ditebak).
+      const size = Math.max(300, Math.min(680, parent.clientWidth, parent.clientHeight));
       setBoxSize(size);
     };
     measure();
@@ -1018,19 +961,12 @@ export default function AdminDashboard() {
       <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-orange-500/10 blur-[90px]" />
 
       <div className="relative flex h-full min-h-0 flex-col overflow-y-auto">
-        {/* HEADER */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0">
-          <div className="flex items-center gap-4">
-            <JarvisCore ok={allSystemsGo} gaugeValue={securityGauge} />
-            <div>
-              <div className="flex items-center gap-2">
-                <StatusOrb ok={allSystemsGo} size={9} />
-                <h1 className="font-mono text-lg font-bold tracking-tight text-white">AI OPS COMMAND CENTER</h1>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1 font-mono">
-                {allSystemsGo ? "SEMUA SISTEM NORMAL" : "ADA YANG PERLU DICEK"} · sync terakhir {lastSync ? timeAgo(lastSync.toISOString()) : "…"}
-              </p>
-            </div>
+        {/* TOOLBAR - baris tipis doang, kontrol di kanan, biar jatah tinggi
+            paling banyak jatuh ke judul besar + orbit di bawahnya. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3 shrink-0">
+          <div className="flex items-center gap-2 font-mono text-[10.5px] text-slate-500">
+            <StatusOrb ok={allSystemsGo} size={8} />
+            {allSystemsGo ? "SEMUA SISTEM NORMAL" : "ADA YANG PERLU DICEK"} · sync {lastSync ? timeAgo(lastSync.toISOString()) : "…"}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] p-0.5">
@@ -1066,18 +1002,29 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* RINGKASAN PLATFORM */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4 shrink-0">
+        {/* JUDUL BESAR - ala terminal/Claude Code (font-mono, tracked-out),
+            jadi fokus utama di atas, ganti dari layout lama (gauge kecil +
+            judul kecil rata kiri) yang keliatan sisa tempat kosong gede di
+            atas orbit. */}
+        <div className="mb-3 shrink-0 text-center">
+          <h1 className="font-mono text-[28px] sm:text-[34px] md:text-[40px] font-bold uppercase tracking-[0.08em] text-white leading-none">
+            <span className="text-orange-400">&gt;_</span> Command Center
+          </h1>
+        </div>
+
+        {/* RINGKASAN PLATFORM - strip tipis, bukan kartu-kartu gede lagi,
+            biar sisa tinggi paling banyak jatuh ke orbit di bawahnya. */}
+        <div className="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center divide-x divide-white/10 rounded-full border border-white/[0.06] bg-white/[0.02] px-2 py-2">
           {[
             { label: "Total Leads", value: status?.platform?.total_leads ?? 0, icon: Users, color: "#f97316" },
             { label: "Organisasi", value: status?.platform?.total_orgs ?? 0, icon: Building2, color: "#a78bfa" },
-            { label: "Pesan Bot Hari Ini", value: status?.assistant?.messages_today ?? 0, icon: MessageCircle, color: "#38bdf8" },
-            { label: "Digest Hari Ini", value: status?.sales_advisor?.runs_today ?? 0, icon: Activity, color: "#34d399" },
+            { label: "Pesan Bot", value: status?.assistant?.messages_today ?? 0, icon: MessageCircle, color: "#38bdf8" },
+            { label: "Digest", value: status?.sales_advisor?.runs_today ?? 0, icon: Activity, color: "#34d399" },
           ].map((s) => (
-            <div key={s.label} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
-              <s.icon size={13} style={{ color: s.color }} className="mb-1.5" />
-              <div className="font-mono text-lg font-bold text-white leading-none">{s.value}</div>
-              <div className="text-[9px] text-slate-500 mt-1 uppercase tracking-wide">{s.label}</div>
+            <div key={s.label} className="flex items-center gap-1.5 px-4 font-mono text-[11px]">
+              <s.icon size={12} style={{ color: s.color }} />
+              <span className="font-bold text-white">{s.value}</span>
+              <span className="text-slate-500 uppercase tracking-wide">{s.label}</span>
             </div>
           ))}
         </div>
