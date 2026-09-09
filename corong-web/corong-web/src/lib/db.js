@@ -392,16 +392,29 @@ export async function saveSalesNames(names) {
 }
 
 // ---- LEADS ----
+// BUG FIX (9 Sep 2026): sebelumnya .range(0, 9999) - kalau org-nya kelak
+// punya lebih dari 10rb lead, sisanya kepotong DIAM-DIAM (bukan error, cuma
+// gak keambil) - bug korupsi data yang gak ketauan sampe ada yang nanya "kok
+// lead gua ilang". Sekarang loop ambil per 1000 baris sampe abis, gak ada
+// batas atas lagi.
 export async function getLeads() {
-  const { data, error } = await supabase
-    .from("leads")
-    .select("*, progress_notes(id, note_date, text)")
-    .is("deleted_at", null)
-    .order("last_contact", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .range(0, 9999); // eksplisit minta sampe 10rb baris - Supabase default motong di 1000 kalau gak di-set
-  if (error) throw error;
-  return (data || []).map((l) => ({
+  const PAGE_SIZE = 1000;
+  let allRows = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("leads")
+      .select("*, progress_notes(id, note_date, text)")
+      .is("deleted_at", null)
+      .order("last_contact", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    allRows = allRows.concat(data || []);
+    if (!data || data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return allRows.map((l) => ({
     ...l,
     progressLog: (l.progress_notes || [])
       .sort((a, b) => (a.note_date < b.note_date ? 1 : -1))
