@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Send, Loader2, ExternalLink } from "lucide-react";
+import { MessageCircle, X, Send, ExternalLink } from "lucide-react";
 import * as db from "../lib/db";
 
 // Widget chat publik landing page - karyawan AI "SASA" (Customer Support).
@@ -139,6 +139,9 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
 
       {open && (
         <div className={`fixed ${panelBottomClass} right-5 z-[150] flex h-[min(480px,70vh)] w-[340px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0e16] shadow-2xl`}>
+          <style>{`
+            @keyframes sasa-typing { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-3px); opacity: 1; } }
+          `}</style>
           <div className="flex items-center gap-2.5 border-b border-white/[0.08] bg-white/[0.02] px-4 py-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500/15">
               <MessageCircle size={15} className="text-orange-400" />
@@ -208,8 +211,14 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
             )}
             {sending && (
               <div className="flex justify-start">
-                <div className="rounded-2xl rounded-bl-sm bg-white/[0.06] px-3.5 py-2.5 text-slate-400">
-                  <Loader2 size={13} className="animate-spin" />
+                <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-white/[0.06] px-4 py-3.5">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="h-1.5 w-1.5 rounded-full bg-slate-400"
+                      style={{ animation: "sasa-typing 1.2s ease-in-out infinite", animationDelay: `${i * 0.15}s` }}
+                    />
+                  ))}
                 </div>
               </div>
             )}
