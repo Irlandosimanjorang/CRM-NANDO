@@ -586,6 +586,11 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
   const angleStep = 360 / Math.max(employees.length, 1);
   const nodes = employees.map((e, i) => ({ ...e, pos: polarPoint(cx, cy, ORBIT_MAIN_RADIUS, ORBIT_START_ANGLE + angleStep * i) }));
   const nodesWithSubRing = nodes.filter((n) => n.subSignals && n.subSignals.length > 0);
+  // Node yang GAK punya subSignals asli (cuma ATOM yang punya) - tetep dikasih
+  // cincin muter, tapi bentuknya SENGAJA beda (1 lengkungan energi nyapu
+  // berputar, bukan titik-titik) biar gak keliatan kayak ngaku-ngaku punya
+  // sub-sinyal beneran padahal cuma dekorasi.
+  const nodesWithoutSubRing = nodes.filter((n) => !n.subSignals || n.subSignals.length === 0);
   // Klik node muncul efek "ripple" (cincin ngembang lalu ilang) sesaat -
   // feedback visual instan tanpa nunggu panel detail di bawah ke-render.
   const [rippleId, setRippleId] = useState(null);
@@ -671,6 +676,24 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
                 </circle>
               );
             })}
+          </g>
+        ))}
+        {/* Cincin energi dekoratif buat node yang gak punya sub-sinyal beneran
+            (semua kecuali ATOM) - 1 lengkungan nyapu berputar per node, warna
+            ngikutin accent-nya sendiri, durasi beda-beda dikit per node biar
+            gak muter serempak kayak jam dinding (kesannya lebih organik). */}
+        {nodesWithoutSubRing.map((n, idx) => (
+          <g key={`deco-${n.key}`}>
+            <circle cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke={`${n.accentColor}22`} strokeWidth="0.3" />
+            <g style={{ transformOrigin: `${n.pos.x}px ${n.pos.y}px`, animation: `orbit-ring-spin ${9 + idx * 1.6}s linear infinite` }}>
+              <circle
+                cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS}
+                fill="none" stroke={n.accentColor} strokeWidth="0.7" strokeLinecap="round"
+                strokeDasharray="18 64"
+                opacity="0.85"
+                style={{ filter: `drop-shadow(0 0 3px ${n.accentColor}aa)` }}
+              />
+            </g>
           </g>
         ))}
       </svg>
