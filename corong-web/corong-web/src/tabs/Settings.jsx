@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, MessageCircle } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
 import RecycleBinModal from "../components/RecycleBinModal";
+import SupportChatWidget from "../components/SupportChatWidget";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 import { PLAN_LEVEL, TIER_LABEL } from "../lib/plans";
 
@@ -707,19 +708,11 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       {showCleanup && <DataCleanupModal leads={leads} stages={stages} onClose={() => { setShowCleanup(false); clearOpenModal("datacleanup"); }} onChanged={onChanged} />}
       {showRecycleBin && <RecycleBinModal onClose={() => { setShowRecycleBin(false); clearOpenModal("recyclebin"); }} onChanged={onChanged} />}
 
-      {/* Floating - dulu kartu section biasa, sekarang ngambang di pojok biar
-          gak numpuk sama section lain, tetep gampang diklik dari mana aja pas
-          lagi scroll tab ini. bottom-20 di mobile biar gak ketiban nav bawah. */}
-      <a
-        href={`https://wa.me/6281273059284?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}`}
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-full pl-3.5 pr-4 py-3 shadow-[0_12px_30px_-10px_rgba(5,150,105,0.55)] transition-colors"
-        title="Butuh bantuan? Chat WhatsApp"
-      >
-        <MessageCircle size={18} />
-        <span className="hidden sm:inline">Bantuan</span>
-      </a>
+      {/* Ganti tombol WA manual jadi widget chat SASA (9 Sep 2026) - visitor
+          landing page udah dilayani SASA duluan, user yang udah login juga
+          lebih baik ditangani AI yang sama daripada loncat ke WA manual.
+          insideApp biar posisinya gak ketiban nav bawah pas mobile. */}
+      <SupportChatWidget supportWaNumber="6281273059284" insideApp />
     </div>
   );
 }

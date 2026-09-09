@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, ExternalLink } from "lucide-react";
 import * as db from "../lib/db";
 
 // Widget chat publik landing page - karyawan AI "SASA" (Customer Support).
@@ -40,7 +40,13 @@ function saveHistory(messages) {
 
 const GREETING = "Halo! Aku SASA, asisten Nexto. Ada yang mau ditanyain soal harga, fitur, atau cara mulai?";
 
-export default function SupportChatWidget() {
+export default function SupportChatWidget({ supportWaNumber, insideApp }) {
+  // insideApp = dipasang di dalam app yang udah login (Settings.jsx), bukan
+  // landing page publik - app punya nav bar bawah di mobile (App.jsx,
+  // fixed bottom-3), jadi bubble & panelnya perlu naik dikit di mobile biar
+  // gak ketiban, sama kayak tombol WA lama yang digantiin widget ini.
+  const bubbleBottomClass = insideApp ? "bottom-20 md:bottom-5" : "bottom-5";
+  const panelBottomClass = insideApp ? "bottom-36 md:bottom-20" : "bottom-20";
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState(() => {
     const saved = loadHistory();
@@ -79,23 +85,37 @@ export default function SupportChatWidget() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 z-[150] flex h-14 w-14 items-center justify-center rounded-full bg-orange-500 text-white shadow-[0_8px_30px_-8px_rgba(249,115,22,0.6)] transition-transform hover:scale-105 active:scale-95"
+        className={`fixed ${bubbleBottomClass} right-5 z-[150] flex h-11 w-11 items-center justify-center rounded-full bg-orange-500 text-white shadow-[0_8px_30px_-8px_rgba(249,115,22,0.6)] transition-transform hover:scale-105 active:scale-95`}
         aria-label="Buka chat bantuan"
       >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
+        {open ? <X size={18} /> : <MessageCircle size={18} />}
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-5 z-[150] flex h-[480px] w-[340px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0e16] shadow-2xl">
+        <div className={`fixed ${panelBottomClass} right-5 z-[150] flex h-[min(480px,70vh)] w-[340px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0e16] shadow-2xl`}>
           <div className="flex items-center gap-2.5 border-b border-white/[0.08] bg-white/[0.02] px-4 py-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500/15">
               <MessageCircle size={15} className="text-orange-400" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-[13px] font-semibold text-white">SASA · Nexto</div>
               <div className="text-[10px] text-slate-500">Biasanya balas dalam beberapa detik</div>
             </div>
           </div>
+
+          {/* Jalan pintas ke manusia - selalu keliatan, gak nunggu SASA
+              "nyerah" dulu baru nawarin. Visitor yang emang maunya chat
+              orang langsung gak perlu mancing-mancing AI dulu. */}
+          {supportWaNumber && (
+            <a
+              href={`https://wa.me/${supportWaNumber}?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-1.5 border-b border-white/[0.08] bg-white/[0.015] py-2 text-[10.5px] font-medium text-emerald-400 transition-colors hover:bg-white/[0.03]"
+            >
+              Lebih suka chat orang langsung? <span className="underline">Via WhatsApp</span> <ExternalLink size={11} />
+            </a>
+          )}
 
           <div ref={scrollRef} className="flex-1 space-y-2.5 overflow-y-auto px-3.5 py-3">
             {messages.map((m, i) => (
