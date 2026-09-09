@@ -666,17 +666,17 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise }) {
           <div className="bg-white border border-slate-100 rounded-[28px] overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Lokasi</th><th className="text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Tanggal visit</th><th className="text-left px-3 py-2 font-medium">Ketemu</th><th className="text-left px-3 py-2 font-medium">Agenda</th>
+                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Lokasi</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Tanggal visit</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Ketemu</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Agenda</th>
               </tr></thead>
               <tbody>
                 {visits.map((c) => { const past = c.visit_date < todayISO(); const today = c.visit_date === todayISO(); const meet = c.visit_meet || c.key_person; return (
                   <tr key={c.id} className={`border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer ${past ? "opacity-50" : ""}`} onClick={() => onEdit(c)}>
                     <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
+                    <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
+                    <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
                     <td className="px-3 py-2 text-xs"><span className={today ? "text-orange-600 font-medium" : "text-slate-600"}>{fmtDate(c.visit_date)}{today && " · hari ini"}</span></td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{meet || "—"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600 max-w-56">{c.visit_agenda ? <div className="line-clamp-2">{c.visit_agenda}</div> : <span className="text-slate-300">—</span>}</td>
+                    <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{meet || "—"}</td>
+                    <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600 max-w-56">{c.visit_agenda ? <div className="line-clamp-2">{c.visit_agenda}</div> : <span className="text-slate-300">—</span>}</td>
                   </tr> ); })}
               </tbody>
             </table>

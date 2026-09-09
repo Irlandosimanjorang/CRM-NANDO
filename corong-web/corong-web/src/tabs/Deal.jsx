@@ -216,7 +216,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
                 <th className="px-3 py-2 font-medium" style={{ width: "28px" }}></th>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="text-left px-3 py-2 font-medium">Sales</th><th className="text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="text-left px-3 py-2 font-medium">{productLabel}</th><th className="text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
+                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Sales</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">{productLabel}</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
               <tbody>
                 {groups.map((g) => {
@@ -238,24 +238,24 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                           {g.txs.length > 1 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">{g.txs.length}x</span>}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-600">{lead?.city || "—"}</td>
+                      <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{lead?.city || "—"}</td>
                       <td className="px-3 py-2">{sm ? <span className="text-[11px] border rounded-full px-2 py-0.5" style={chipStyle(sm.hex)}>{sm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
-                      <td className="px-3 py-2 text-xs text-slate-600">{lead?.sales_owner || "—"}</td>
-                      <td className="px-3 py-2 text-xs text-slate-600">{latest.deal_date ? fmtDate(latest.deal_date) : "—"}</td>
-                      <td className="px-3 py-2 text-xs text-slate-600">{latest.chemical || "—"}</td>
-                      <td className="px-3 py-2 text-xs font-mono text-slate-700">{latest.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${latest.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
+                      <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{lead?.sales_owner || "—"}</td>
+                      <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.deal_date ? fmtDate(latest.deal_date) : "—"}</td>
+                      <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.chemical || "—"}</td>
+                      <td className="hidden sm:table-cell px-3 py-2 text-xs font-mono text-slate-700">{latest.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${latest.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
                       <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{groupTotalRp ? (rpRevealed ? fmtRp(groupTotalRp) : "••••••") : "—"}</td>
                     </tr>
                     {isOpen && g.txs.map((t) => (
                       <tr key={t.id} className="border-t border-slate-50 bg-slate-50/50 text-xs">
                         <td></td>
                         <td className="px-3 py-1.5 pl-8 text-slate-400" colSpan={1}>↳ transaksi</td>
+                        <td className="hidden sm:table-cell px-3 py-1.5"></td>
                         <td className="px-3 py-1.5"></td>
-                        <td className="px-3 py-1.5"></td>
-                        <td className="px-3 py-1.5"></td>
-                        <td className="px-3 py-1.5 text-slate-600">{t.deal_date ? fmtDate(t.deal_date) : "—"}</td>
-                        <td className="px-3 py-1.5 text-slate-600">{t.chemical || "—"}</td>
-                        <td className="px-3 py-1.5 font-mono text-slate-600">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${t.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
+                        <td className="hidden sm:table-cell px-3 py-1.5"></td>
+                        <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.deal_date ? fmtDate(t.deal_date) : "—"}</td>
+                        <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.chemical || "—"}</td>
+                        <td className="hidden sm:table-cell px-3 py-1.5 font-mono text-slate-600">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${t.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
                         <td className="px-3 py-1.5 font-mono text-emerald-700 font-semibold">
                           <div className="flex items-center justify-between gap-2">
                             {t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : "••••••") : "—"}
