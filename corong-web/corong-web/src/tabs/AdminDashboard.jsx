@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -263,11 +263,15 @@ function ChecksDetailPanel({ checks, aiSummary }) {
 // Warnanya ngikutin status ATOM: emerald kalo semua sistem normal, amber
 // kalo ada temuan - biar orb-nya sendiri jadi indikator kesehatan platform,
 // bukan cuma dekorasi doang.
-function JarvisCore({ ok, gaugeValue }) {
+function JarvisCore({ ok, gaugeValue, size = 96 }) {
   const glow = ok ? "52,211,153" : "245,158,11"; // emerald / amber, RGB
   const dotColor = ok ? "#34d399" : "#f59e0b";
+  // Skala semua elemen internal relatif ke ukuran dasar 96px, biar orb ini
+  // bisa dipake ulang lebih gede jadi hub tengah peta orbit (lihat
+  // OrbitCommandMap) tanpa gambar ulang dari nol.
+  const scale = size / 96;
   return (
-    <div className="relative shrink-0 flex items-center justify-center" style={{ width: 96, height: 96 }}>
+    <div className="relative shrink-0 flex items-center justify-center" style={{ width: size, height: size }}>
       <style>{`
         @keyframes jarvis-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes jarvis-spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
@@ -279,31 +283,141 @@ function JarvisCore({ ok, gaugeValue }) {
         @media (prefers-reduced-motion: reduce) { .jarvis-motion, .jarvis-motion * { animation: none !important; } }
       `}</style>
       <div className="jarvis-motion absolute inset-0 rounded-full border border-dashed" style={{ borderColor: `rgba(${glow},.35)`, animation: "jarvis-spin 14s linear infinite" }} />
-      <div className="jarvis-motion absolute inset-[10px] rounded-full border" style={{ borderColor: `rgba(${glow},.22)`, animation: "jarvis-spin-reverse 9s linear infinite" }} />
+      <div className="jarvis-motion absolute rounded-full border" style={{ borderColor: `rgba(${glow},.22)`, animation: "jarvis-spin-reverse 9s linear infinite", inset: 10 * scale }} />
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <span
           key={i}
-          className="jarvis-motion absolute left-1/2 top-1/2 h-1 w-1 rounded-full"
+          className="jarvis-motion absolute left-1/2 top-1/2 rounded-full"
           style={{
+            width: 4 * scale,
+            height: 4 * scale,
             background: dotColor,
             boxShadow: `0 0 8px 2px rgba(${glow},.7)`,
-            transform: `rotate(${i * 60}deg) translateY(-42px)`,
+            transform: `rotate(${i * 60}deg) translateY(-${42 * scale}px)`,
             animation: `jarvis-dot ${1.6 + (i % 3) * .3}s ease-in-out infinite`,
             animationDelay: `${i * .12}s`,
           }}
         />
       ))}
-      <div className="absolute h-14 w-14 rounded-full blur-xl" style={{ background: `rgba(${glow},.18)` }} />
+      <div className="absolute rounded-full blur-xl" style={{ width: 56 * scale, height: 56 * scale, background: `rgba(${glow},.18)` }} />
       <div
-        className="jarvis-motion relative flex h-[58px] w-[58px] flex-col items-center justify-center rounded-full border border-white/[0.14]"
+        className="jarvis-motion relative flex flex-col items-center justify-center rounded-full border border-white/[0.14]"
         style={{
+          width: 58 * scale,
+          height: 58 * scale,
           background: "radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), rgba(16,21,31,.96) 45%, rgba(5,7,12,.99) 100%)",
           animation: "jarvis-pulse 3s ease-in-out infinite",
         }}
       >
-        <span className="font-mono text-[13px] font-bold" style={{ color: dotColor }}>{Math.round(gaugeValue)}</span>
-        <span className="text-[6px] uppercase tracking-[0.14em] text-slate-500">health</span>
+        <span className="font-mono font-bold" style={{ color: dotColor, fontSize: 13 * scale }}>{Math.round(gaugeValue)}</span>
+        <span className="uppercase tracking-[0.14em] text-slate-500" style={{ fontSize: 6 * scale }}>health</span>
       </div>
+    </div>
+  );
+}
+
+// Peta orbit "second brain" - hub AI di tengah dengan 4 karyawan AI
+// (ATOM/ADI/NEXA/MEMO) mengorbit di sekelilingnya. ATOM dikasih perlakuan
+// khusus: dia sendiri punya sampai puluhan sub-sinyal (checks_detail dari
+// health-check), jadi ditampilin sebagai cincin titik-titik kecil di
+// sekeliling node ATOM sendiri (bukan di sekeliling hub utama) - biar
+// keliatan dia "punya tim sendiri" di dalam, sama seperti cluster
+// departemen di video referensi. Posisi dihitung pake trigonometri
+// (sudut tetap per node) dalam persen 0-100 biar responsif tanpa perlu
+// ukur pixel manual - lihat polarPoint().
+const ORBIT_ANGLES = { atom: 215, adi: 305, nexa: 35, memo: 125 };
+const ORBIT_MAIN_RADIUS = 36;
+const ORBIT_SUB_RADIUS = 13;
+
+function polarPoint(cx, cy, r, angleDeg) {
+  const rad = (angleDeg * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function OrbitCommandMap({ employees, atomChecks, selectedKey, onSelectEmployee, onSelectCheck, overallOk, overallGauge }) {
+  const cx = 50, cy = 50;
+  const nodes = employees.map((e) => ({ ...e, pos: polarPoint(cx, cy, ORBIT_MAIN_RADIUS, ORBIT_ANGLES[e.key] ?? 0) }));
+  const atomNode = nodes.find((n) => n.key === "atom");
+  const subDots = atomNode
+    ? atomChecks.map((c, i) => ({
+        check: c,
+        pos: polarPoint(atomNode.pos.x, atomNode.pos.y, ORBIT_SUB_RADIUS, (360 / Math.max(atomChecks.length, 1)) * i),
+      }))
+    : [];
+
+  return (
+    <div className="relative mx-auto w-full max-w-[560px] aspect-square select-none">
+      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full overflow-visible">
+        <circle cx={cx} cy={cy} r={46} fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="0.3" strokeDasharray="1.2 2" />
+        {atomNode && (
+          <circle cx={atomNode.pos.x} cy={atomNode.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke={`${atomNode.accentColor}33`} strokeWidth="0.3" />
+        )}
+        {nodes.map((n) => (
+          <line
+            key={n.key}
+            x1={cx} y1={cy} x2={n.pos.x} y2={n.pos.y}
+            stroke={n.accentColor}
+            strokeOpacity={selectedKey === n.key ? 0.55 : 0.22}
+            strokeWidth={selectedKey === n.key ? 0.6 : 0.35}
+          />
+        ))}
+      </svg>
+
+      {/* Hub tengah */}
+      <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+        <JarvisCore ok={overallOk} gaugeValue={overallGauge} size={110} />
+        <div className="mt-1.5 text-center font-mono text-[9px] uppercase tracking-[0.14em] text-slate-500">Nexto AI</div>
+      </div>
+
+      {/* Titik sub-sinyal ATOM - klik buka detail sinyal yang sama kayak di panel bawah */}
+      {subDots.map(({ check, pos }, i) => (
+        <button
+          key={check.key || i}
+          onClick={() => onSelectCheck(check)}
+          title={check.label}
+          className="absolute z-10 rounded-full transition-[filter] hover:brightness-125"
+          style={{
+            left: `${pos.x}%`,
+            top: `${pos.y}%`,
+            transform: "translate(-50%,-50%)",
+            width: "clamp(9px, 1.8vw, 13px)",
+            height: "clamp(9px, 1.8vw, 13px)",
+            background: check.ok ? "#34d399" : "#f59e0b",
+            boxShadow: check.ok ? "0 0 6px 1px rgba(52,211,153,0.6)" : "0 0 8px 2px rgba(245,158,11,0.7)",
+          }}
+        />
+      ))}
+
+      {/* Node karyawan utama */}
+      {nodes.map((n) => {
+        const Icon = n.icon;
+        const isSelected = selectedKey === n.key;
+        return (
+          <button
+            key={n.key}
+            onClick={() => onSelectEmployee(n.key)}
+            className="group absolute z-20 flex flex-col items-center gap-1.5"
+            style={{ left: `${n.pos.x}%`, top: `${n.pos.y}%`, transform: "translate(-50%,-50%)" }}
+          >
+            <span
+              className="relative flex items-center justify-center rounded-full border transition-all"
+              style={{
+                width: "clamp(52px, 9vw, 78px)",
+                height: "clamp(52px, 9vw, 78px)",
+                borderColor: isSelected ? n.accentColor : `${n.accentColor}55`,
+                background: `radial-gradient(circle at 30% 25%, ${n.accentColor}26, rgba(6,9,15,0.94) 70%)`,
+                boxShadow: isSelected ? `0 0 34px -8px ${n.accentColor}` : `0 0 22px -14px ${n.accentColor}`,
+              }}
+            >
+              <Icon size={20} style={{ color: n.accentColor }} />
+              <span className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#05070c] ${n.ok ? "bg-emerald-400" : "bg-amber-400"}`} />
+            </span>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-200 transition-colors group-hover:text-white">
+              {n.title}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -315,6 +429,9 @@ export default function AdminDashboard() {
   const [triggering, setTriggering] = useState(null);
   const [lastSync, setLastSync] = useState(null);
   const [, forceTick] = useState(0);
+  const [viewMode, setViewMode] = useState("orbit"); // "orbit" | "grid"
+  const [selectedEmployeeKey, setSelectedEmployeeKey] = useState("atom");
+  const [selectedCheck, setSelectedCheck] = useState(null);
   const intervalRef = useRef(null);
 
   const load = useCallback(async (silent) => {
@@ -375,6 +492,94 @@ export default function AdminDashboard() {
   const securityGauge = !security ? 60 : securityHealthy ? 100 : Math.max(10, 100 - (security.issue_count || 1) * 20);
   const securityTrend = (status?.security_trend || []).map((d) => ({ ...d, day: d.day.slice(5) }));
   const digestTrend = (status?.sales_advisor?.trend || []).map((d) => ({ ...d, day: d.day.slice(5) }));
+  const atomChecks = security?.checks_detail || [];
+  const memoPending = status?.vector_memory?.pending_embeddings ?? 0;
+
+  // Satu sumber data buat "karyawan AI" - dipake bareng sama tampilan Grid
+  // (klasik, gampang discan semua sekaligus) dan Peta Orbit (baru, buat
+  // liat command center sebagai satu jaringan hidup) biar gak duplikat
+  // logic (28 Agt 2026: RAKA/ADI/NEXA/MEMO - RAKA diganti ATOM 9 Sep 2026).
+  const employees = [
+    {
+      key: "atom",
+      title: "ATOM",
+      subtitle: "Security & Ops",
+      icon: securityHealthy || !security ? ShieldCheck : ShieldAlert,
+      accentColor: allSystemsGo ? "#34d399" : "#f59e0b",
+      glowClass: allSystemsGo ? "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]" : "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]",
+      ok: allSystemsGo,
+      gaugeValue: securityGauge,
+      trend: securityTrend.length > 1 ? securityTrend : null,
+      trendKey: "issues",
+      triggerKey: "health-check",
+      content: (
+        <>
+          <div className="text-[11px] text-slate-400 font-mono">
+            {security ? (
+              <>
+                terakhir dicek <span className="text-slate-200">{timeAgo(security.checked_at)}</span> ·{" "}
+                {securityHealthy ? <span className="text-emerald-400">nihil temuan</span> : <span className="text-amber-400">{security.issue_count} temuan</span>}
+              </>
+            ) : "belum pernah dicek - klik Panggil buat tes pertama"}
+          </div>
+          <ChecksDetailPanel checks={security?.checks_detail} aiSummary={security?.summary} />
+        </>
+      ),
+    },
+    {
+      key: "adi",
+      title: "ADI",
+      subtitle: "Sales Advisor",
+      icon: Sparkles,
+      accentColor: "#f97316",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(249,115,22,0.6)]",
+      ok: true,
+      gaugeValue: Math.min(100, (status?.sales_advisor?.runs_today ?? 0) * 20),
+      trend: digestTrend.length > 1 ? digestTrend : null,
+      trendKey: "count",
+      triggerKey: "daily-digest",
+      content: (
+        <div className="text-[11px] text-slate-400 font-mono">
+          <span className="text-slate-200 font-bold">{status?.sales_advisor?.runs_today ?? 0}</span> user dapet digest hari ini
+        </div>
+      ),
+    },
+    {
+      key: "nexa",
+      title: "NEXA",
+      subtitle: "Asisten Chat",
+      icon: MessageCircle,
+      accentColor: "#38bdf8",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(56,189,248,0.6)]",
+      ok: true,
+      gaugeValue: status?.assistant?.last_activity ? 100 : 40,
+      noTrigger: true,
+      noTriggerNote: "jalan pas ada chat",
+      content: (
+        <div className="text-[11px] text-slate-400 font-mono">
+          aktivitas terakhir <span className="text-slate-200">{timeAgo(status?.assistant?.last_activity)}</span> · <span className="text-slate-200 font-bold">{status?.assistant?.messages_today ?? 0}</span> pesan hari ini
+        </div>
+      ),
+    },
+    {
+      key: "memo",
+      title: "MEMO",
+      subtitle: "Vector Memory",
+      icon: Sparkles,
+      accentColor: memoPending > 0 ? "#f59e0b" : "#a78bfa",
+      glowClass: memoPending > 0 ? "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]" : "shadow-[0_0_40px_-25px_rgba(167,139,250,0.6)]",
+      ok: memoPending === 0,
+      gaugeValue: memoPending > 0 ? 55 : 100,
+      noTrigger: true,
+      noTriggerNote: "otomatis via trigger",
+      content: (
+        <div className="text-[11px] text-slate-400 font-mono">
+          <span className="text-slate-200 font-bold">{memoPending}</span> catatan 24 jam terakhir belum ke-embed
+        </div>
+      ),
+    },
+  ];
+  const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
 
   return (
     <div className="relative rounded-[28px] bg-[#05070c] border border-white/[0.06] p-5 md:p-6 overflow-hidden">
@@ -405,9 +610,25 @@ export default function AdminDashboard() {
               </p>
             </div>
           </div>
-          <button onClick={() => load(false)} className="text-[10px] font-mono uppercase tracking-wide border border-white/10 bg-white/[0.03] text-slate-400 rounded-xl px-3 py-2 hover:bg-white/[0.07] hover:text-white flex items-center gap-1.5 transition-colors">
-            <RefreshCw size={11} /> Sync Manual
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] p-0.5">
+              <button
+                onClick={() => setViewMode("orbit")}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wide transition-colors ${viewMode === "orbit" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}
+              >
+                <Orbit size={12} /> Orbit
+              </button>
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wide transition-colors ${viewMode === "grid" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}
+              >
+                <LayoutGrid size={12} /> Grid
+              </button>
+            </div>
+            <button onClick={() => load(false)} className="text-[10px] font-mono uppercase tracking-wide border border-white/10 bg-white/[0.03] text-slate-400 rounded-xl px-3 py-2 hover:bg-white/[0.07] hover:text-white flex items-center gap-1.5 transition-colors">
+              <RefreshCw size={11} /> Sync Manual
+            </button>
+          </div>
         </div>
 
         {/* RINGKASAN PLATFORM */}
@@ -426,82 +647,72 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* KARTU KARYAWAN AI - dikasih nama biar berasa beneran tim, bukan cuma
-            nama function teknis (28 Agt 2026: RAKA/ADI/NEXA/MEMO - RAKA
-            diganti ATOM 9 Sep 2026) */}
-        <div className="grid md:grid-cols-2 gap-3">
-          <EmployeeCard
-            icon={securityHealthy || !security ? ShieldCheck : ShieldAlert}
-            title="ATOM · Security & Ops"
-            subtitle="health-check · pantau kesehatan sistem"
-            accentColor={allSystemsGo ? "#34d399" : "#f59e0b"}
-            glowClass={allSystemsGo ? "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]" : "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]"}
-            gaugeValue={securityGauge}
-            trend={securityTrend.length > 1 ? securityTrend : null}
-            trendKey="issues"
-            onTrigger={trigger}
-            triggering={triggering}
-            triggerKey="health-check"
-          >
-            <div className="text-[11px] text-slate-400 font-mono">
-              {security ? (
-                <>
-                  terakhir dicek <span className="text-slate-200">{timeAgo(security.checked_at)}</span> ·{" "}
-                  {securityHealthy ? <span className="text-emerald-400">nihil temuan</span> : <span className="text-amber-400">{security.issue_count} temuan</span>}
-                </>
-              ) : "belum pernah dicek - klik Panggil buat tes pertama"}
-            </div>
-            <ChecksDetailPanel checks={security?.checks_detail} aiSummary={security?.summary} />
-          </EmployeeCard>
+        {/* KARYAWAN AI - dikasih nama biar berasa beneran tim, bukan cuma nama
+            function teknis (28 Agt 2026: RAKA/ADI/NEXA/MEMO - RAKA diganti
+            ATOM 9 Sep 2026). Dua cara liat: Peta Orbit (default, command
+            center sebagai satu jaringan hidup - ATOM dikasih cincin
+            sub-sinyalnya sendiri karena dia yang paling "rame" isinya) atau
+            Grid klasik (semua kartu kebuka sekaligus, lebih gampang discan
+            cepat kalau lagi buru-buru) - 9 Sep 2026. */}
+        {viewMode === "orbit" ? (
+          <div>
+            <OrbitCommandMap
+              employees={employees}
+              atomChecks={atomChecks}
+              selectedKey={selectedEmployeeKey}
+              onSelectEmployee={setSelectedEmployeeKey}
+              onSelectCheck={setSelectedCheck}
+              overallOk={allSystemsGo}
+              overallGauge={securityGauge}
+            />
+            {selectedEmployee && (
+              <div className="mt-2 max-w-lg mx-auto">
+                <EmployeeCard
+                  icon={selectedEmployee.icon}
+                  title={`${selectedEmployee.title} · ${selectedEmployee.subtitle}`}
+                  accentColor={selectedEmployee.accentColor}
+                  glowClass={selectedEmployee.glowClass}
+                  gaugeValue={selectedEmployee.gaugeValue}
+                  trend={selectedEmployee.trend}
+                  trendKey={selectedEmployee.trendKey}
+                  onTrigger={trigger}
+                  triggering={triggering}
+                  triggerKey={selectedEmployee.triggerKey}
+                  noTrigger={selectedEmployee.noTrigger}
+                  noTriggerNote={selectedEmployee.noTriggerNote}
+                >
+                  {selectedEmployee.content}
+                </EmployeeCard>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-3">
+            {employees.map((e) => (
+              <EmployeeCard
+                key={e.key}
+                icon={e.icon}
+                title={`${e.title} · ${e.subtitle}`}
+                accentColor={e.accentColor}
+                glowClass={e.glowClass}
+                gaugeValue={e.gaugeValue}
+                trend={e.trend}
+                trendKey={e.trendKey}
+                onTrigger={trigger}
+                triggering={triggering}
+                triggerKey={e.triggerKey}
+                noTrigger={e.noTrigger}
+                noTriggerNote={e.noTriggerNote}
+              >
+                {e.content}
+              </EmployeeCard>
+            ))}
+          </div>
+        )}
 
-          <EmployeeCard
-            icon={Sparkles}
-            title="ADI · Sales Advisor"
-            subtitle="daily-digest · analisis lead & rekomendasi"
-            accentColor="#f97316"
-            glowClass="shadow-[0_0_40px_-25px_rgba(249,115,22,0.6)]"
-            gaugeValue={Math.min(100, (status?.sales_advisor?.runs_today ?? 0) * 20)}
-            trend={digestTrend.length > 1 ? digestTrend : null}
-            trendKey="count"
-            onTrigger={trigger}
-            triggering={triggering}
-            triggerKey="daily-digest"
-          >
-            <div className="text-[11px] text-slate-400 font-mono">
-              <span className="text-slate-200 font-bold">{status?.sales_advisor?.runs_today ?? 0}</span> user dapet digest hari ini
-            </div>
-          </EmployeeCard>
-
-          <EmployeeCard
-            icon={MessageCircle}
-            title="NEXA · Asisten Chat"
-            subtitle="telegram-webhook · eksekusi perintah"
-            accentColor="#38bdf8"
-            glowClass="shadow-[0_0_40px_-25px_rgba(56,189,248,0.6)]"
-            gaugeValue={status?.assistant?.last_activity ? 100 : 40}
-            noTrigger
-            noTriggerNote="jalan pas ada chat"
-          >
-            <div className="text-[11px] text-slate-400 font-mono">
-              aktivitas terakhir <span className="text-slate-200">{timeAgo(status?.assistant?.last_activity)}</span> · <span className="text-slate-200 font-bold">{status?.assistant?.messages_today ?? 0}</span> pesan hari ini
-            </div>
-          </EmployeeCard>
-
-          <EmployeeCard
-            icon={Sparkles}
-            title="MEMO · Vector Memory"
-            subtitle="embed-progress-note · memori semantik"
-            accentColor={(status?.vector_memory?.pending_embeddings ?? 0) > 0 ? "#f59e0b" : "#a78bfa"}
-            glowClass={(status?.vector_memory?.pending_embeddings ?? 0) > 0 ? "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]" : "shadow-[0_0_40px_-25px_rgba(167,139,250,0.6)]"}
-            gaugeValue={(status?.vector_memory?.pending_embeddings ?? 0) > 0 ? 55 : 100}
-            noTrigger
-            noTriggerNote="otomatis via trigger"
-          >
-            <div className="text-[11px] text-slate-400 font-mono">
-              <span className="text-slate-200 font-bold">{status?.vector_memory?.pending_embeddings ?? 0}</span> catatan 24 jam terakhir belum ke-embed
-            </div>
-          </EmployeeCard>
-        </div>
+        {selectedCheck && (
+          <CheckDetailModal check={selectedCheck} aiSummary={security?.summary} onClose={() => setSelectedCheck(null)} />
+        )}
 
         <div className="mt-4 text-center text-[9px] font-mono text-slate-700 uppercase tracking-widest">
           auto-sync tiap {REFRESH_INTERVAL_MS / 1000}s · platform-wide, bukan cuma org Anda
