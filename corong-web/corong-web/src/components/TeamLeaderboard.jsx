@@ -9,16 +9,16 @@ import { fmtRp } from "../lib/helpers";
 // closing bulan ini. Otomatis cuma nongol kalau org emang punya >1 anggota
 // (org solo Standard/Professional gak akan pernah lolos cek ini, jadi gak
 // perlu cek plan/role terpisah - member_limit org itu sendiri yang udah
-// jadi gerbangnya). Dihitung dari `leads` yang UDAH di-load App.jsx -
-// Owner/Manager RLS-nya emang udah nampilin SEMUA lead org (bukan cuma
-// punya sendiri), jadi gak perlu query/RPC baru.
+// jadi gerbangnya).
 //
-// Redesign 9 Sep 2026 - versi pertama polos banget (nomor bulat + progress
-// bar) dan progress bar-nya keliatan rusak/kosong pas org baru belum ada
-// deal_value sama sekali (semua Rp0, bar-nya jadi garis abu-abu doang).
-// Sekarang: avatar inisial per anggota, medali beda warna top-3, dan
-// progress bar CUMA ditampilin kalau emang ada revenue beneran (kalau
-// nihil semua, disembunyiin daripada nampilin bar kosong yang aneh).
+// Revenue & jumlah deal dihitung dari `deal_transactions` (BUKAN dari
+// leads.outcome kayak versi pertama) - disamain sama sumber yang dipake
+// RevenuePanel/RevenueTrendChart di file ini juga, biar angkanya konsisten
+// satu sama lain dan beneran "bulan berjalan" kayak yang ditulis di
+// subjudul (versi pertama sebenernya ngitung ALL-TIME, nyasar). Jumlah
+// visit ditarik dari visit_checkins (fitur GPS Check-in). leadCount &
+// winRate tetep dari `leads` (udah di-load App.jsx, Owner/Manager RLS-nya
+// emang nampilin SEMUA lead org) - gak nambah query buat itu.
 const RANK_STYLE = [
   { avatarBg: "bg-gradient-to-br from-amber-400 to-orange-500", badgeBg: "bg-amber-500" },
   { avatarBg: "bg-gradient-to-br from-slate-300 to-slate-400", badgeBg: "bg-slate-400" },
@@ -35,14 +35,28 @@ function initials(name, uid) {
   return uid.slice(0, 2).toUpperCase();
 }
 
-export default function TeamLeaderboard({ leads }) {
+function currentMonthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export default function TeamLeaderboard({ leads, dealTransactions }) {
   const [members, setMembers] = useState(null);
+  const [checkins, setCheckins] = useState([]);
 
   useEffect(() => {
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
+    db.getCheckins(currentMonthKey()).then(setCheckins).catch(() => setCheckins([]));
   }, []);
 
   if (!members || members.length <= 1) return null;
+
+  const now = new Date();
+  const dealsThisMonth = (dealTransactions || []).filter((t) => {
+    if (!t.deal_date) return false;
+    const d = new Date(t.deal_date);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
 
   const rows = members
     .map((m) => {
@@ -51,12 +65,18 @@ export default function TeamLeaderboard({ leads }) {
       const lost = mine.filter((l) => l.outcome?.result === "lost");
       const closed = won.length + lost.length;
       const winRate = closed > 0 ? Math.round((won.length / closed) * 100) : null;
-      const revenue = won.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+
+      const myDeals = dealsThisMonth.filter((t) => t.user_id === m.user_id);
+      const revenue = myDeals.reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
+      const visitCount = checkins.filter((c) => c.user_id === m.user_id).length;
+
       return {
         key: m.user_id,
         uid: m.user_id,
         name: m.display_name || `Anggota ${m.user_id.slice(0, 8)}`,
         leadCount: mine.length,
+        dealCount: myDeals.length,
+        visitCount,
         winRate,
         revenue,
       };
@@ -97,8 +117,12 @@ export default function TeamLeaderboard({ leads }) {
                   <div className="truncate text-[13px] font-semibold text-slate-800">{r.name}</div>
                   <div className={`shrink-0 text-[13px] font-bold ${r.revenue > 0 ? "text-slate-800" : "text-slate-300"}`}>{fmtRp(r.revenue)}</div>
                 </div>
-                <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-400">
                   <span>{r.leadCount} lead</span>
+                  <span className="text-slate-300">·</span>
+                  <span>{r.dealCount} deal</span>
+                  <span className="text-slate-300">·</span>
+                  <span>{r.visitCount} visit</span>
                   {r.winRate !== null && (
                     <>
                       <span className="text-slate-300">·</span>
