@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid, Megaphone } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid, Megaphone, LifeBuoy } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -421,35 +421,32 @@ function JarvisCore({ ok, gaugeValue, size = 96 }) {
   );
 }
 
-// Peta orbit "second brain" - hub AI di tengah dengan 4 karyawan AI
-// (ATOM/ADI/NEXA/MEMO) mengorbit di sekelilingnya. ATOM dikasih perlakuan
-// khusus: dia sendiri punya sampai puluhan sub-sinyal (checks_detail dari
-// health-check), jadi ditampilin sebagai cincin titik-titik kecil di
-// sekeliling node ATOM sendiri (bukan di sekeliling hub utama) - biar
-// keliatan dia "punya tim sendiri" di dalam, sama seperti cluster
-// departemen di video referensi. Posisi dihitung pake trigonometri
-// (sudut tetap per node) dalam persen 0-100 biar responsif tanpa perlu
+// Peta orbit "second brain" - hub AI di tengah dengan tiap karyawan AI
+// mengorbit di sekelilingnya. Sudut per node dihitung OTOMATIS dari jumlah
+// karyawan (360 / total), BUKAN hardcode per nama (9 Sep 2026 - sebelumnya
+// tiap kali nambah karyawan baru harus itung ulang derajat manual satu-satu,
+// gak scalable buat rencana nambah lebih banyak lagi ke depan). Karyawan
+// mana pun boleh punya `subSignals` (array {key,label,ok,desc,detail}) buat
+// ditampilin sebagai cincin titik-titik kecil di sekeliling node-nya sendiri
+// (dulu cuma ATOM yang di-hardcode dapet perlakuan ini) - biar keliatan dia
+// "punya tim sendiri" di dalam, kayak cluster departemen di video referensi.
+// Posisi dihitung pake trigonometri dalam persen 0-100 biar responsif tanpa
 // ukur pixel manual - lihat polarPoint().
-// 5 node disebar rata 72 derajat (9 Sep 2026: + NOVA - Marketing & Content).
-const ORBIT_ANGLES = { atom: 216, nova: 288, adi: 0, nexa: 72, memo: 144 };
-const ORBIT_MAIN_RADIUS = 36;
+const ORBIT_START_ANGLE = 216; // biar node pertama (biasanya ATOM) di posisi yang sama kayak sebelumnya
+const ORBIT_MAIN_RADIUS = 37;
 const ORBIT_SUB_RADIUS = 13;
+const ORBIT_BOUNDARY_RADIUS = 47;
 
 function polarPoint(cx, cy, r, angleDeg) {
   const rad = (angleDeg * Math.PI) / 180;
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function OrbitCommandMap({ employees, atomChecks, selectedKey, onSelectEmployee, onSelectCheck, overallOk, overallGauge }) {
+function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSignal, overallOk, overallGauge }) {
   const cx = 50, cy = 50;
-  const nodes = employees.map((e) => ({ ...e, pos: polarPoint(cx, cy, ORBIT_MAIN_RADIUS, ORBIT_ANGLES[e.key] ?? 0) }));
-  const atomNode = nodes.find((n) => n.key === "atom");
-  const subDots = atomNode
-    ? atomChecks.map((c, i) => ({
-        check: c,
-        pos: polarPoint(atomNode.pos.x, atomNode.pos.y, ORBIT_SUB_RADIUS, (360 / Math.max(atomChecks.length, 1)) * i),
-      }))
-    : [];
+  const angleStep = 360 / Math.max(employees.length, 1);
+  const nodes = employees.map((e, i) => ({ ...e, pos: polarPoint(cx, cy, ORBIT_MAIN_RADIUS, ORBIT_START_ANGLE + angleStep * i) }));
+  const nodesWithSubRing = nodes.filter((n) => n.subSignals && n.subSignals.length > 0);
   // Klik node muncul efek "ripple" (cincin ngembang lalu ilang) sesaat -
   // feedback visual instan tanpa nunggu panel detail di bawah ke-render.
   const [rippleId, setRippleId] = useState(null);
@@ -470,11 +467,11 @@ function OrbitCommandMap({ employees, atomChecks, selectedKey, onSelectEmployee,
       `}</style>
       <svg viewBox="0 0 100 100" className="orbit-motion absolute inset-0 h-full w-full overflow-visible">
         <g style={{ transformOrigin: "50px 50px", animation: "orbit-ring-spin-slow 90s linear infinite" }}>
-          <circle cx={cx} cy={cy} r={46} fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="0.3" strokeDasharray="1.2 2" />
+          <circle cx={cx} cy={cy} r={ORBIT_BOUNDARY_RADIUS} fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="0.3" strokeDasharray="1.2 2" />
         </g>
-        {atomNode && (
-          <circle cx={atomNode.pos.x} cy={atomNode.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke={`${atomNode.accentColor}33`} strokeWidth="0.3" />
-        )}
+        {nodesWithSubRing.map((n) => (
+          <circle key={`ring-${n.key}`} cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke={`${n.accentColor}33`} strokeWidth="0.3" />
+        ))}
         {nodes.map((n) => (
           <g key={n.key}>
             <line x1={cx} y1={cy} x2={n.pos.x} y2={n.pos.y} stroke={n.accentColor} strokeOpacity={selectedKey === n.key ? 0.4 : 0.16} strokeWidth={selectedKey === n.key ? 0.6 : 0.35} />
@@ -490,26 +487,31 @@ function OrbitCommandMap({ employees, atomChecks, selectedKey, onSelectEmployee,
             />
           </g>
         ))}
-        {/* Cincin sub-sinyal ATOM - muter pelan terus-menerus biar keliatan "hidup", kayak satelit kecil ngorbit */}
-        {atomNode && subDots.length > 0 && (
-          <g style={{ transformOrigin: `${atomNode.pos.x}px ${atomNode.pos.y}px`, animation: "orbit-ring-spin 70s linear infinite" }}>
-            {subDots.map(({ check, pos }, i) => (
-              <circle
-                key={check.key || i}
-                cx={pos.x} cy={pos.y} r={0.9}
-                fill={check.ok ? "#34d399" : "#f59e0b"}
-                style={{
-                  filter: check.ok ? "drop-shadow(0 0 2px rgba(52,211,153,0.8))" : "drop-shadow(0 0 3px rgba(245,158,11,0.9))",
-                  cursor: "pointer",
-                }}
-                className="transition-[filter] hover:brightness-125"
-                onClick={() => onSelectCheck(check)}
-              >
-                <title>{check.label}</title>
-              </circle>
-            ))}
+        {/* Cincin sub-sinyal - muter pelan terus-menerus biar keliatan "hidup",
+            kayak satelit kecil ngorbit. Karyawan mana pun bisa punya ini
+            (lewat prop subSignals), gak di-hardcode buat 1 nama doang. */}
+        {nodesWithSubRing.map((n) => (
+          <g key={`sub-${n.key}`} style={{ transformOrigin: `${n.pos.x}px ${n.pos.y}px`, animation: "orbit-ring-spin 70s linear infinite" }}>
+            {n.subSignals.map((sig, i) => {
+              const pos = polarPoint(n.pos.x, n.pos.y, ORBIT_SUB_RADIUS, (360 / Math.max(n.subSignals.length, 1)) * i);
+              return (
+                <circle
+                  key={sig.key || i}
+                  cx={pos.x} cy={pos.y} r={0.9}
+                  fill={sig.ok ? "#34d399" : "#f59e0b"}
+                  style={{
+                    filter: sig.ok ? "drop-shadow(0 0 2px rgba(52,211,153,0.8))" : "drop-shadow(0 0 3px rgba(245,158,11,0.9))",
+                    cursor: "pointer",
+                  }}
+                  className="transition-[filter] hover:brightness-125"
+                  onClick={() => onSelectSignal(sig)}
+                >
+                  <title>{sig.label}</title>
+                </circle>
+              );
+            })}
           </g>
-        )}
+        ))}
       </svg>
 
       {/* Hub tengah */}
@@ -533,8 +535,8 @@ function OrbitCommandMap({ employees, atomChecks, selectedKey, onSelectEmployee,
             <span
               className="orbit-motion relative flex items-center justify-center rounded-full border transition-all group-hover:scale-110"
               style={{
-                width: "clamp(52px, 9vw, 78px)",
-                height: "clamp(52px, 9vw, 78px)",
+                width: "clamp(46px, 8vw, 70px)",
+                height: "clamp(46px, 8vw, 70px)",
                 borderColor: isSelected ? n.accentColor : `${n.accentColor}55`,
                 background: `radial-gradient(circle at 30% 25%, ${n.accentColor}26, rgba(6,9,15,0.94) 70%)`,
                 boxShadow: isSelected ? `0 0 34px -8px ${n.accentColor}` : `0 0 22px -14px ${n.accentColor}`,
@@ -550,7 +552,7 @@ function OrbitCommandMap({ employees, atomChecks, selectedKey, onSelectEmployee,
                   style={{ borderColor: n.accentColor, animation: "orbit-ripple .6s ease-out" }}
                 />
               )}
-              <Icon size={20} style={{ color: n.accentColor }} />
+              <Icon size={18} style={{ color: n.accentColor }} />
               <span className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#05070c] ${n.ok ? "bg-emerald-400" : "bg-amber-400"}`} />
             </span>
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-200 transition-colors group-hover:text-white">
@@ -654,6 +656,7 @@ export default function AdminDashboard() {
       trend: securityTrend.length > 1 ? securityTrend : null,
       trendKey: "issues",
       triggerKey: "health-check",
+      subSignals: atomChecks,
       content: (
         <>
           <div className="text-[11px] text-slate-400 font-mono">
@@ -743,6 +746,28 @@ export default function AdminDashboard() {
         </>
       ),
     },
+    {
+      key: "sasa",
+      title: "SASA",
+      subtitle: "Customer Support",
+      icon: LifeBuoy,
+      accentColor: "#2dd4bf",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(45,212,191,0.6)]",
+      ok: (status?.support?.escalated_today ?? 0) === 0,
+      gaugeValue: (status?.support?.escalated_today ?? 0) === 0 ? 100 : Math.max(40, 100 - (status.support.escalated_today) * 15),
+      noTrigger: true,
+      noTriggerNote: "jalan pas ada visitor",
+      content: (
+        <div className="text-[11px] text-slate-400 font-mono">
+          <span className="text-slate-200 font-bold">{status?.support?.messages_today ?? 0}</span> pertanyaan hari ini ·{" "}
+          {(status?.support?.escalated_today ?? 0) > 0 ? (
+            <span className="text-amber-400">{status.support.escalated_today} dieskalasi ke kamu</span>
+          ) : (
+            <span className="text-emerald-400">nihil eskalasi</span>
+          )}
+        </div>
+      ),
+    },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
 
@@ -823,10 +848,9 @@ export default function AdminDashboard() {
           <div>
             <OrbitCommandMap
               employees={employees}
-              atomChecks={atomChecks}
               selectedKey={selectedEmployeeKey}
               onSelectEmployee={(key) => { setSelectedEmployeeKey(key); setDetailOpen(true); }}
-              onSelectCheck={setSelectedCheck}
+              onSelectSignal={setSelectedCheck}
               overallOk={allSystemsGo}
               overallGauge={securityGauge}
             />
