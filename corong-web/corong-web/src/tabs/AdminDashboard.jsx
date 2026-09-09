@@ -663,11 +663,9 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
               style={{
                 width: "clamp(46px, 8vw, 68px)",
                 height: "clamp(46px, 8vw, 68px)",
-                borderColor: isSelected ? n.accentColor : "rgba(148,163,184,0.3)",
-                background: isSelected
-                  ? `radial-gradient(circle at 30% 25%, ${n.accentColor}30, rgba(8,11,17,0.96) 72%)`
-                  : "rgba(255,255,255,0.02)",
-                boxShadow: isSelected ? `0 0 24px -6px ${n.accentColor}` : "none",
+                borderColor: isSelected ? n.accentColor : `${n.accentColor}80`,
+                background: `radial-gradient(circle at 30% 25%, ${n.accentColor}${isSelected ? "30" : "1c"}, rgba(8,11,17,0.96) 72%)`,
+                boxShadow: isSelected ? `0 0 26px -4px ${n.accentColor}` : `0 0 16px -6px ${n.accentColor}`,
                 animation: `orbit-float ${4.2 + i * 0.4}s ease-in-out infinite`,
                 animationDelay: `${i * 0.35}s`,
               }}
@@ -680,13 +678,13 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
                   style={{ borderColor: n.accentColor, animation: "orbit-ripple .6s ease-out" }}
                 />
               )}
-              <Icon size={18} style={{ color: isSelected ? n.accentColor : `${n.accentColor}cc` }} />
+              <Icon size={18} style={{ color: n.accentColor, filter: `drop-shadow(0 0 4px ${n.accentColor}aa)` }} />
               <span
                 className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-[#05070c]"
                 style={{ background: n.ok ? "#34d399" : "#f59e0b", animation: n.ok ? "none" : "orbit-pulse-dot 1.8s ease-in-out infinite" }}
               />
             </span>
-            <span className={`font-mono text-[10px] font-bold uppercase tracking-wider transition-colors ${isSelected ? "text-white" : "text-slate-500 group-hover:text-slate-300"}`}>
+            <span className={`font-mono text-[10px] font-bold uppercase tracking-wider transition-colors ${isSelected ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
               {n.title}
             </span>
           </button>
