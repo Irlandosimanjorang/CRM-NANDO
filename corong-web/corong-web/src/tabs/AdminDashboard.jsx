@@ -572,9 +572,16 @@ function JarvisCore({ ok, gaugeValue, size = 96 }) {
 // Posisi dihitung pake trigonometri dalam persen 0-100 biar responsif tanpa
 // ukur pixel manual - lihat polarPoint().
 const ORBIT_START_ANGLE = 216; // biar node pertama (biasanya ATOM) di posisi yang sama kayak sebelumnya
-const ORBIT_MAIN_RADIUS = 37;
-const ORBIT_SUB_RADIUS = 13;
-const ORBIT_BOUNDARY_RADIUS = 47;
+// Radius dikecilin dari versi awal (37/13/47) - versi lama ketauan pas dites
+// beneran: node paling bawah (misal NOVA) fisiknya (ikon + label teks di
+// bawahnya) bisa nembus keluar kotak orbit sendiri dan numpuk sama footer
+// di bawahnya, soalnya translate(-50%,-50%) itu nge-tengahin SELURUH tumpukan
+// ikon+label di titik matematis, bukan cuma ikonnya - jadi separuh tinggi
+// label ikut "makan" jatah margin ke tepi kotak. Radius yang lebih kecil
+// nyisain margin lebih di semua sisi (atas/bawah/kiri/kanan) buat nampung itu.
+const ORBIT_MAIN_RADIUS = 32;
+const ORBIT_SUB_RADIUS = 10;
+const ORBIT_BOUNDARY_RADIUS = 40;
 
 function polarPoint(cx, cy, r, angleDeg) {
   const rad = (angleDeg * Math.PI) / 180;
@@ -599,8 +606,29 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
     setRippleId(`${key}-${Date.now()}`);
   };
 
+  // Ukuran kotak orbit diukur LANGSUNG dari sisa ruang yang beneran ada di
+  // parent-nya (ResizeObserver), bukan ditebak pake vh/aspect-ratio CSS -
+  // percobaan sebelumnya pake satuan vh gak nyambung ke tinggi ASLI yang
+  // udah kepake header+ringkasan di atas, jadi orbitnya sering lebih gede
+  // dari sisa ruang dan numpuk ke elemen lain. Diukur beneran = gak akan
+  // pernah salah ukuran lagi, di layar berapa pun.
+  const wrapRef = useRef(null);
+  const [boxSize, setBoxSize] = useState(480);
+  useEffect(() => {
+    const parent = wrapRef.current?.parentElement;
+    if (!parent) return;
+    const measure = () => {
+      const size = Math.max(300, Math.min(520, parent.clientWidth, parent.clientHeight));
+      setBoxSize(size);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="relative mx-auto w-full aspect-square select-none shrink-0" style={{ maxWidth: "min(560px, 62vh, 92vw)" }}>
+    <div ref={wrapRef} className="relative select-none shrink-0" style={{ width: boxSize, height: boxSize }}>
       <style>{`
         @keyframes orbit-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes orbit-ring-spin-slow { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
@@ -1062,7 +1090,7 @@ export default function AdminDashboard() {
             Grid klasik (semua kartu kebuka sekaligus, lebih gampang discan
             cepat kalau lagi buru-buru) - 9 Sep 2026. */}
         {viewMode === "orbit" ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+          <div className="flex min-h-[380px] flex-1 flex-col items-center justify-center py-2">
             <OrbitCommandMap
               employees={employees}
               selectedKey={selectedEmployeeKey}
