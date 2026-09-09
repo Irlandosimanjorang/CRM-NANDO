@@ -97,14 +97,30 @@ function NextoWordmark({ width = 108, className = "" }) {
   );
 }
 
+// Warna visor per status - "idle" (oranye, brand default) dipake di mana pun
+// robot ini cuma jadi logo/mascot biasa. "thinking" (ungu) & "syncing" (biru)
+// dipake di tempat yang MEMANG lagi nunjukkin AI beneran kerja (bukan
+// dekorasi) - misal loading screen atau kartu yang lagi narik data.
+const NEXTO_VISOR_COLORS = { idle: "#f97316", thinking: "#8b5cf6", syncing: "#0ea5e9" };
+
+function hexToRgba(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
 // Redesign shape (9 Sep 2026): dulu 2 mata bulat kecil, sekarang 1 visor
-// scanner - garis energi oranye ngelewatin visor gelap + 1 inti terang di
-// tengah, kesannya lebih "AI futuristic" (kayak lensa/sensor tunggal) daripada
-// "robot kartun 2 mata". Pas ngomong, ada cahaya yang nyapu bolak-balik di
-// visornya (efek scanning), bukan cuma pulsing biasa. Bezel-nya sendiri
-// (metal 3-stop + highlight kaca pojok kiri-atas) tetap dipertahanin dari
-// redesign sebelumnya.
-export function NextoRobotHead({ size = 32, className = "", speaking = false }) {
+// scanner - garis energi ngelewatin visor gelap + 1 inti terang di tengah,
+// kesannya lebih "AI futuristic" (kayak lensa/sensor tunggal) daripada "robot
+// kartun 2 mata". Pas ngomong, ada cahaya yang nyapu bolak-balik di visornya
+// (efek scanning), bukan cuma pulsing biasa. Bezel-nya sendiri (metal 3-stop
+// + highlight kaca pojok kiri-atas) tetap dipertahanin dari redesign
+// sebelumnya.
+//
+// `status` (9 Sep 2026): visor sekarang JUGA jadi indikator kondisi beneran,
+// bukan cuma dekorasi - "idle" (default, oranye), "thinking" (ungu, AI lagi
+// mikir/proses), "syncing" (biru, lagi tarik/kirim data).
+export function NextoRobotHead({ size = 32, className = "", speaking = false, status = "idle" }) {
+  const visorColor = NEXTO_VISOR_COLORS[status] || NEXTO_VISOR_COLORS.idle;
   return (
     <div
       className={`relative flex shrink-0 items-center justify-center ${className}`}
@@ -153,7 +169,7 @@ export function NextoRobotHead({ size = 32, className = "", speaking = false }) 
       >
         <div
           className="absolute inset-y-0 inset-x-0"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(249,115,22,.6) 50%, transparent)" }}
+          style={{ background: `linear-gradient(90deg, transparent, ${hexToRgba(visorColor, 0.6)} 50%, transparent)` }}
         />
         {speaking && (
           <div
@@ -170,8 +186,8 @@ export function NextoRobotHead({ size = 32, className = "", speaking = false }) 
           style={{
             width: "17%",
             height: "58%",
-            background: "radial-gradient(circle at 35% 30%, #ffffff, #fdba74 42%, #f97316 78%)",
-            boxShadow: "0 0 6px rgba(249,115,22,.85)",
+            background: `radial-gradient(circle at 35% 30%, #ffffff, ${hexToRgba(visorColor, 0.8)} 42%, ${visorColor} 78%)`,
+            boxShadow: `0 0 6px ${hexToRgba(visorColor, 0.85)}`,
             animation: speaking ? "nexto-core-pulse 0.42s ease-in-out infinite" : "none",
           }}
         />

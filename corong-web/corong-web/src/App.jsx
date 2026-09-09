@@ -1336,7 +1336,7 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
 function Splash({ inline }) {
   return (
     <div className={`${inline ? "py-20" : "min-h-screen"} bg-slate-50 flex flex-col items-center justify-center gap-3`}>
-      <div className="animate-pulse"><NextoRobotHead size={48} /></div>
+      <div className="animate-pulse"><NextoRobotHead size={48} status="thinking" /></div>
       <div className="text-slate-400 text-sm flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
     </div>
   );

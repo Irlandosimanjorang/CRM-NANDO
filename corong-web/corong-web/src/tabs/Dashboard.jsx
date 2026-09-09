@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Loader2, Volume2, Zap } from "lucide-react";
+import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Volume2, Zap } from "lucide-react";
 import * as db from "../lib/db";
 import { todayISO, fmtRp } from "../lib/helpers";
 import { NextoRobotHead } from "../Auth";
@@ -177,8 +177,8 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
 
   if (state.status === "loading") {
     return (
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5 flex items-center gap-2 text-sm text-slate-400">
-        <Loader2 size={15} className="animate-spin" /> Loading summary…
+      <div className="bg-white border border-slate-100 rounded-[28px] p-5 flex items-center gap-2.5 text-sm text-slate-400">
+        <NextoRobotHead size={26} status="thinking" /> Menyiapkan ringkasan…
       </div>
     );
   }
