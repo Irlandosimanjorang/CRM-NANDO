@@ -2349,7 +2349,23 @@ export default function Auth() {
                   <div className="mt-1 text-[10px] text-slate-400">
                     Untuk 4 orang (≈Rp325rb/orang) — tim sales dengan visibilitas penuh
                   </div>
-                  <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
+
+                  {/* Tim lebih dari 4 orang - bukan harga standar, arahin
+                      langsung ngobrol sama SASA (yang udah dibekelin cara
+                      jawab kasus ini) daripada nyoba masukin harga custom
+                      ke tabel harga publik. Warna amber sengaja kontras
+                      sama tema violet kartu ini biar keliatan menonjol,
+                      gak ketelen jadi teks pudar biasa (9 Sep 2026). */}
+                  <button
+                    onClick={() => window.__nextoOpenSasaChat?.("Saya butuh tim lebih dari 4 orang, ada opsi harga khusus?")}
+                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-[10px] font-bold text-amber-300 transition hover:bg-amber-500/25"
+                  >
+                    Butuh tim lebih dari 4 orang? Hubungi kami
+                  </button>
+
+                  <div className="mt-3">
+                    <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
+                  </div>
                   {enterpriseCycle === "semiannual" && (
                     <div className="mt-1.5 text-[9px] text-violet-300/80">Ditagih {PRICING.enterprise.semiannualTotal} tiap 6 bulan — bayar 5, dapat 6</div>
                   )}
@@ -2373,17 +2389,6 @@ export default function Auth() {
                     className="mt-8 w-full rounded-xl bg-violet-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-violet-500"
                   >
                     Upgrade ke Enterprise
-                  </button>
-
-                  {/* Tim lebih dari 4 orang - bukan harga standar, arahin
-                      langsung ngobrol sama SASA (yang udah dibekelin cara
-                      jawab kasus ini) daripada nyoba masukin harga custom
-                      ke tabel harga publik. */}
-                  <button
-                    onClick={() => window.__nextoOpenSasaChat?.("Saya butuh tim lebih dari 4 orang, ada opsi harga khusus?")}
-                    className="mt-3 w-full text-center text-[10px] text-violet-300/70 underline decoration-dotted transition hover:text-violet-200"
-                  >
-                    Butuh tim lebih dari 4 orang? Hubungi kami
                   </button>
                 </div>
               </div>
