@@ -1718,15 +1718,19 @@ function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
   const activeBg = { slate: "bg-white text-slate-950", orange: "bg-orange-500 text-white", violet: "bg-violet-500 text-white" }[accent];
   return (
     <div className="mt-2 inline-flex items-center gap-0.5 rounded-full bg-white/[0.06] p-0.5">
+      {/* min-h-[34px] - versi awal cuma ~21px tinggi (padding py-1), ketauan
+          pas ngecek mobile kalau itu di bawah standar tap target nyaman
+          (Apple/Google nyaranin ~44px; 34px kompromi biar tetep keliatan
+          compact tapi gak susah dipencet jari, 9 Sep 2026). */}
       <button
         onClick={() => setBillingCycle("monthly")}
-        className={`rounded-full px-2.5 py-1 text-[9px] font-bold transition-colors ${billingCycle === "monthly" ? activeBg : "text-slate-400 hover:text-slate-200"}`}
+        className={`min-h-[34px] rounded-full px-3 text-[10px] font-bold transition-colors ${billingCycle === "monthly" ? activeBg : "text-slate-400 hover:text-slate-200"}`}
       >
         Bulanan
       </button>
       <button
         onClick={() => setBillingCycle("semiannual")}
-        className={`rounded-full px-2.5 py-1 text-[9px] font-bold transition-colors ${billingCycle === "semiannual" ? activeBg : "text-slate-400 hover:text-slate-200"}`}
+        className={`min-h-[34px] rounded-full px-3 text-[10px] font-bold transition-colors ${billingCycle === "semiannual" ? activeBg : "text-slate-400 hover:text-slate-200"}`}
       >
         6 Bulan
       </button>
