@@ -2354,11 +2354,13 @@ export default function Auth() {
                       langsung ngobrol sama SASA (yang udah dibekelin cara
                       jawab kasus ini) daripada nyoba masukin harga custom
                       ke tabel harga publik. Warna amber sengaja kontras
-                      sama tema violet kartu ini biar keliatan menonjol,
-                      gak ketelen jadi teks pudar biasa (9 Sep 2026). */}
+                      sama tema violet kartu ini, tapi HALUS - outline
+                      tipis + teks violet muda, bukan pill solid warna
+                      nyala (amber kesannya "warning", ketauan kurang pas
+                      buat CTA upsell premium - direvisi 9 Sep 2026). */}
                   <button
                     onClick={() => window.__nextoOpenSasaChat?.("Saya butuh tim lebih dari 4 orang, ada opsi harga khusus?")}
-                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-[10px] font-bold text-amber-300 transition hover:bg-amber-500/25"
+                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 px-3 py-1.5 text-[10px] font-semibold text-violet-200 transition hover:border-violet-400/50 hover:text-white"
                   >
                     Butuh tim lebih dari 4 orang? Hubungi kami
                   </button>
