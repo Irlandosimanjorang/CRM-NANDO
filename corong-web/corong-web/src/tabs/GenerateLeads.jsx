@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp, Info, X } from "lucide-react";
 import * as db from "../lib/db";
+import { getGenerateLeadsExample } from "../lib/industryTemplates";
 
 // Warna glow tiap kartu ditentuin TIER SKOR-nya - jadi bukan dekorasi doang,
 // tapi langsung nunjukin lead itu "panas" (ijo), "hangat" (kuning), atau
@@ -48,7 +49,8 @@ function Field({ icon: Icon, value }) {
 // user tetep dapet kabar walau dia udah pindah ke tab lain pas nungguin
 // (komponen ini sekarang selalu ke-mount di App.jsx, jadi proses ini gak
 // bakal keputus/ilang lagi cuma gara-gara ganti tab).
-export default function GenerateLeads({ stages, onChanged, onNotify }) {
+export default function GenerateLeads({ stages, industry, onChanged, onNotify }) {
+  const example = getGenerateLeadsExample(industry);
   const [keyword, setKeyword] = useState("");
   const [province, setProvince] = useState("");
   const [targetRole, setTargetRole] = useState("");
@@ -163,11 +165,11 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Barang/jasa yang Anda jual <span className="text-rose-500">*</span></span>
-                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: jasa katering, unit apartemen, produk asuransi" value={productSold} onChange={(e) => setProductSold(e.target.value)} />
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder={`misal: ${example.productSold}`} value={productSold} onChange={(e) => setProductSold(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Kata kunci / industri <span className="text-rose-500">*</span></span>
-                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: distributor elektronik, agen properti" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder={`misal: ${example.keyword}`} value={keyword} onChange={(e) => setKeyword(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Provinsi (opsional - kosongin buat cari se-Indonesia)</span>
@@ -175,7 +177,7 @@ export default function GenerateLeads({ stages, onChanged, onNotify }) {
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Jabatan/peran yang dicari <span className="text-rose-500">*</span></span>
-                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Purchasing Manager, HRD, atau Ketua Komunitas" value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
+                <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder={`misal: ${example.targetRole}`} value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Skala perusahaan (opsional)</span>

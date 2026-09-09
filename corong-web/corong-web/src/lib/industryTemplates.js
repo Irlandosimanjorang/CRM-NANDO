@@ -42,6 +42,7 @@ export const INDUSTRY_TEMPLATES = {
     hiddenFields: [],
     customFieldLabels: {},
     aiContext: "Bisnis ini distribusi/manufaktur PVC dan bahan kimia industri. Istilah relevan: tonase, resin, kompon, purchasing manager, trader vs manufacturer.",
+    genLeadsExample: { productSold: "resin PVC, kompon kabel", keyword: "distributor kabel listrik", targetRole: "Purchasing Manager, HRD, atau Ketua Komunitas" },
   },
 
   automotive: {
@@ -76,6 +77,7 @@ export const INDUSTRY_TEMPLATES = {
       custom_field_4: "Warna diminati",
     },
     aiContext: "Bisnis ini dealer kendaraan (mobil/motor). Istilah relevan: test drive, unit, tipe/varian, DP, cicilan, trade-in.",
+    genLeadsExample: { productSold: "mobil SUV, motor matic", keyword: "showroom mobil bekas", targetRole: "calon pembeli individu atau fleet manager" },
   },
 
   property: {
@@ -110,6 +112,7 @@ export const INDUSTRY_TEMPLATES = {
       custom_field_4: "Tipe sertifikat",
     },
     aiContext: "Bisnis ini agen/developer properti. Istilah relevan: viewing, booking fee, KPR, tipe unit, luas tanah/bangunan, timeline pembelian.",
+    genLeadsExample: { productSold: "unit apartemen, rumah tapak", keyword: "agen properti Jakarta Selatan", targetRole: "calon pembeli rumah atau investor" },
   },
 
   b2b_general: {
@@ -138,6 +141,7 @@ export const INDUSTRY_TEMPLATES = {
       custom_field_2: "Metode pembayaran (Cash/Termin)",
     },
     aiContext: "Bisnis ini B2B umum (distributor/trading). Istilah relevan: quotation, PO, sample, reorder.",
+    genLeadsExample: { productSold: "alat tulis kantor, mesin produksi", keyword: "distributor alat tulis kantor", targetRole: "Purchasing Manager atau Owner" },
   },
 
   insurance: {
@@ -171,6 +175,7 @@ export const INDUSTRY_TEMPLATES = {
       custom_field_4: "Jenis polis",
     },
     aiContext: "Bisnis ini agen asuransi/financial services. Istilah relevan: premi, polis, nilai pertanggungan, ahli waris, konsultasi kebutuhan, renewal.",
+    genLeadsExample: { productSold: "asuransi jiwa, produk investasi", keyword: "nasabah asuransi kesehatan", targetRole: "calon nasabah atau agen mitra" },
   },
 
   retail_fmcg: {
@@ -201,6 +206,7 @@ export const INDUSTRY_TEMPLATES = {
       custom_field_3: "Rata-rata nilai order",
     },
     aiContext: "Bisnis ini distribusi retail/FMCG. Istilah relevan: outlet, karton, distributor area, repeat order.",
+    genLeadsExample: { productSold: "produk makanan ringan, minuman kemasan", keyword: "toko kelontong area Bekasi", targetRole: "pemilik toko atau distributor area" },
   },
 };
 
@@ -227,6 +233,11 @@ export function getCategories(industryKey) {
 export function getCompanyTypeOptions(industryKey) {
   const tpl = getIndustryTemplate(industryKey);
   return tpl.companyTypeOptions || COMPANY_TYPES;
+}
+
+export function getGenerateLeadsExample(industryKey) {
+  const tpl = getIndustryTemplate(industryKey);
+  return tpl.genLeadsExample || INDUSTRY_TEMPLATES[DEFAULT_INDUSTRY].genLeadsExample;
 }
 
 export function isFieldHidden(industryKey, fieldName) {

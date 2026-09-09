@@ -838,7 +838,7 @@ export default function App() {
                 {visitedTabs.has("generateleads") && (
                   <div style={{ display: effectiveTab === "generateleads" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("generateleads")}>
-                      <GenerateLeads stages={stageList} onChanged={reload} onNotify={pushToast} />
+                      <GenerateLeads stages={stageList} industry={org?.industry} onChanged={reload} onNotify={pushToast} />
                     </PreviewLock>
                   </div>
                 )}
