@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid, Megaphone, LifeBuoy, Gauge as GaugeIcon } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid, Megaphone, LifeBuoy } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -451,17 +451,23 @@ function AiAccountsUsagePanel({ features, accounts }) {
   );
 }
 
-// Isi modal buat node satelit "Limit AI" (lihat pembuatan `aiSatellite` di
-// AdminDashboard) - dipisah jadi node satelit sendiri yang nempel ke ATOM
-// lewat garis, BUKAN ditumpuk di dalam panel ATOM - biar ring sub-sinyal ATOM
-// sendiri (checks_detail) gak ikut penuh sesak tiap kali nambah fitur AI baru,
-// dan biar ada/nggaknya masalah limit kelihatan dari LUAR (warna node
-// satelitnya sendiri) tanpa harus buka modal ATOM dulu.
-function AiLimitsModalContent({ aiLimits, flaggedCount, severity }) {
+// Panel "Limit Fitur AI" - ditumpuk LANGSUNG di bawah panel sinyal security
+// (ChecksDetailPanel) di dalam modal ATOM, SELALU kebuka pas ATOM diklik
+// (bukan node satelit terpisah - versi itu ternyata numpuk visual sama ring
+// ATOM di orbit view, jadi dibalik ke sini). 2 tabel keliatan sekaligus:
+// katalog semua fitur AI + limitnya, dan rincian pemakaian per akun.
+function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
   if (!aiLimits) return null;
   const { features, accounts } = aiLimits;
   return (
-    <div className="grid gap-4">
+    <div className="mt-4 pt-4 border-t border-white/[0.08] grid gap-3">
+      <div className="flex items-center gap-2.5">
+        <span className="relative inline-flex h-2 w-2">
+          <span className={`absolute inline-flex h-full w-full rounded-full ${severity === "ok" ? "bg-emerald-400" : severity === "critical" ? "bg-rose-400" : "bg-amber-400"} opacity-70 animate-ping`} />
+          <span className={`relative inline-flex rounded-full h-full w-full ${severity === "ok" ? "bg-emerald-400" : severity === "critical" ? "bg-rose-400" : "bg-amber-400"}`} />
+        </span>
+        <span className="font-mono text-[13px] font-bold uppercase tracking-[0.12em] text-slate-200">Limit Fitur AI</span>
+      </div>
       <div className="text-[11px] text-slate-400 font-mono">
         {flaggedCount === 0 ? (
           <span className="text-emerald-400">semua akun aman, gak ada yang mendekati limit</span>
@@ -552,30 +558,17 @@ const ORBIT_START_ANGLE = 216; // biar node pertama (biasanya ATOM) di posisi ya
 const ORBIT_MAIN_RADIUS = 37;
 const ORBIT_SUB_RADIUS = 13;
 const ORBIT_BOUNDARY_RADIUS = 47;
-// Node "satelit" - beda dari karyawan utama, nempel MENJAUH dari salah satu
-// node (bukan dari hub tengah) lewat garis penghubung sendiri. Dipake buat
-// "Limit AI" biar gak numpuk di ring sub-sinyal ATOM (lihat AiLimitsModalContent).
-const SATELLITE_RADIUS = ORBIT_MAIN_RADIUS + 10;
-const SATELLITE_SUB_RADIUS = 7;
 
 function polarPoint(cx, cy, r, angleDeg) {
   const rad = (angleDeg * Math.PI) / 180;
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function sigColor(sig) {
-  if (sig.ok) return "#34d399";
-  return sig.severity === "critical" ? "#f43f5e" : "#f59e0b";
-}
-
-function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSignal, overallOk, overallGauge, satellite, onSelectSatellite }) {
+function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSignal, overallOk, overallGauge }) {
   const cx = 50, cy = 50;
   const angleStep = 360 / Math.max(employees.length, 1);
-  const nodes = employees.map((e, i) => ({ ...e, angle: ORBIT_START_ANGLE + angleStep * i, pos: polarPoint(cx, cy, ORBIT_MAIN_RADIUS, ORBIT_START_ANGLE + angleStep * i) }));
+  const nodes = employees.map((e, i) => ({ ...e, pos: polarPoint(cx, cy, ORBIT_MAIN_RADIUS, ORBIT_START_ANGLE + angleStep * i) }));
   const nodesWithSubRing = nodes.filter((n) => n.subSignals && n.subSignals.length > 0);
-  const satelliteAnchor = satellite ? nodes.find((n) => n.key === satellite.anchorKey) : null;
-  const satellitePos = satelliteAnchor ? polarPoint(cx, cy, SATELLITE_RADIUS, satelliteAnchor.angle) : null;
-  const SatelliteIcon = satellite?.icon;
   // Klik node muncul efek "ripple" (cincin ngembang lalu ilang) sesaat -
   // feedback visual instan tanpa nunggu panel detail di bawah ke-render.
   const [rippleId, setRippleId] = useState(null);
@@ -623,13 +616,15 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
           <g key={`sub-${n.key}`} style={{ transformOrigin: `${n.pos.x}px ${n.pos.y}px`, animation: "orbit-ring-spin 70s linear infinite" }}>
             {n.subSignals.map((sig, i) => {
               const pos = polarPoint(n.pos.x, n.pos.y, ORBIT_SUB_RADIUS, (360 / Math.max(n.subSignals.length, 1)) * i);
-              const color = sigColor(sig);
               return (
                 <circle
                   key={sig.key || i}
                   cx={pos.x} cy={pos.y} r={0.9}
-                  fill={color}
-                  style={{ filter: `drop-shadow(0 0 3px ${color}cc)`, cursor: "pointer" }}
+                  fill={sig.ok ? "#34d399" : "#f59e0b"}
+                  style={{
+                    filter: sig.ok ? "drop-shadow(0 0 2px rgba(52,211,153,0.8))" : "drop-shadow(0 0 3px rgba(245,158,11,0.9))",
+                    cursor: "pointer",
+                  }}
                   className="transition-[filter] hover:brightness-125"
                   onClick={() => onSelectSignal(sig)}
                 >
@@ -639,39 +634,6 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
             })}
           </g>
         ))}
-
-        {/* Node satelit - nempel ke salah satu karyawan (bukan hub tengah)
-            lewat garis putus-putus sendiri, posisinya SEDIKIT lebih jauh dari
-            ring utama biar keliatan "cabang" bukan anggota ring. Titik-titik
-            di sekelilingnya CUMA muncul kalau ada yang beneran perlu
-            perhatian (flaggedSignals) - kalau aman, satelitnya polos aja. */}
-        {satellitePos && satelliteAnchor && (
-          <>
-            <line
-              x1={satelliteAnchor.pos.x} y1={satelliteAnchor.pos.y} x2={satellitePos.x} y2={satellitePos.y}
-              stroke={satellite.accentColor} strokeOpacity={0.55} strokeWidth="0.4" strokeDasharray="0.5 1.4" strokeLinecap="round"
-            />
-            {satellite.flaggedSignals?.length > 0 && (
-              <circle cx={satellitePos.x} cy={satellitePos.y} r={SATELLITE_SUB_RADIUS} fill="none" stroke={`${satellite.accentColor}33`} strokeWidth="0.3" />
-            )}
-            {(satellite.flaggedSignals || []).map((sig, i) => {
-              const pos = polarPoint(satellitePos.x, satellitePos.y, SATELLITE_SUB_RADIUS, (360 / Math.max(satellite.flaggedSignals.length, 1)) * i);
-              const color = sigColor(sig);
-              return (
-                <circle
-                  key={sig.key || i}
-                  cx={pos.x} cy={pos.y} r={0.85}
-                  fill={color}
-                  style={{ filter: `drop-shadow(0 0 3px ${color}cc)`, cursor: "pointer" }}
-                  className="transition-[filter] hover:brightness-125"
-                  onClick={() => onSelectSatellite()}
-                >
-                  <title>{sig.label}</title>
-                </circle>
-              );
-            })}
-          </>
-        )}
       </svg>
 
       {/* Hub tengah */}
@@ -721,34 +683,6 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
           </button>
         );
       })}
-
-      {/* Tombol node satelit - lebih kecil dari node karyawan biar jelas ini
-          "cabang", bukan anggota tim baru. */}
-      {satellitePos && SatelliteIcon && (
-        <button
-          onClick={() => onSelectSatellite()}
-          className="group absolute z-20 flex flex-col items-center gap-1"
-          style={{ left: `${satellitePos.x}%`, top: `${satellitePos.y}%`, transform: "translate(-50%,-50%)" }}
-        >
-          <span
-            className="relative flex items-center justify-center rounded-full border transition-all group-hover:scale-110"
-            style={{
-              width: 34, height: 34,
-              borderColor: `${satellite.accentColor}66`,
-              background: `radial-gradient(circle at 30% 25%, ${satellite.accentColor}26, rgba(6,9,15,0.94) 70%)`,
-              boxShadow: `0 0 18px -10px ${satellite.accentColor}`,
-            }}
-          >
-            <SatelliteIcon size={13} style={{ color: satellite.accentColor }} />
-            {satellite.flaggedSignals?.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#05070c]" style={{ background: satellite.accentColor }} />
-            )}
-          </span>
-          <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-slate-400 transition-colors group-hover:text-white">
-            {satellite.title}
-          </span>
-        </button>
-      )}
     </div>
   );
 }
@@ -764,7 +698,6 @@ export default function AdminDashboard() {
   const [selectedEmployeeKey, setSelectedEmployeeKey] = useState("atom");
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedCheck, setSelectedCheck] = useState(null);
-  const [aiSatelliteOpen, setAiSatelliteOpen] = useState(false);
   const intervalRef = useRef(null);
 
   const load = useCallback(async (silent) => {
@@ -828,6 +761,26 @@ export default function AdminDashboard() {
   const atomChecks = security?.checks_detail || [];
   const memoPending = status?.vector_memory?.pending_embeddings ?? 0;
 
+  // "Limit Fitur AI" - dihitung DULUAN di sini (bukan di bawah employees)
+  // karena ATOM's content di array employees butuh aiFlaggedCount/aiSeverity
+  // pas array-nya dibangun. Ringkasan: berapa banyak akun+fitur yang lagi
+  // mendekati/lewat limit bulanan/harian - dipake buat kasih warna/teks
+  // ringkasan sebelum tabel lengkapnya ditampilin (lihat AiLimitsPanel).
+  const aiLimits = status?.ai_limits;
+  const aiMeteredFeatures = (aiLimits?.features || []).filter((f) => f.metered);
+  let aiFlaggedCount = 0;
+  let aiSeverity = "ok";
+  for (const acc of aiLimits?.accounts || []) {
+    for (const f of aiMeteredFeatures) {
+      const u = acc.usage?.[f.key];
+      if (u && u.applicable && (u.status === "warning" || u.status === "over")) {
+        aiFlaggedCount++;
+        if (u.status === "over") aiSeverity = "critical";
+        else if (aiSeverity !== "critical") aiSeverity = "warning";
+      }
+    }
+  }
+
   // Satu sumber data buat "karyawan AI" - dipake bareng sama tampilan Grid
   // (klasik, gampang discan semua sekaligus) dan Peta Orbit (baru, buat
   // liat command center sebagai satu jaringan hidup) biar gak duplikat
@@ -857,6 +810,7 @@ export default function AdminDashboard() {
             ) : "belum pernah dicek - klik Panggil buat tes pertama"}
           </div>
           <ChecksDetailPanel checks={security?.checks_detail} aiSummary={security?.summary} />
+          <AiLimitsPanel aiLimits={status?.ai_limits} flaggedCount={aiFlaggedCount} severity={aiSeverity} />
         </>
       ),
     },
@@ -960,52 +914,6 @@ export default function AdminDashboard() {
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
 
-  // Node satelit "Limit AI" - nempel ke ATOM lewat garis, POSISI DI LUAR ring
-  // ATOM sendiri (bukan nambahin cincin sub-sinyal ATOM) biar ATOM gak makin
-  // penuh tiap kali nambah fitur AI baru. Titik-titik di sekelilingnya CUMA
-  // muncul buat akun yang beneran mendekati/lewat limit (bukan render semua
-  // akun tiap saat) - biar jumlahnya kebawa sama jumlah MASALAH, bukan
-  // jumlah total akun/fitur.
-  const aiLimits = status?.ai_limits;
-  const aiMeteredFeatures = (aiLimits?.features || []).filter((f) => f.metered);
-  const aiFlaggedSignals = [];
-  for (const acc of aiLimits?.accounts || []) {
-    for (const f of aiMeteredFeatures) {
-      const u = acc.usage?.[f.key];
-      if (u && u.applicable && (u.status === "warning" || u.status === "over")) {
-        const who = acc.display_name || acc.email || acc.user_id.slice(0, 8);
-        aiFlaggedSignals.push({
-          key: `${acc.user_id}-${f.key}`,
-          label: `${f.label} · ${who} (${u.used}/${u.limit})`,
-          ok: false,
-          severity: u.status === "over" ? "critical" : "warning",
-        });
-      }
-    }
-  }
-  const aiSeverity = aiFlaggedSignals.some((s) => s.severity === "critical") ? "critical" : aiFlaggedSignals.length > 0 ? "warning" : "ok";
-  const aiSatelliteColor = aiSeverity === "critical" ? "#f43f5e" : aiSeverity === "warning" ? "#f59e0b" : "#34d399";
-  const aiSatellite = aiLimits ? {
-    key: "ai-limits",
-    anchorKey: "atom",
-    title: "Limit AI",
-    icon: GaugeIcon,
-    accentColor: aiSatelliteColor,
-    flaggedSignals: aiFlaggedSignals,
-  } : null;
-  const aiSatelliteEmployeeLike = aiLimits ? {
-    key: "ai-limits",
-    title: "Limit AI",
-    subtitle: "Kuota Fitur AI per Akun",
-    icon: GaugeIcon,
-    accentColor: aiSatelliteColor,
-    glowClass: aiSeverity === "critical" ? "shadow-[0_0_40px_-25px_rgba(244,63,94,0.6)]" : aiSeverity === "warning" ? "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]" : "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]",
-    gaugeValue: aiFlaggedSignals.length === 0 ? 100 : Math.max(20, 100 - aiFlaggedSignals.length * 12),
-    noTrigger: true,
-    noTriggerNote: "update tiap sync",
-    content: <AiLimitsModalContent aiLimits={aiLimits} flaggedCount={aiFlaggedSignals.length} severity={aiSeverity} />,
-  } : null;
-
   return (
     <div className="relative rounded-[28px] bg-[#05070c] border border-white/[0.06] p-5 md:p-6 overflow-hidden">
       {/* Grid background + glow, konsisten sama estetika landing page */}
@@ -1088,8 +996,6 @@ export default function AdminDashboard() {
               onSelectSignal={setSelectedCheck}
               overallOk={allSystemsGo}
               overallGauge={securityGauge}
-              satellite={aiSatellite}
-              onSelectSatellite={() => setAiSatelliteOpen(true)}
             />
             <div className="mt-1 text-center text-[9.5px] font-mono text-slate-600">klik salah satu node buat liat detail lengkapnya</div>
             {detailOpen && selectedEmployee && (
@@ -1098,14 +1004,6 @@ export default function AdminDashboard() {
                 onTrigger={trigger}
                 triggering={triggering}
                 onClose={() => setDetailOpen(false)}
-              />
-            )}
-            {aiSatelliteOpen && aiSatelliteEmployeeLike && (
-              <EmployeeDetailModal
-                employee={aiSatelliteEmployeeLike}
-                onTrigger={trigger}
-                triggering={triggering}
-                onClose={() => setAiSatelliteOpen(false)}
               />
             )}
           </div>
@@ -1130,21 +1028,6 @@ export default function AdminDashboard() {
                 {e.content}
               </EmployeeCard>
             ))}
-            {aiSatelliteEmployeeLike && (
-              <EmployeeCard
-                icon={aiSatelliteEmployeeLike.icon}
-                title={`${aiSatelliteEmployeeLike.title} · ${aiSatelliteEmployeeLike.subtitle}`}
-                accentColor={aiSatelliteEmployeeLike.accentColor}
-                glowClass={aiSatelliteEmployeeLike.glowClass}
-                gaugeValue={aiSatelliteEmployeeLike.gaugeValue}
-                onTrigger={trigger}
-                triggering={triggering}
-                noTrigger={aiSatelliteEmployeeLike.noTrigger}
-                noTriggerNote={aiSatelliteEmployeeLike.noTriggerNote}
-              >
-                {aiSatelliteEmployeeLike.content}
-              </EmployeeCard>
-            )}
           </div>
         )}
 
