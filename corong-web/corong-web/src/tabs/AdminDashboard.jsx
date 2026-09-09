@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid, Megaphone, LifeBuoy } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid, Megaphone, LifeBuoy, Maximize2, Minimize2 } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -744,7 +744,14 @@ export default function AdminDashboard() {
   const [selectedEmployeeKey, setSelectedEmployeeKey] = useState("atom");
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedCheck, setSelectedCheck] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(() => !!document.fullscreenElement);
   const intervalRef = useRef(null);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
 
   const load = useCallback(async (silent) => {
     if (!silent) setLoading(true);
@@ -1014,6 +1021,19 @@ export default function AdminDashboard() {
             </div>
             <button onClick={() => load(false)} className="text-[10px] font-mono uppercase tracking-wide border border-white/10 bg-white/[0.03] text-slate-400 rounded-xl px-3 py-2 hover:bg-white/[0.07] hover:text-white flex items-center gap-1.5 transition-colors">
               <RefreshCw size={11} /> Sync Manual
+            </button>
+            {/* Toggle fullscreen manual - jaring pengaman kalau permintaan
+                fullscreen otomatis pas klik menu (lihat App.jsx) ke-block
+                browser (misal tab ini dibuka dari refresh/link langsung,
+                gak lewat klik menu sama sekali). */}
+            <button
+              onClick={() => {
+                if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                else document.documentElement.requestFullscreen?.().catch(() => {});
+              }}
+              className="text-[10px] font-mono uppercase tracking-wide border border-white/10 bg-white/[0.03] text-slate-400 rounded-xl px-3 py-2 hover:bg-white/[0.07] hover:text-white flex items-center gap-1.5 transition-colors"
+            >
+              {isFullscreen ? <Minimize2 size={11} /> : <Maximize2 size={11} />} {isFullscreen ? "Keluar Fullscreen" : "Fullscreen"}
             </button>
           </div>
         </div>

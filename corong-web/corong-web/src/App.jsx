@@ -496,7 +496,10 @@ export default function App() {
         <div className="relative max-w-[1400px] mx-auto h-full flex flex-col px-4 py-3.5 md:px-8 md:py-5">
           <div className="flex items-center justify-between gap-3 mb-3.5 shrink-0">
             <button
-              onClick={() => setTab("dashboard")}
+              onClick={() => {
+                if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                setTab("dashboard");
+              }}
               className="flex items-center gap-2 text-[12px] font-mono text-slate-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl px-3.5 py-2 transition-colors"
             >
               <ArrowLeft size={13} /> Kembali ke Workspace
@@ -712,7 +715,17 @@ export default function App() {
             return (
               <button
                 key={n.key}
-                onClick={() => setTab(n.key)}
+                onClick={() => {
+                  // Command Center itu "fullscreen takeover" - minta browser
+                  // masuk mode fullscreen beneran (nutupin tab/address bar),
+                  // bukan cuma penuh di dalam viewport halaman. HARUS dipanggil
+                  // langsung di dalam klik ini (user gesture) - kalau ditunda
+                  // sedikit pun browser nolak permintaannya.
+                  if (n.key === "adminops" && document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                  }
+                  setTab(n.key);
+                }}
                 className={`nexto-nav-item relative w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[14px] text-[13px] ${cls}`}
               >
                 {active && !locked && !n.special && <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-white/90" />}
@@ -908,7 +921,16 @@ export default function App() {
                 ? (active ? "text-violet-300 bg-violet-500/15" : "text-violet-400")
                 : (active ? "text-orange-300 bg-orange-500/15" : "text-slate-400");
               return (
-                <button key={n.key} onClick={() => setTab(n.key)} className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition-colors ${cls}`}>
+                <button
+                  key={n.key}
+                  onClick={() => {
+                    if (n.key === "adminops" && document.documentElement.requestFullscreen) {
+                      document.documentElement.requestFullscreen().catch(() => {});
+                    }
+                    setTab(n.key);
+                  }}
+                  className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition-colors ${cls}`}
+                >
                   <I size={18} strokeWidth={active ? 2.5 : 1.9} />
                   <span className="mt-0.5 max-w-full truncate text-[8px] font-medium leading-none">{n.short}</span>
                   {locked && <Lock size={8} className="absolute right-2 top-0.5" />}
