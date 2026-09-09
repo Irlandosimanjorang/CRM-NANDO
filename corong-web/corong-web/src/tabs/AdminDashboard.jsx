@@ -361,6 +361,127 @@ function ContentDraftsPanel({ drafts, onReviewed }) {
   );
 }
 
+const TIER_LABEL = { standard: "Standard", professional: "Professional", enterprise: "Enterprise", internal: "Internal" };
+const WINDOW_LABEL = { day: "hari", month: "bulan", week: "minggu", none: "" };
+const SCOPE_LABEL = { user: "akun", org: "tim", platform: "platform" };
+const USAGE_STATUS_STYLE = {
+  ok: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+  warning: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  over: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+  unlimited: "bg-slate-500/10 text-slate-500 border-white/[0.06]",
+  "n/a": "bg-slate-500/[0.04] text-slate-600 border-white/[0.04]",
+};
+
+function limitText(f) {
+  if (f.limit === null || f.limit === undefined) return "Tanpa batas";
+  return `${f.limit}x / ${WINDOW_LABEL[f.window]} / ${SCOPE_LABEL[f.scope]}`;
+}
+
+// Legenda SEMUA fitur AI yang ada di app (metered maupun bukan) - biar admin
+// tau persis batasan tiap fitur tanpa harus buka kode edge function satu-satu.
+function AiFeatureCatalog({ features }) {
+  return (
+    <div className="grid gap-1.5">
+      {features.map((f) => (
+        <div key={f.key} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-white/[0.015] px-2.5 py-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11.5px] font-semibold text-slate-200">{f.label}</span>
+              <span className="text-[8.5px] uppercase tracking-wide font-mono text-slate-500 border border-white/[0.08] rounded px-1 py-[1px]">{TIER_LABEL[f.tier]}</span>
+            </div>
+            {f.note && <div className="mt-0.5 text-[10px] text-slate-500 font-mono">{f.note}</div>}
+          </div>
+          <span className={`shrink-0 font-mono text-[10.5px] font-bold px-2 py-1 rounded-lg border ${f.metered ? "bg-sky-500/10 text-sky-300 border-sky-500/20" : "bg-slate-500/10 text-slate-500 border-white/[0.06]"}`}>
+            {limitText(f)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Rincian pemakaian per AKUN (bukan cuma agregat) - permintaan Nando: "bener2
+// setiap akun di list", biar ketauan SEBELUM ada yang kepake lebih dari jatah
+// (kebocoran), gak cuma pas udah kejadian.
+function AiAccountsUsagePanel({ features, accounts }) {
+  const meteredFeatures = features.filter((f) => f.metered);
+  if (!accounts || accounts.length === 0) {
+    return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun tim (organization_members kosong).</div>;
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-collapse min-w-[640px]">
+        <thead>
+          <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+            <th className="pb-1.5 pr-2 font-medium">Akun</th>
+            <th className="pb-1.5 pr-2 font-medium">Plan</th>
+            {meteredFeatures.map((f) => (
+              <th key={f.key} className="pb-1.5 pr-2 font-medium whitespace-nowrap">{f.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {accounts.map((a) => (
+            <tr key={a.user_id} className="border-t border-white/[0.05]">
+              <td className="py-1.5 pr-2">
+                <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{a.display_name || a.email || a.user_id.slice(0, 8)}</div>
+                <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{a.org_name} · {a.role}</div>
+              </td>
+              <td className="py-1.5 pr-2">
+                <span className="text-[9.5px] uppercase font-mono text-slate-400">{a.plan}</span>
+              </td>
+              {meteredFeatures.map((f) => {
+                const u = a.usage?.[f.key];
+                if (!u || !u.applicable) {
+                  return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-600">-</span></td>;
+                }
+                return (
+                  <td key={f.key} className="py-1.5 pr-2">
+                    <span className={`font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${USAGE_STATUS_STYLE[u.status]}`}>
+                      {u.used}{u.limit !== null ? `/${u.limit}` : ""}
+                    </span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AiLimitsPanel({ aiLimits }) {
+  const [open, setOpen] = useState(false);
+  if (!aiLimits) return null;
+  const { features, accounts, any_over, any_warning } = aiLimits;
+  const allOk = !any_over && !any_warning;
+  return (
+    <div className="mt-4 pt-4 border-t border-white/[0.08]">
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between group">
+        <div className="flex items-center gap-2.5">
+          <span className="relative inline-flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full rounded-full ${allOk ? "bg-emerald-400" : any_over ? "bg-rose-400" : "bg-amber-400"} opacity-70 animate-ping`} />
+            <span className={`relative inline-flex rounded-full h-full w-full ${allOk ? "bg-emerald-400" : any_over ? "bg-rose-400" : "bg-amber-400"}`} />
+          </span>
+          <span className="font-mono text-[13px] font-bold uppercase tracking-[0.12em] text-slate-200 group-hover:text-white transition-colors">
+            Limit Fitur AI
+            {any_over && <span className="ml-2 text-rose-400">· ada yang kebocoran</span>}
+            {!any_over && any_warning && <span className="ml-2 text-amber-400">· mendekati limit</span>}
+          </span>
+        </div>
+        <ChevronDown size={15} className={`text-slate-500 group-hover:text-white transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-3 grid gap-4">
+          <AiFeatureCatalog features={features} />
+          <AiAccountsUsagePanel features={features} accounts={accounts} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // "Jarvis Core" - orb HUD berputar di header, gaya visual sama persis kayak
 // "NEXTO AI CORE" di landing page (Auth.jsx, section AiEngineLoopSection) -
 // keyframes-nya SENGAJA dipake ulang nama & bentuknya biar konsisten (App ini
@@ -668,6 +789,7 @@ export default function AdminDashboard() {
             ) : "belum pernah dicek - klik Panggil buat tes pertama"}
           </div>
           <ChecksDetailPanel checks={security?.checks_detail} aiSummary={security?.summary} />
+          <AiLimitsPanel aiLimits={status?.ai_limits} />
         </>
       ),
     },
