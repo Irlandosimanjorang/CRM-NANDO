@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, RefreshCw, Zap, Users, Building2, Activity, ChevronDown, CheckCircle2, AlertTriangle, X, Orbit, LayoutGrid, Megaphone, LifeBuoy, Maximize2, Minimize2 } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -18,15 +18,6 @@ function timeAgo(iso) {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs} jam lalu`;
   return `${Math.floor(hrs / 24)} hari lalu`;
-}
-
-function StatusOrb({ ok, size = 10 }) {
-  return (
-    <span className="relative inline-flex" style={{ width: size, height: size }}>
-      <span className={`absolute inline-flex h-full w-full rounded-full ${ok ? "bg-emerald-400" : "bg-amber-400"} opacity-60 animate-ping`} />
-      <span className={`relative inline-flex rounded-full h-full w-full ${ok ? "bg-emerald-400" : "bg-amber-400"}`} />
-    </span>
-  );
 }
 
 // Gauge radial kecil - 100 = sehat total, turun sesuai jumlah temuan.
@@ -558,10 +549,11 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
     const parent = wrapRef.current?.parentElement;
     if (!parent) return;
     const measure = () => {
-      // Cap dinaikin ke 680 (dari 520) - sekarang toolbar+judul+strip ringkasan
-      // di atasnya udah jauh lebih ringkas, jadi ada sisa ruang lebih buat
-      // orbit gede tanpa nyodok elemen lain (tetep diukur beneran, gak ditebak).
-      const size = Math.max(300, Math.min(680, parent.clientWidth, parent.clientHeight));
+      // Command Center = orbit doang sekarang, gak ada lagi yang berebut
+      // tinggi - cap dinaikin ke 760 biar orbitnya beneran kerasa "penuh
+      // layar", tetep diukur ResizeObserver beneran (bukan ditebak) jadi
+      // otomatis ngecil di layar kecil tanpa pernah nyodok tepi.
+      const size = Math.max(300, Math.min(760, parent.clientWidth, parent.clientHeight));
       setBoxSize(size);
     };
     measure();
@@ -709,20 +701,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [triggering, setTriggering] = useState(null);
-  const [lastSync, setLastSync] = useState(null);
   const [, forceTick] = useState(0);
-  const [viewMode, setViewMode] = useState("orbit"); // "orbit" | "grid"
   const [selectedEmployeeKey, setSelectedEmployeeKey] = useState("atom");
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedCheck, setSelectedCheck] = useState(null);
-  const [isFullscreen, setIsFullscreen] = useState(() => !!document.fullscreenElement);
   const intervalRef = useRef(null);
-
-  useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => document.removeEventListener("fullscreenchange", onFsChange);
-  }, []);
 
   const load = useCallback(async (silent) => {
     if (!silent) setLoading(true);
@@ -730,7 +713,6 @@ export default function AdminDashboard() {
     try {
       const data = await db.getAdminStatus();
       setStatus(data);
-      setLastSync(new Date());
     } catch (e) {
       setError(e.message);
     } finally {
@@ -946,148 +928,41 @@ export default function AdminDashboard() {
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
 
+  // Command Center = orbit doang, gak ada lagi apa-apa di sekelilingnya
+  // (permintaan Nando eksplisit: "hapus semua kecuali orbit, full screen").
+  // Semua yang dulu ada di header (judul, ringkasan platform, toolbar) bisa
+  // diliat lewat klik node yang relevan - gak ada info yang beneran hilang,
+  // cuma dipindah dari "selalu kepajang" jadi "diliat pas dibutuhin".
   return (
-    <div className="relative flex h-full min-h-0 flex-col rounded-[28px] bg-[#05070c] border border-white/[0.06] p-4 md:p-5 overflow-hidden">
-      {/* Grid background + glow, konsisten sama estetika landing page */}
+    <div className="relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden bg-[#05070c] p-8 md:p-12">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35]"
         style={{
-          backgroundImage: "linear-gradient(rgba(148,163,184,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.08) 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(rgba(148,163,184,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.06) 1px, transparent 1px)",
           backgroundSize: "28px 28px",
-          maskImage: "radial-gradient(circle at 30% 0%, rgba(0,0,0,.9), transparent 70%)",
-          WebkitMaskImage: "radial-gradient(circle at 30% 0%, rgba(0,0,0,.9), transparent 70%)",
+          maskImage: "radial-gradient(circle at 50% 50%, rgba(0,0,0,.9), transparent 75%)",
+          WebkitMaskImage: "radial-gradient(circle at 50% 50%, rgba(0,0,0,.9), transparent 75%)",
         }}
       />
-      <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-orange-500/10 blur-[90px]" />
-
-      <div className="relative flex h-full min-h-0 flex-col overflow-y-auto">
-        {/* TOOLBAR - baris tipis doang, kontrol di kanan, biar jatah tinggi
-            paling banyak jatuh ke judul besar + orbit di bawahnya. */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3 shrink-0">
-          <div className="flex items-center gap-2 font-mono text-[10.5px] text-slate-500">
-            <StatusOrb ok={allSystemsGo} size={8} />
-            {allSystemsGo ? "SEMUA SISTEM NORMAL" : "ADA YANG PERLU DICEK"} · sync {lastSync ? timeAgo(lastSync.toISOString()) : "…"}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] p-0.5">
-              <button
-                onClick={() => setViewMode("orbit")}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wide transition-colors ${viewMode === "orbit" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}
-              >
-                <Orbit size={12} /> Orbit
-              </button>
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wide transition-colors ${viewMode === "grid" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}
-              >
-                <LayoutGrid size={12} /> Grid
-              </button>
-            </div>
-            <button onClick={() => load(false)} className="text-[10px] font-mono uppercase tracking-wide border border-white/10 bg-white/[0.03] text-slate-400 rounded-xl px-3 py-2 hover:bg-white/[0.07] hover:text-white flex items-center gap-1.5 transition-colors">
-              <RefreshCw size={11} /> Sync Manual
-            </button>
-            {/* Toggle fullscreen manual - jaring pengaman kalau permintaan
-                fullscreen otomatis pas klik menu (lihat App.jsx) ke-block
-                browser (misal tab ini dibuka dari refresh/link langsung,
-                gak lewat klik menu sama sekali). */}
-            <button
-              onClick={() => {
-                if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-                else document.documentElement.requestFullscreen?.().catch(() => {});
-              }}
-              className="text-[10px] font-mono uppercase tracking-wide border border-white/10 bg-white/[0.03] text-slate-400 rounded-xl px-3 py-2 hover:bg-white/[0.07] hover:text-white flex items-center gap-1.5 transition-colors"
-            >
-              {isFullscreen ? <Minimize2 size={11} /> : <Maximize2 size={11} />} {isFullscreen ? "Keluar Fullscreen" : "Fullscreen"}
-            </button>
-          </div>
-        </div>
-
-        {/* JUDUL BESAR - ala terminal/Claude Code (font-mono, tracked-out),
-            jadi fokus utama di atas, ganti dari layout lama (gauge kecil +
-            judul kecil rata kiri) yang keliatan sisa tempat kosong gede di
-            atas orbit. */}
-        <div className="mb-3 shrink-0 text-center">
-          <h1 className="font-mono text-[28px] sm:text-[34px] md:text-[40px] font-bold uppercase tracking-[0.08em] text-white leading-none">
-            <span className="text-orange-400">&gt;_</span> Command Center
-          </h1>
-        </div>
-
-        {/* RINGKASAN PLATFORM - strip tipis, bukan kartu-kartu gede lagi,
-            biar sisa tinggi paling banyak jatuh ke orbit di bawahnya. */}
-        <div className="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center divide-x divide-white/10 rounded-full border border-white/[0.06] bg-white/[0.02] px-2 py-2">
-          {[
-            { label: "Total Leads", value: status?.platform?.total_leads ?? 0, icon: Users, color: "#f97316" },
-            { label: "Organisasi", value: status?.platform?.total_orgs ?? 0, icon: Building2, color: "#a78bfa" },
-            { label: "Pesan Bot", value: status?.assistant?.messages_today ?? 0, icon: MessageCircle, color: "#38bdf8" },
-            { label: "Digest", value: status?.sales_advisor?.runs_today ?? 0, icon: Activity, color: "#34d399" },
-          ].map((s) => (
-            <div key={s.label} className="flex items-center gap-1.5 px-4 font-mono text-[11px]">
-              <s.icon size={12} style={{ color: s.color }} />
-              <span className="font-bold text-white">{s.value}</span>
-              <span className="text-slate-500 uppercase tracking-wide">{s.label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* KARYAWAN AI - dikasih nama biar berasa beneran tim, bukan cuma nama
-            function teknis (28 Agt 2026: RAKA/ADI/NEXA/MEMO - RAKA diganti
-            ATOM 9 Sep 2026). Dua cara liat: Peta Orbit (default, command
-            center sebagai satu jaringan hidup - ATOM dikasih cincin
-            sub-sinyalnya sendiri karena dia yang paling "rame" isinya) atau
-            Grid klasik (semua kartu kebuka sekaligus, lebih gampang discan
-            cepat kalau lagi buru-buru) - 9 Sep 2026. */}
-        {viewMode === "orbit" ? (
-          <div className="flex min-h-[380px] flex-1 flex-col items-center justify-center py-2">
-            <OrbitCommandMap
-              employees={employees}
-              selectedKey={selectedEmployeeKey}
-              onSelectEmployee={(key) => { setSelectedEmployeeKey(key); setDetailOpen(true); }}
-              onSelectSignal={setSelectedCheck}
-              overallOk={allSystemsGo}
-              overallGauge={securityGauge}
-            />
-            <div className="mt-1 shrink-0 text-center text-[9.5px] font-mono text-slate-600">klik salah satu node buat liat detail lengkapnya</div>
-            {detailOpen && selectedEmployee && (
-              <EmployeeDetailModal
-                employee={selectedEmployee}
-                onTrigger={trigger}
-                triggering={triggering}
-                onClose={() => setDetailOpen(false)}
-              />
-            )}
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-3">
-            {employees.map((e) => (
-              <EmployeeCard
-                key={e.key}
-                icon={e.icon}
-                title={`${e.title} · ${e.subtitle}`}
-                accentColor={e.accentColor}
-                glowClass={e.glowClass}
-                gaugeValue={e.gaugeValue}
-                trend={e.trend}
-                trendKey={e.trendKey}
-                onTrigger={trigger}
-                triggering={triggering}
-                triggerKey={e.triggerKey}
-                noTrigger={e.noTrigger}
-                noTriggerNote={e.noTriggerNote}
-              >
-                {e.content}
-              </EmployeeCard>
-            ))}
-          </div>
-        )}
-
-        {selectedCheck && (
-          <CheckDetailModal check={selectedCheck} aiSummary={security?.summary} onClose={() => setSelectedCheck(null)} />
-        )}
-
-        <div className="mt-3 shrink-0 text-center text-[9px] font-mono text-slate-700 uppercase tracking-widest">
-          auto-sync tiap {REFRESH_INTERVAL_MS / 1000}s · platform-wide, bukan cuma org Anda
-        </div>
-      </div>
+      <OrbitCommandMap
+        employees={employees}
+        selectedKey={selectedEmployeeKey}
+        onSelectEmployee={(key) => { setSelectedEmployeeKey(key); setDetailOpen(true); }}
+        onSelectSignal={setSelectedCheck}
+        overallOk={allSystemsGo}
+        overallGauge={securityGauge}
+      />
+      {detailOpen && selectedEmployee && (
+        <EmployeeDetailModal
+          employee={selectedEmployee}
+          onTrigger={trigger}
+          triggering={triggering}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
+      {selectedCheck && (
+        <CheckDetailModal check={selectedCheck} aiSummary={security?.summary} onClose={() => setSelectedCheck(null)} />
+      )}
     </div>
   );
 }
