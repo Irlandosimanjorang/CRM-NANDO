@@ -1370,9 +1370,9 @@ export default function Leads({
           const lastContact = lastProgress?.created_at || lastProgress?.date || lastProgress?.updated_at || null;
           const daysSinceContact = daysSince(lastContact);
 
-          // Garis status di sisi kiri kartu gantiin ornamen HUD lama - sekarang
-          // WARNANYA BENERAN NGOMONG SESUATU (kapan terakhir dihubungi), bukan
-          // cuma dekorasi sudut yang sama di semua kartu.
+          // Outline kartu ikut warna urgensi kontak - kartu overdue kelihatan
+          // beda dari jauh (border merah), gak perlu buka satu-satu buat tau
+          // mana yang perlu diprioritasin duluan.
           const urgency =
             daysSinceContact === null
               ? { stripe: "#cbd5e1", text: "#94a3b8", note: "Belum pernah dihubungi" }
@@ -1386,11 +1386,10 @@ export default function Leads({
             <div
               key={c.id}
               onClick={() => setEdit(c)}
-              className="flex rounded-2xl bg-white cursor-pointer overflow-hidden border border-slate-200/80 hover:border-slate-300 hover:shadow-[0_10px_30px_-16px_rgba(15,23,42,0.3)] transition-all"
+              className="rounded-2xl bg-white cursor-pointer overflow-hidden transition-all hover:shadow-[0_10px_30px_-16px_rgba(15,23,42,0.3)]"
+              style={{ border: `1.5px solid ${urgency.stripe}` }}
             >
-              <div className="w-1 shrink-0" style={{ background: urgency.stripe }} />
-
-              <div className="flex-1 min-w-0 p-4 sm:p-5">
+              <div className="p-4 sm:p-5">
                 {/* HEADER */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -1477,7 +1476,7 @@ export default function Leads({
                 {/* PROGRESS UPDATE */}
                 <button
                   onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, autoFocus: true }); saveOpenModal("progress", { leadId: c.id }); }}
-                  className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border border-slate-200 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-300 hover:text-orange-700 hover:bg-orange-50/60 transition-colors"
+                  className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border-2 border-l-[3px] border-slate-200 border-l-orange-400 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-300 hover:border-l-orange-500 hover:text-orange-700 hover:bg-orange-50/60 transition-colors"
                   title="Update progress harian"
                 >
                   <ClipboardList size={13} className="shrink-0 text-slate-400" />
