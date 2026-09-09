@@ -265,7 +265,7 @@ function EmployeeDetailModal({ employee, onTrigger, triggering, onClose }) {
   return createPortal(
     <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-[22px] pt-9"
+        className={`relative w-full ${employee.wide ? "max-w-3xl" : "max-w-lg"} max-h-[85vh] overflow-y-auto rounded-[22px] pt-9`}
         onClick={(e) => e.stopPropagation()}
       >
         <button onClick={onClose} className="absolute top-2 right-2 z-30 text-slate-400 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] rounded-lg p-1.5 transition-colors">
@@ -583,10 +583,24 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
         @keyframes orbit-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes orbit-ring-spin-slow { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
         @keyframes orbit-dash-flow { to { stroke-dashoffset: -12; } }
-        @keyframes orbit-breathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.06); opacity: .85; } }
+        @keyframes orbit-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-4px) scale(1.05); } }
         @keyframes orbit-ripple { from { transform: scale(0.6); opacity: .55; } to { transform: scale(2.1); opacity: 0; } }
+        @keyframes orbit-core-pulse { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.25); opacity: .85; } }
         @media (prefers-reduced-motion: reduce) { .orbit-motion, .orbit-motion * { animation: none !important; } }
       `}</style>
+
+      {/* Inti orbit - cuma pendar energi ambient, TANPA angka/teks (dulu ada
+          gauge "100/health" di tengah yang cuma duplikat status ATOM, gak
+          ada info baru). Sekadar penanda gravitasi visual biar node-node di
+          sekelilingnya kerasa "mengorbit sesuatu", bukan cuma ngambang acak. */}
+      <div className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+        <div
+          className="orbit-motion rounded-full blur-2xl"
+          style={{ width: 100, height: 100, background: overallOk ? "rgba(52,211,153,0.24)" : "rgba(245,158,11,0.24)", animation: "orbit-core-pulse 4.5s ease-in-out infinite" }}
+        />
+        <div className="orbit-motion absolute inset-0 rounded-full border" style={{ borderColor: overallOk ? "rgba(52,211,153,0.35)" : "rgba(245,158,11,0.35)", animation: "orbit-ring-spin 22s linear infinite" }} />
+      </div>
+
       <svg viewBox="0 0 100 100" className="orbit-motion absolute inset-0 h-full w-full overflow-visible">
         <g style={{ transformOrigin: "50px 50px", animation: "orbit-ring-spin-slow 90s linear infinite" }}>
           <circle cx={cx} cy={cy} r={ORBIT_BOUNDARY_RADIUS} fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="0.3" strokeDasharray="1.2 2" />
@@ -594,21 +608,29 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
         {nodesWithSubRing.map((n) => (
           <circle key={`ring-${n.key}`} cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke={`${n.accentColor}33`} strokeWidth="0.3" />
         ))}
-        {nodes.map((n) => (
-          <g key={n.key}>
-            <line x1={cx} y1={cy} x2={n.pos.x} y2={n.pos.y} stroke={n.accentColor} strokeOpacity={selectedKey === n.key ? 0.4 : 0.16} strokeWidth={selectedKey === n.key ? 0.6 : 0.35} />
-            {/* Overlay dash yang ngalir - kesan "energi" ngalir dari node ke hub, lebih terang buat node yang lagi dipilih */}
-            <line
-              x1={n.pos.x} y1={n.pos.y} x2={cx} y2={cy}
-              stroke={n.accentColor}
-              strokeOpacity={selectedKey === n.key ? 0.9 : 0.4}
-              strokeWidth={selectedKey === n.key ? 0.7 : 0.45}
-              strokeDasharray="0.4 3.2"
-              strokeLinecap="round"
-              style={{ animation: `orbit-dash-flow ${selectedKey === n.key ? 1.1 : 2.2}s linear infinite` }}
-            />
-          </g>
-        ))}
+        {/* Mesh jaringan - tiap node nyambung ke TETANGGANYA (bukan ke hub
+            tengah yang udah dihapus), kesannya jadi "jaringan" node yang
+            saling terhubung, bukan hub-and-spoke. Edge yang nempel ke node
+            terpilih ikut nyala lebih terang. */}
+        {nodes.map((n, i) => {
+          const next = nodes[(i + 1) % nodes.length];
+          if (nodes.length < 2) return null;
+          const isActive = selectedKey === n.key || selectedKey === next.key;
+          return (
+            <g key={`mesh-${n.key}`}>
+              <line x1={n.pos.x} y1={n.pos.y} x2={next.pos.x} y2={next.pos.y} stroke="rgba(148,163,184,0.16)" strokeWidth="0.3" />
+              <line
+                x1={n.pos.x} y1={n.pos.y} x2={next.pos.x} y2={next.pos.y}
+                stroke={isActive ? n.accentColor : "rgba(148,163,184,0.3)"}
+                strokeOpacity={isActive ? 0.85 : 0.35}
+                strokeWidth={isActive ? 0.55 : 0.35}
+                strokeDasharray="0.4 3.2"
+                strokeLinecap="round"
+                style={{ animation: `orbit-dash-flow ${isActive ? 1.3 : 3.5}s linear infinite` }}
+              />
+            </g>
+          );
+        })}
         {/* Cincin sub-sinyal - muter pelan terus-menerus biar keliatan "hidup",
             kayak satelit kecil ngorbit. Karyawan mana pun bisa punya ini
             (lewat prop subSignals), gak di-hardcode buat 1 nama doang. */}
@@ -636,12 +658,6 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
         ))}
       </svg>
 
-      {/* Hub tengah */}
-      <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-        <JarvisCore ok={overallOk} gaugeValue={overallGauge} size={110} />
-        <div className="mt-1.5 text-center font-mono text-[9px] uppercase tracking-[0.14em] text-slate-500">Nexto AI</div>
-      </div>
-
       {/* Node karyawan utama */}
       {nodes.map((n, i) => {
         const Icon = n.icon;
@@ -662,7 +678,7 @@ function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSig
                 borderColor: isSelected ? n.accentColor : `${n.accentColor}55`,
                 background: `radial-gradient(circle at 30% 25%, ${n.accentColor}26, rgba(6,9,15,0.94) 70%)`,
                 boxShadow: isSelected ? `0 0 34px -8px ${n.accentColor}` : `0 0 22px -14px ${n.accentColor}`,
-                animation: `orbit-breathe ${3.4 + i * 0.4}s ease-in-out infinite`,
+                animation: `orbit-float ${3.4 + i * 0.4}s ease-in-out infinite`,
                 animationDelay: `${i * 0.3}s`,
               }}
             >
@@ -799,6 +815,7 @@ export default function AdminDashboard() {
       trendKey: "issues",
       triggerKey: "health-check",
       subSignals: atomChecks,
+      wide: true,
       content: (
         <>
           <div className="text-[11px] text-slate-400 font-mono">
@@ -809,8 +826,15 @@ export default function AdminDashboard() {
               </>
             ) : "belum pernah dicek - klik Panggil buat tes pertama"}
           </div>
-          <ChecksDetailPanel checks={security?.checks_detail} aiSummary={security?.summary} />
-          <AiLimitsPanel aiLimits={status?.ai_limits} flaggedCount={aiFlaggedCount} severity={aiSeverity} />
+          {/* 2 tabel bersebelahan (side-by-side) di layar lebar, numpuk balik ke
+              1 kolom otomatis di HP - Sinyal Termonitor di kiri, Limit Fitur
+              AI di kanan, dipisah garis vertikal tipis. */}
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+            <ChecksDetailPanel checks={security?.checks_detail} aiSummary={security?.summary} />
+            <div className="lg:border-l lg:border-white/[0.08] lg:pl-4">
+              <AiLimitsPanel aiLimits={status?.ai_limits} flaggedCount={aiFlaggedCount} severity={aiSeverity} />
+            </div>
+          </div>
         </>
       ),
     },
