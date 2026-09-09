@@ -141,6 +141,10 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const hidden = (field) => isFieldHidden(industry, field);
   const customSlots = getCustomFieldSlots(industry, customFieldLabels);
   const categories = getCategories(industry);
+  // Kalau kategori lead ini gak ada di daftar bawaan industri (berarti dulu
+  // pernah diisi custom), langsung buka mode custom pas modal dibuka - biar
+  // gak keliatan "ke-reset" jadi kosong.
+  const [customCategory, setCustomCategory] = useState(() => !!f.category && !categories.includes(f.category));
   const companyTypeOptions = getCompanyTypeOptions(industry);
   // Warna header ngikutin tahap pipeline lead ini (real-time ngikutin pilihan
   // dropdown Tahap di bawah, bukan cuma nilai awal pas modal dibuka).
@@ -282,7 +286,27 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           )}
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Kategori"><select className={inp} value={f.category || categories[0]} onChange={(e) => set("category", e.target.value)}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
+            <Field label="Kategori">
+              <select
+                className={inp}
+                value={customCategory ? "Lainnya" : (f.category || categories[0])}
+                onChange={(e) => {
+                  if (e.target.value === "Lainnya") { setCustomCategory(true); set("category", ""); }
+                  else { setCustomCategory(false); set("category", e.target.value); }
+                }}
+              >
+                {categories.map((c) => <option key={c}>{c}</option>)}
+              </select>
+              {customCategory && (
+                <input
+                  autoFocus
+                  className={`${inp} mt-2`}
+                  placeholder="Tulis kategori sendiri…"
+                  value={f.category || ""}
+                  onChange={(e) => set("category", e.target.value)}
+                />
+              )}
+            </Field>
             {!hidden("company_type") && (
               <Field label={lbl("company_type", "Tipe perusahaan")}><select className={inp} value={f.company_type || ""} onChange={(e) => set("company_type", e.target.value)}>{companyTypeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></Field>
             )}
