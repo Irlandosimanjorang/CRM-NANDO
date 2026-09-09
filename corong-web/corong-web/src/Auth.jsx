@@ -1747,7 +1747,12 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "tos" | "privacy" | null
-  const [billingCycle, setBillingCycle] = useState("monthly"); // "monthly" | "semiannual" - toggle harga section #harga
+  // Toggle harga per kartu (Standard/Professional/Enterprise) - INDEPENDEN
+  // satu sama lain, gak shared, biar klik "6 Bulan" di 1 kartu gak ikut
+  // ngubah kartu lain (9 Sep 2026, sebelumnya shared dan itu kerasa aneh).
+  const [standardCycle, setStandardCycle] = useState("monthly");
+  const [professionalCycle, setProfessionalCycle] = useState("monthly");
+  const [enterpriseCycle, setEnterpriseCycle] = useState("monthly");
 
   const chatbotVoice = useRobotVoice(ROBOT_CHATBOT_AUDIO);
   const engineLoopVoice = useRobotVoice(ROBOT_ENGINE_LOOP_AUDIO);
@@ -2224,7 +2229,7 @@ export default function Auth() {
 
                 <div className="mt-3 flex items-end gap-1">
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                    {billingCycle === "monthly" ? PRICING.standard.monthlyPrice : PRICING.standard.semiannualPerMonth}
+                    {standardCycle === "monthly" ? PRICING.standard.monthlyPrice : PRICING.standard.semiannualPerMonth}
                   </span>
                   <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                 </div>
@@ -2232,8 +2237,8 @@ export default function Auth() {
                 <div className="mt-1 text-[10px] text-slate-500">
                   CRM inti + AI ringan — untuk yang mau rapiin data leads dulu
                 </div>
-                <MiniBillingToggle billingCycle={billingCycle} setBillingCycle={setBillingCycle} accent="slate" />
-                {billingCycle === "semiannual" && (
+                <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
+                {standardCycle === "semiannual" && (
                   <div className="mt-1.5 text-[9px] text-slate-500">Ditagih {PRICING.standard.semiannualTotal} tiap 6 bulan — bayar 5, dapat 6</div>
                 )}
 
@@ -2280,7 +2285,7 @@ export default function Auth() {
 
                 <div className="relative mt-3 flex items-end gap-1">
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                    {billingCycle === "monthly" ? PRICING.professional.monthlyPrice : PRICING.professional.semiannualPerMonth}
+                    {professionalCycle === "monthly" ? PRICING.professional.monthlyPrice : PRICING.professional.semiannualPerMonth}
                   </span>
                   <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                 </div>
@@ -2289,9 +2294,9 @@ export default function Auth() {
                   AI Sales Engine penuh — solo, tapi kerja kayak ada tim
                 </div>
                 <div className="relative">
-                  <MiniBillingToggle billingCycle={billingCycle} setBillingCycle={setBillingCycle} accent="orange" />
+                  <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
                 </div>
-                {billingCycle === "semiannual" && (
+                {professionalCycle === "semiannual" && (
                   <div className="relative mt-1.5 text-[9px] text-orange-300/80">Ditagih {PRICING.professional.semiannualTotal} tiap 6 bulan — bayar 5, dapat 6</div>
                 )}
 
@@ -2336,7 +2341,7 @@ export default function Auth() {
 
                   <div className="mt-3 flex items-end gap-1">
                     <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                      {billingCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.semiannualPerMonth}
+                      {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.semiannualPerMonth}
                     </span>
                     <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                   </div>
@@ -2344,8 +2349,8 @@ export default function Auth() {
                   <div className="mt-1 text-[10px] text-slate-400">
                     Untuk 4 orang (≈Rp325rb/orang) — tim sales dengan visibilitas penuh
                   </div>
-                  <MiniBillingToggle billingCycle={billingCycle} setBillingCycle={setBillingCycle} accent="violet" />
-                  {billingCycle === "semiannual" && (
+                  <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
+                  {enterpriseCycle === "semiannual" && (
                     <div className="mt-1.5 text-[9px] text-violet-300/80">Ditagih {PRICING.enterprise.semiannualTotal} tiap 6 bulan — bayar 5, dapat 6</div>
                   )}
 
