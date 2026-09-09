@@ -40,6 +40,22 @@ function saveHistory(messages) {
 
 const GREETING = "Halo! Aku SASA, asisten Nexto. Ada yang mau ditanyain soal harga, fitur, atau cara mulai?";
 
+// Marker khusus buat 1 bubble balasan - render tombol WA langsung, BUKAN
+// jawaban dari AI. Dipake pas visitor klik chip "Ngobrol sama tim manusia"
+// biar responnya instan (gak nunggu API) dan mesti eksplisit ke WA, gak
+// gantung ke deteksi eskalasi AI yang bisa aja meleset.
+const HUMAN_HANDOFF_MARKER = "__HUMAN_HANDOFF__";
+
+// Chip pertanyaan cepat - cuma keliatan pas chat masih kosong (baru
+// greeting doang), ilang begitu ada 1 interaksi biar gak numpuk sama histori
+// beneran. Isinya kombinasi FAQ paling umum + 1 jalan pintas ke manusia.
+const QUICK_REPLIES = [
+  { label: "Berapa harga paketnya?", text: "Berapa harga paket-paket Nexto?" },
+  { label: "Fitur apa aja yang ada?", text: "Fitur apa aja yang ada di Nexto?" },
+  { label: "Gimana cara mulai?", text: "Gimana cara mulai pakai Nexto?" },
+  { label: "Mau ngobrol sama tim manusia", human: true },
+];
+
 export default function SupportChatWidget({ supportWaNumber, insideApp }) {
   // insideApp = dipasang di dalam app yang udah login (Settings.jsx), bukan
   // landing page publik - app punya nav bar bawah di mobile (App.jsx,
@@ -65,10 +81,8 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
     if (open && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, open]);
 
-  const send = async () => {
-    const text = input.trim();
+  const sendText = async (text) => {
     if (!text || sending) return;
-    setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
     setSending(true);
     try {
@@ -80,6 +94,26 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
       setSending(false);
     }
   };
+
+  const send = () => {
+    const text = input.trim();
+    if (!text) return;
+    setInput("");
+    sendText(text);
+  };
+
+  // Chip "ngobrol sama tim manusia" - jawabannya FIX (tombol WA), gak lewat
+  // AI sama sekali, biar pasti nyambung ke WA tanpa gantung ke interpretasi
+  // model.
+  const sendHumanHandoff = () => {
+    setMessages((m) => [
+      ...m,
+      { role: "user", content: "Mau ngobrol sama tim manusia" },
+      { role: "assistant", content: HUMAN_HANDOFF_MARKER },
+    ]);
+  };
+
+  const waLink = supportWaNumber ? `https://wa.me/${supportWaNumber}?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}` : null;
 
   return (
     <>
@@ -106,9 +140,9 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
           {/* Jalan pintas ke manusia - selalu keliatan, gak nunggu SASA
               "nyerah" dulu baru nawarin. Visitor yang emang maunya chat
               orang langsung gak perlu mancing-mancing AI dulu. */}
-          {supportWaNumber && (
+          {waLink && (
             <a
-              href={`https://wa.me/${supportWaNumber}?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}`}
+              href={waLink}
               target="_blank"
               rel="noreferrer"
               className="flex items-center justify-center gap-1.5 border-b border-white/[0.08] bg-white/[0.015] py-2 text-[10.5px] font-medium text-emerald-400 transition-colors hover:bg-white/[0.03]"
@@ -120,17 +154,46 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
           <div ref={scrollRef} className="flex-1 space-y-2.5 overflow-y-auto px-3.5 py-3">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[12.5px] leading-relaxed ${
-                    m.role === "user"
-                      ? "rounded-br-sm bg-orange-500 text-white"
-                      : "rounded-bl-sm bg-white/[0.06] text-slate-200"
-                  }`}
-                >
-                  {m.content}
-                </div>
+                {m.content === HUMAN_HANDOFF_MARKER ? (
+                  <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white/[0.06] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-slate-200">
+                    Oke, ini jalan langsung ke tim Nexto - biasanya balas lebih cepat lewat WhatsApp:
+                    {waLink && (
+                      <a
+                        href={waLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-1.5 text-[11.5px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/25"
+                      >
+                        Chat WhatsApp Tim <ExternalLink size={11} />
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[12.5px] leading-relaxed ${
+                      m.role === "user"
+                        ? "rounded-br-sm bg-orange-500 text-white"
+                        : "rounded-bl-sm bg-white/[0.06] text-slate-200"
+                    }`}
+                  >
+                    {m.content}
+                  </div>
+                )}
               </div>
             ))}
+            {messages.length === 1 && !sending && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {QUICK_REPLIES.map((q) => (
+                  <button
+                    key={q.label}
+                    onClick={() => (q.human ? sendHumanHandoff() : sendText(q.text))}
+                    className="rounded-full border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-[11px] text-slate-300 transition-colors hover:border-orange-500/40 hover:text-white"
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            )}
             {sending && (
               <div className="flex justify-start">
                 <div className="rounded-2xl rounded-bl-sm bg-white/[0.06] px-3.5 py-2.5 text-slate-400">
