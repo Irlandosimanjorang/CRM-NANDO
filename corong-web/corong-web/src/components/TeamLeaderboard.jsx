@@ -1,24 +1,32 @@
 import { useState, useEffect } from "react";
-import { Trophy, Crown } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Trophy, Crown, X, ChevronRight } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 
 // Laporan performa tim (leaderboard) - gap yang ketauan pas audit 9 Sep
 // 2026: paket Enterprise dijual dengan "role-based visibility" & tim
 // sampai 4 orang, tapi Owner/Manager gak punya cara liat siapa yang paling
-// closing bulan ini. Otomatis cuma nongol kalau org emang punya >1 anggota
-// (org solo Standard/Professional gak akan pernah lolos cek ini, jadi gak
-// perlu cek plan/role terpisah - member_limit org itu sendiri yang udah
-// jadi gerbangnya).
+// closing. Otomatis cuma nongol kalau org emang punya >1 anggota (org solo
+// Standard/Professional gak akan pernah lolos cek ini, jadi gak perlu cek
+// plan/role terpisah - member_limit org itu sendiri yang udah jadi
+// gerbangnya).
 //
-// Revenue & jumlah deal dihitung dari `deal_transactions` (BUKAN dari
-// leads.outcome kayak versi pertama) - disamain sama sumber yang dipake
-// RevenuePanel/RevenueTrendChart di file ini juga, biar angkanya konsisten
-// satu sama lain dan beneran "bulan berjalan" kayak yang ditulis di
-// subjudul (versi pertama sebenernya ngitung ALL-TIME, nyasar). Jumlah
-// visit ditarik dari visit_checkins (fitur GPS Check-in). leadCount &
-// winRate tetep dari `leads` (udah di-load App.jsx, Owner/Manager RLS-nya
-// emang nampilin SEMUA lead org) - gak nambah query buat itu.
+// === FIX 2x (9 Sep 2026, abis ketauan pas dites Nando) ===
+// 1. Win rate awalnya dihitung dari leads.outcome.result (field yang cuma
+//    keisi kalau lead ditutup lewat form closing resmi) - beda metode sama
+//    SISA app (daily-digest computeStats & Dashboard's PerformanceInsight)
+//    yang selalu ngitung won/lost dari POSISI STAGE lead sekarang (stage
+//    dengan type='won'/'lost'). Sekarang disamain: SELALU pake stage_key.
+// 2. Revenue/deal awalnya di-filter "bulan berjalan" doang - buat tim yang
+//    baru mulai / data historisnya tersebar di bulan lain, ini bikin semua
+//    orang keliatan "Rp0 · 0 deal" padahal riwayat deal-nya beneran ada.
+//    Sekarang all-time.
+//
+// === PREVIEW KLIK (9 Sep 2026) ===
+// Tiap angka (lead/deal/visit) sekarang bisa diklik, munculin popup daftar
+// itemnya - klik salah satu item buka lead aslinya (lewat onOpenLead yang
+// udah ada, sama kayak tempat lain di Dashboard).
 const RANK_STYLE = [
   { avatarBg: "bg-gradient-to-br from-amber-400 to-orange-500", badgeBg: "bg-amber-500" },
   { avatarBg: "bg-gradient-to-br from-slate-300 to-slate-400", badgeBg: "bg-slate-400" },
@@ -35,40 +43,86 @@ function initials(name, uid) {
   return uid.slice(0, 2).toUpperCase();
 }
 
-function currentMonthKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+// Popup daftar item (lead/deal/visit) - klik 1 baris buka lead aslinya kalau
+// masih ketemu (bisa aja udah kehapus/gak punya lead_id, di situ dibiarin
+// gak bisa diklik daripada nge-crash).
+function StatPreviewModal({ title, items, onOpenItem, onClose }) {
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div
+        className="max-h-[75vh] w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <div className="text-sm font-bold text-slate-800">{title}</div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600" aria-label="Tutup">
+            <X size={17} />
+          </button>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto p-2">
+          {items.length === 0 ? (
+            <div className="px-3 py-6 text-center text-[12px] text-slate-400">Belum ada data.</div>
+          ) : (
+            items.map((it) => {
+              const clickable = !!it.leadId;
+              const Tag = clickable ? "button" : "div";
+              return (
+                <Tag
+                  key={it.id}
+                  onClick={clickable ? () => onOpenItem(it) : undefined}
+                  className={`flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-left transition ${
+                    clickable ? "hover:bg-slate-50" : "opacity-60"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-[12.5px] font-semibold text-slate-700">{it.primary}</div>
+                    {it.secondary && <div className="mt-0.5 truncate text-[11px] text-slate-400">{it.secondary}</div>}
+                  </div>
+                  {clickable && <ChevronRight size={15} className="shrink-0 text-slate-300" />}
+                </Tag>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
-export default function TeamLeaderboard({ leads, dealTransactions }) {
+export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpenLead }) {
   const [members, setMembers] = useState(null);
   const [checkins, setCheckins] = useState([]);
+  const [preview, setPreview] = useState(null); // { title, items }
 
   useEffect(() => {
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
-    db.getCheckins(currentMonthKey()).then(setCheckins).catch(() => setCheckins([]));
+    db.getCheckins().then(setCheckins).catch(() => setCheckins([]));
   }, []);
 
   if (!members || members.length <= 1) return null;
 
-  const now = new Date();
-  const dealsThisMonth = (dealTransactions || []).filter((t) => {
-    if (!t.deal_date) return false;
-    const d = new Date(t.deal_date);
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-  });
+  // Sama persis kayak PerformanceInsight & daily-digest: won/lost ditentuin
+  // dari stage TEMPAT LEAD ITU SEKARANG BERADA, bukan field outcome.
+  const wonKeys = (stages || []).filter((s) => s.type === "won").map((s) => s.key);
+  const lostKeys = (stages || []).filter((s) => s.type === "lost").map((s) => s.key);
+
+  const openLeadById = (leadId) => {
+    const lead = (leads || []).find((l) => l.id === leadId);
+    if (lead) { onOpenLead?.(lead); setPreview(null); }
+  };
 
   const rows = members
     .map((m) => {
       const mine = (leads || []).filter((l) => l.assigned_to === m.user_id && !l.deleted_at);
-      const won = mine.filter((l) => l.outcome?.result === "won");
-      const lost = mine.filter((l) => l.outcome?.result === "lost");
+      const won = mine.filter((l) => wonKeys.includes(l.stage_key));
+      const lost = mine.filter((l) => lostKeys.includes(l.stage_key));
       const closed = won.length + lost.length;
       const winRate = closed > 0 ? Math.round((won.length / closed) * 100) : null;
 
-      const myDeals = dealsThisMonth.filter((t) => t.user_id === m.user_id);
+      const myDeals = (dealTransactions || []).filter((t) => t.user_id === m.user_id);
       const revenue = myDeals.reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
-      const visitCount = checkins.filter((c) => c.user_id === m.user_id).length;
+      const myCheckins = checkins.filter((c) => c.user_id === m.user_id);
 
       return {
         key: m.user_id,
@@ -76,9 +130,12 @@ export default function TeamLeaderboard({ leads, dealTransactions }) {
         name: m.display_name || `Anggota ${m.user_id.slice(0, 8)}`,
         leadCount: mine.length,
         dealCount: myDeals.length,
-        visitCount,
+        visitCount: myCheckins.length,
         winRate,
         revenue,
+        leadItems: mine.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: l.category || l.city || "" })),
+        dealItems: myDeals.map((t) => ({ id: t.id, leadId: t.lead_id, primary: t.lead_name || "Deal", secondary: [fmtRp(t.deal_value), t.deal_date].filter(Boolean).join(" · ") })),
+        visitItems: myCheckins.map((c) => ({ id: c.id, leadId: c.lead_id, primary: c.lead_name || "Kunjungan", secondary: c.checked_in_at ? new Date(c.checked_in_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "" })),
       };
     })
     .sort((a, b) => b.revenue - a.revenue);
@@ -94,7 +151,7 @@ export default function TeamLeaderboard({ leads, dealTransactions }) {
         </div>
         <div>
           <div className="text-sm font-bold text-slate-800">Performa Tim</div>
-          <div className="text-[10.5px] text-slate-400">Peringkat berdasarkan revenue closing bulan berjalan</div>
+          <div className="text-[10.5px] text-slate-400">Peringkat berdasarkan total revenue closing</div>
         </div>
       </div>
 
@@ -118,11 +175,17 @@ export default function TeamLeaderboard({ leads, dealTransactions }) {
                   <div className={`shrink-0 text-[13px] font-bold ${r.revenue > 0 ? "text-slate-800" : "text-slate-300"}`}>{fmtRp(r.revenue)}</div>
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-400">
-                  <span>{r.leadCount} lead</span>
+                  <button onClick={() => setPreview({ title: `Lead - ${r.name}`, items: r.leadItems })} className="underline decoration-dotted underline-offset-2 hover:text-slate-600">
+                    {r.leadCount} lead
+                  </button>
                   <span className="text-slate-300">·</span>
-                  <span>{r.dealCount} deal</span>
+                  <button onClick={() => setPreview({ title: `Deal - ${r.name}`, items: r.dealItems })} className="underline decoration-dotted underline-offset-2 hover:text-slate-600">
+                    {r.dealCount} deal
+                  </button>
                   <span className="text-slate-300">·</span>
-                  <span>{r.visitCount} visit</span>
+                  <button onClick={() => setPreview({ title: `Kunjungan - ${r.name}`, items: r.visitItems })} className="underline decoration-dotted underline-offset-2 hover:text-slate-600">
+                    {r.visitCount} visit
+                  </button>
                   {r.winRate !== null && (
                     <>
                       <span className="text-slate-300">·</span>
@@ -143,6 +206,15 @@ export default function TeamLeaderboard({ leads, dealTransactions }) {
           );
         })}
       </div>
+
+      {preview && (
+        <StatPreviewModal
+          title={preview.title}
+          items={preview.items}
+          onOpenItem={(it) => openLeadById(it.leadId)}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </div>
   );
 }

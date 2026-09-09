@@ -546,7 +546,7 @@ export default function Dashboard({ leads, stages, dealTransactions, settings, o
         <PipelineFunnel stages={stages} counts={s.stageCounts} />
       </div>
 
-      <TeamLeaderboard leads={leads} dealTransactions={dealTransactions} />
+      <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} />
 
       <StatsStrip items={statItems} />
 
