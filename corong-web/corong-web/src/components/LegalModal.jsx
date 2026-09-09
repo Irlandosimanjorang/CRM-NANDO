@@ -106,7 +106,7 @@ function TosContent() {
 function PrivacyContent() {
   return (
     <>
-      <p className="text-[11px] text-slate-400 mb-5">Terakhir diperbarui: 5 September 2026</p>
+      <p className="text-[11px] text-slate-400 mb-5">Terakhir diperbarui: 9 September 2026</p>
 
       <Section title="1. Data yang Kami Kumpulkan">
         <p><b>Data akun:</b> email, nama, jabatan, foto profil.</p>
@@ -114,6 +114,7 @@ function PrivacyContent() {
         <p><b>Data lokasi:</b> koordinat GPS, hanya jika Anda secara aktif menggunakan fitur check-in kunjungan.</p>
         <p><b>Data audio:</b> rekaman suara, hanya jika Anda menggunakan fitur voice note atau rekam meeting (diproses untuk transkripsi, tidak disimpan permanen dalam bentuk audio kecuali Anda simpan sendiri).</p>
         <p><b>Data Telegram:</b> jika Anda menghubungkan akun Telegram, kami menyimpan chat ID dan riwayat percakapan dengan asisten AI untuk keperluan fungsi bot.</p>
+        <p><b>Data chat widget landing page:</b> jika Anda ngobrol dengan asisten AI kami (SASA) di website sebelum mendaftar, percakapan Anda disimpan secara anonim (ditandai kode sesi acak di browser Anda, bukan identitas Anda) untuk keperluan menjawab pertanyaan & meningkatkan kualitas jawaban. Kalau pertanyaan Anda perlu ditindaklanjuti manual oleh tim kami, dan Anda memberikan email/nomor WhatsApp dalam percakapan tersebut, kontak itu kami gunakan untuk menghubungi Anda kembali.</p>
       </Section>
 
       <Section title="2. Bagaimana Data Digunakan">
