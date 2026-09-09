@@ -698,19 +698,6 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
         </button>
       </div>
 
-      <div className="bg-white border border-emerald-200 rounded-[28px] p-4">
-        <h3 className="font-semibold text-sm mb-1">Butuh Bantuan?</h3>
-        <p className="text-xs text-slate-500 mb-3">Ada kendala pakai Nexto atau mau tanya-tanya? Chat langsung ke tim support kami.</p>
-        <a
-          href={`https://wa.me/6281273059284?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm border border-emerald-300 text-emerald-700 rounded-xl px-3 py-2 hover:bg-emerald-50"
-        >
-          <MessageCircle size={15} /> Chat via WhatsApp
-        </a>
-      </div>
-
       <div className="bg-white border border-rose-200 rounded-2xl shadow-sm p-4">
         <h3 className="font-semibold text-sm mb-1 text-rose-600">Zona bahaya</h3>
         <p className="text-xs text-slate-500 mb-2">Keluar dari akun ini di perangkat ini.</p>
@@ -719,6 +706,20 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
       {showCleanup && <DataCleanupModal leads={leads} stages={stages} onClose={() => { setShowCleanup(false); clearOpenModal("datacleanup"); }} onChanged={onChanged} />}
       {showRecycleBin && <RecycleBinModal onClose={() => { setShowRecycleBin(false); clearOpenModal("recyclebin"); }} onChanged={onChanged} />}
+
+      {/* Floating - dulu kartu section biasa, sekarang ngambang di pojok biar
+          gak numpuk sama section lain, tetep gampang diklik dari mana aja pas
+          lagi scroll tab ini. bottom-20 di mobile biar gak ketiban nav bawah. */}
+      <a
+        href={`https://wa.me/6281273059284?text=${encodeURIComponent("Halo, saya butuh bantuan soal Nexto CRM.")}`}
+        target="_blank"
+        rel="noreferrer"
+        className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-full pl-3.5 pr-4 py-3 shadow-[0_12px_30px_-10px_rgba(5,150,105,0.55)] transition-colors"
+        title="Butuh bantuan? Chat WhatsApp"
+      >
+        <MessageCircle size={18} />
+        <span className="hidden sm:inline">Bantuan</span>
+      </a>
     </div>
   );
 }
