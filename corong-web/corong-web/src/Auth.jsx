@@ -31,12 +31,10 @@ import {
   Layers,
   Volume2,
   ShieldCheck,
-  KeyRound,
   Lock,
   History,
   Radar,
   EyeOff,
-  Archive,
 
 } from "lucide-react";
 
@@ -310,53 +308,36 @@ export function NextoDarkWordmark({ width = 108, className = "" }) {
 // ditambahin biar user tau akun mereka gak bakal kekunci permanen kalau
 // HP hilang (celah yang sempet ada, udah ditambal).
 // ============================================================
+// Dipadetin jadi 5 poin paling kuat (9 Sep 2026) - sebelumnya 8 card
+// terpisah (akun vs database) kepanjangan buat halaman marketing, audiens
+// utama Nexto tim sales/pemilik bisnis, bukan orang IT yang nyari detail
+// teknis. "Dipantau AI 24 Jam" sengaja ditaro paling atas - itu yang paling
+// beda dari CRM lain, sisanya digabung jadi 1 kalimat per topik.
 const SECURITY_FEATURES = [
-  {
-    icon: ShieldCheck,
-    title: "Autentikasi 2 Langkah (2FA)",
-    desc: "Aktifin 2FA pakai app authenticator (Google Authenticator, Authy, dll) — abis password bener, login masih minta kode 6 digit. Akun tetep aman walau password bocor.",
-  },
-  {
-    icon: KeyRound,
-    title: "Kode Recovery",
-    desc: "Begitu 2FA aktif, Anda dikasih 10 kode cadangan sekali-pakai. HP hilang atau app authenticator-nya kehapus? Tinggal pakai satu kode itu buat tetep bisa masuk — gak pernah kekunci permanen dari akun sendiri.",
-  },
-  {
-    icon: Lock,
-    title: "Data Timmu Terisolasi",
-    desc: "Row Level Security (RLS) mastiin data organisasimu gak bisa ketembus/keliatan sama organisasi lain, sekalipun sama-sama pengguna Nexto.",
-  },
-  {
-    icon: History,
-    title: "Audit Log Aktivitas",
-    desc: "Perubahan sensitif (hapus lead, hapus kompetitor, dst) tercatat rapi — gampang ditelusuri kalau ada yang perlu dicek ulang.",
-  },
-];
-
-// Beda dari SECURITY_FEATURES di atas (itu keamanan sisi AKUN Anda: 2FA,
-// recovery code, dst) - ini soal keamanan DATABASE & infrastrukturnya
-// sendiri, biar jelas juga gimana caranya data gak bocor/kena hack dari
-// sisi server, bukan cuma dari sisi login (9 Sep 2026).
-const DATABASE_SECURITY_FEATURES = [
-  {
-    icon: Database,
-    title: "Infrastruktur Terenkripsi",
-    desc: "Data disimpan di Postgres terkelola (Supabase) yang dienkripsi baik saat disimpan (at rest) maupun saat dikirim lewat internet (TLS) — bukan database rakitan sendiri yang rawan celah keamanan.",
-  },
   {
     icon: Radar,
     title: "Dipantau AI 24 Jam",
-    desc: "Sistem internal kami ngecek kesehatan & keamanan platform tiap beberapa jam sepanjang hari — dari isolasi data antar organisasi sampai konfigurasi sensitif — dan langsung notif tim kami kalau ada yang janggal, bukan nunggu ada yang lapor duluan.",
+    desc: "Sistem internal kami ngecek kesehatan & keamanan platform tiap beberapa jam sepanjang hari, dan langsung notif tim kami kalau ada yang janggal — bukan nunggu ada yang lapor duluan.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Login Aman Berlapis",
+    desc: "Aktifin 2FA pakai app authenticator, dan kalau HP hilang ada 10 kode cadangan sekali-pakai — akun Anda gak pernah kekunci permanen dari diri sendiri.",
+  },
+  {
+    icon: Lock,
+    title: "Data Terisolasi & Terenkripsi",
+    desc: "Row Level Security mastiin data organisasi Anda gak bisa ketembus organisasi lain, dan semuanya disimpan terenkripsi baik saat disimpan maupun saat dikirim lewat internet.",
   },
   {
     icon: EyeOff,
     title: "Kredensial Gak Pernah ke Browser",
-    desc: "Kunci-kunci sensitif (API key, service credential) cuma hidup di server kami, gak pernah dikirim ke browser Anda — jadi gak ada yang bisa dicuri lewat sisi perangkat pengguna.",
+    desc: "Kunci-kunci sensitif (API key, service credential) cuma hidup di server kami, gak pernah dikirim ke browser Anda — gak ada yang bisa dicuri lewat sisi perangkat pengguna.",
   },
   {
-    icon: Archive,
-    title: "Backup Berkala",
-    desc: "Database di-backup otomatis secara berkala oleh infrastruktur Supabase, jadi data Anda gak bergantung sama satu titik kegagalan doang.",
+    icon: History,
+    title: "Audit Log & Backup Berkala",
+    desc: "Perubahan sensitif tercatat rapi dan gampang ditelusuri, sementara database di-backup otomatis secara berkala — data Anda gak gantung di satu titik kegagalan.",
   },
 ];
 
@@ -2120,38 +2101,8 @@ export default function Auth() {
               </p>
             </div>
 
-            <div className="mt-12 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-              Keamanan akun Anda
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-12 grid gap-4 sm:grid-cols-2">
               {SECURITY_FEATURES.map((f) => {
-                const Icon = f.icon;
-                return (
-                  <div
-                    key={f.title}
-                    className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 transition hover:border-orange-200"
-                  >
-                    <div className="absolute right-[-40px] top-[-40px] h-32 w-32 rounded-full bg-orange-100/50 blur-2xl transition group-hover:bg-orange-200/60" />
-                    <div className="relative">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-                        <Icon size={18} />
-                      </div>
-                      <div className="mt-4 text-[14px] font-bold tracking-tight text-slate-900">{f.title}</div>
-                      <p className="mt-2 text-[12px] leading-5 text-slate-500">{f.desc}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Keamanan database & infrastruktur - beda topik dari akun di
-                atas, jawab pertanyaan "gimana caranya data gak bocor/kena
-                hack dari sisi server", bukan cuma dari sisi login (9 Sep 2026). */}
-            <div className="mt-10 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-              Keamanan database &amp; infrastruktur
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {DATABASE_SECURITY_FEATURES.map((f) => {
                 const Icon = f.icon;
                 return (
                   <div
