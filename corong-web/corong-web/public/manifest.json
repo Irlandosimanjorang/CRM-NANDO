@@ -4,8 +4,8 @@
   "description": "Sales engine berbasis AI buat bantu sales tim tau siapa yang harus dihubungi dan apa langkah berikutnya.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#9a3412",
+  "background_color": "#0b101a",
+  "theme_color": "#0b101a",
   "icons": [
     {
       "src": "/icon-192.png",
