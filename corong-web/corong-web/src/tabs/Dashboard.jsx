@@ -311,33 +311,32 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
   );
 }
 
-function StatCard({ icon: I, label, value, accent, small }) {
-  const ac = accent === "orange" ? "text-orange-600" : accent === "emerald" ? "text-emerald-600" : "text-slate-800";
-  const bub = accent === "orange" ? "bg-orange-100 text-orange-600" : accent === "emerald" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500";
-  return (
-    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4 transition-transform hover:-translate-y-0.5">
-      <span className={`w-9 h-9 rounded-2xl flex items-center justify-center mb-2.5 ${bub}`}><I size={16} /></span>
-      <div className={`font-mono font-bold leading-none ${small ? "text-base" : "text-2xl"} ${ac}`}>{value}</div>
-      <div className="text-[11px] text-slate-400 mt-1.5">{label}</div>
-    </div>
-  );
-}
-
-function RevenueCard({ label, value, dark }) {
+// Satu panel gabungan buat 2 angka pendapatan (dulu 2 kartu terpisah yang
+// visualnya saling rebutan perhatian) - dibagi kolom kiri/kanan dengan garis
+// tipis, 1 tombol sembunyikan/tampilkan buat keduanya sekaligus.
+function RevenuePanel({ year, month }) {
   const [revealed, setRevealed] = useState(false);
   return (
-    <div className={dark ? "bg-slate-900 rounded-[28px] shadow-[0_4px_24px_-6px_rgba(15,23,42,0.35)] p-4 text-white" : "bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4"}>
-      <div className={`flex items-center justify-between text-xs mb-3 ${dark ? "text-slate-300" : "text-slate-400"}`}>
-        <div className="flex items-center gap-2">
-          <span className={`w-8 h-8 rounded-2xl flex items-center justify-center ${dark ? "bg-orange-600/20 text-orange-400" : "bg-orange-100 text-orange-600"}`}><Wallet size={15} /></span>
-          {label}
+    <div className="bg-slate-950 rounded-[28px] p-5 text-white">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-slate-300">
+          <span className="w-8 h-8 rounded-2xl bg-orange-500/15 text-orange-400 flex items-center justify-center"><Wallet size={15} /></span>
+          Pendapatan
         </div>
-        <button onClick={() => setRevealed((v) => !v)} className={dark ? "text-slate-400 hover:text-white" : "text-slate-400 hover:text-slate-700"} title={revealed ? "Hide" : "Show"}>
+        <button onClick={() => setRevealed((v) => !v)} className="text-slate-400 hover:text-white transition-colors" title={revealed ? "Sembunyikan" : "Tampilkan"}>
           {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
       </div>
-      <div className={`font-mono font-bold text-xl tracking-tight ${dark ? "" : "text-slate-800"}`}>
-        {revealed ? fmtRp(value) : "Rp ••••••••"}
+      <div className="mt-5 flex items-stretch gap-5">
+        <div className="flex-1 min-w-0">
+          <div className="font-mono font-bold text-2xl tracking-tight tabular-nums truncate">{revealed ? fmtRp(year) : "Rp ••••••••"}</div>
+          <div className="text-[11px] text-slate-400 mt-1.5">Tahun ini</div>
+        </div>
+        <div className="w-px bg-white/10" />
+        <div className="flex-1 min-w-0">
+          <div className="font-mono font-bold text-2xl tracking-tight tabular-nums truncate">{revealed ? fmtRp(month) : "Rp ••••••••"}</div>
+          <div className="text-[11px] text-slate-400 mt-1.5">Bulan ini</div>
+        </div>
       </div>
     </div>
   );
@@ -347,15 +346,23 @@ function RevenueTrendChart({ months }) {
   const max = Math.max(...months.map((m) => m.value), 1);
   const w = 100 / months.length;
   return (
-    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><BarChart3 size={14} /></span> Revenue Trend (Last 6 Months)</div>
+    <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><BarChart3 size={14} /></span> Tren Pendapatan (6 Bulan Terakhir)</div>
       <svg viewBox="0 0 300 140" className="w-full" style={{ height: "160px" }}>
+        <defs>
+          <linearGradient id="dashBarFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fb923c" />
+            <stop offset="100%" stopColor="#ea580c" />
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="110" x2="300" y2="110" stroke="#f1f5f9" strokeWidth="1" />
         {months.map((m, i) => {
           const barH = max > 0 ? (m.value / max) * 90 : 0;
           const x = i * w;
+          const isLast = i === months.length - 1;
           return (
             <g key={i}>
-              <rect x={`${x + w * 0.2}%`} y={110 - barH} width={`${w * 0.6}%`} height={barH} rx="3" fill={m.value > 0 ? "#ea580c" : "#e2e8f0"} />
+              <rect x={`${x + w * 0.2}%`} y={110 - barH} width={`${w * 0.6}%`} height={barH} rx="3" fill={m.value > 0 ? (isLast ? "url(#dashBarFill)" : "#fed7aa") : "#f1f5f9"} />
               <text x={`${x + w * 0.5}%`} y="128" textAnchor="middle" fontSize="9" fill="#94a3b8">{m.label}</text>
             </g>
           );
@@ -368,14 +375,14 @@ function RevenueTrendChart({ months }) {
 function PipelineFunnel({ stages, counts }) {
   const max = Math.max(...counts.map((c) => c.count), 1);
   return (
-    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><FunnelIcon size={14} /></span> Pipeline Funnel</div>
+    <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><FunnelIcon size={14} /></span> Corong Pipeline</div>
       <div className="space-y-3">
         {counts.map((c, i) => (
           <div key={i}>
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="text-slate-600 font-medium">{c.label}</span>
-              <span className="text-slate-400 font-mono">{c.count}</span>
+              <span className="text-slate-400 tabular-nums">{c.count}</span>
             </div>
             <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(c.count / max) * 100}%`, backgroundColor: c.hex }} />
@@ -387,9 +394,30 @@ function PipelineFunnel({ stages, counts }) {
   );
 }
 
-// Win rate, average days to close, and top category - calculated from leads
-// that are already closed (won/lost). 8-lead threshold matches AI Advisor &
-// proactive-check, so insights appear consistently across the app.
+// Ringkasan 6 metrik yang dulu jadi 6 kartu terpisah (border+shadow diulang
+// 6x) - sekarang jadi SATU panel, kolom-kolom dibedain lewat ikon+warna,
+// bukan lewat kotak yang sama persis di-copy-paste.
+function StatsStrip({ items }) {
+  return (
+    <div className="bg-white border border-slate-100 rounded-[28px] p-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-5">
+        {items.map((it, i) => (
+          <div key={i} className="flex items-center gap-2.5 min-w-0">
+            <span className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${it.bub}`}><it.icon size={16} /></span>
+            <div className="min-w-0">
+              <div className={`font-bold text-lg leading-none tabular-nums truncate ${it.ac || "text-slate-900"}`}>{it.value}</div>
+              <div className="text-[11px] text-slate-400 mt-1 truncate">{it.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Win rate, rata-rata hari closing, dan kategori teratas - dihitung dari lead
+// yang udah closed (won/lost). Ambang 8 lead sama kayak AI Advisor & proactive
+// check, biar insight-nya konsisten di seluruh app.
 function PerformanceInsight({ leads, stages }) {
   const wonKeys = stages.filter((s) => s.type === "won").map((s) => s.key);
   const lostKeys = stages.filter((s) => s.type === "lost").map((s) => s.key);
@@ -399,9 +427,9 @@ function PerformanceInsight({ leads, stages }) {
 
   if (totalClosed < 8) {
     return (
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1"><span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Sparkles size={14} /></span> Performance Insights</div>
-        <p className="text-xs text-slate-400 mt-2">Only {totalClosed} leads closed so far (won/lost). Collect at least 8 to see patterns here.</p>
+      <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><Sparkles size={14} /></span> Insight Performa</div>
+        <p className="text-xs text-slate-400 mt-2">Baru {totalClosed} lead yang closed (won/lost). Kumpulin minimal 8 dulu biar polanya kelihatan di sini.</p>
       </div>
     );
   }
@@ -417,27 +445,27 @@ function PerformanceInsight({ leads, stages }) {
   const avgDays = daysArr.length ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length) : null;
 
   const catWin = {};
-  for (const l of closedWon) { const k = l.category || "Other"; catWin[k] = (catWin[k] || 0) + 1; }
+  for (const l of closedWon) { const k = l.category || "Lainnya"; catWin[k] = (catWin[k] || 0) + 1; }
   const topCat = Object.entries(catWin).sort((a, b) => b[1] - a[1])[0];
 
   return (
-    <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"><span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Sparkles size={14} /></span> Performance Insights</div>
+    <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><Sparkles size={14} /></span> Insight Performa</div>
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <div className="text-2xl font-bold font-mono text-orange-600">{winRate}%</div>
+          <div className="text-2xl font-bold tabular-nums text-orange-600">{winRate}%</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Win rate</div>
         </div>
         <div>
-          <div className="text-2xl font-bold font-mono text-slate-800">{avgDays ?? "—"}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Avg. days to close</div>
+          <div className="text-2xl font-bold tabular-nums text-slate-800">{avgDays ?? "—"}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Rata-rata hari closing</div>
         </div>
         <div>
           <div className="text-sm font-bold text-slate-800 truncate" title={topCat ? topCat[0] : ""}>{topCat ? topCat[0] : "—"}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Top category</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Kategori teratas</div>
         </div>
       </div>
-      <p className="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-100">Based on {totalClosed} closed leads.</p>
+      <p className="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-100">Berdasarkan {totalClosed} lead yang udah closed.</p>
     </div>
   );
 }
@@ -490,33 +518,35 @@ export default function Dashboard({ leads, stages, dealTransactions, settings, o
     };
   }, [leads, stages, dealTransactions]);
 
+  const statItems = [
+    { icon: CalendarCheck, label: "Kunjungan hari ini", value: <CountUp value={s.visitsToday} />, bub: "bg-orange-50 text-orange-600", ac: "text-orange-600" },
+    { icon: Users, label: "Total lead", value: <CountUp value={s.total} />, bub: "bg-slate-100 text-slate-500" },
+    { icon: TrendingUp, label: "Lead aktif", value: <CountUp value={s.active} />, bub: "bg-slate-100 text-slate-500" },
+    { icon: CheckCircle2, label: "Deal", value: <CountUp value={s.deals} />, bub: "bg-emerald-50 text-emerald-600", ac: "text-emerald-600" },
+    { icon: AlertCircle, label: "Perlu follow-up", value: <CountUp value={s.followup} />, bub: "bg-orange-50 text-orange-600", ac: "text-orange-600" },
+    { icon: Mail, label: "Ada kontak", value: `${s.contact}/${s.total}`, bub: "bg-slate-100 text-slate-500" },
+  ];
+
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs text-slate-400 capitalize">{new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+        <p className="text-xs text-slate-400 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
 
       <GoodMorningCard settings={settings} onGo={onGo} onOpenLead={onOpenLead} leads={leads} />
 
-      <div className="grid grid-cols-2 gap-3">
-        <RevenueCard label="Revenue This Year" value={s.revYear} dark />
-        <RevenueCard label="Revenue This Month" value={s.revMonth} />
-      </div>
+      <RevenuePanel year={s.revYear} month={s.revMonth} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <RevenueTrendChart months={s.months} />
         <PipelineFunnel stages={stages} counts={s.stageCounts} />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatCard icon={CalendarCheck} label="Today's Visits" value={s.visitsToday} accent="orange" />
-        <StatCard icon={Users} label="Total Leads" value={s.total} />
-        <StatCard icon={TrendingUp} label="Active Leads" value={s.active} />
-        <StatCard icon={CheckCircle2} label="Deals" value={s.deals} accent="emerald" />
-        <StatCard icon={AlertCircle} label="Needs Follow-up" value={s.followup} accent="orange" />
-        <StatCard icon={Mail} label="Has Contact" value={`${s.contact}/${s.total}`} />
-      </div>
-      <button onClick={() => onGo("leads")} className="w-full text-sm text-orange-700 font-medium bg-orange-50 hover:bg-orange-100 transition-colors rounded-2xl py-3 text-center">View all leads →</button>
+      <StatsStrip items={statItems} />
+
+      <PerformanceInsight leads={leads} stages={stages} />
+
+      <button onClick={() => onGo("leads")} className="w-full text-sm text-orange-700 font-medium bg-orange-50 hover:bg-orange-100 transition-colors rounded-2xl py-3 text-center">Lihat semua lead →</button>
     </div>
   );
 }
