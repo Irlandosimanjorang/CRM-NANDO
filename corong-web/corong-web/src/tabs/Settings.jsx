@@ -272,10 +272,11 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     finally { setCancelBusy(false); }
   };
 
+  const [inviteRole, setInviteRole] = useState("sales_rep");
   const generateInvite = async () => {
     setInviteBusy(true);
     try {
-      const row = await db.createInviteCode("sales_rep");
+      const row = await db.createInviteCode(inviteRole);
       setInviteCode(row.code);
       setInviteExpiresAt(row.expires_at);
     }
@@ -287,6 +288,17 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     if (!window.confirm(`Keluarin ${name || "anggota ini"} dari tim?`)) return;
     try { await db.removeMember(id); loadOrg(); }
     catch (e) { alert("Gagal: " + e.message); }
+  };
+
+  const [roleBusyId, setRoleBusyId] = useState(null);
+  const toggleMemberRole = async (m) => {
+    const newRole = m.role === "manager" ? "sales_rep" : "manager";
+    setRoleBusyId(m.id);
+    try {
+      await db.updateMemberRole(m.id, newRole);
+      setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, role: newRole } : x)));
+    } catch (e) { alert("Gagal ubah role: " + e.message); }
+    finally { setRoleBusyId(null); }
   };
 
   const [leaveBusy, setLeaveBusy] = useState(false);
@@ -450,7 +462,22 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                     {isEnterprise && <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>}
                   </div>
                   {isOwner && m.user_id !== myUid && (
-                    <button onClick={() => removeMember(m.id, ROLE_LABEL[m.role])} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Naik/turunin jadi Manager - dulu gak ada cara buat bikin
+                          "manager" beneran sama sekali (invite selalu hardcode
+                          sales_rep), padahal RLS & approval-gate udah lama
+                          nyebut "owner/manager" berkali-kali. */}
+                      {m.role !== "owner" && (
+                        <button
+                          onClick={() => toggleMemberRole(m)}
+                          disabled={roleBusyId === m.id}
+                          className="text-[11px] text-violet-600 hover:underline disabled:opacity-50"
+                        >
+                          {m.role === "manager" ? "Jadikan Sales Rep" : "Jadikan Manager"}
+                        </button>
+                      )}
+                      <button onClick={() => removeMember(m.id, ROLE_LABEL[m.role])} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -483,9 +510,15 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                       <p className="text-[11px] text-slate-400 mt-2">Bisa dipake berkali-kali sampe kuota anggota penuh. Berlaku 1 jam.</p>
                     </div>
                   ) : (
-                    <button onClick={generateInvite} disabled={inviteBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-                      {inviteBusy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Undang Anggota
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white">
+                        <option value="sales_rep">Sales Rep</option>
+                        <option value="manager">Manager</option>
+                      </select>
+                      <button onClick={generateInvite} disabled={inviteBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
+                        {inviteBusy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Undang Anggota
+                      </button>
+                    </div>
                   )
                 ) : (
                   <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise buat bisa undang anggota tim.</p>

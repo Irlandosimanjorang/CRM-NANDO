@@ -215,6 +215,15 @@ export async function removeMember(memberId) {
   if (error) throw error;
 }
 
+// Naikin/turunin role anggota (sales_rep <-> manager) - dulu gak ada satupun
+// cara buat bikin "manager" beneran (invite selalu hardcode sales_rep, dan
+// gak ada policy UPDATE di organization_members sama sekali), padahal
+// approval-gate & RLS leads udah lama nyebut "owner/manager" berkali-kali.
+export async function updateMemberRole(memberId, role) {
+  const { error } = await supabase.from("organization_members").update({ role }).eq("id", memberId);
+  if (error) throw error;
+}
+
 // Buat ANGGOTA (bukan Owner) keluar dari organisasi yang dia join - abis ini
 // dia otomatis balik punya organisasi sendiri lagi (solo), bukan nyangkut kosong.
 export async function leaveOrg() {
