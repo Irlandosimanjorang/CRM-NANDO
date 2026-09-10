@@ -2273,8 +2273,12 @@ export default function Auth() {
 
           <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-[34px] font-bold leading-tight tracking-[-0.045em] text-white sm:text-[46px]">
+                Berapa banyak "karyawan AI"
+                <span className="block text-slate-500">yang mau Anda pekerjakan?</span>
+              </h2>
               {new Date() < EARLY_BIRD_DEADLINE && (
-                <div className="mb-4 inline-flex items-center gap-2.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-5 py-2.5 text-base font-bold text-orange-300 sm:text-lg">
+                <div className="mt-5 inline-flex items-center gap-2.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-5 py-2.5 text-base font-bold text-orange-300 sm:text-lg">
                   <span className="relative flex h-2.5 w-2.5 shrink-0">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
                     <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-500" />
@@ -2282,12 +2286,6 @@ export default function Auth() {
                   Early Bird Registration — daftar sebelum 30 September 2026
                 </div>
               )}
-              <SectionLabel>Simple pricing</SectionLabel>
-
-              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-white sm:text-[46px]">
-                Berapa banyak "karyawan AI"
-                <span className="block text-slate-500">yang mau Anda pekerjakan?</span>
-              </h2>
             </div>
 
             <div className="mx-auto mt-14 grid max-w-6xl gap-5 lg:grid-cols-3 lg:items-start">
