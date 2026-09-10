@@ -189,8 +189,17 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
   const loadOrg = () => {
     setOrgLoading(true);
-    Promise.all([db.getMyOrg(), db.getOrgMembers(), db.getCurrentUserId()])
-      .then(([o, m, uid]) => { setOrg(o); setMembers(m); setMyUid(uid); })
+    Promise.all([db.getMyOrg(), db.getOrgMembers(), db.getCurrentUserId(), db.getPendingInviteCodes()])
+      .then(([o, m, uid, pending]) => {
+        setOrg(o); setMembers(m); setMyUid(uid);
+        // Kode undangan yang MASIH BERLAKU (belum expired/dipake) ditarik
+        // balik dari database - sebelumnya inviteCode cuma disimpen di state
+        // React doang, jadi begitu komponen ini remount (misal Supabase
+        // refresh token pas tab browser balik fokus, yang bikin App.jsx
+        // sempet nyalain loading spinner sebentar), kodenya keliatan "ilang"
+        // padahal masih valid, dan owner harus generate ulang tiap kali.
+        if (pending?.[0]) setInviteCode(pending[0].code);
+      })
       .catch(() => {})
       .finally(() => setOrgLoading(false));
   };
