@@ -417,11 +417,20 @@ function AiAccountsUsagePanel({ features, accounts }) {
           </tr>
         </thead>
         <tbody>
-          {accounts.map((a) => (
+          {accounts.map((a) => {
+            // Nama tetep prioritas utama, tapi email SELALU keliatan kecil
+            // di bawahnya (permintaan Nando) - biar gampang cocokin akun
+            // mana yang dimaksud tanpa nebak dari nama doang. Kalau emang
+            // belum ada display_name, baris atas kepaksa pake email juga -
+            // di situ baris bawah ganti isinya jadi org·role, biar gak
+            // dobel nampilin email yang sama persis 2x.
+            const primaryName = a.display_name || a.email || a.user_id.slice(0, 8);
+            const secondaryLine = a.display_name ? (a.email || `${a.org_name} · ${a.role}`) : `${a.org_name} · ${a.role}`;
+            return (
             <tr key={a.user_id} className="border-t border-white/[0.05]">
               <td className="sticky left-0 z-10 py-1.5 pr-2 pl-0" style={{ background: STICKY_BG }}>
-                <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{a.display_name || a.email || a.user_id.slice(0, 8)}</div>
-                <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{a.org_name} · {a.role}</div>
+                <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{primaryName}</div>
+                <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{secondaryLine}</div>
               </td>
               <td className="py-1.5 pr-2">
                 <span className="text-[9.5px] uppercase font-mono text-slate-400">{a.plan}</span>
@@ -440,7 +449,8 @@ function AiAccountsUsagePanel({ features, accounts }) {
                 );
               })}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
