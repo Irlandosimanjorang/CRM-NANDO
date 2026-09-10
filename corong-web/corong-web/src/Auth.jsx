@@ -413,6 +413,13 @@ const ENTERPRISE_FEATURES = [
 // Captcha protection" ditolak jalan tanpa token dari widget ini.
 const TURNSTILE_SITE_KEY = "0x4AAAAAAEu6vGXceQD1CTOl";
 
+// Banner "Early Bird Registration" di header pricing - murni urgency
+// marketing, gak ngubah logic harga apa pun (paket 3 bulan diskon 15% di
+// atas TETEP jalan normal setelah tanggal ini lewat, banner-nya doang yang
+// ilang). Kalau nanti mau beneran ngerevert harga/promo setelah deadline,
+// itu perlu perubahan terpisah (harga di Mayar + AMOUNT_TO_TIER lagi).
+const EARLY_BIRD_DEADLINE = new Date("2026-09-30T23:59:59+07:00");
+
 const PRICING = {
   standard: { monthlyPrice: "Rp79rb", quarterlyPerMonth: "Rp67rb", quarterlyTotal: "Rp201rb" },
   professional: { monthlyPrice: "Rp269rb", quarterlyPerMonth: "Rp229rb", quarterlyTotal: "Rp686rb" },
@@ -2266,6 +2273,15 @@ export default function Auth() {
 
           <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
+              {new Date() < EARLY_BIRD_DEADLINE && (
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1.5 text-[11px] font-semibold text-orange-300">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-500" />
+                  </span>
+                  Early Bird Registration — daftar sebelum 30 September 2026
+                </div>
+              )}
               <SectionLabel>Simple pricing</SectionLabel>
 
               <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-white sm:text-[46px]">
