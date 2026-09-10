@@ -399,32 +399,37 @@ const ENTERPRISE_FEATURES = [
   "Prioritas support",
 ];
 
-// Harga per siklus billing (10 Sep 2026 - opsi 6 bulan DIGANTI jadi paket
-// 3 bulan diskon 15%, bukan lagi "bayar 5 dapat 6"). "quarterlyPerMonth" =
-// total 3 bulan dibagi 3, dibulatin ke ribuan terdekat biar rapi,
-// DITAMPILIN sebagai harga per-bulan biar gampang dibandingin sama mode
-// bulanan - "quarterlyTotal" tetep disebutin di badge kecil biar jelas
-// cara nagihnya sebenernya gimana (1x bayar nutup 3 bulan, BUKAN
-// subscription bulanan yang harganya turun - lihat mayar-webhook.ts
-// AMOUNT_TO_TIER buat nominal exact yang dikenali).
 // Site key Cloudflare Turnstile (aman ditaro di frontend - beda dari secret
 // key yang cuma disimpen di sisi Supabase). Dipake buat render widget
 // captcha di form signup/login, dipasangin karena Supabase Auth "Enable
 // Captcha protection" ditolak jalan tanpa token dari widget ini.
 const TURNSTILE_SITE_KEY = "0x4AAAAAAEu6vGXceQD1CTOl";
 
-// Banner "Early Bird Registration" di header pricing - murni urgency
-// marketing, gak ngubah logic harga apa pun (paket 3 bulan diskon 15% di
-// atas TETEP jalan normal setelah tanggal ini lewat, banner-nya doang yang
-// ilang). Kalau nanti mau beneran ngerevert harga/promo setelah deadline,
-// itu perlu perubahan terpisah (harga di Mayar + AMOUNT_TO_TIER lagi).
+// === EARLY BIRD PROMO (10 Sep 2026) ===
+// Diskon 15% berlaku buat DUA-DUANYA siklus billing (Bulanan maupun 3
+// Bulan) selama periode early bird - bukan cuma paket 3-bulanan. Begitu
+// EARLY_BIRD_DEADLINE lewat, harga OTOMATIS balik ke PRICING_NORMAL (gak
+// perlu ubah kode lagi) - tapi INGET, ini cuma ngubah apa yang DITAMPILIN
+// di landing page. Nominal yang beneran di-charge tetep ditentuin harga
+// yang di-set di Mayar dashboard - itu WAJIB diubah manual balik ke normal
+// di tanggal yang sama (dan mapping AMOUNT_TO_TIER di mayar-webhook.ts
+// SENGAJA tetap nyimpen nominal early bird selamanya, jangan dihapus -
+// biar subscriber yang udah kadung subscribe di harga diskon pas
+// perpanjangan bulanan gak "nyangkut" jadi unknown amount).
 const EARLY_BIRD_DEADLINE = new Date("2026-09-30T23:59:59+07:00");
+const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 
-const PRICING = {
-  standard: { monthlyPrice: "Rp79rb", quarterlyPerMonth: "Rp67rb", quarterlyTotal: "Rp201rb" },
-  professional: { monthlyPrice: "Rp269rb", quarterlyPerMonth: "Rp229rb", quarterlyTotal: "Rp686rb" },
-  enterprise: { monthlyPrice: "Rp1,3jt", quarterlyPerMonth: "Rp1,11jt", quarterlyTotal: "Rp3,315jt" },
+const PRICING_NORMAL = {
+  standard: { monthlyPrice: "Rp79rb", quarterlyPerMonth: "Rp79rb", quarterlyTotal: "Rp237rb" },
+  professional: { monthlyPrice: "Rp269rb", quarterlyPerMonth: "Rp269rb", quarterlyTotal: "Rp807rb" },
+  enterprise: { monthlyPrice: "Rp1,3jt", quarterlyPerMonth: "Rp1,3jt", quarterlyTotal: "Rp3,9jt" },
 };
+const PRICING_EARLY_BIRD = {
+  standard: { monthlyPrice: "Rp67rb", quarterlyPerMonth: "Rp67rb", quarterlyTotal: "Rp201rb" },
+  professional: { monthlyPrice: "Rp229rb", quarterlyPerMonth: "Rp229rb", quarterlyTotal: "Rp686rb" },
+  enterprise: { monthlyPrice: "Rp1,11jt", quarterlyPerMonth: "Rp1,11jt", quarterlyTotal: "Rp3,315jt" },
+};
+const PRICING = isEarlyBird ? PRICING_EARLY_BIRD : PRICING_NORMAL;
 
 const AI_DEMO_STATES = [
   {
@@ -2312,7 +2317,7 @@ export default function Auth() {
                 </div>
                 <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
                 {standardCycle === "quarterly" && (
-                  <div className="mt-1.5 text-[9px] text-slate-500">Ditagih {PRICING.standard.quarterlyTotal} tiap 3 bulan — hemat 15%</div>
+                  <div className="mt-1.5 text-[9px] text-slate-500">Ditagih {PRICING.standard.quarterlyTotal} tiap 3 bulan{isEarlyBird ? " — hemat 15%" : ""}</div>
                 )}
 
                 <div className="my-7 h-px bg-white/[0.06]" />
@@ -2370,7 +2375,7 @@ export default function Auth() {
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
                 </div>
                 {professionalCycle === "quarterly" && (
-                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">Ditagih {PRICING.professional.quarterlyTotal} tiap 3 bulan — hemat 15%</div>
+                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">Ditagih {PRICING.professional.quarterlyTotal} tiap 3 bulan{isEarlyBird ? " — hemat 15%" : ""}</div>
                 )}
 
                 <div className="relative my-7 h-px bg-white/[0.08]" />
@@ -2442,7 +2447,7 @@ export default function Auth() {
                     <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
                   </div>
                   {enterpriseCycle === "quarterly" && (
-                    <div className="mt-1.5 text-[9px] text-violet-300/80">Ditagih {PRICING.enterprise.quarterlyTotal} tiap 3 bulan — hemat 15%</div>
+                    <div className="mt-1.5 text-[9px] text-violet-300/80">Ditagih {PRICING.enterprise.quarterlyTotal} tiap 3 bulan{isEarlyBird ? " — hemat 15%" : ""}</div>
                   )}
 
                   <div className="my-7 h-px bg-white/10" />
