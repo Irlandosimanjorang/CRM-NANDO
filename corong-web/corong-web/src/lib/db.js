@@ -661,8 +661,8 @@ export async function updateLeadAssignee(id, assigned_to) {
 }
 
 // ---- LOKASI GPS & CHECK-IN ----
-export async function saveLeadLocation(id, latitude, longitude) {
-  const { error } = await supabase.from("leads").update({ latitude, longitude }).eq("id", id);
+export async function saveLeadLocation(id, latitude, longitude, accuracy_m = null) {
+  const { error } = await supabase.from("leads").update({ latitude, longitude, location_accuracy_m: accuracy_m }).eq("id", id);
   if (error) throw error;
 }
 
@@ -753,7 +753,7 @@ export async function getCheckinCooldown() {
   return { canCheckIn, usedThisMonth, quotaMax: CHECKIN_QUOTA_MAX, nextAvailableAt };
 }
 
-export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters, photo_url }) {
+export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters, photo_url, accuracy_m = null }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
   const usedThisMonth = await countCheckinsThisMonth(uid);
@@ -762,7 +762,7 @@ export async function checkIn({ lead_id, lead_name, latitude, longitude, distanc
   }
   const { data, error } = await supabase
     .from("visit_checkins")
-    .insert({ user_id: uid, org_id: orgId, lead_id, lead_name, latitude, longitude, distance_meters, photo_url: photo_url || null })
+    .insert({ user_id: uid, org_id: orgId, lead_id, lead_name, latitude, longitude, distance_meters, photo_url: photo_url || null, accuracy_m })
     .select()
     .single();
   if (error) throw error;

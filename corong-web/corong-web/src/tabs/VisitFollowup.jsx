@@ -17,6 +17,14 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
 }
 
 const CHECKIN_RADIUS_M = 100;
+// GPS browser bisa ngasih titik dengan akurasi apa aja - dari ±5m (satelit
+// jelas) sampe ±500m+ (indoor/WiFi-positioning/laptop tanpa GPS asli).
+// Dulu akurasi ini gak pernah dicek sama sekali, jadi titik jelek dipake
+// mentah-mentah buat itung jarak check-in - bisa salah nolak (padahal udah
+// di lokasi) ATAU salah nerima (padahal jauh, kebetulan itungannya masuk).
+// Sekarang WAJIB nunggu sinyal di bawah ambang ini dulu sebelum GPS
+// dianggap valid buat check-in/simpan lokasi.
+const GOOD_ACCURACY_M = 50;
 
 // Konfirmasi lokasi SEBELUM minta foto - dulu langsung loncat ke ambil foto
 // begitu tombol diklik, user gak pernah eksplisit ngeliat/ngonfirmasi data
@@ -24,9 +32,10 @@ const CHECKIN_RADIUS_M = 100;
 // "scanning" dulu sambil reverse-geocode koordinat jadi alamat asli (bukan
 // teks generik "GPS Anda saat ini") - baru abis itu tombol konfirmasi muncul.
 function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
-  const { mode, lead, distance, scanning, address, coords } = confirmData;
+  const { mode, lead, distance, scanning, address, coords, accuracy, liveAccuracy } = confirmData;
   const coordLabel = coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "";
   const locationLabel = address || coordLabel;
+  const accLabel = accuracy != null ? `±${Math.round(accuracy)}m` : null;
   return (
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={scanning ? undefined : onCancel}>
       <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
@@ -40,7 +49,10 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
               <span className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-30 animate-ping" />
               <span className="relative inline-flex rounded-full h-10 w-10 bg-orange-100 items-center justify-center"><Navigation size={18} className="text-orange-600" /></span>
             </span>
-            <p className="text-sm text-slate-500">Nyari posisi & alamat Anda sekarang…</p>
+            <p className="text-sm text-slate-500">Menyempurnakan akurasi GPS…</p>
+            {liveAccuracy != null && (
+              <p className="text-xs text-slate-400">Akurasi saat ini: ±{Math.round(liveAccuracy)}m (target ≤{GOOD_ACCURACY_M}m)</p>
+            )}
           </div>
         ) : (
           <>
@@ -55,6 +67,9 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
                 {address && <span className="text-slate-400 text-xs block mt-0.5">Koordinat presisi: {coordLabel}</span>}
                 <br />Kalau alamat di atas belum sampe nama jalan/gang (data peta di area ini emang belum lengkap), gapapa - titik GPS presisinya tetep kesimpen buat verifikasi kunjungan berikutnya. Pastikan Anda beneran lagi di lokasi customer ini sebelum lanjut.
               </p>
+            )}
+            {accLabel && (
+              <p className="text-[11px] text-emerald-600 font-medium mt-1.5 flex items-center gap-1"><MapPin size={11} /> Akurasi GPS: {accLabel}</p>
             )}
             <div className="flex gap-2 mt-4">
               <button onClick={onCancel} className="flex-1 text-sm px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
@@ -239,12 +254,22 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
     // dengan popup izin lokasi yang gak ada gunanya buat mereka.
     if (!isEnterprise || todayVisits.length === 0 || !navigator.geolocation) return;
     watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => { setMyPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoError(false); },
+      (pos) => {
+        // Jangan biarin fix jelek nimpa fix bagus yang udah kedapet - GPS
+        // suka "loncat" sesaat (multipath di gedung dll), keep yang paling
+        // presisi selama belum ada fix baru yang lebih presisi lagi.
+        setMyPos((prev) => (prev && prev.accuracy <= pos.coords.accuracy && prev.accuracy <= GOOD_ACCURACY_M
+          ? prev
+          : { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }));
+        setGeoError(false);
+      },
       () => setGeoError(true),
-      { enableHighAccuracy: true, maximumAge: 10000 }
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
     );
     return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
   }, [todayVisits.length]);
+
+  const gpsReady = !!(myPos && myPos.accuracy != null && myPos.accuracy <= GOOD_ACCURACY_M);
 
   // Dulu klik tombol langsung loncat ke minta foto - user gak pernah
   // eksplisit ngonfirmasi data GPS-nya sendiri dulu. Sekarang ask* munculin
@@ -256,46 +281,67 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
 
   const askCheckIn = (lead, distance) => {
     if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
+    if (!gpsReady) { alert(`Sinyal GPS belum cukup presisi (butuh ≤${GOOD_ACCURACY_M}m). Tunggu bentar atau pindah ke tempat terbuka.`); return; }
     const reqId = ++geoReqIdRef.current;
-    setLocationConfirm({ mode: "checkin", lead, distance, scanning: true, address: null, coords: myPos });
+    setLocationConfirm({ mode: "checkin", lead, distance, scanning: true, address: null, coords: myPos, accuracy: myPos.accuracy });
     db.reverseGeocode(myPos.lat, myPos.lng).then((address) => {
       if (geoReqIdRef.current !== reqId) return; // dibatalin/diganti request lain
       setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, scanning: false, address } : prev));
     });
   };
 
+  // Dulu cuma 1x getCurrentPosition - sekali tembak, walau hasilnya jelek
+  // (indoor/multipath) tetep dipake buat nyimpen titik PERMANEN lokasi
+  // lead, yang jadi acuan semua check-in berikutnya. Sekarang nge-watch
+  // terus dan ambil fix TERBAIK sampai akurasinya ≤GOOD_ACCURACY_M atau
+  // 20 detik abis (mana duluan) - titik yang kesimpen jadi jauh lebih presisi.
   const askSavePin = (lead) => {
     if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
     if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
     const reqId = ++geoReqIdRef.current;
-    setLocationConfirm({ mode: "savepin", lead, distance: null, scanning: true, address: null, coords: null });
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+    setLocationConfirm({ mode: "savepin", lead, distance: null, scanning: true, address: null, coords: null, accuracy: null, liveAccuracy: null });
+    let best = null;
+    const finish = async () => {
+      if (geoReqIdRef.current !== reqId) return;
+      navigator.geolocation.clearWatch(watchId);
+      if (!best) {
+        setLocationConfirm(null);
+        alert("Gagal dapetin sinyal GPS yang cukup presisi. Coba pindah ke tempat terbuka (bukan dalam ruangan/gedung), lalu coba lagi.");
+        return;
+      }
+      const address = await db.reverseGeocode(best.lat, best.lng);
+      if (geoReqIdRef.current !== reqId) return;
+      setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, scanning: false, address, coords: { lat: best.lat, lng: best.lng }, accuracy: best.accuracy } : prev));
+    };
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
         if (geoReqIdRef.current !== reqId) return;
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        const address = await db.reverseGeocode(coords.lat, coords.lng);
-        if (geoReqIdRef.current !== reqId) return;
-        setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, scanning: false, address, coords } : prev));
+        const accuracy = pos.coords.accuracy;
+        if (!best || accuracy < best.accuracy) best = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy };
+        setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, liveAccuracy: best.accuracy } : prev));
+        if (best.accuracy <= GOOD_ACCURACY_M) finish();
       },
       () => {
         if (geoReqIdRef.current !== reqId) return;
+        navigator.geolocation.clearWatch(watchId);
         setLocationConfirm(null);
         alert("Gagal ambil lokasi. Kalau ini dari laptop, laptop emang gak punya GPS asli (beda sama HP) - cek Windows Settings > Privacy > Location harus nyala, dan izin lokasi Chrome buat nexto.site harus \"Allow\". Coba pake HP kalau masih gagal.");
       },
-      { enableHighAccuracy: true, timeout: 25000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
+    setTimeout(finish, 20000);
   };
 
   // Kedua alur (udah ada titik lokasi ATAU baru pertama kali) sama-sama minta
   // foto dulu sebelum check-in beneran kesimpen - lewat PhotoCheckinModal.
-  const proceedCheckIn = (lead, distance) => {
+  const proceedCheckIn = (lead, distance, accuracy_m) => {
     setPendingCheckin({
       leadId: lead.id,
       leadName: lead.name,
       run: async (photo_url) => {
         setCheckingIn(lead.id);
         try {
-          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude: myPos.lat, longitude: myPos.lng, distance_meters: distance, photo_url });
+          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude: myPos.lat, longitude: myPos.lng, distance_meters: distance, photo_url, accuracy_m });
           onChanged();
           refreshQuota();
         } finally { setCheckingIn(null); }
@@ -305,7 +351,7 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
 
   // coords udah didapet pas askSavePin nge-scan lokasi buat modal konfirmasi -
   // dipake ulang di sini biar gak minta GPS 2x (dulu getCurrentPosition lagi).
-  const proceedSavePin = (lead, coords) => {
+  const proceedSavePin = (lead, coords, accuracy_m) => {
     setPendingCheckin({
       leadId: lead.id,
       leadName: lead.name,
@@ -313,8 +359,8 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
         setCheckingIn(lead.id);
         try {
           const { lat: latitude, lng: longitude } = coords;
-          await db.saveLeadLocation(lead.id, latitude, longitude);
-          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0, photo_url });
+          await db.saveLeadLocation(lead.id, latitude, longitude, accuracy_m);
+          await db.checkIn({ lead_id: lead.id, lead_name: lead.name, latitude, longitude, distance_meters: 0, photo_url, accuracy_m });
           onChanged();
           refreshQuota();
         } finally { setCheckingIn(null); }
@@ -343,14 +389,18 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
         {todayVisits.map((c) => {
           const hasCoords = c.latitude != null && c.longitude != null;
           let distance = null;
-          if (hasCoords && myPos) distance = Math.round(haversineMeters(myPos.lat, myPos.lng, c.latitude, c.longitude));
+          if (hasCoords && myPos && gpsReady) distance = Math.round(haversineMeters(myPos.lat, myPos.lng, c.latitude, c.longitude));
           const canCheckIn = hasCoords && distance !== null && distance <= CHECKIN_RADIUS_M;
           return (
             <div key={c.id} className="flex items-center justify-between gap-3 border border-slate-100 rounded-2xl p-3">
               <div className="min-w-0">
                 <div className="font-medium text-sm truncate">{c.name}</div>
                 <div className="text-[11px] text-slate-400 mt-0.5">
-                  {!hasCoords ? "Belum ada titik lokasi tersimpan" : distance === null ? "Nyari posisi Anda…" : canCheckIn ? "Anda udah di lokasi ✓" : `${distance >= 1000 ? (distance / 1000).toFixed(1) + " km" : distance + " m"} lagi`}
+                  {!hasCoords ? "Belum ada titik lokasi tersimpan"
+                    : !myPos ? "Nyari posisi Anda…"
+                    : !gpsReady ? `Menyempurnakan sinyal GPS (±${Math.round(myPos.accuracy)}m)…`
+                    : canCheckIn ? "Anda udah di lokasi ✓"
+                    : `${distance >= 1000 ? (distance / 1000).toFixed(1) + " km" : distance + " m"} lagi`}
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
@@ -390,10 +440,10 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
           confirmData={locationConfirm}
           onCancel={() => setLocationConfirm(null)}
           onConfirm={() => {
-            const { mode, lead, distance, coords } = locationConfirm;
+            const { mode, lead, distance, coords, accuracy } = locationConfirm;
             setLocationConfirm(null);
-            if (mode === "checkin") proceedCheckIn(lead, distance);
-            else proceedSavePin(lead, coords);
+            if (mode === "checkin") proceedCheckIn(lead, distance, accuracy);
+            else proceedSavePin(lead, coords, accuracy);
           }}
         />
       )}
