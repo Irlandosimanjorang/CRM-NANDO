@@ -420,14 +420,14 @@ const EARLY_BIRD_DEADLINE = new Date("2026-09-30T23:59:59+07:00");
 const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 
 const PRICING_NORMAL = {
-  standard: { monthlyPrice: "Rp79rb", quarterlyPerMonth: "Rp79rb", quarterlyTotal: "Rp237rb" },
-  professional: { monthlyPrice: "Rp269rb", quarterlyPerMonth: "Rp269rb", quarterlyTotal: "Rp807rb" },
-  enterprise: { monthlyPrice: "Rp1,3jt", quarterlyPerMonth: "Rp1,3jt", quarterlyTotal: "Rp3,9jt" },
+  standard: { monthlyPrice: "Rp79rb", quarterlyTotal: "Rp237rb" },
+  professional: { monthlyPrice: "Rp269rb", quarterlyTotal: "Rp807rb" },
+  enterprise: { monthlyPrice: "Rp1,3jt", quarterlyTotal: "Rp3,9jt" },
 };
 const PRICING_EARLY_BIRD = {
-  standard: { monthlyPrice: "Rp67rb", monthlySavings: "Rp12rb", quarterlyPerMonth: "Rp67rb", quarterlyTotal: "Rp201rb", quarterlySavings: "Rp36rb" },
-  professional: { monthlyPrice: "Rp229rb", monthlySavings: "Rp40rb", quarterlyPerMonth: "Rp229rb", quarterlyTotal: "Rp686rb", quarterlySavings: "Rp121rb" },
-  enterprise: { monthlyPrice: "Rp1,11jt", monthlySavings: "Rp195rb", quarterlyPerMonth: "Rp1,11jt", quarterlyTotal: "Rp3,315jt", quarterlySavings: "Rp585rb" },
+  standard: { monthlyPrice: "Rp67rb", monthlySavings: "Rp12rb", quarterlyTotal: "Rp201rb", quarterlySavings: "Rp36rb" },
+  professional: { monthlyPrice: "Rp229rb", monthlySavings: "Rp40rb", quarterlyTotal: "Rp686rb", quarterlySavings: "Rp121rb" },
+  enterprise: { monthlyPrice: "Rp1,11jt", monthlySavings: "Rp195rb", quarterlyTotal: "Rp3,315jt", quarterlySavings: "Rp585rb" },
 };
 const PRICING = isEarlyBird ? PRICING_EARLY_BIRD : PRICING_NORMAL;
 
@@ -2308,25 +2308,21 @@ export default function Auth() {
                 <div className="mt-3 flex items-end gap-2">
                   {isEarlyBird && (
                     <span className="mb-1 text-xl font-semibold text-slate-600 line-through">
-                      {standardCycle === "monthly" ? PRICING_NORMAL.standard.monthlyPrice : PRICING_NORMAL.standard.quarterlyPerMonth}
+                      {standardCycle === "monthly" ? PRICING_NORMAL.standard.monthlyPrice : PRICING_NORMAL.standard.quarterlyTotal}
                     </span>
                   )}
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                    {standardCycle === "monthly" ? PRICING.standard.monthlyPrice : PRICING.standard.quarterlyPerMonth}
+                    {standardCycle === "monthly" ? PRICING.standard.monthlyPrice : PRICING.standard.quarterlyTotal}
                   </span>
-                  <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
+                  <span className="mb-1.5 text-[10px] text-slate-500">{standardCycle === "monthly" ? "/bulan" : "/3 bulan"}</span>
                 </div>
 
                 <div className="mt-1 text-[10px] text-slate-500">
                   CRM inti + AI ringan — untuk yang mau rapiin data leads dulu
                 </div>
                 <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
-                {standardCycle === "quarterly" ? (
-                  <div className="mt-1.5 text-[9px] text-slate-500">
-                    Ditagih {isEarlyBird && <span className="line-through">{PRICING_NORMAL.standard.quarterlyTotal}</span>} {PRICING.standard.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.standard.quarterlySavings}` : ""}
-                  </div>
-                ) : isEarlyBird && (
-                  <div className="mt-1.5 text-[9px] text-slate-500">Hemat {PRICING.standard.monthlySavings}/bulan selama early bird</div>
+                {isEarlyBird && (
+                  <div className="mt-1.5 text-[9px] text-slate-500">Hemat {standardCycle === "monthly" ? PRICING.standard.monthlySavings + "/bulan" : PRICING.standard.quarterlySavings} selama early bird</div>
                 )}
 
                 <div className="my-7 h-px bg-white/[0.06]" />
@@ -2373,13 +2369,13 @@ export default function Auth() {
                 <div className="relative mt-3 flex items-end gap-2">
                   {isEarlyBird && (
                     <span className="mb-1 text-xl font-semibold text-orange-200/40 line-through">
-                      {professionalCycle === "monthly" ? PRICING_NORMAL.professional.monthlyPrice : PRICING_NORMAL.professional.quarterlyPerMonth}
+                      {professionalCycle === "monthly" ? PRICING_NORMAL.professional.monthlyPrice : PRICING_NORMAL.professional.quarterlyTotal}
                     </span>
                   )}
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                    {professionalCycle === "monthly" ? PRICING.professional.monthlyPrice : PRICING.professional.quarterlyPerMonth}
+                    {professionalCycle === "monthly" ? PRICING.professional.monthlyPrice : PRICING.professional.quarterlyTotal}
                   </span>
-                  <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
+                  <span className="mb-1.5 text-[10px] text-slate-500">{professionalCycle === "monthly" ? "/bulan" : "/3 bulan"}</span>
                 </div>
 
                 <div className="relative mt-1 text-[10px] text-slate-400">
@@ -2388,12 +2384,8 @@ export default function Auth() {
                 <div className="relative">
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
                 </div>
-                {professionalCycle === "quarterly" ? (
-                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">
-                    Ditagih {isEarlyBird && <span className="line-through">{PRICING_NORMAL.professional.quarterlyTotal}</span>} {PRICING.professional.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.professional.quarterlySavings}` : ""}
-                  </div>
-                ) : isEarlyBird && (
-                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">Hemat {PRICING.professional.monthlySavings}/bulan selama early bird</div>
+                {isEarlyBird && (
+                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">Hemat {professionalCycle === "monthly" ? PRICING.professional.monthlySavings + "/bulan" : PRICING.professional.quarterlySavings} selama early bird</div>
                 )}
 
                 <div className="relative my-7 h-px bg-white/[0.08]" />
@@ -2438,13 +2430,13 @@ export default function Auth() {
                   <div className="mt-3 flex items-end gap-2">
                     {isEarlyBird && (
                       <span className="mb-1 text-xl font-semibold text-violet-200/40 line-through">
-                        {enterpriseCycle === "monthly" ? PRICING_NORMAL.enterprise.monthlyPrice : PRICING_NORMAL.enterprise.quarterlyPerMonth}
+                        {enterpriseCycle === "monthly" ? PRICING_NORMAL.enterprise.monthlyPrice : PRICING_NORMAL.enterprise.quarterlyTotal}
                       </span>
                     )}
                     <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                      {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.quarterlyPerMonth}
+                      {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.quarterlyTotal}
                     </span>
-                    <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
+                    <span className="mb-1.5 text-[10px] text-slate-500">{enterpriseCycle === "monthly" ? "/bulan" : "/3 bulan"}</span>
                   </div>
 
                   <div className="mt-1 text-[10px] text-slate-400">
@@ -2469,12 +2461,8 @@ export default function Auth() {
                   <div className="mt-3">
                     <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
                   </div>
-                  {enterpriseCycle === "quarterly" ? (
-                    <div className="mt-1.5 text-[9px] text-violet-300/80">
-                      Ditagih {isEarlyBird && <span className="line-through">{PRICING_NORMAL.enterprise.quarterlyTotal}</span>} {PRICING.enterprise.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.enterprise.quarterlySavings}` : ""}
-                    </div>
-                  ) : isEarlyBird && (
-                    <div className="mt-1.5 text-[9px] text-violet-300/80">Hemat {PRICING.enterprise.monthlySavings}/bulan selama early bird</div>
+                  {isEarlyBird && (
+                    <div className="mt-1.5 text-[9px] text-violet-300/80">Hemat {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlySavings + "/bulan" : PRICING.enterprise.quarterlySavings} selama early bird</div>
                   )}
 
                   <div className="my-7 h-px bg-white/10" />
