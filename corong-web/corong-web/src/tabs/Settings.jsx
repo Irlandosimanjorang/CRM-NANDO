@@ -429,7 +429,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                         <span className="flex-1 tracking-wider">{inviteCode}</span>
                         <button onClick={() => navigator.clipboard.writeText(inviteCode)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-2">Bisa dipake berkali-kali sampe kuota anggota penuh. Berlaku 7 hari.</p>
+                      <p className="text-[11px] text-slate-400 mt-2">Bisa dipake berkali-kali sampe kuota anggota penuh. Berlaku 1 jam.</p>
                     </div>
                   ) : (
                     <button onClick={generateInvite} disabled={inviteBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
