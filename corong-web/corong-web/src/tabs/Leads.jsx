@@ -1053,6 +1053,11 @@ export default function Leads({
           }
         } catch (aiErr) {
           console.error("Smart import AI gagal nebak:", aiErr);
+          // Sebelumnya diem-diem aja jatuh ke pemetaan manual tanpa bilang
+          // apa-apa - user gak pernah tau KENAPA (misal jatah Smart Import
+          // udah abis). Sekarang dikasih tau alasannya lewat notif, baru
+          // lanjut ke pemetaan manual biar proses import-nya tetep jalan.
+          alert(aiErr.message || "Smart Import AI gagal diproses, silakan petain kolom manual.");
           guessedMapping = {};
           guessedDataStartRow = 0;
         }

@@ -554,7 +554,7 @@ export default function App() {
   // Level minimal tiap tab: 0=Free, 1=Standard, 2=Professional.
   // Tab yang gak disebutin di sini otomatis level 0 (Free).
   const TAB_MIN_LEVEL = {
-    komunitas: 1, settings: 1,
+    settings: 1,
     generateleads: 2, deal: 2, visitfollowup: 2, kompetitor: 2, advisor: 2,
   };
 

@@ -790,7 +790,11 @@ export async function deleteDealTransaction(id) {
 // ---- SMART IMPORT (AI baca layout Excel yang formatnya ga standar) ----
 export async function smartImportMap(sampleRows) {
   const { data, error } = await supabase.functions.invoke("smart-import-map-ts", { body: { sampleRows } });
-  if (error) throw error;
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Smart Import AI gagal diproses");
+  }
   return data;
 }
 
