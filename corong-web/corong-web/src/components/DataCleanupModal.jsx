@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { X, Sparkles, Loader2, CheckCircle2, AlertTriangle, Tag, Clock, Phone } from "lucide-react";
 import * as db from "../lib/db";
 import { daysSince } from "../lib/helpers";
