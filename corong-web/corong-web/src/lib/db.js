@@ -58,19 +58,18 @@ export async function switchDemoIndustry(industryKey) {
   if (stagesErr) throw stagesErr;
 }
 
+// Lewat edge function (service role) - bukan cuma query settings.
+// community_display_name doang, tapi FALLBACK ke email anggota kalau
+// mereka belum pernah ngisi nama profil (misal join lewat kode invite
+// tanpa lewat wizard signup lengkap). Client biasa gak bisa baca email
+// anggota LAIN (RLS gak ngasih akses ke auth.users), makanya butuh
+// service role - sebelumnya nama yang "belum diisi" jatuh ke potongan
+// UUID mentah ("Anggota 45dadf81") yang gak kebaca sama sekali.
 export async function getOrgMembers() {
-  const orgId = await getMyOrgId();
-  const { data, error } = await supabase.from("organization_members").select("*").eq("org_id", orgId);
+  const { data, error } = await supabase.functions.invoke("get-org-members");
   if (error) throw error;
-  const members = data || [];
-  if (members.length === 0) return members;
-  // Narik nama tampilan tiap anggota dari tabel settings - sebelumnya cuma
-  // nampilin potongan UUID mentah yang gak kebaca sama sekali.
-  const userIds = members.map((m) => m.user_id);
-  const { data: settingsRows } = await supabase.from("settings").select("user_id, community_display_name").in("user_id", userIds);
-  const nameByUid = {};
-  for (const s of settingsRows || []) nameByUid[s.user_id] = s.community_display_name;
-  return members.map((m) => ({ ...m, display_name: nameByUid[m.user_id] || null }));
+  if (data?.error) throw new Error(data.error);
+  return data || [];
 }
 
 export async function createInviteCode(role = "sales_rep") {
