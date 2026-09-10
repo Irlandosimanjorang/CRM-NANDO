@@ -368,7 +368,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
                 <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
                   {settings.plan === "standard"
                     ? "Leads & Komunitas aktif. Upgrade ke Professional untuk membuka AI, Deal, Visit, Calendar, dan automation."
-                    : "Dashboard & Leads aktif. Upgrade untuk membuka Komunitas, AI, Deal, Visit, Calendar, dan automation."}
+                    : "Dashboard, Leads, & Komunitas aktif. Upgrade untuk membuka AI, Deal, Visit, Calendar, dan automation."}
                 </div>
               </div>
             </div>

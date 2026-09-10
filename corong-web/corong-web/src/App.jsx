@@ -819,7 +819,7 @@ export default function App() {
                         ? `Akunmu udah jadi - tinggal selesaiin pembayaran ${intendedTierLabel}. Pastikan pakai email yang sama persis (${session?.user?.email || "email akun ini"}) pas bayar di Mayar.`
                         : myLevel === 1
                         ? "Leads & Komunitas aktif. Upgrade ke Professional untuk membuka AI, Deal, Visit, Calendar, dan automation."
-                        : "Dashboard & Leads aktif. Upgrade untuk membuka Komunitas, AI, Deal, Visit, Calendar, dan automation."}
+                        : "Dashboard, Leads, & Komunitas aktif. Upgrade untuk membuka AI, Deal, Visit, Calendar, dan automation."}
                     </div>
                   </div>
                 </div>
