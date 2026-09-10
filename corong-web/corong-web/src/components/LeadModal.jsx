@@ -86,7 +86,7 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Gak ada budget", "G
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, isOwner, members, myUid }) {
   const [f, setF] = useState({ ...lead });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
@@ -312,6 +312,17 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             )}
           </div>
           <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => onStageChange(e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
+
+          {/* Cuma owner yang bisa milih ini - biar bisa langsung nentuin lead
+              baru/hasil edit ini punya siapa, gak harus balik ke kartu Leads
+              buat reassign manual sesudahnya. */}
+          {isOwner && members?.length > 1 && (
+            <Field label="Ditugaskan ke">
+              <select className={inp} value={f.assigned_to || myUid || ""} onChange={(e) => set("assigned_to", e.target.value)}>
+                {members.map((m) => <option key={m.user_id} value={m.user_id}>{m.display_name || `Anggota ${m.user_id.slice(0, 8)}`}</option>)}
+              </select>
+            </Field>
+          )}
 
           {showOutcome && (
             <div className={`border rounded-2xl p-3 space-y-2.5 ${outcomeResult === "won" ? "border-emerald-200 bg-emerald-50/60" : "border-rose-200 bg-rose-50/60"}`}>

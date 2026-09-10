@@ -484,9 +484,11 @@ export default function Leads({
   // bisa liat & ubah lead SEMUA orang di orgnya.
   const [members, setMembers] = useState([]);
   const [fAssignee, setFAssignee] = useState("");
+  const [myUid, setMyUid] = useState(null);
   useEffect(() => {
     if (!isOwner) return;
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
+    db.getCurrentUserId().then(setMyUid).catch(() => setMyUid(null));
   }, [isOwner]);
 
   const [page, setPage] =
@@ -1836,6 +1838,15 @@ export default function Leads({
           }
           onClose={() =>
             setEdit(null)
+          }
+          isOwner={
+            isOwner
+          }
+          members={
+            members
+          }
+          myUid={
+            myUid
           }
           onSaved={() => {
 
