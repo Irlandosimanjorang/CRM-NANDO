@@ -361,11 +361,6 @@ export async function importGeneratedLead(genLead, defaultStageKey) {
   if (error) throw error;
 }
 
-export async function dismissGeneratedLead(id) {
-  const { error } = await supabase.from("generated_leads").update({ status: "dismissed" }).eq("id", id);
-  if (error) throw error;
-}
-
 // ---- KIRIM EMAIL KE LEAD ----
 export async function sendLeadEmail({ lead_id, to_email, to_name, subject, body, sender_name }) {
   const { data, error } = await supabase.functions.invoke("send-lead-email", { body: { lead_id, to_email, to_name, subject, body, sender_name } });
@@ -648,11 +643,6 @@ export async function restoreLead(id) {
 
 export async function permanentlyDeleteLead(id) {
   const { error } = await supabase.from("leads").delete().eq("id", id);
-  if (error) throw error;
-}
-
-export async function setLeadStage(id, stage_key) {
-  const { error } = await supabase.from("leads").update({ stage_key }).eq("id", id);
   if (error) throw error;
 }
 

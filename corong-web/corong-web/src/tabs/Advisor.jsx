@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Lightbulb, Loader2, AlertCircle, CheckCircle2, User, MessageCircle, ExternalLink, Calendar } from "lucide-react";
 import * as db from "../lib/db";
-import { stageMeta, chipStyle, daysSince, fmtDate } from "../lib/helpers";
+import { stageMeta, chipStyle, daysSince } from "../lib/helpers";
 
 const uMeta = { high: { label: "High", hex: "#e11d48" }, medium: { label: "Medium", hex: "#d97706" }, low: { label: "Low", hex: "#64748b" } };
 

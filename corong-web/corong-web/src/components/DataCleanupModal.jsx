@@ -1,11 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { X, Sparkles, Loader2, CheckCircle2, AlertTriangle, Tag, Clock, Phone } from "lucide-react";
 import * as db from "../lib/db";
-
-function daysSince(iso) {
-  if (!iso) return null;
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-}
+import { daysSince } from "../lib/helpers";
 
 export default function DataCleanupModal({ leads, stages, onClose, onChanged }) {
   const [tab, setTab] = useState("kategori");
