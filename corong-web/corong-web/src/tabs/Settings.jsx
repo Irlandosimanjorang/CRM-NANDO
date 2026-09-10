@@ -240,6 +240,17 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   // backend-nya juga dibenerin sekalian.
   const myLevel = isEnterprise ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
 
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const cancelInvite = async () => {
+    setCancelBusy(true);
+    try {
+      await db.revokeInviteCode(inviteCode);
+      setInviteCode("");
+      setInviteExpiresAt(null);
+    } catch (e) { alert("Gagal batalin kode: " + e.message); }
+    finally { setCancelBusy(false); }
+  };
+
   const generateInvite = async () => {
     setInviteBusy(true);
     try {
@@ -445,7 +456,8 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                       <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota tim, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
                       <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
                         <span className="flex-1 tracking-wider">{inviteCode}</span>
-                        <button onClick={() => navigator.clipboard.writeText(inviteCode)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
+                        <button onClick={() => navigator.clipboard.writeText(inviteCode)} className="text-slate-400 hover:text-slate-700" title="Salin kode"><Copy size={14} /></button>
+                        <button onClick={cancelInvite} disabled={cancelBusy} className="text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Batalin kode ini"><X size={14} /></button>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-2">Bisa dipake berkali-kali sampe kuota anggota penuh. Berlaku 1 jam.</p>
                     </div>
