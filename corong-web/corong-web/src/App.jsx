@@ -6,6 +6,7 @@ import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPo
 import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
 import Auth from "./Auth";
 import EngineHeaderMini from "./components/EngineHeaderMini";
+import PreviewLock from "./components/PreviewLock";
 import { todayISO } from "./lib/helpers";
 import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // Dashboard/Leads/Settings tetep IMPORT STATIS - hampir semua user langsung
@@ -856,42 +857,42 @@ export default function App() {
               <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
                 {visitedTabs.has("generateleads") && (
                   <div style={{ display: effectiveTab === "generateleads" ? "block" : "none" }}>
-                    <PreviewLock locked={isLocked("generateleads")}>
+                    <PreviewLock locked={isLocked("generateleads")} minLevel={TAB_MIN_LEVEL.generateleads}>
                       <GenerateLeads stages={stageList} industry={org?.industry} onChanged={reload} onNotify={pushToast} />
                     </PreviewLock>
                   </div>
                 )}
                 {visitedTabs.has("deal") && (
                   <div style={{ display: effectiveTab === "deal" ? "block" : "none" }}>
-                    <PreviewLock locked={isLocked("deal")}>
+                    <PreviewLock locked={isLocked("deal")} minLevel={TAB_MIN_LEVEL.deal}>
                       <Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} industry={org?.industry} onEdit={setEditLead} onChanged={reload} />
                     </PreviewLock>
                   </div>
                 )}
                 {visitedTabs.has("visitfollowup") && (
                   <div style={{ display: effectiveTab === "visitfollowup" ? "block" : "none" }}>
-                    <PreviewLock locked={isLocked("visitfollowup")}>
+                    <PreviewLock locked={isLocked("visitfollowup")} minLevel={TAB_MIN_LEVEL.visitfollowup}>
                       <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} />
                     </PreviewLock>
                   </div>
                 )}
                 {visitedTabs.has("kompetitor") && (
                   <div style={{ display: effectiveTab === "kompetitor" ? "block" : "none" }}>
-                    <PreviewLock locked={isLocked("kompetitor")}>
+                    <PreviewLock locked={isLocked("kompetitor")} minLevel={TAB_MIN_LEVEL.kompetitor}>
                       <Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} />
                     </PreviewLock>
                   </div>
                 )}
                 {visitedTabs.has("komunitas") && (
                   <div style={{ display: effectiveTab === "komunitas" ? "block" : "none" }}>
-                    <PreviewLock locked={isLocked("komunitas")}>
+                    <PreviewLock locked={isLocked("komunitas")} minLevel={TAB_MIN_LEVEL.komunitas}>
                       <Nex dummy={isLocked("komunitas")} settings={settings} />
                     </PreviewLock>
                   </div>
                 )}
                 {visitedTabs.has("advisor") && (
                   <div style={{ display: effectiveTab === "advisor" ? "block" : "none" }}>
-                    <PreviewLock locked={isLocked("advisor")}>
+                    <PreviewLock locked={isLocked("advisor")} minLevel={TAB_MIN_LEVEL.advisor}>
                       <Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} />
                     </PreviewLock>
                   </div>
@@ -903,9 +904,14 @@ export default function App() {
                 )}
               </Suspense>
               <div style={{ display: effectiveTab === "settings" ? "block" : "none" }}>
-                <PreviewLock locked={isLocked("settings")}>
-                  <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} mayarLink={MAYAR_PAYMENT_LINK} userEmail={session?.user?.email} />
-                </PreviewLock>
+                {/* Settings.jsx ngurus lock-nya SENDIRI di dalem (bukan
+                    dibungkus PreviewLock di sini kayak tab lain) - biar aksi
+                    akun universal (ganti password, export, keluar, hapus
+                    akun) TETEP bisa dipake SEMUA plan, gak ikut ketutup
+                    overlay generic yang dulu nutup SELURUH tab termasuk
+                    tombol-tombol itu (bug: user Free gak bisa hapus akun
+                    sendiri sama sekali). */}
+                <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} mayarLink={MAYAR_PAYMENT_LINK} userEmail={session?.user?.email} locked={isLocked("settings")} />
               </div>
             </>
           )}
@@ -953,22 +959,6 @@ export default function App() {
 // yang bakal mereka dapet), tapi klik apapun di dalemnya (tombol, form, dst)
 // ke-tangkep sama lapisan transparan ini dan cuma munculin ajakan upgrade -
 // gak ada perubahan data yang beneran kejadian.
-function PreviewLock({ locked, children }) {
-  if (!locked) return children;
-  return (
-    <div className="relative">
-      <div className="mb-3 bg-slate-800 text-white text-xs rounded-2xl px-4 py-2.5 flex items-center gap-2">
-        <Lock size={13} className="shrink-0" /> Mode lihat-lihat doang - upgrade ke Professional buat bisa nambah/ubah data di sini.
-      </div>
-      <div
-        onClick={() => alert("Ini fitur Professional bro - di paket Free/Standard cuma bisa dilihat doang, gak bisa diubah. Upgrade dulu (Rp269rb/bulan) buat bisa pake fiturnya.")}
-        className="absolute inset-0 top-11 z-20 cursor-pointer"
-      />
-      {children}
-    </div>
-  );
-}
-
 // Switcher industri - CUMA muncul buat admin platform (is_platform_admin).
 // Beda dari IndustryPicker (onboarding sekali doang), ini boleh dipencet
 // berkali-kali - dipake Nando buat gonta-ganti industri pas demo/pitching,

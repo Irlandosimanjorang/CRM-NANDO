@@ -5,6 +5,7 @@ import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
 import RecycleBinModal from "../components/RecycleBinModal";
 import DeleteAccountModal from "../components/DeleteAccountModal";
+import PreviewLock from "../components/PreviewLock";
 import SupportChatWidget from "../components/SupportChatWidget";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 import { PLAN_LEVEL, TIER_LABEL } from "../lib/plans";
@@ -43,7 +44,7 @@ function getSavedTgCode() {
   }
 }
 
-export default function Settings({ settings, stages, leads, onChanged, mayarLink, userEmail }) {
+export default function Settings({ settings, stages, leads, onChanged, mayarLink, userEmail, locked }) {
   const [names, setNames] = useState((settings.sales_names || []).join(", "));
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
   const [busy, setBusy] = useState(false);
@@ -354,6 +355,11 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
 
   return (
     <div className="space-y-5">
+      {/* Aksi akun universal (Zona Bahaya di bawah - keluar & hapus akun)
+          SENGAJA dirender DI LUAR PreviewLock ini, jadi tetep bisa dipake
+          SEMUA plan - dulu ketutup overlay generic yang nge-block SELURUH
+          tab Pengaturan (bug: user Free gak bisa hapus akun/keluar sendiri). */}
+      <PreviewLock locked={locked} minLevel={1}>
       <h1 className="text-2xl font-bold tracking-tight">Pengaturan</h1>
 
       {!orgLoading && !isEnterprise && settings.plan !== "premium" && (
@@ -700,6 +706,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
           {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export semua data"}
         </button>
       </div>
+      </PreviewLock>
 
       <div className="bg-white border border-rose-200 rounded-2xl shadow-sm p-4">
         <h3 className="font-semibold text-sm mb-1 text-rose-600">Zona bahaya</h3>

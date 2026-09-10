@@ -15,3 +15,10 @@ export const MAYAR_PAYMENT_LINK = "https://crmnexto.myr.id/m/nexto-crm-ai-sales-
 export const TIER_LABEL = { standard: "Standard", premium: "Professional", enterprise: "Enterprise" };
 
 export const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
+
+// Dipake PreviewLock buat nampilin nama tier & harga yang BENERAN sesuai
+// level yang dibutuhin fitur itu (dulu di-hardcode "Professional" di semua
+// tempat, walau ada fitur yang sebenernya cuma butuh Standard - bikin user
+// disuruh upgrade ke tier yang lebih mahal dari yang seharusnya).
+export const LEVEL_LABEL = { 1: "Standard", 2: "Professional" };
+export const LEVEL_PRICE = { 1: "Rp79rb/bulan", 2: "Rp269rb/bulan" };
