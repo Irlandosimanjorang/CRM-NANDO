@@ -316,6 +316,17 @@ export default function App() {
           await db.saveMyProfile({ name: pending.fullName, job_title: pending.jobTitle, whatsapp: pending.whatsapp });
           if (pending.companyName) { await db.setOrgName(pending.companyName); myOrg = await db.getMyOrg(); }
           localStorage.removeItem("nexto_pending_profile");
+        } else {
+          // Akun yang daftar/masuk lewat "Sign in with Google" gak lewat
+          // form isi nama manual (gak ada nexto_pending_profile) - ambil
+          // nama dari profil Google-nya sendiri, TAPI cuma kalau namanya
+          // beneran masih kosong (biar gak numpuk nge-overwrite nama yang
+          // udah pernah diganti manual sama user di Pengaturan).
+          const googleName = session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name;
+          if (googleName) {
+            const s = await db.getSettings().catch(() => null);
+            if (!s?.community_display_name) await db.saveMyProfile({ name: googleName });
+          }
         }
       } catch (e) { console.error("Gagal nerapin data profil dari signup:", e); }
 
