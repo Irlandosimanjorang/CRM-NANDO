@@ -699,10 +699,18 @@ async function reverseGeocodeOnce(lat, lng) {
   return dedup.length ? dedup.join(", ") : data?.display_name || null;
 }
 
-// User gak mau lagi liat angka koordinat mentah kalau alamatnya gagal
-// ke-resolve - jadi di sini dicoba 2x (Nominatim kadang timeout/rate-limit
-// sesaat) sebelum bener-bener nyerah dan balikin null ke caller.
+// Utamain Google Maps Geocoding (lewat edge function - API key gak pernah
+// nyampur ke browser) buat alamat yang jauh lebih detail/lengkap (sampe
+// nama jalan) dibanding Nominatim/OSM gratis, yang di banyak area
+// pinggiran Indonesia cuma punya data sampe level kelurahan/kota. Kalau
+// Google API key belum dikonfigurasi ATAU gagal, fallback ke Nominatim
+// (dicoba 2x - kadang timeout/rate-limit sesaat) sebelum nyerah ke null.
 export async function reverseGeocode(lat, lng) {
+  try {
+    const { data, error } = await supabase.functions.invoke("reverse-geocode", { body: { lat, lng } });
+    if (!error && data?.address) return data.address;
+  } catch (_) { /* fallback di bawah */ }
+
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const address = await reverseGeocodeOnce(lat, lng);
