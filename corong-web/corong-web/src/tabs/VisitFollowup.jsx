@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock } from "lucide-react";
 import * as db from "../lib/db";
-import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
+import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO, daysSince } from "../lib/helpers";
 import MeetingRecorderModal from "../components/MeetingRecorderModal";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
@@ -213,9 +213,30 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
   );
 }
 
-function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
+const NEARBY_RADIUS_M = 2000;
+const NEARBY_STALE_DAYS = 14;
+
+function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   const todayVisits = useMemo(() => leads.filter((c) => c.visit_date === todayISO()), [leads]);
   const [myPos, setMyPos] = useState(null);
+
+  // "Lead di Sekitar Sini" (10 Sep 2026) - manfaatin posisi GPS yang emang
+  // udah kepake buat check-in, sekalian nyaranin lead LAIN yang lokasinya
+  // deket (radius 2km) dan udah lama gak di-follow-up (14+ hari / belum
+  // pernah), biar sales rep bisa sekalian mampir tanpa harus buka-buka
+  // daftar lead manual nyari yang deket. Cuma keliatan kalau posisi GPS
+  // udah kedapet (sama kayak syarat nampilin jarak di daftar visit hari
+  // ini) - gak ada request GPS TAMBAHAN, numpang sama yang udah jalan.
+  const todayVisitIds = useMemo(() => new Set(todayVisits.map((c) => c.id)), [todayVisits]);
+  const nearbyLeads = useMemo(() => {
+    if (!myPos) return [];
+    return leads
+      .filter((c) => c.latitude != null && c.longitude != null && !todayVisitIds.has(c.id))
+      .map((c) => ({ ...c, _distance: Math.round(haversineMeters(myPos.lat, myPos.lng, c.latitude, c.longitude)) }))
+      .filter((c) => c._distance <= NEARBY_RADIUS_M && (!c.last_contact || daysSince(c.last_contact) >= NEARBY_STALE_DAYS))
+      .sort((a, b) => a._distance - b._distance)
+      .slice(0, 5);
+  }, [leads, myPos, todayVisitIds]);
   const [geoError, setGeoError] = useState(false);
   const [checkingIn, setCheckingIn] = useState(null);
   const [recordingLead, setRecordingLead] = useState(null);
@@ -383,6 +404,34 @@ function TodayVisitsCard({ leads, onChanged, isEnterprise }) {
           );
         })}
       </div>
+
+      {nearbyLeads.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-dashed border-slate-200">
+          <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 mb-2">
+            <MapPin size={13} className="text-emerald-500" /> Lead Lain di Sekitar Sini
+          </div>
+          <div className="space-y-1.5">
+            {nearbyLeads.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => onEdit?.(c)}
+                className="w-full flex items-center justify-between gap-3 border border-slate-100 rounded-xl px-3 py-2 text-left hover:border-emerald-200 hover:bg-emerald-50/40 transition-colors"
+              >
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-slate-700 truncate">{c.name}</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">
+                    {c.last_contact ? `${daysSince(c.last_contact)} hari sejak kontak terakhir` : "Belum pernah dihubungi"}
+                  </div>
+                </div>
+                <span className="shrink-0 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+                  {c._distance >= 1000 ? `${(c._distance / 1000).toFixed(1)} km` : `${c._distance} m`}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {recordingLead && <MeetingRecorderModal lead={recordingLead} onClose={() => setRecordingLead(null)} onSaved={onChanged} />}
       {locationConfirm && (
         <LocationConfirmModal
@@ -643,7 +692,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise }) {
         </div>
       </div>
 
-      <TodayVisitsCard leads={leads} onChanged={onChanged} isEnterprise={isEnterprise} />
+      <TodayVisitsCard leads={leads} onChanged={onChanged} onEdit={onEdit} isEnterprise={isEnterprise} />
 
       {visits.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana aja.</div>
