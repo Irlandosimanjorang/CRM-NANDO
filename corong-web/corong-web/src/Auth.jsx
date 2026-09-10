@@ -1802,11 +1802,16 @@ export default function Auth() {
       }
     }
 
-    if (!captchaToken) {
-      setMsg("Tunggu verifikasi captcha selesai dulu ya (biasanya cuma sedetik).");
-      return;
-    }
-
+    // BUG FIX (10 Sep 2026) - sebelumnya di sini ADA hard-block "gak boleh
+    // submit tanpa captchaToken", dan itu BIKIN SEMUA ORANG GAK BISA LOGIN
+    // sama sekali begitu widget Turnstile gagal ngeluarin token (kejadian
+    // nyata - token nyangkut kosong selamanya, gak ada UI buat user bantu
+    // nyelesain verifikasinya, form-nya diem doang). Sekarang captchaToken
+    // (isi apa adanya, walau kosong) tetep dikirim ke Supabase - biar
+    // SERVER yang mutusin butuh captcha apa enggak, bukan frontend nge-
+    // block preemptif. Kalau Supabase emang lagi wajibin captcha dan
+    // tokennya kosong/invalid, error asli dari Supabase yang keliatan di
+    // pesan (bukan diem gak bisa ngapa-ngapain).
     setLoading(true);
 
     try {
