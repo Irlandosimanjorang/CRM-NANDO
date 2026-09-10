@@ -908,6 +908,20 @@ export async function deleteDealTransaction(id) {
 }
 
 // ---- SMART IMPORT (AI baca layout Excel yang formatnya ga standar) ----
+// "Perkaya Data" - AI nyari info tambahan lead lewat web search (alamat,
+// website, kategori, telepon publik, deskripsi). Hasilnya CUMA SARAN, rep
+// yang milih mau diterapin apa enggak (lihat LeadModal.jsx).
+export async function enrichLead(leadId) {
+  const { data, error } = await supabase.functions.invoke("enrich-lead", { body: { lead_id: leadId } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal perkaya data lead");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data.suggestions;
+}
+
 export async function smartImportMap(sampleRows) {
   const { data, error } = await supabase.functions.invoke("smart-import-map-ts", { body: { sampleRows } });
   if (error) {

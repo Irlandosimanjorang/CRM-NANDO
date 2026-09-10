@@ -97,6 +97,28 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const isProfessional = myLevel >= 2;
 
+  // "Perkaya Data" (AI) - cari info tambahan lead lewat web search. Hasilnya
+  // CUMA SARAN (enrichSuggestions) - rep pilih sendiri field mana yang mau
+  // dipakai (enrichApplied nandain yang udah dipakai), gak auto-overwrite.
+  const [enriching, setEnriching] = useState(false);
+  const [enrichSuggestions, setEnrichSuggestions] = useState(null);
+  const [enrichApplied, setEnrichApplied] = useState({});
+  const runEnrich = async () => {
+    setEnriching(true);
+    setEnrichSuggestions(null);
+    setEnrichApplied({});
+    try {
+      const suggestions = await db.enrichLead(lead.id);
+      setEnrichSuggestions(suggestions);
+    } catch (e) { alert("Gagal perkaya data: " + e.message); }
+    finally { setEnriching(false); }
+  };
+  const applyEnrichField = (key, value) => {
+    if (key === "category") { setCustomCategory(true); set("category", value); }
+    else set(key, value);
+    setEnrichApplied((p) => ({ ...p, [key]: true }));
+  };
+
   // ---- OUTCOME MEMORY - pas Tahap diganti ke tipe Menang/Kalah (dan
   // sebelumnya belum closed), munculin form kecil nanya kenapa. Ini yang
   // ngisi "Memory Engine" di alur Context->Decision->Action->Memory->Loop. ----
@@ -304,6 +326,45 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             </div>
           )}
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
+          {lead.id && isProfessional && (
+            <div className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-medium text-violet-700 flex items-center gap-1.5"><Sparkles size={13} /> Perkaya Data (AI)</div>
+                <button type="button" onClick={runEnrich} disabled={enriching} className="text-[11px] font-medium text-violet-700 hover:underline disabled:opacity-50 flex items-center gap-1">
+                  {enriching && <Loader2 size={11} className="animate-spin" />}
+                  {enriching ? "Nyari..." : "Cari Info"}
+                </button>
+              </div>
+              {enrichSuggestions && (
+                <div className="mt-2 space-y-1.5">
+                  {[
+                    { key: "city", label: "Kota" },
+                    { key: "website", label: "Website" },
+                    { key: "category", label: "Kategori" },
+                    { key: "phone", label: "Telepon" },
+                  ].filter((f2) => enrichSuggestions[f2.key]).map((f2) => (
+                    <div key={f2.key} className="flex items-center justify-between gap-2 text-[11px] bg-white rounded-lg border border-violet-100 px-2 py-1.5">
+                      <div className="min-w-0">
+                        <span className="text-slate-400">{f2.label}:</span>{" "}
+                        <span className="text-slate-700 font-medium break-words">{enrichSuggestions[f2.key]}</span>
+                      </div>
+                      {enrichApplied[f2.key] ? (
+                        <span className="shrink-0 text-emerald-600 flex items-center gap-0.5"><Check size={11} /> Dipakai</span>
+                      ) : (
+                        <button type="button" onClick={() => applyEnrichField(f2.key, enrichSuggestions[f2.key])} className="shrink-0 text-violet-600 font-medium hover:underline">Pakai</button>
+                      )}
+                    </div>
+                  ))}
+                  {enrichSuggestions.description && (
+                    <p className="text-[11px] italic text-slate-500 px-1">{enrichSuggestions.description}</p>
+                  )}
+                  {!["city", "website", "category", "phone", "description"].some((k) => enrichSuggestions[k]) && (
+                    <p className="text-[11px] text-slate-400 px-1">Gak nemu info tambahan buat lead ini.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Kategori">
               <select
