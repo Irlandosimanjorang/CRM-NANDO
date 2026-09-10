@@ -45,7 +45,6 @@ function getSavedTgCode() {
 }
 
 export default function Settings({ settings, stages, leads, onChanged, mayarLink, userEmail, locked }) {
-  const [names, setNames] = useState((settings.sales_names || []).join(", "));
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -304,7 +303,6 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
   const save = async () => {
     setBusy(true); setMsg("");
     try {
-      await db.saveSalesNames(names.split(",").map((s) => s.trim()).filter(Boolean));
       await db.saveStages(st);
       setMsg("Pengaturan tersimpan.");
       onChanged();
@@ -452,10 +450,6 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
             )}
           </>
         )}
-      </div>
-
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4 space-y-3">
-        <label className="block"><span className="text-xs font-medium text-slate-500">Nama sales (pisah koma)</span><input className={inp} value={names} onChange={(e) => setNames(e.target.value)} placeholder="Nando, Budi, Sari" /></label>
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
