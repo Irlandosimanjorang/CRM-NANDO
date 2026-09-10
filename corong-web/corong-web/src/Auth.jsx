@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import LegalModal from "./components/LegalModal";
 import SupportChatWidget from "./components/SupportChatWidget";
@@ -411,6 +411,12 @@ const ENTERPRISE_FEATURES = [
 // dibulatin ke ribuan terdekat biar rapi, DITAMPILIN sebagai harga
 // per-bulan biar gampang dibandingin sama mode bulanan - "semiannualTotal"
 // tetep disebutin di badge kecil biar jelas cara nagihnya sebenernya gimana.
+// Site key Cloudflare Turnstile (aman ditaro di frontend - beda dari secret
+// key yang cuma disimpen di sisi Supabase). Dipake buat render widget
+// captcha di form signup/login, dipasangin karena Supabase Auth "Enable
+// Captcha protection" ditolak jalan tanpa token dari widget ini.
+const TURNSTILE_SITE_KEY = "0x4AAAAAAEu6vGXceQD1CTOl";
+
 const PRICING = {
   standard: { monthlyPrice: "Rp79rb", semiannualPerMonth: "Rp66rb", semiannualTotal: "Rp395rb" },
   professional: { monthlyPrice: "Rp269rb", semiannualPerMonth: "Rp224rb", semiannualTotal: "Rp1,345jt" },
@@ -1753,6 +1759,27 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "tos" | "privacy" | null
+
+  // Cloudflare Turnstile (captcha) - token sekali-pake, di-reset abis tiap
+  // percobaan submit (sukses maupun gagal) biar gak nyoba dipake dua kali.
+  const [captchaToken, setCaptchaToken] = useState("");
+  const turnstileRef = useRef(null);
+  const turnstileWidgetId = useRef(null);
+  useEffect(() => {
+    let cancelled = false;
+    const tryRender = () => {
+      if (cancelled || !turnstileRef.current || turnstileWidgetId.current) return;
+      if (!window.turnstile) { setTimeout(tryRender, 200); return; }
+      turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => setCaptchaToken(token),
+        "expired-callback": () => setCaptchaToken(""),
+        "error-callback": () => setCaptchaToken(""),
+      });
+    };
+    tryRender();
+    return () => { cancelled = true; };
+  }, []);
   // Toggle harga per kartu (Standard/Professional/Enterprise) - INDEPENDEN
   // satu sama lain, gak shared, biar klik "6 Bulan" di 1 kartu gak ikut
   // ngubah kartu lain (9 Sep 2026, sebelumnya shared dan itu kerasa aneh).
@@ -1781,6 +1808,11 @@ export default function Auth() {
       }
     }
 
+    if (!captchaToken) {
+      setMsg("Tunggu verifikasi captcha selesai dulu ya (biasanya cuma sedetik).");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -1788,6 +1820,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password: pw,
+          options: { captchaToken },
         });
 
         if (error) throw error;
@@ -1795,6 +1828,7 @@ export default function Auth() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password: pw,
+          options: { captchaToken },
         });
 
         if (error) throw error;
@@ -1817,6 +1851,12 @@ export default function Auth() {
       setMsg(e.message);
     } finally {
       setLoading(false);
+      // Token Turnstile sekali-pake - reset widget-nya abis tiap percobaan
+      // (sukses maupun gagal) biar dapet token baru buat percobaan berikutnya.
+      setCaptchaToken("");
+      if (window.turnstile && turnstileWidgetId.current) {
+        window.turnstile.reset(turnstileWidgetId.current);
+      }
     }
   };
 
@@ -2623,6 +2663,8 @@ export default function Auth() {
                         </span>
                       </label>
                     )}
+
+                    <div ref={turnstileRef} className="flex justify-center" />
 
                     <button
                       onClick={submit}

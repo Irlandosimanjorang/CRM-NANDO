@@ -48,5 +48,10 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script src="/register-sw.js"></script>
+    <!-- Cloudflare Turnstile (captcha) - proteksi form signup/login dari bot,
+         diminta karena Supabase Auth "Enable Captcha protection" butuh
+         widget-nya kepasang di frontend sebelum bisa diaktifin, kalau enggak
+         SEMUA signup/login bakal ditolak Supabase (gak nyertain token). -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   </body>
 </html>
