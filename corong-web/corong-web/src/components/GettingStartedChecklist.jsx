@@ -17,6 +17,7 @@ export default function GettingStartedChecklist({ leads, myLevel, onGo }) {
     try { return localStorage.getItem(DISMISS_KEY) === "1"; } catch (_) { return false; }
   });
   const [telegramLinked, setTelegramLinked] = useState(null);
+  const [calendarLinked, setCalendarLinked] = useState(null);
   const [teamCount, setTeamCount] = useState(null);
 
   const leadCount = leads?.length ?? 0;
@@ -27,6 +28,7 @@ export default function GettingStartedChecklist({ leads, myLevel, onGo }) {
     db.getTelegramLink().then((row) => setTelegramLinked(!!row)).catch(() => setTelegramLinked(false));
     if (myLevel >= 2) {
       db.getOrgMembers().then((rows) => setTeamCount(rows.length)).catch(() => setTeamCount(1));
+      db.getGoogleCalendarLink().then((row) => setCalendarLinked(!!row)).catch(() => setCalendarLinked(false));
     }
   }, [showAtAll, myLevel]);
 
@@ -40,6 +42,9 @@ export default function GettingStartedChecklist({ leads, myLevel, onGo }) {
     items.push({ key: "telegram", label: "Hubungkan Bot Telegram", done: telegramLinked === true, action: () => onGo?.("settings") });
     if (teamCount !== null) {
       items.push({ key: "team", label: "Undang anggota tim", done: teamCount > 1, action: () => onGo?.("settings") });
+    }
+    if (calendarLinked !== null) {
+      items.push({ key: "calendar", label: "Hubungkan Google Calendar", done: calendarLinked === true, action: () => onGo?.("settings") });
     }
   }
 
