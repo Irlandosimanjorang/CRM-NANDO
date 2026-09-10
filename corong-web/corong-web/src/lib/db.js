@@ -556,6 +556,15 @@ export async function updateLeadNextAction(id, next_action) {
   if (error) throw error;
 }
 
+// Reassign lead ke anggota tim lain - dipake owner/manager di tab Leads buat
+// mindahin lead yang keupload sales_rep A ke sales_rep B, karena RLS
+// (leads_role_access) bikin sales_rep cuma bisa liat lead yang assigned_to
+// dirinya sendiri.
+export async function updateLeadAssignee(id, assigned_to) {
+  const { error } = await supabase.from("leads").update({ assigned_to }).eq("id", id);
+  if (error) throw error;
+}
+
 // ---- LOKASI GPS & CHECK-IN ----
 export async function saveLeadLocation(id, latitude, longitude) {
   const { error } = await supabase.from("leads").update({ latitude, longitude }).eq("id", id);

@@ -216,7 +216,7 @@ function initials(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress }) {
+function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, isOwner, members, onReassign }) {
   // Progress bar mulai dari 0% terus animasi jalan ke posisi asli begitu
   // kartu ini muncul di layar - kesan "hidup", bukan langsung nongol jadi.
   const [barReady, setBarReady] = useState(false);
@@ -341,6 +341,25 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
             <Sparkles size={13} />
           </button>
 
+          {/* Reassign - cuma owner yang liat ini, biar bisa mindahin lead
+              punya sales_rep A ke sales_rep B kapan aja (misal si A resign,
+              atau kerjaannya mau diratain ulang). */}
+          {isOwner && members.length > 1 && (
+            <select
+              value={c.assigned_to || ""}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => onReassign(c.id, e.target.value)}
+              className="text-[11px] border border-slate-200 rounded-lg px-1.5 py-1 bg-white text-slate-500 max-w-[110px]"
+              title="Pindahkan lead ke anggota tim lain"
+            >
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.display_name || `Anggota ${m.user_id.slice(0, 8)}`}
+                </option>
+              ))}
+            </select>
+          )}
+
           <div className="ml-auto flex items-center gap-0.5">
             <button onClick={() => onEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50" title="Edit lead">
               <Pencil size={13} />
@@ -448,6 +467,7 @@ export default function Leads({
   customFieldLabels,
   myLevel,
   onChanged,
+  isOwner,
 }) {
 
   const [q, setQ] =
@@ -458,6 +478,16 @@ export default function Leads({
 
   const [fType, setFType] =
     useState("");
+
+  // Daftar anggota tim (buat filter "leads siapa" & reassign) - cuma owner
+  // yang butuh ini, karena cuma owner (lewat RLS leads_role_access) yang
+  // bisa liat & ubah lead SEMUA orang di orgnya.
+  const [members, setMembers] = useState([]);
+  const [fAssignee, setFAssignee] = useState("");
+  useEffect(() => {
+    if (!isOwner) return;
+    db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
+  }, [isOwner]);
 
   const [page, setPage] =
     useState(1);
@@ -730,6 +760,14 @@ export default function Leads({
             return false;
           }
 
+          if (
+            fAssignee &&
+            c.assigned_to !==
+              fAssignee
+          ) {
+            return false;
+          }
+
           if (q) {
 
             const s =
@@ -785,6 +823,7 @@ export default function Leads({
         q,
         fCat,
         fType,
+        fAssignee,
       ]
     );
 
@@ -1430,6 +1469,38 @@ export default function Leads({
           )}
 
 
+          {isOwner && members.length > 1 && (
+
+            <select
+              value={fAssignee}
+              onChange={(e) =>
+                setFAssignee(
+                  e.target.value
+                )
+              }
+              className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"
+            >
+
+              <option value="">
+                Semua sales rep
+              </option>
+
+              {members.map(
+                (m) => (
+                  <option
+                    key={m.user_id}
+                    value={m.user_id}
+                  >
+                    {m.display_name || `Anggota ${m.user_id.slice(0, 8)}`}
+                  </option>
+                )
+              )}
+
+            </select>
+
+          )}
+
+
           <button
             onClick={() =>
               setEdit(
@@ -1549,6 +1620,9 @@ export default function Leads({
             onDelete={del}
             onDraft={openDraftPopup}
             onProgress={(lead) => { setProgressPopup({ lead, autoFocus: true }); saveOpenModal("progress", { leadId: lead.id }); }}
+            isOwner={isOwner}
+            members={members}
+            onReassign={async (leadId, uid) => { await db.updateLeadAssignee(leadId, uid); onChanged(); }}
           />
         ))}
 
