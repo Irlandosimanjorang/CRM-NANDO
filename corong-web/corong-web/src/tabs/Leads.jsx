@@ -468,6 +468,8 @@ export default function Leads({
   myLevel,
   onChanged,
   isOwner,
+  canManage,
+  isEnterprise,
 }) {
 
   const [q, setQ] =
@@ -490,6 +492,19 @@ export default function Leads({
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
     db.getCurrentUserId().then(setMyUid).catch(() => setMyUid(null));
   }, [isOwner]);
+
+  // Approval-gate export (Enterprise) - sales_rep butuh persetujuan
+  // owner/manager dulu sebelum bisa export data. Status request TERBARU
+  // milik dia sendiri ditarik dari DB biar tombol Export tau harus:
+  // (a) minta approval baru, (b) bilang "masih nunggu", atau (c) beneran
+  // ngizinin export sekali pas udah di-approve.
+  const [exportApproval, setExportApproval] = useState(null);
+  const refreshExportApproval = () => {
+    if (isEnterprise && !canManage) {
+      db.getMyLatestApproval("export_leads").then(setExportApproval).catch(() => setExportApproval(null));
+    }
+  };
+  useEffect(refreshExportApproval, [isEnterprise, canManage]);
 
   const [page, setPage] =
     useState(1);
@@ -1217,7 +1232,7 @@ export default function Leads({
      EXPORT
   ========================================================= */
 
-  const exportCSV =
+  const doExportCSV =
     () => {
 
       const rows =
@@ -1300,13 +1315,52 @@ export default function Leads({
 
     };
 
+  // Approval-gate (Enterprise) - sales_rep gak bisa langsung klik-export,
+  // harus minta approve owner/manager dulu. Approval cuma berlaku SEKALI
+  // pake (langsung ditandain "used" abis kepake), biar tiap mau export lagi
+  // harus minta izin lagi, bukan approval sekali buat selamanya.
+  const handleExportClick = async () => {
+    if (!isEnterprise || canManage) { doExportCSV(); return; }
+
+    if (exportApproval?.status === "approved") {
+      doExportCSV();
+      try { await db.markApprovalUsed(exportApproval.id); } catch (_) {}
+      refreshExportApproval();
+      return;
+    }
+    if (exportApproval?.status === "pending") {
+      alert("Permintaan export kamu masih nunggu di-approve owner/manager.");
+      return;
+    }
+    if (!window.confirm("Export butuh persetujuan owner/manager. Kirim permintaan sekarang?")) return;
+    try {
+      const row = await db.requestApproval("export_leads");
+      setExportApproval(row);
+      alert("Permintaan export dikirim. Nunggu di-approve owner/manager dulu.");
+    } catch (e) { alert("Gagal kirim permintaan: " + e.message); }
+  };
+
 
   /* =========================================================
      DELETE
   ========================================================= */
 
+  // Approval-gate (Enterprise) - sales_rep gak bisa langsung hapus lead,
+  // harus minta approve owner/manager dulu. Owner/manager sendiri (canManage)
+  // tetep bisa hapus langsung kayak biasa - gak ada gunanya minta izin ke
+  // diri sendiri.
   const del =
     async (id) => {
+
+      if (isEnterprise && !canManage) {
+        const lead = leads.find((l) => l.id === id);
+        if (!window.confirm(`Kirim permintaan hapus lead "${lead?.name || "ini"}" ke owner/manager?`)) return;
+        try {
+          await db.requestApproval("delete_lead", { lead_id: id, lead_name: lead?.name || "" });
+          alert("Permintaan hapus dikirim. Nunggu di-approve owner/manager dulu.");
+        } catch (e) { alert("Gagal kirim permintaan: " + e.message); }
+        return;
+      }
 
       if (
         !window.confirm(
@@ -1570,7 +1624,12 @@ export default function Leads({
 
           <button
             onClick={
-              exportCSV
+              handleExportClick
+            }
+            title={
+              isEnterprise && !canManage && exportApproval?.status === "pending"
+                ? "Nunggu approval owner/manager"
+                : undefined
             }
             className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
           >
@@ -1579,7 +1638,9 @@ export default function Leads({
               size={12}
             />
 
-            Export
+            {isEnterprise && !canManage && exportApproval?.status === "pending"
+              ? "Export (nunggu approval)"
+              : "Export"}
 
           </button>
 

@@ -401,7 +401,7 @@ const ENTERPRISE_FEATURES = [
   "Laporan Performa Tim (leaderboard revenue & win rate)",
   "Undang anggota tim via kode invite",
   "Bot Telegram kirim email otonom",
-  "Approval-gate & keamanan tim",
+  "Approval-gate: hapus lead & export data butuh persetujuan owner/manager",
   "Prioritas support",
 ];
 

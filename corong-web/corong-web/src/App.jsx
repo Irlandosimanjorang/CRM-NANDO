@@ -201,6 +201,7 @@ export default function App() {
   const [dealTransactions, setDealTransactions] = useState([]);
   const [competitors, setCompetitors] = useState([]);
   const [org, setOrg] = useState(null);
+  const [myRole, setMyRole] = useState(null);
   const [joinCode, setJoinCode] = useState("");
   const [joinBusy, setJoinBusy] = useState(false);
   const [joinMsg, setJoinMsg] = useState("");
@@ -319,7 +320,8 @@ export default function App() {
       } catch (e) { console.error("Gagal nerapin data profil dari signup:", e); }
 
       setOrg(myOrg);
-      let [st, se, ls, comp, dt] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions()]);
+      let [st, se, ls, comp, dt, role] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions(), db.getMyRole()]);
+      setMyRole(role);
       // Akun baru (belum pernah setup pipeline sama sekali) - otomatis kasih
       // pipeline default biar gak kosong melompong abis daftar sendiri.
       // TAPI kalau org-nya belum pernah milih industri (industry masih null),
@@ -852,7 +854,7 @@ export default function App() {
                 <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
-                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} isOwner={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} />
+                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} isOwner={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} canManage={!!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager"} isEnterprise={org?.plan === "enterprise"} />
               </div>
               <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
                 {visitedTabs.has("generateleads") && (

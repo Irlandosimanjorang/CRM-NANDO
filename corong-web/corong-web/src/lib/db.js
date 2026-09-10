@@ -108,6 +108,80 @@ export async function redeemInviteCode(code) {
   return data;
 }
 
+export async function getMyRole() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { data, error } = await supabase.from("organization_members").select("role").eq("user_id", uid).maybeSingle();
+  if (error) throw error;
+  return data?.role || null;
+}
+
+// ---- APPROVAL GATE (Enterprise) - sales_rep butuh persetujuan owner/manager
+// buat hapus lead atau export data, biar data tim gak bisa dibawa kabur atau
+// dihapus sepihak tanpa sepengetahuan owner. ----
+export async function requestApproval(action_type, payload = {}) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase
+    .from("approval_requests")
+    .insert({ org_id: orgId, requested_by: uid, action_type, payload })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Request approval PALING BARU milik user ini sendiri buat 1 jenis aksi -
+// dipake sales_rep buat ngecek "request gua udah di-approve belum".
+export async function getMyLatestApproval(action_type) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { data, error } = await supabase
+    .from("approval_requests")
+    .select("*")
+    .eq("requested_by", uid)
+    .eq("action_type", action_type)
+    .order("requested_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+export async function markApprovalUsed(id) {
+  const { error } = await supabase.from("approval_requests").update({ status: "used" }).eq("id", id);
+  if (error) throw error;
+}
+
+// Buat owner/manager - daftar request yang masih nunggu keputusan di org-nya.
+export async function getPendingApprovals() {
+  const { data, error } = await supabase
+    .from("approval_requests")
+    .select("*")
+    .eq("status", "pending")
+    .order("requested_at", { ascending: false });
+  if (error) throw error;
+  const rows = data || [];
+  if (!rows.length) return rows;
+  const userIds = [...new Set(rows.map((r) => r.requested_by))];
+  const { data: settingsRows } = await supabase.from("settings").select("user_id, community_display_name").in("user_id", userIds);
+  const nameByUid = {};
+  for (const s of settingsRows || []) nameByUid[s.user_id] = s.community_display_name;
+  return rows.map((r) => ({ ...r, requester_name: nameByUid[r.requested_by] || null }));
+}
+
+export async function decideApproval(id, approve) {
+  const { data: reqRow, error: fErr } = await supabase.from("approval_requests").select("*").eq("id", id).single();
+  if (fErr) throw fErr;
+  if (approve && reqRow.action_type === "delete_lead" && reqRow.payload?.lead_id) {
+    await deleteLead(reqRow.payload.lead_id);
+  }
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase
+    .from("approval_requests")
+    .update({ status: approve ? "approved" : "denied", decided_by: uid, decided_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
 export async function removeMember(memberId) {
   const { data: member, error: mErr } = await supabase
     .from("organization_members")
