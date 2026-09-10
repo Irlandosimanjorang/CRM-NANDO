@@ -856,6 +856,7 @@ export default function Leads({
     q,
     fCat,
     fType,
+    fAssignee,
   ]);
 
 
