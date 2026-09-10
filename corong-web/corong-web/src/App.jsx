@@ -471,6 +471,24 @@ export default function App() {
     };
   }, [session, refreshing]);
 
+  // BUG FIX (10 Sep 2026, ketauan pas Nando lapor "gak bisa masuk" - dashboard
+  // blank putih abis login): useState/useEffect ini SEBELUMNYA ditaro di
+  // bawah sononya, SETELAH beberapa `if (...) return <Komponen/>` (early
+  // return session/mfa/industry/adminops). Itu ngelanggar Rules of Hooks -
+  // begitu session berubah dari null jadi ada isinya (org lain kata: user
+  // BERHASIL login), komponen ini nge-render LEBIH JAUH dari sebelumnya
+  // (baru nyampe hook ini), bikin JUMLAH HOOKS beda antar render -> React
+  // nge-crash total (blank putih, gak ke-catch error boundary apapun).
+  // Hooks WAJIB selalu dipanggil di urutan/jumlah yang SAMA tiap render,
+  // jadi dipindah ke atas SINI, sebelum satu pun early return.
+  const isEnterprise = org?.plan === "enterprise";
+  const canManage = !!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager";
+  const [orgMembers, setOrgMembers] = useState([]);
+  useEffect(() => {
+    if (!canManage) { setOrgMembers([]); return; }
+    db.getOrgMembers().then(setOrgMembers).catch(() => setOrgMembers([]));
+  }, [canManage]);
+
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
   if (!session) return <Auth />;
@@ -543,20 +561,6 @@ export default function App() {
   // Professional + fitur tim tambahan yang di-gate terpisah di Settings.jsx.
   const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
   const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
-
-  const isEnterprise = org?.plan === "enterprise";
-  const canManage = !!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager";
-
-  // Daftar anggota tim - dipake buat fitur reassign lead (LeadModal "Ditugaskan
-  // ke"). BUG FIX: sebelumnya cuma di-fetch di dalem Leads.jsx sendiri, jadi
-  // LeadModal yang dibuka dari Dashboard/Deal/Visit/Advisor (pake instance
-  // GLOBAL di bawah, bukan yang di tab Leads) gak pernah dapet daftar ini -
-  // field "Ditugaskan ke" diem-diem gak pernah nongol di jalur itu.
-  const [orgMembers, setOrgMembers] = useState([]);
-  useEffect(() => {
-    if (!canManage) { setOrgMembers([]); return; }
-    db.getOrgMembers().then(setOrgMembers).catch(() => setOrgMembers([]));
-  }, [canManage]);
 
   // Tier yang dipilih user pas klik tombol pricing di landing page SEBELUM
   // daftar (lihat chooseTierAndSignup di Auth.jsx) - dipake buat personalisasi
