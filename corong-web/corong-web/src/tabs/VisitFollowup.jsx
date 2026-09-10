@@ -24,7 +24,7 @@ const CHECKIN_RADIUS_M = 100;
 // di lokasi) ATAU salah nerima (padahal jauh, kebetulan itungannya masuk).
 // Sekarang WAJIB nunggu sinyal di bawah ambang ini dulu sebelum GPS
 // dianggap valid buat check-in/simpan lokasi.
-const GOOD_ACCURACY_M = 50;
+const GOOD_ACCURACY_M = 30;
 
 // Konfirmasi lokasi SEBELUM minta foto - dulu langsung loncat ke ambil foto
 // begitu tombol diklik, user gak pernah eksplisit ngeliat/ngonfirmasi data
@@ -32,9 +32,10 @@ const GOOD_ACCURACY_M = 50;
 // "scanning" dulu sambil reverse-geocode koordinat jadi alamat asli (bukan
 // teks generik "GPS Anda saat ini") - baru abis itu tombol konfirmasi muncul.
 function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
-  const { mode, lead, distance, scanning, address, coords, accuracy, liveAccuracy } = confirmData;
-  const coordLabel = coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "";
-  const locationLabel = address || coordLabel;
+  const { mode, lead, distance, scanning, address, accuracy, liveAccuracy } = confirmData;
+  // User gak mau liat angka koordinat mentah - kalau reverse-geocode bener2
+  // gagal (jaringan/rate-limit), tunjukin frasa umum, JANGAN lat/lng.
+  const locationLabel = address || "lokasi GPS Anda saat ini";
   const accLabel = accuracy != null ? `±${Math.round(accuracy)}m` : null;
   return (
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={scanning ? undefined : onCancel}>
@@ -58,13 +59,12 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
           <>
             {mode === "checkin" ? (
               <p className="text-sm text-slate-600 mt-2">
-                Anda kedeteksi di <b>{locationLabel}</b>{address && <span className="text-slate-400"> (koordinat: {coordLabel})</span>}, sekitar <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi Anda beneran ada di lokasi ini sekarang, baru lanjut lampirin foto.
+                Anda kedeteksi di <b>{locationLabel}</b>, sekitar <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi Anda beneran ada di lokasi ini sekarang, baru lanjut lampirin foto.
               </p>
             ) : (
               <p className="text-sm text-slate-600 mt-2">
-                Nexto bakal nyimpen titik berikut sebagai lokasi <b>"{lead.name}"</b> buat verifikasi kunjungan berikutnya:
+                Nexto bakal nyimpen alamat berikut sebagai lokasi <b>"{lead.name}"</b> buat verifikasi kunjungan berikutnya:
                 <br /><b>{locationLabel}</b>
-                {address && <span className="text-slate-400 text-xs block mt-0.5">Koordinat presisi: {coordLabel}</span>}
                 <br />Kalau alamat di atas belum sampe nama jalan/gang (data peta di area ini emang belum lengkap), gapapa - titik GPS presisinya tetep kesimpen buat verifikasi kunjungan berikutnya. Pastikan Anda beneran lagi di lokasi customer ini sebelum lanjut.
               </p>
             )}

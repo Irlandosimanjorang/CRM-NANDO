@@ -676,31 +676,41 @@ export async function saveLeadLocation(id, latitude, longitude, accuracy_m = nul
 // jadi fallback ke bagian paling detail yang tersedia (dusun/RT-RW/desa).
 // Fail-open: kalau gagal (network/rate-limit), balikin null biar caller
 // fallback ke koordinat mentah.
+async function reverseGeocodeOnce(lat, lng) {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+    { headers: { Accept: "application/json" } }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  const a = data?.address;
+  if (!a) return data?.display_name || null;
+  const jalan = [a.road, a.house_number].filter(Boolean).join(" No. ");
+  const parts = [
+    jalan,
+    a.hamlet, // dusun/gang kecil, kalo ke-mapping di OSM
+    a.neighbourhood || a.suburb,
+    a.village || a.town,
+    a.city_district,
+    a.city || a.county,
+  ].filter(Boolean);
+  // Buang duplikat berurutan (misal suburb & village kebetulan sama nama)
+  const dedup = parts.filter((p, i) => p !== parts[i - 1]);
+  return dedup.length ? dedup.join(", ") : data?.display_name || null;
+}
+
+// User gak mau lagi liat angka koordinat mentah kalau alamatnya gagal
+// ke-resolve - jadi di sini dicoba 2x (Nominatim kadang timeout/rate-limit
+// sesaat) sebelum bener-bener nyerah dan balikin null ke caller.
 export async function reverseGeocode(lat, lng) {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-      { headers: { Accept: "application/json" } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const a = data?.address;
-    if (!a) return data?.display_name || null;
-    const jalan = [a.road, a.house_number].filter(Boolean).join(" No. ");
-    const parts = [
-      jalan,
-      a.hamlet, // dusun/gang kecil, kalo ke-mapping di OSM
-      a.neighbourhood || a.suburb,
-      a.village || a.town,
-      a.city_district,
-      a.city || a.county,
-    ].filter(Boolean);
-    // Buang duplikat berurutan (misal suburb & village kebetulan sama nama)
-    const dedup = parts.filter((p, i) => p !== parts[i - 1]);
-    return dedup.length ? dedup.join(", ") : data?.display_name || null;
-  } catch (_) {
-    return null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const address = await reverseGeocodeOnce(lat, lng);
+      if (address) return address;
+    } catch (_) { /* coba lagi */ }
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
   }
+  return null;
 }
 
 export async function uploadCheckinPhoto(file) {
