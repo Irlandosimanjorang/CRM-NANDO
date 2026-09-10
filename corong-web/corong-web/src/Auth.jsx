@@ -2305,12 +2305,12 @@ export default function Auth() {
                   Standard
                 </div>
 
-                {isEarlyBird && (
-                  <div className="mt-3 text-[13px] text-slate-600 line-through">
-                    {standardCycle === "monthly" ? PRICING_NORMAL.standard.monthlyPrice : PRICING_NORMAL.standard.quarterlyPerMonth}
-                  </div>
-                )}
-                <div className={`${isEarlyBird ? "mt-0.5" : "mt-3"} flex items-end gap-1`}>
+                <div className="mt-3 flex items-end gap-2">
+                  {isEarlyBird && (
+                    <span className="mb-1 text-xl font-semibold text-slate-600 line-through">
+                      {standardCycle === "monthly" ? PRICING_NORMAL.standard.monthlyPrice : PRICING_NORMAL.standard.quarterlyPerMonth}
+                    </span>
+                  )}
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
                     {standardCycle === "monthly" ? PRICING.standard.monthlyPrice : PRICING.standard.quarterlyPerMonth}
                   </span>
@@ -2368,12 +2368,12 @@ export default function Auth() {
                   Professional
                 </div>
 
-                {isEarlyBird && (
-                  <div className="relative mt-3 text-[13px] text-orange-200/40 line-through">
-                    {professionalCycle === "monthly" ? PRICING_NORMAL.professional.monthlyPrice : PRICING_NORMAL.professional.quarterlyPerMonth}
-                  </div>
-                )}
-                <div className={`relative ${isEarlyBird ? "mt-0.5" : "mt-3"} flex items-end gap-1`}>
+                <div className="relative mt-3 flex items-end gap-2">
+                  {isEarlyBird && (
+                    <span className="mb-1 text-xl font-semibold text-orange-200/40 line-through">
+                      {professionalCycle === "monthly" ? PRICING_NORMAL.professional.monthlyPrice : PRICING_NORMAL.professional.quarterlyPerMonth}
+                    </span>
+                  )}
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
                     {professionalCycle === "monthly" ? PRICING.professional.monthlyPrice : PRICING.professional.quarterlyPerMonth}
                   </span>
@@ -2431,12 +2431,12 @@ export default function Auth() {
                     Enterprise
                   </div>
 
-                  {isEarlyBird && (
-                    <div className="mt-3 text-[13px] text-violet-200/40 line-through">
-                      {enterpriseCycle === "monthly" ? PRICING_NORMAL.enterprise.monthlyPrice : PRICING_NORMAL.enterprise.quarterlyPerMonth}
-                    </div>
-                  )}
-                  <div className={`${isEarlyBird ? "mt-0.5" : "mt-3"} flex items-end gap-1`}>
+                  <div className="mt-3 flex items-end gap-2">
+                    {isEarlyBird && (
+                      <span className="mb-1 text-xl font-semibold text-violet-200/40 line-through">
+                        {enterpriseCycle === "monthly" ? PRICING_NORMAL.enterprise.monthlyPrice : PRICING_NORMAL.enterprise.quarterlyPerMonth}
+                      </span>
+                    )}
                     <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
                       {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.quarterlyPerMonth}
                     </span>
