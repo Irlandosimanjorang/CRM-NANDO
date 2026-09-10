@@ -8,11 +8,9 @@ import {
   Trash2,
   Pencil,
   Mail,
-  Globe,
   ShieldCheck,
   ShieldAlert,
   Copy,
-  MapPin,
   Sparkles,
   Phone,
   ClipboardList,
@@ -29,14 +27,9 @@ import * as db from "../lib/db";
 
 import {
   stageMeta,
-  chipStyle,
-  prioMeta,
-  typeBadge,
   waLink,
   daysSince,
   fmtRp,
-  prettyDomain,
-  isNewLead,
   todayISO,
   nameSimilarity,
 } from "../lib/helpers";

@@ -544,6 +544,20 @@ export default function App() {
   const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
   const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
 
+  const isEnterprise = org?.plan === "enterprise";
+  const canManage = !!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager";
+
+  // Daftar anggota tim - dipake buat fitur reassign lead (LeadModal "Ditugaskan
+  // ke"). BUG FIX: sebelumnya cuma di-fetch di dalem Leads.jsx sendiri, jadi
+  // LeadModal yang dibuka dari Dashboard/Deal/Visit/Advisor (pake instance
+  // GLOBAL di bawah, bukan yang di tab Leads) gak pernah dapet daftar ini -
+  // field "Ditugaskan ke" diem-diem gak pernah nongol di jalur itu.
+  const [orgMembers, setOrgMembers] = useState([]);
+  useEffect(() => {
+    if (!canManage) { setOrgMembers([]); return; }
+    db.getOrgMembers().then(setOrgMembers).catch(() => setOrgMembers([]));
+  }, [canManage]);
+
   // Tier yang dipilih user pas klik tombol pricing di landing page SEBELUM
   // daftar (lihat chooseTierAndSignup di Auth.jsx) - dipake buat personalisasi
   // banner upgrade di bawah, biar gak generic "Upgrade Professional" doang
@@ -865,7 +879,7 @@ export default function App() {
                 <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
-                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={!!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager"} isEnterprise={org?.plan === "enterprise"} />
+                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
               </div>
               <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
                 {visitedTabs.has("generateleads") && (
@@ -963,7 +977,7 @@ export default function App() {
         </nav>
       </div>
 
-      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={!!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager"} isEnterprise={org?.plan === "enterprise"} />}
+      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
     </div>
   );
 }
