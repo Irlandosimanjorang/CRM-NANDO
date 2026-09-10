@@ -196,7 +196,7 @@ export default function App() {
     setVisitedTabs((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
   }, [tab]);
   const [stages, setStages] = useState([]);
-  const [settings, setSettings] = useState({ sales_names: [] });
+  const [settings, setSettings] = useState({});
   const [leads, setLeads] = useState([]);
   const [dealTransactions, setDealTransactions] = useState([]);
   const [competitors, setCompetitors] = useState([]);
@@ -911,7 +911,7 @@ export default function App() {
                     overlay generic yang dulu nutup SELURUH tab termasuk
                     tombol-tombol itu (bug: user Free gak bisa hapus akun
                     sendiri sama sekali). */}
-                <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} mayarLink={MAYAR_PAYMENT_LINK} userEmail={session?.user?.email} locked={isLocked("settings")} />
+                <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} userEmail={session?.user?.email} locked={isLocked("settings")} />
               </div>
             </>
           )}
@@ -955,10 +955,6 @@ export default function App() {
   );
 }
 
-// Bungkus konten tab yang butuh Premium - kelihatan isinya (biar user tau apa
-// yang bakal mereka dapet), tapi klik apapun di dalemnya (tombol, form, dst)
-// ke-tangkep sama lapisan transparan ini dan cuma munculin ajakan upgrade -
-// gak ada perubahan data yang beneran kejadian.
 // Switcher industri - CUMA muncul buat admin platform (is_platform_admin).
 // Beda dari IndustryPicker (onboarding sekali doang), ini boleh dipencet
 // berkali-kali - dipake Nando buat gonta-ganti industri pas demo/pitching,

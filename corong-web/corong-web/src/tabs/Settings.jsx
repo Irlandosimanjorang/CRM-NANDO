@@ -44,7 +44,7 @@ function getSavedTgCode() {
   }
 }
 
-export default function Settings({ settings, stages, leads, onChanged, mayarLink, userEmail, locked }) {
+export default function Settings({ settings, stages, leads, onChanged, userEmail, locked }) {
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");

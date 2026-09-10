@@ -456,12 +456,7 @@ export async function initDefaultStages() {
 // ---- SETTINGS ----
 export async function getSettings() {
   const { data } = await supabase.from("settings").select("*").maybeSingle();
-  return data || { sales_names: [] };
-}
-export async function saveSalesNames(names) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
-  const { error } = await supabase.from("settings").upsert({ user_id: uid, sales_names: names, updated_at: new Date().toISOString() });
-  if (error) throw error;
+  return data || {};
 }
 
 // ---- LEADS ----
