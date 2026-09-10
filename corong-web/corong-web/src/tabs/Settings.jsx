@@ -363,13 +363,17 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       <h1 className="text-2xl font-bold tracking-tight">Pengaturan</h1>
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Users size={15} className="text-violet-500" /> Tim</h3>
+        {/* Judul & teks kartu ini beda buat Enterprise (tim beneran, banyak
+            anggota) vs plan lain (akun pribadi, cuma dia sendiri) - biar gak
+            kesan ada "tim"/"anggota" padahal cuma 1 orang. */}
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Users size={15} className="text-violet-500" /> {isEnterprise ? "Tim" : "Akun"}</h3>
         {orgLoading ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : (
           <>
             <p className="text-xs text-slate-500 mb-3">
-              Paket: <b>{isEnterprise ? "Enterprise" : (TIER_LABEL[settings.plan] || "Free")}</b> · {members.length}/{org?.member_limit || 1} anggota
+              Paket: <b>{isEnterprise ? "Enterprise" : (TIER_LABEL[settings.plan] || "Free")}</b>
+              {isEnterprise && <> · {members.length}/{org?.member_limit || 1} anggota</>}
               {(() => {
                 const expiresAt = isEnterprise ? org?.plan_expires_at : settings.plan_expires_at;
                 if (!expiresAt) return null;
