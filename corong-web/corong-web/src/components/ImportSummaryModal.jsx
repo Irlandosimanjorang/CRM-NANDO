@@ -3,11 +3,19 @@ import { X, CheckCircle2, Copy, StickyNote, Sparkles } from "lucide-react";
 
 // Ringkasan hasil import Excel/CSV - dulu cuma alert() polos "Import selesai:
 // X lead" tanpa detail apa aja yang beneran masuk atau yang dilewatin karena
-// udah ada (duplikat). Sekarang ditampilin lengkap: daftar yang berhasil
-// masuk (+ tanda kalau ada catatan yang ikut kesimpen sebagai progress note),
-// dan daftar yang DITOLAK karena nama company/lead-nya udah ada di CRM
-// (exact match ATAU mirip banget - sama threshold kayak fitur "Cek Duplikat"),
-// biar user gak nyangka "kok kurang" pas jumlahnya beda dari total baris di Excel.
+// duplikat. Sekarang ditampilin lengkap: daftar yang berhasil masuk (+ tanda
+// kalau ada catatan yang ikut kesimpen sebagai progress note), dan daftar
+// yang DITOLAK karena namanya duplikat (exact match ATAU mirip banget - sama
+// threshold kayak fitur "Cek Duplikat"), biar user gak nyangka "kok kurang"
+// pas jumlahnya beda dari total baris di Excel.
+//
+// BUG FIX (10 Sep 2026): duplikat itu bisa dari 2 SUMBER beda - (1) nama
+// yang udah ada di CRM dari SEBELUM import ini, atau (2) 2+ baris yang mirip
+// di DALAM file Excel yang lagi diimport ini juga. Sebelumnya keduanya
+// digeneralisir jadi 1 teks "udah ada di CRM" - bikin akun BARU yang CRM-nya
+// masih 100% kosong keliatan aneh/nyurigain pas ada baris yang "dilewati -
+// udah ada di CRM" padahal gak ada satupun lead lama. Sekarang dibedain
+// tegas lewat field `duplicates[].source` ("existing" vs "this_import").
 export default function ImportSummaryModal({ summary, onClose }) {
   const { imported, duplicates, usedAiFallback } = summary;
 
@@ -27,7 +35,7 @@ export default function ImportSummaryModal({ summary, onClose }) {
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <span className="text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full px-2.5 py-1">✅ {imported.length} masuk</span>
           {duplicates.length > 0 && (
-            <span className="text-xs font-medium bg-amber-50 text-amber-700 rounded-full px-2.5 py-1">⚠️ {duplicates.length} dilewati (udah ada)</span>
+            <span className="text-xs font-medium bg-amber-50 text-amber-700 rounded-full px-2.5 py-1">⚠️ {duplicates.length} dilewati (duplikat)</span>
           )}
           {usedAiFallback && (
             <span className="text-xs font-medium bg-violet-50 text-violet-700 rounded-full px-2.5 py-1 flex items-center gap-1"><Sparkles size={11} /> dibantu AI baca formatnya</span>
@@ -50,14 +58,20 @@ export default function ImportSummaryModal({ summary, onClose }) {
 
         {duplicates.length > 0 && (
           <div className="mb-1">
-            <p className="text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><Copy size={12} /> Dilewati - nama ini udah ada di CRM ({duplicates.length})</p>
+            <p className="text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><Copy size={12} /> Dilewati - duplikat ({duplicates.length})</p>
             <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
               {duplicates.map((d, i) => (
                 <div key={i} className="text-xs bg-amber-50/60 rounded-lg px-2.5 py-1.5">
                   <span className="text-amber-800">{d.name}</span>
-                  {d.matchedName && d.matchedName.toLowerCase() !== d.name.toLowerCase() && (
-                    <span className="text-amber-500"> → mirip "{d.matchedName}"</span>
-                  )}
+                  {/* Dibedain sumbernya - "udah ada di CRM" (data lama) vs
+                      "duplikat di file yang sama" (2 baris mirip di Excel
+                      yang sama-sama diimport barusan) - sebelumnya digeneralisir
+                      jadi 1 teks doang, bikin akun BARU yang CRM-nya masih
+                      kosong keliatan aneh pas ada baris "udah ada di CRM". */}
+                  <span className="text-amber-500">
+                    {" "}→ {d.source === "existing" ? "udah ada di CRM" : "duplikat di file yang sama"}
+                    {d.matchedName && d.matchedName.toLowerCase() !== d.name.toLowerCase() && ` ("${d.matchedName}")`}
+                  </span>
                 </div>
               ))}
             </div>

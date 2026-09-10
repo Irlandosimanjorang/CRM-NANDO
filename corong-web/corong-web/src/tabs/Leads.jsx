@@ -923,11 +923,17 @@ export default function Leads({
     // baris-baris baru DALAM satu file import yang sama-sama mirip juga
     // ketangkep, bukan cuma yang mirip sama lead lama.
     const existingByKey = new Map(leads.map((l) => [l.name.trim().toLowerCase(), l.name]));
+    // Snapshot nama-nama yang UDAH ADA di database SEBELUM import ini mulai -
+    // dipake buat bedain "duplikat sama data lama di CRM" vs "duplikat sama
+    // baris LAIN di file yang lagi diimport sekarang" (dua kasus beda yang
+    // sebelumnya digeneralisir jadi 1 pesan "udah ada di CRM" - bikin bingung
+    // akun BARU yang CRM-nya masih kosong tapi tetep ada baris "dilewati").
+    const originalLeadNames = new Set(leads.map((l) => l.name));
     const knownNames = leads.map((l) => l.name);
     const seenThisImport = new Set();
 
     const toInsert = []; // { lead, notes }
-    const duplicates = []; // { name, matchedName, score }
+    const duplicates = []; // { name, matchedName, score, source: "existing" | "this_import" }
 
     for (const m of leadRows) {
       const name = (m.name || "").trim();
@@ -936,13 +942,13 @@ export default function Leads({
 
       const existingExact = existingByKey.get(key);
       if (existingExact || seenThisImport.has(key)) {
-        duplicates.push({ name, matchedName: existingExact || name, score: 1 });
+        duplicates.push({ name, matchedName: existingExact || name, score: 1, source: existingExact ? "existing" : "this_import" });
         continue;
       }
 
       const fuzzyMatchName = knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD);
       if (fuzzyMatchName) {
-        duplicates.push({ name, matchedName: fuzzyMatchName, score: nameSimilarity(fuzzyMatchName, name) });
+        duplicates.push({ name, matchedName: fuzzyMatchName, score: nameSimilarity(fuzzyMatchName, name), source: originalLeadNames.has(fuzzyMatchName) ? "existing" : "this_import" });
         continue;
       }
 
