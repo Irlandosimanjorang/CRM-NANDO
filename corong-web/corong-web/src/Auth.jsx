@@ -2288,10 +2288,6 @@ export default function Auth() {
                 Berapa banyak "karyawan AI"
                 <span className="block text-slate-500">yang mau Anda pekerjakan?</span>
               </h2>
-              <p className="mx-auto mt-4 max-w-lg text-[13px] leading-relaxed text-slate-500">
-                Daftar sekarang dan kunci harga Early Bird — hemat 15% untuk paket 3 bulan pertama sebelum periode ini berakhir.
-              </p>
-
             </div>
 
             <div className="mx-auto mt-14 grid max-w-6xl gap-5 lg:grid-cols-3 lg:items-start">
