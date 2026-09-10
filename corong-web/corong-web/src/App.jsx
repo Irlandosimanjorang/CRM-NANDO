@@ -952,7 +952,7 @@ export default function App() {
         </nav>
       </div>
 
-      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} />}
+      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={!!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager"} isEnterprise={org?.plan === "enterprise"} />}
     </div>
   );
 }

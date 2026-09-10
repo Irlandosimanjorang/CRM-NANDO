@@ -86,7 +86,7 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Gak ada budget", "G
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, isOwner, members, myUid }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, isOwner, members, myUid, canManage, isEnterprise }) {
   const [f, setF] = useState({ ...lead });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
@@ -223,7 +223,26 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     }
     catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
-  const del = async () => { if (!window.confirm("Hapus lead ini?")) return; setBusy(true); await db.deleteLead(lead.id); onSaved(); };
+  // Approval-gate (Enterprise) - sama kayak tombol hapus di kartu Leads,
+  // sales_rep gak boleh langsung hapus dari SINI juga (dulu kelewat - modal
+  // ini punya tombol Hapus SENDIRI, terpisah dari yang di LeadCard).
+  const del = async () => {
+    if (isEnterprise && !canManage) {
+      if (!window.confirm(`Kirim permintaan hapus lead "${lead.name || "ini"}" ke owner/manager?`)) return;
+      setBusy(true);
+      try {
+        await db.requestApproval("delete_lead", { lead_id: lead.id, lead_name: lead.name || "" });
+        alert("Permintaan hapus dikirim. Nunggu di-approve owner/manager dulu.");
+        onClose();
+      } catch (e) { alert("Gagal kirim permintaan: " + e.message); }
+      finally { setBusy(false); }
+      return;
+    }
+    if (!window.confirm("Hapus lead ini?")) return;
+    setBusy(true);
+    await db.deleteLead(lead.id);
+    onSaved();
+  };
 
   const addProg = async () => {
     if (!newProg.trim() || !lead.id) { if (!lead.id) alert("Simpan lead-nya dulu sebelum catat progress."); return; }

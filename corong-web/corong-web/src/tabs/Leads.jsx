@@ -1910,6 +1910,12 @@ export default function Leads({
           myUid={
             myUid
           }
+          canManage={
+            canManage
+          }
+          isEnterprise={
+            isEnterprise
+          }
           onSaved={() => {
 
             setEdit(null);
