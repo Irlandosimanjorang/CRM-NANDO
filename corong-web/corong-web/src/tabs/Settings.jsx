@@ -381,8 +381,12 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
               {members.map((m) => (
                 <div key={m.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
                   <div className="text-xs flex items-center gap-1.5">
-                    {m.role === "owner" && <Crown size={12} className="text-amber-500" />}
-                    {m.user_id === myUid ? "Anda" : (m.display_name || `Anggota ${m.user_id.slice(0, 8)}`)} <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>
+                    {/* Label role (Owner/Manager/Sales Rep) cuma masuk akal buat
+                        tim beneran (Enterprise) - Free/Standard/Professional
+                        itu akun PRIBADI, jadi gak usah dilabelin "Owner". */}
+                    {isEnterprise && m.role === "owner" && <Crown size={12} className="text-amber-500" />}
+                    {m.user_id === myUid ? "Anda" : (m.display_name || `Anggota ${m.user_id.slice(0, 8)}`)}
+                    {isEnterprise && <span className="text-slate-400">· {ROLE_LABEL[m.role] || m.role}</span>}
                   </div>
                   {isOwner && m.user_id !== myUid && (
                     <button onClick={() => removeMember(m.id, ROLE_LABEL[m.role])} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
