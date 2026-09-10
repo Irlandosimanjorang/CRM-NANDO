@@ -110,6 +110,34 @@ export async function redeemInviteCode(code) {
 }
 
 export async function removeMember(memberId) {
+  const { data: member, error: mErr } = await supabase
+    .from("organization_members")
+    .select("user_id, org_id")
+    .eq("id", memberId)
+    .single();
+  if (mErr) throw mErr;
+
+  // Leads yang tadinya assigned_to anggota ini dibalikin ke OWNER org, biar
+  // gak nyangkut nunjuk ke uid yang udah gak ada di tim lagi begitu dia
+  // dikeluarin (datanya sendiri aman - RLS owner tetep liat semua lead - tapi
+  // gak ada satu pun sales rep aktif yang "pegang" lead itu lagi kalau
+  // dibiarin nunjuk ke mantan anggota).
+  const { data: org, error: oErr } = await supabase
+    .from("organizations")
+    .select("owner_user_id")
+    .eq("id", member.org_id)
+    .single();
+  if (oErr) throw oErr;
+
+  if (org?.owner_user_id && org.owner_user_id !== member.user_id) {
+    const { error: reassignErr } = await supabase
+      .from("leads")
+      .update({ assigned_to: org.owner_user_id })
+      .eq("org_id", member.org_id)
+      .eq("assigned_to", member.user_id);
+    if (reassignErr) throw reassignErr;
+  }
+
   const { error } = await supabase.from("organization_members").delete().eq("id", memberId);
   if (error) throw error;
 }
