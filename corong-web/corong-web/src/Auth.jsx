@@ -2274,10 +2274,10 @@ export default function Auth() {
           <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
               {new Date() < EARLY_BIRD_DEADLINE && (
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1.5 text-[11px] font-semibold text-orange-300">
-                  <span className="relative flex h-1.5 w-1.5">
+                <div className="mb-4 inline-flex items-center gap-2.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-5 py-2.5 text-base font-bold text-orange-300 sm:text-lg">
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-500" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-500" />
                   </span>
                   Early Bird Registration — daftar sebelum 30 September 2026
                 </div>
@@ -2289,7 +2289,7 @@ export default function Auth() {
                 <span className="block text-slate-500">yang mau Anda pekerjakan?</span>
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-[13px] leading-relaxed text-slate-500">
-                Standard udah dibekelin AI ringan (import & rekomendasi harian). Dari Professional ke atas, AI Sales Engine-nya nyala penuh — analisis, draft pesan, dan eksekusi jalan sendiri di belakang layar.
+                Daftar sekarang dan kunci harga Early Bird — hemat 15% untuk paket 3 bulan pertama sebelum periode ini berakhir.
               </p>
 
             </div>
