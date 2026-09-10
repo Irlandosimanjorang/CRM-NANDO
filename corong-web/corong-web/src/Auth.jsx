@@ -2322,7 +2322,9 @@ export default function Auth() {
                 </div>
                 <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
                 {standardCycle === "quarterly" ? (
-                  <div className="mt-1.5 text-[9px] text-slate-500">Ditagih {PRICING.standard.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.standard.quarterlySavings}` : ""}</div>
+                  <div className="mt-1.5 text-[9px] text-slate-500">
+                    Ditagih {isEarlyBird && <span className="line-through">{PRICING_NORMAL.standard.quarterlyTotal}</span>} {PRICING.standard.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.standard.quarterlySavings}` : ""}
+                  </div>
                 ) : isEarlyBird && (
                   <div className="mt-1.5 text-[9px] text-slate-500">Hemat {PRICING.standard.monthlySavings}/bulan selama early bird</div>
                 )}
@@ -2387,7 +2389,9 @@ export default function Auth() {
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
                 </div>
                 {professionalCycle === "quarterly" ? (
-                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">Ditagih {PRICING.professional.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.professional.quarterlySavings}` : ""}</div>
+                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">
+                    Ditagih {isEarlyBird && <span className="line-through">{PRICING_NORMAL.professional.quarterlyTotal}</span>} {PRICING.professional.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.professional.quarterlySavings}` : ""}
+                  </div>
                 ) : isEarlyBird && (
                   <div className="relative mt-1.5 text-[9px] text-orange-300/80">Hemat {PRICING.professional.monthlySavings}/bulan selama early bird</div>
                 )}
@@ -2466,7 +2470,9 @@ export default function Auth() {
                     <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
                   </div>
                   {enterpriseCycle === "quarterly" ? (
-                    <div className="mt-1.5 text-[9px] text-violet-300/80">Ditagih {PRICING.enterprise.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.enterprise.quarterlySavings}` : ""}</div>
+                    <div className="mt-1.5 text-[9px] text-violet-300/80">
+                      Ditagih {isEarlyBird && <span className="line-through">{PRICING_NORMAL.enterprise.quarterlyTotal}</span>} {PRICING.enterprise.quarterlyTotal} tiap 3 bulan{isEarlyBird ? ` — hemat ${PRICING.enterprise.quarterlySavings}` : ""}
+                    </div>
                   ) : isEarlyBird && (
                     <div className="mt-1.5 text-[9px] text-violet-300/80">Hemat {PRICING.enterprise.monthlySavings}/bulan selama early bird</div>
                   )}
