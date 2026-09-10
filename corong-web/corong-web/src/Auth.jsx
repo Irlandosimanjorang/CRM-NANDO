@@ -399,12 +399,14 @@ const ENTERPRISE_FEATURES = [
   "Prioritas support",
 ];
 
-// Harga per siklus billing (9 Sep 2026 - dulu opsi 6 bulan cuma badge teks
-// statis "atau Rp395rb/6 bulan", sekarang ada toggle beneran yang ngubah
-// angka gede di kartu). "semiannualPerMonth" = total 6 bulan dibagi 6,
-// dibulatin ke ribuan terdekat biar rapi, DITAMPILIN sebagai harga
-// per-bulan biar gampang dibandingin sama mode bulanan - "semiannualTotal"
-// tetep disebutin di badge kecil biar jelas cara nagihnya sebenernya gimana.
+// Harga per siklus billing (10 Sep 2026 - opsi 6 bulan DIGANTI jadi paket
+// 3 bulan diskon 15%, bukan lagi "bayar 5 dapat 6"). "quarterlyPerMonth" =
+// total 3 bulan dibagi 3, dibulatin ke ribuan terdekat biar rapi,
+// DITAMPILIN sebagai harga per-bulan biar gampang dibandingin sama mode
+// bulanan - "quarterlyTotal" tetep disebutin di badge kecil biar jelas
+// cara nagihnya sebenernya gimana (1x bayar nutup 3 bulan, BUKAN
+// subscription bulanan yang harganya turun - lihat mayar-webhook.ts
+// AMOUNT_TO_TIER buat nominal exact yang dikenali).
 // Site key Cloudflare Turnstile (aman ditaro di frontend - beda dari secret
 // key yang cuma disimpen di sisi Supabase). Dipake buat render widget
 // captcha di form signup/login, dipasangin karena Supabase Auth "Enable
@@ -412,9 +414,9 @@ const ENTERPRISE_FEATURES = [
 const TURNSTILE_SITE_KEY = "0x4AAAAAAEu6vGXceQD1CTOl";
 
 const PRICING = {
-  standard: { monthlyPrice: "Rp79rb", semiannualPerMonth: "Rp66rb", semiannualTotal: "Rp395rb" },
-  professional: { monthlyPrice: "Rp269rb", semiannualPerMonth: "Rp224rb", semiannualTotal: "Rp1,345jt" },
-  enterprise: { monthlyPrice: "Rp1,3jt", semiannualPerMonth: "Rp1,08jt", semiannualTotal: "Rp6,5jt" },
+  standard: { monthlyPrice: "Rp79rb", quarterlyPerMonth: "Rp67rb", quarterlyTotal: "Rp201rb" },
+  professional: { monthlyPrice: "Rp269rb", quarterlyPerMonth: "Rp229rb", quarterlyTotal: "Rp686rb" },
+  enterprise: { monthlyPrice: "Rp1,3jt", quarterlyPerMonth: "Rp1,11jt", quarterlyTotal: "Rp3,315jt" },
 };
 
 const AI_DEMO_STATES = [
@@ -1731,10 +1733,10 @@ function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
         Bulanan
       </button>
       <button
-        onClick={() => setBillingCycle("semiannual")}
-        className={`min-h-[34px] rounded-full px-3 text-[10px] font-bold transition-colors ${billingCycle === "semiannual" ? activeBg : "text-slate-400 hover:text-slate-200"}`}
+        onClick={() => setBillingCycle("quarterly")}
+        className={`min-h-[34px] rounded-full px-3 text-[10px] font-bold transition-colors ${billingCycle === "quarterly" ? activeBg : "text-slate-400 hover:text-slate-200"}`}
       >
-        6 Bulan
+        3 Bulan
       </button>
     </div>
   );
@@ -1775,7 +1777,7 @@ export default function Auth() {
     return () => { cancelled = true; };
   }, []);
   // Toggle harga per kartu (Standard/Professional/Enterprise) - INDEPENDEN
-  // satu sama lain, gak shared, biar klik "6 Bulan" di 1 kartu gak ikut
+  // satu sama lain, gak shared, biar klik "3 Bulan" di 1 kartu gak ikut
   // ngubah kartu lain (9 Sep 2026, sebelumnya shared dan itu kerasa aneh).
   const [standardCycle, setStandardCycle] = useState("monthly");
   const [professionalCycle, setProfessionalCycle] = useState("monthly");
@@ -2290,7 +2292,7 @@ export default function Auth() {
 
                 <div className="mt-3 flex items-end gap-1">
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                    {standardCycle === "monthly" ? PRICING.standard.monthlyPrice : PRICING.standard.semiannualPerMonth}
+                    {standardCycle === "monthly" ? PRICING.standard.monthlyPrice : PRICING.standard.quarterlyPerMonth}
                   </span>
                   <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                 </div>
@@ -2299,8 +2301,8 @@ export default function Auth() {
                   CRM inti + AI ringan — untuk yang mau rapiin data leads dulu
                 </div>
                 <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
-                {standardCycle === "semiannual" && (
-                  <div className="mt-1.5 text-[9px] text-slate-500">Ditagih {PRICING.standard.semiannualTotal} tiap 6 bulan — bayar 5, dapat 6</div>
+                {standardCycle === "quarterly" && (
+                  <div className="mt-1.5 text-[9px] text-slate-500">Ditagih {PRICING.standard.quarterlyTotal} tiap 3 bulan — hemat 15%</div>
                 )}
 
                 <div className="my-7 h-px bg-white/[0.06]" />
@@ -2346,7 +2348,7 @@ export default function Auth() {
 
                 <div className="relative mt-3 flex items-end gap-1">
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                    {professionalCycle === "monthly" ? PRICING.professional.monthlyPrice : PRICING.professional.semiannualPerMonth}
+                    {professionalCycle === "monthly" ? PRICING.professional.monthlyPrice : PRICING.professional.quarterlyPerMonth}
                   </span>
                   <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                 </div>
@@ -2357,8 +2359,8 @@ export default function Auth() {
                 <div className="relative">
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
                 </div>
-                {professionalCycle === "semiannual" && (
-                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">Ditagih {PRICING.professional.semiannualTotal} tiap 6 bulan — bayar 5, dapat 6</div>
+                {professionalCycle === "quarterly" && (
+                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">Ditagih {PRICING.professional.quarterlyTotal} tiap 3 bulan — hemat 15%</div>
                 )}
 
                 <div className="relative my-7 h-px bg-white/[0.08]" />
@@ -2402,7 +2404,7 @@ export default function Auth() {
 
                   <div className="mt-3 flex items-end gap-1">
                     <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                      {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.semiannualPerMonth}
+                      {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.quarterlyPerMonth}
                     </span>
                     <span className="mb-1.5 text-[10px] text-slate-500">/bulan</span>
                   </div>
@@ -2429,8 +2431,8 @@ export default function Auth() {
                   <div className="mt-3">
                     <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
                   </div>
-                  {enterpriseCycle === "semiannual" && (
-                    <div className="mt-1.5 text-[9px] text-violet-300/80">Ditagih {PRICING.enterprise.semiannualTotal} tiap 6 bulan — bayar 5, dapat 6</div>
+                  {enterpriseCycle === "quarterly" && (
+                    <div className="mt-1.5 text-[9px] text-violet-300/80">Ditagih {PRICING.enterprise.quarterlyTotal} tiap 3 bulan — hemat 15%</div>
                   )}
 
                   <div className="my-7 h-px bg-white/10" />
