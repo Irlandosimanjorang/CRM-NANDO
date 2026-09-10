@@ -285,6 +285,22 @@ export async function draftFollowup(leadId, channel) {
   return data;
 }
 
+// ---- HAPUS AKUN SENDIRI - self-service dari tab Pengaturan (sebelumnya gak
+// ada fitur ini sama sekali, satu-satunya cara hapus akun minta admin
+// jalanin SQL manual). Perilaku beda tergantung role - lihat komentar di
+// edge function delete-my-account: owner = seluruh organisasi ikut kehapus
+// (ditolak kalau masih ada anggota lain), role lain = cukup keluar dari tim. ----
+export async function deleteMyAccount() {
+  const { data, error } = await supabase.functions.invoke("delete-my-account");
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal hapus akun");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // ---- DASHBOARD ADMIN - status "karyawan AI" (health-check, daily-digest,
 // bot Telegram, dst) buat SELURUH platform. Cuma bisa dipanggil sama admin
 // (dicek server-side di Edge Function-nya, bukan cuma disembunyiin di UI). ----

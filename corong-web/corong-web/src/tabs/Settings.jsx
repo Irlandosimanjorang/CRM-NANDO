@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
 import RecycleBinModal from "../components/RecycleBinModal";
+import DeleteAccountModal from "../components/DeleteAccountModal";
 import SupportChatWidget from "../components/SupportChatWidget";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 import { PLAN_LEVEL, TIER_LABEL } from "../lib/plans";
@@ -184,6 +185,7 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
   const [joinCode, setJoinCode] = useState("");
   const [joinBusy, setJoinBusy] = useState(false);
   const [joinMsg, setJoinMsg] = useState("");
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
   const loadOrg = () => {
     setOrgLoading(true);
@@ -702,8 +704,23 @@ export default function Settings({ settings, stages, leads, onChanged, mayarLink
       <div className="bg-white border border-rose-200 rounded-2xl shadow-sm p-4">
         <h3 className="font-semibold text-sm mb-1 text-rose-600">Zona bahaya</h3>
         <p className="text-xs text-slate-500 mb-2">Keluar dari akun ini di perangkat ini.</p>
-        <button onClick={() => supabase.auth.signOut()} className="text-sm border border-rose-300 text-rose-600 rounded-xl px-3 py-2 hover:bg-rose-50">Keluar</button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => supabase.auth.signOut()} className="text-sm border border-rose-300 text-rose-600 rounded-xl px-3 py-2 hover:bg-rose-50">Keluar</button>
+          <button onClick={() => setShowDeleteAccount(true)} className="text-sm bg-rose-600 text-white rounded-xl px-3 py-2 hover:bg-rose-700 flex items-center gap-1.5">
+            <Trash2 size={14} /> Hapus Akun
+          </button>
+        </div>
       </div>
+
+      {showDeleteAccount && (
+        <DeleteAccountModal
+          isOwner={isOwner}
+          otherMemberCount={Math.max(0, members.length - 1)}
+          orgName={org?.name}
+          userEmail={userEmail}
+          onClose={() => setShowDeleteAccount(false)}
+        />
+      )}
 
       {showCleanup && <DataCleanupModal leads={leads} stages={stages} onClose={() => { setShowCleanup(false); clearOpenModal("datacleanup"); }} onChanged={onChanged} />}
       {showRecycleBin && <RecycleBinModal onClose={() => { setShowRecycleBin(false); clearOpenModal("recyclebin"); }} onChanged={onChanged} />}
