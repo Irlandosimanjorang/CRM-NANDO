@@ -181,6 +181,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [myUid, setMyUid] = useState(null);
   const [orgLoading, setOrgLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState("");
+  const [inviteExpiresAt, setInviteExpiresAt] = useState(null);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinBusy, setJoinBusy] = useState(false);
@@ -198,7 +199,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         // refresh token pas tab browser balik fokus, yang bikin App.jsx
         // sempet nyalain loading spinner sebentar), kodenya keliatan "ilang"
         // padahal masih valid, dan owner harus generate ulang tiap kali.
-        if (pending?.[0]) setInviteCode(pending[0].code);
+        if (pending?.[0]) { setInviteCode(pending[0].code); setInviteExpiresAt(pending[0].expires_at); }
       })
       .catch(() => {})
       .finally(() => setOrgLoading(false));
@@ -210,6 +211,19 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     loadOrg();
     loadMfaFactors();
   }, []);
+
+  // Kode invite otomatis ilang dari layar begitu beneran expired (1 jam),
+  // TANPA nunggu tab-nya di-refresh/remount dulu - sebelumnya baru ke-clear
+  // kalau loadOrg() jalan ulang (misal abis remount), jadi kalau owner
+  // biarin tab Pengaturan kebuka lebih dari 1 jam, kodenya keliatan masih
+  // "aktif" padahal udah gak valid lagi buat dipake gabung.
+  useEffect(() => {
+    if (!inviteExpiresAt) return;
+    const ms = new Date(inviteExpiresAt).getTime() - Date.now();
+    if (ms <= 0) { setInviteCode(""); setInviteExpiresAt(null); return; }
+    const t = setTimeout(() => { setInviteCode(""); setInviteExpiresAt(null); }, ms);
+    return () => clearTimeout(t);
+  }, [inviteExpiresAt]);
 
   const isOwner = org && myUid && org.owner_user_id === myUid;
   const isEnterprise = org?.plan === "enterprise";
@@ -228,7 +242,11 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
   const generateInvite = async () => {
     setInviteBusy(true);
-    try { setInviteCode(await db.createInviteCode("sales_rep")); }
+    try {
+      const row = await db.createInviteCode("sales_rep");
+      setInviteCode(row.code);
+      setInviteExpiresAt(row.expires_at);
+    }
     catch (e) { alert("Gagal bikin kode: " + e.message); }
     finally { setInviteBusy(false); }
   };

@@ -79,7 +79,7 @@ export async function createInviteCode(role = "sales_rep") {
   const expires = new Date(Date.now() + 60 * 60000).toISOString(); // 1 jam
   const { error } = await supabase.from("org_invite_codes").insert({ code, org_id: orgId, created_by: uid, role, expires_at: expires });
   if (error) throw error;
-  return code;
+  return { code, expires_at: expires };
 }
 
 export async function getPendingInviteCodes() {
