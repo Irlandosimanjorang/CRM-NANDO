@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2 } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -930,6 +930,40 @@ export default function AdminDashboard() {
           ) : (
             <span className="text-emerald-400">nihil eskalasi</span>
           )}
+        </div>
+      ),
+    },
+    {
+      // SAPU (10 Sep 2026) - weekly-garbage-sweep. Beresin sampah database
+      // operasional otomatis (nol resiko data bisnis), org orphan yang masih
+      // ada datanya cuma DILAPORIN di sini, gak di-auto-hapus - keputusan
+      // tetep manual (approval-gate philosophy, sama kayak sisa app-nya).
+      key: "sapu",
+      title: "SAPU",
+      subtitle: "Kebersihan Database",
+      icon: Trash2,
+      accentColor: (status?.garbage_sweep?.needs_review?.length ?? 0) > 0 ? "#f59e0b" : "#38bdf8",
+      glowClass: (status?.garbage_sweep?.needs_review?.length ?? 0) > 0 ? "shadow-[0_0_40px_-25px_rgba(245,158,11,0.6)]" : "shadow-[0_0_40px_-25px_rgba(56,189,248,0.6)]",
+      ok: (status?.garbage_sweep?.needs_review?.length ?? 0) === 0,
+      gaugeValue: (status?.garbage_sweep?.needs_review?.length ?? 0) === 0 ? 100 : Math.max(40, 100 - (status.garbage_sweep.needs_review.length) * 20),
+      triggerKey: "weekly-garbage-sweep",
+      content: (
+        <div className="text-[11px] text-slate-400 font-mono">
+          {status?.garbage_sweep ? (
+            <>
+              terakhir jalan <span className="text-slate-200">{timeAgo(status.garbage_sweep.ran_at)}</span>
+              <br />
+              <span className="text-slate-200 font-bold">
+                {Object.values(status.garbage_sweep.counts || {}).reduce((a, b) => a + b, 0) + (status.garbage_sweep.auto_deleted_empty_orgs || 0)}
+              </span>{" "}
+              baris/org sampah dibersihin otomatis ·{" "}
+              {(status.garbage_sweep.needs_review?.length ?? 0) > 0 ? (
+                <span className="text-amber-400">{status.garbage_sweep.needs_review.length} org butuh dicek manual</span>
+              ) : (
+                <span className="text-emerald-400">nihil yang perlu dicek manual</span>
+              )}
+            </>
+          ) : "belum pernah jalan - klik Panggil buat tes pertama"}
         </div>
       ),
     },
