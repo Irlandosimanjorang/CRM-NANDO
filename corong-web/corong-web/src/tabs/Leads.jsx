@@ -664,8 +664,21 @@ export default function Leads({
 
   const kpi = useMemo(() => {
 
+    // KPI ngikutin filter "sales rep" (fAssignee) juga - biar owner yang
+    // lagi liatin lead punya satu rep tertentu keliatan angka Active/Hot/
+    // Won/No Contact YANG BENERAN buat rep itu, bukan angka gabungan
+    // seluruh tim yang nyesatin.
+    const kpiBase =
+      fAssignee
+        ? leads.filter(
+            (l) =>
+              l.assigned_to ===
+              fAssignee
+          )
+        : leads;
+
     const total =
-      leads.length;
+      kpiBase.length;
 
     const activeStageKeys =
       stages
@@ -689,7 +702,7 @@ export default function Leads({
         );
 
     const active =
-      leads.filter(
+      kpiBase.filter(
         (lead) =>
           activeStageKeys.includes(
             lead.stage_key
@@ -697,7 +710,7 @@ export default function Leads({
       ).length;
 
     const hot =
-      leads.filter(
+      kpiBase.filter(
         (lead) =>
           String(
             lead.priority || ""
@@ -706,7 +719,7 @@ export default function Leads({
       ).length;
 
     const won =
-      leads.filter(
+      kpiBase.filter(
         (lead) =>
           wonStageKeys.includes(
             lead.stage_key
@@ -714,7 +727,7 @@ export default function Leads({
       ).length;
 
     const noContact =
-      leads.filter(
+      kpiBase.filter(
         (lead) =>
           !lead.phone &&
           !lead.email
@@ -731,6 +744,7 @@ export default function Leads({
   }, [
     leads,
     stages,
+    fAssignee,
   ]);
 
 
