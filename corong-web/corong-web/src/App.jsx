@@ -854,7 +854,7 @@ export default function App() {
                 <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
-                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} isOwner={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} canManage={!!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager"} isEnterprise={org?.plan === "enterprise"} />
+                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={!!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager"} isEnterprise={org?.plan === "enterprise"} />
               </div>
               <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
                 {visitedTabs.has("generateleads") && (

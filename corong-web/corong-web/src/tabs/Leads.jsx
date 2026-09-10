@@ -216,7 +216,7 @@ function initials(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, isOwner, members, onReassign }) {
+function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign }) {
   // Progress bar mulai dari 0% terus animasi jalan ke posisi asli begitu
   // kartu ini muncul di layar - kesan "hidup", bukan langsung nongol jadi.
   const [barReady, setBarReady] = useState(false);
@@ -341,10 +341,10 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
             <Sparkles size={13} />
           </button>
 
-          {/* Reassign - cuma owner yang liat ini, biar bisa mindahin lead
-              punya sales_rep A ke sales_rep B kapan aja (misal si A resign,
-              atau kerjaannya mau diratain ulang). */}
-          {isOwner && members.length > 1 && (
+          {/* Reassign - owner ATAU manager yang liat ini, biar bisa mindahin
+              lead punya sales_rep A ke sales_rep B kapan aja (misal si A
+              resign, atau kerjaannya mau diratain ulang). */}
+          {canManage && members.length > 1 && (
             <select
               value={c.assigned_to || ""}
               onClick={(e) => e.stopPropagation()}
@@ -467,7 +467,6 @@ export default function Leads({
   customFieldLabels,
   myLevel,
   onChanged,
-  isOwner,
   canManage,
   isEnterprise,
 }) {
@@ -481,17 +480,19 @@ export default function Leads({
   const [fType, setFType] =
     useState("");
 
-  // Daftar anggota tim (buat filter "leads siapa" & reassign) - cuma owner
-  // yang butuh ini, karena cuma owner (lewat RLS leads_role_access) yang
-  // bisa liat & ubah lead SEMUA orang di orgnya.
+  // Daftar anggota tim (buat filter "leads siapa" & reassign) - owner ATAU
+  // manager yang butuh ini, karena RLS leads_role_access ngasih owner/manager
+  // dua-duanya akses liat & ubah lead SEMUA orang di orgnya (sales_rep cuma
+  // lead-nya sendiri). BUG FIX: sebelumnya di-gate ke isOwner doang, bikin
+  // manager gak keliatan fitur ini padahal RLS-nya udah ngasih akses.
   const [members, setMembers] = useState([]);
   const [fAssignee, setFAssignee] = useState("");
   const [myUid, setMyUid] = useState(null);
   useEffect(() => {
-    if (!isOwner) return;
+    if (!canManage) return;
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
     db.getCurrentUserId().then(setMyUid).catch(() => setMyUid(null));
-  }, [isOwner]);
+  }, [canManage]);
 
   // Approval-gate export (Enterprise) - sales_rep butuh persetujuan
   // owner/manager dulu sebelum bisa export data. Status request TERBARU
@@ -1540,7 +1541,7 @@ export default function Leads({
           )}
 
 
-          {isOwner && members.length > 1 && (
+          {canManage && members.length > 1 && (
 
             <select
               value={fAssignee}
@@ -1698,7 +1699,7 @@ export default function Leads({
             onDelete={del}
             onDraft={openDraftPopup}
             onProgress={(lead) => { setProgressPopup({ lead, autoFocus: true }); saveOpenModal("progress", { leadId: lead.id }); }}
-            isOwner={isOwner}
+            canManage={canManage}
             members={members}
             onReassign={async (leadId, uid) => { await db.updateLeadAssignee(leadId, uid); onChanged(); }}
           />
@@ -1900,9 +1901,6 @@ export default function Leads({
           }
           onClose={() =>
             setEdit(null)
-          }
-          isOwner={
-            isOwner
           }
           members={
             members
