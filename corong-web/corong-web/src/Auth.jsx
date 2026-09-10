@@ -2283,10 +2283,10 @@ export default function Auth() {
                 <span className="block text-slate-500">yang mau Anda pekerjakan?</span>
               </h2>
               {new Date() < EARLY_BIRD_DEADLINE && (
-                <div className="mt-5 inline-flex items-center gap-2.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-5 py-2.5 text-base font-bold text-orange-300 sm:text-lg">
-                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[13px] font-bold text-orange-300 sm:text-sm">
+                  <span className="relative flex h-2 w-2 shrink-0">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-500" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
                   </span>
                   Early Bird Registration — daftar sebelum 30 September 2026
                 </div>
