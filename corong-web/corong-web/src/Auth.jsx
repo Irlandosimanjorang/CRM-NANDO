@@ -1351,8 +1351,13 @@ function AiEngineLoopSection({ robotVoice }) {
             <EngineActionCard active={activeLoop === 3} />
           </div>
 
-          {/* core */}
-          <div className="absolute left-1/2 top-[35%] z-20 -translate-x-1/2 lg:top-[42%]">
+          {/* core - relative/mx-auto di mobile (ikut alur normal, gak numpuk sama
+              panel "Mobile: same composition" di bawahnya), balik ke absolute
+              cuma di lg+ buat komposisi canvas orbit desktop (10 Sep 2026 -
+              sebelumnya SELALU absolute top-[35%], bikin nimpa card LIVE
+              CONTEXT di HP karena badge LOOP ACTIVE-nya nongol jauh lebih
+              bawah dari 405px tempat panel mobile mulai). */}
+          <div className="relative z-20 mx-auto w-fit lg:absolute lg:left-1/2 lg:top-[42%] lg:mx-0 lg:w-auto lg:-translate-x-1/2">
             <div className="relative flex h-[330px] w-[330px] items-center justify-center sm:h-[360px] sm:w-[360px]">
               <div
                 className="nexto-command-motion absolute inset-[40px] rounded-full border border-blue-300/[0.08]"
@@ -1486,8 +1491,12 @@ function AiEngineLoopSection({ robotVoice }) {
             <span className="text-slate-800">↺</span>
           </div>
 
-          {/* Mobile: same composition, stacked cleanly */}
-          <div className="absolute inset-x-0 top-[405px] space-y-3 lg:hidden">
+          {/* Mobile: same composition, stacked cleanly - normal flow (bukan
+              absolute+top-px tetap), biar otomatis ngikutin tinggi asli si
+              "core" robot di atasnya, gak ngasal nimpa. mt-16 (bukan mt-8)
+              biar jarak cukup buat ngelewatin badge "LOOP ACTIVE" yang
+              nongol di luar box robot (-bottom-8 dari box-nya sendiri). */}
+          <div className="mt-16 space-y-3 lg:hidden">
             <div className="nexto-command-glass rounded-2xl p-4">
               <div className="flex items-center justify-between">
                 <div>
