@@ -799,7 +799,7 @@ export default function App() {
               <div className="font-extrabold tracking-[-0.03em] text-[14px]">NE<span className="text-orange-500">X</span>TO</div>
               <div className="text-[9px] font-medium text-slate-400 truncate">{NAV.find((n) => n.key === effectiveTab)?.label}</div>
             </div>
-            <NotificationBell org={org} onNavigate={setTab} />
+            <NotificationBell onNavigate={setTab} />
             <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={34} />
           </div>
         </header>
@@ -824,7 +824,7 @@ export default function App() {
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Data tersinkron
             </div>
-            <NotificationBell org={org} onNavigate={setTab} />
+            <NotificationBell onNavigate={setTab} />
           </div>
         </header>
 
@@ -1178,8 +1178,7 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
 // gak ada gunanya nampilin lonceng kosong buat tier yang gak punya fitur ini.
 // Polling tiap 45 detik (bukan realtime) - simpel, cukup buat kebutuhan
 // "keliatan gak lama-lama amat abis kejadian", gak perlu websocket buat ini.
-function NotificationBell({ org, onNavigate }) {
-  const isEnterprise = org?.plan === "enterprise";
+function NotificationBell({ onNavigate }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -1187,15 +1186,19 @@ function NotificationBell({ org, onNavigate }) {
   const btnRef = useRef(null);
   const CARD_WIDTH = 340;
 
+  // BUG FIX (11 Sep 2026): dulu bell ini SELURUHNYA disembunyiin buat akun
+  // non-Enterprise (`if (!isEnterprise) return null`) - masuk akal waktu
+  // itu karena satu-satunya notifikasi yang ada (check-in GPS) emang
+  // Enterprise-only. Sekarang ada notifikasi lain yang berlaku buat
+  // Professional ke atas juga (Pipeline Review), jadi gerbang Enterprise
+  // itu keliru - bell sekarang selalu tampil, kosong aja kalau emang gak
+  // ada notifikasi buat plan itu.
   useEffect(() => {
-    if (!isEnterprise) return;
     const refresh = () => db.getUnreadNotificationCount().then(setUnread).catch(() => {});
     refresh();
     const id = setInterval(refresh, 45000);
     return () => clearInterval(id);
-  }, [isEnterprise]);
-
-  if (!isEnterprise) return null;
+  }, []);
 
   const toggleOpen = () => {
     if (!open) {
