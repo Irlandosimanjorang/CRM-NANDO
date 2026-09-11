@@ -2216,7 +2216,7 @@ function DemoScene({ sceneKey }) {
           </div>
           <span className="text-[8.5px] text-slate-400">16 Sep</span>
         </div>
-        <p className="mt-1.5 text-[9.5px] leading-4 text-slate-600">
+        <p className="mt-1.5 line-clamp-2 text-[9.5px] leading-4 text-slate-600">
           14 hari terakhir: 6 lead baru, 2 closing. Fokus dorong PT Karya Mandiri sebelum harga penawaran expired.
         </p>
         <div className="mt-2.5 grid grid-cols-4 gap-1.5">
