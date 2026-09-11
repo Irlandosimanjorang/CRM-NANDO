@@ -385,7 +385,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               ))}
             </div>
           )}
-          {!hidden("location") && (
+          {!hidden("location") && isEnterprise && (
             <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs">
