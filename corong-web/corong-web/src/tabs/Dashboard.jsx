@@ -82,9 +82,10 @@ const markPlayedToday = () => { try { localStorage.setItem(playedTodayKey(), "1"
 // 2x/bulan lewat cron (edge function pipeline-review), BUKAN tombol
 // on-demand kayak fitur AI lain di Nexto. Badge/header-nya SELALU
 // ke-embed di Dashboard (biar user tau fitur ini ada) - isi laporannya
-// (summary, statistik, fokus minggu ini) BARU muncul begitu ada laporan
-// yang beneran ke-generate; sebelum itu cuma badge doang yang keliatan,
-// gak ada teks penjelasan apapun. Khusus Professional ke atas.
+// (summary, statistik, fokus minggu ini) cuma keliatan kalau laporan
+// itu umurnya <=4 hari dari generated_at, di luar itu balik ke badge
+// doang (biar dashboard gak "nyangkut" nunjukin laporan basi berhari-hari
+// sampe periode berikutnya, ~10-11 hari kemudian). Khusus Professional ke atas.
 function PipelineReviewCard({ leads, onOpenLead, isProfessional }) {
   const [review, setReview] = useState(undefined); // undefined = loading, null = belum pernah ada
   useEffect(() => {
@@ -96,18 +97,23 @@ function PipelineReviewCard({ leads, onOpenLead, isProfessional }) {
 
   if (!isProfessional) return null;
 
+  // Laporan cuma keliatan isinya kalau umurnya <=4 hari - di luar itu balik
+  // ke badge doang (biar dashboard gak keliatan "nyangkut" nunjukin laporan
+  // basi berhari-hari sampe periode berikutnya, 10-11 hari kemudian).
+  const isFresh = review && (Date.now() - new Date(review.generated_at).getTime()) <= 4 * 86400000;
+
   const stats = review?.stats || {};
   const focusLeads = review?.focus_leads || [];
-  const generatedDate = review ? new Date(review.generated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : null;
+  const generatedDate = isFresh ? new Date(review.generated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : null;
 
   return (
     <div className="bg-white border border-violet-100 rounded-[28px] p-5">
-      <div className={`flex items-center justify-between gap-2 ${review ? "mb-2" : ""}`}>
+      <div className={`flex items-center justify-between gap-2 ${isFresh ? "mb-2" : ""}`}>
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Sparkles size={16} className="text-violet-500" /> Pipeline Review</div>
         {generatedDate && <span className="text-[11px] text-slate-400">{generatedDate}</span>}
       </div>
 
-      {review && (
+      {isFresh && (
         <>
           <p className="text-sm text-slate-600 leading-relaxed">{review.summary}</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
