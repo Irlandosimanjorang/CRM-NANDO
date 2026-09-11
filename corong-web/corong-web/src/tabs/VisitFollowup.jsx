@@ -568,20 +568,39 @@ function dateStr(y, m, d) {
 
 function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
   const isProfessional = myLevel >= 2;
+  // BUG FIX (11 Sep 2026): tab di-discard browser/OS (pindah app lain di HP,
+  // balik lagi) bikin React kehilangan SEMUA state - modal-nya emang udah
+  // otomatis kebuka lagi (lihat getOpenModal("visit") di VisitView), TAPI
+  // poin "Poin Diskusi (AI)" yang baru di-generate ilang jadi blank lagi,
+  // padahal itu udah makan kuota AI (15x/bulan) - user harus generate ulang
+  // & boros kuota buat hal yang sebenernya udah pernah didapetin. Sekarang
+  // restore juga lead yang lagi dipilih + hasil poin AI-nya dari localStorage
+  // (persis pola "inget kondisi terakhir" yang sama dipake modal lain).
+  const restored = getOpenModal("visit") || {};
+  const restoredLead = restored.leadId ? leads.find((l) => l.id === restored.leadId) : null;
+
   const [q, setQ] = useState("");
-  const [sel, setSel] = useState(null);
-  const [date, setDate] = useState(todayISO());
-  const [meet, setMeet] = useState("");
-  const [agenda, setAgenda] = useState("");
+  const [sel, setSel] = useState(restoredLead || null);
+  const [date, setDate] = useState(restoredLead ? (restored.date || todayISO()) : todayISO());
+  const [meet, setMeet] = useState(restoredLead ? (restored.meet || "") : "");
+  const [agenda, setAgenda] = useState(restoredLead ? (restored.agenda || "") : "");
   const [busy, setBusy] = useState(false);
   // "Poin Diskusi (AI)" - baca histori progress notes lead yang dipilih,
   // saranin 3-5 poin buat dibahas pas ketemu. Hasilnya CUMA SARAN - rep
   // milih sendiri poin mana yang mau ditambahin ke Agenda (klik "Pakai"),
   // gak auto-overwrite apa yang udah diketik rep sendiri.
   const [suggesting, setSuggesting] = useState(false);
-  const [suggestedPoints, setSuggestedPoints] = useState(null);
+  const [suggestedPoints, setSuggestedPoints] = useState(restoredLead ? (restored.suggestedPoints || null) : null);
   const [suggestError, setSuggestError] = useState("");
-  const [appliedPoints, setAppliedPoints] = useState({});
+  const [appliedPoints, setAppliedPoints] = useState(restoredLead ? (restored.appliedPoints || {}) : {});
+
+  // Nyimpen snapshot tiap kali ada perubahan relevan - cuma pas UDAH ada
+  // lead yang dipilih (draft kosong gak ada gunanya direstore).
+  useEffect(() => {
+    if (!sel) return;
+    saveOpenModal("visit", { leadId: sel.id, date, meet, agenda, suggestedPoints, appliedPoints });
+  }, [sel, date, meet, agenda, suggestedPoints, appliedPoints]);
+
   const suggestPoints = async () => {
     if (!sel) return;
     setSuggesting(true); setSuggestError(""); setSuggestedPoints(null); setAppliedPoints({});
