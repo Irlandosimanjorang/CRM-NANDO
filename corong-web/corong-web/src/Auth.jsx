@@ -382,7 +382,7 @@ const PROFESSIONAL_FEATURES = [
   "Customer State (AI)",
   "Outcome Memory (AI)",
   "AI Advisor harian",
-  "Pipeline Review otomatis (2x/bulan)",
+  "Pipeline Review",
   "AI Draft Follow-up (WhatsApp & Email)",
   "Analisa Kompetitor",
 ];
