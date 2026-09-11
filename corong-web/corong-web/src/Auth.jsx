@@ -396,7 +396,7 @@ const PROFESSIONAL_FEATURES = [
   "Advisor harian",
   "Pipeline Review otomatis",
   "Draft Follow-up (WhatsApp & Email)",
-  "Analisa Kompetitor",
+  "Data Kompetitor",
 ];
 
 const ENTERPRISE_FEATURES = [
