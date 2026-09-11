@@ -500,6 +500,20 @@ export async function guessOutcomeReason(leadId, result) {
   return data;
 }
 
+// "Poin Diskusi" - pas rep atur visit/meeting, AI baca histori progress
+// notes lead itu terus nyaranin 3-5 poin yang perlu didiskusikan pas
+// ketemu (lihat AddVisitModal di VisitFollowup.jsx).
+export async function suggestVisitPoints(leadId) {
+  const { data, error } = await supabase.functions.invoke("suggest-visit-points", { body: { lead_id: leadId } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal nyiapin poin diskusi");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data.points;
+}
+
 // ---- STAGES ----
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock } from "lucide-react";
+import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock, Sparkles, Check } from "lucide-react";
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
 import MeetingRecorderModal from "../components/MeetingRecorderModal";
@@ -566,15 +566,37 @@ function dateStr(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-function AddVisitModal({ leads, onClose, onSaved }) {
+function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
+  const isProfessional = myLevel >= 2;
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(null);
   const [date, setDate] = useState(todayISO());
   const [meet, setMeet] = useState("");
   const [agenda, setAgenda] = useState("");
   const [busy, setBusy] = useState(false);
+  // "Poin Diskusi (AI)" - baca histori progress notes lead yang dipilih,
+  // saranin 3-5 poin buat dibahas pas ketemu. Hasilnya CUMA SARAN - rep
+  // milih sendiri poin mana yang mau ditambahin ke Agenda (klik "Pakai"),
+  // gak auto-overwrite apa yang udah diketik rep sendiri.
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestedPoints, setSuggestedPoints] = useState(null);
+  const [suggestError, setSuggestError] = useState("");
+  const [appliedPoints, setAppliedPoints] = useState({});
+  const suggestPoints = async () => {
+    if (!sel) return;
+    setSuggesting(true); setSuggestError(""); setSuggestedPoints(null); setAppliedPoints({});
+    try {
+      const points = await db.suggestVisitPoints(sel.id);
+      setSuggestedPoints(points);
+    } catch (e) { setSuggestError(e.message); }
+    finally { setSuggesting(false); }
+  };
+  const applyPoint = (i, point) => {
+    setAgenda((prev) => (prev.trim() ? `${prev.trim()}\n- ${point}` : `- ${point}`));
+    setAppliedPoints((p) => ({ ...p, [i]: true }));
+  };
   const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
-  const pick = (c) => { setSel(c); setQ(""); setMeet(c.visit_meet || c.key_person || ""); setAgenda(c.visit_agenda || ""); if (c.visit_date) setDate(c.visit_date); };
+  const pick = (c) => { setSel(c); setQ(""); setMeet(c.visit_meet || c.key_person || ""); setAgenda(c.visit_agenda || ""); if (c.visit_date) setDate(c.visit_date); setSuggestedPoints(null); setSuggestError(""); setAppliedPoints({}); };
   const save = async () => {
     if (!sel) { alert("Pilih company dulu."); return; }
     setBusy(true);
@@ -605,6 +627,37 @@ function AddVisitModal({ leads, onClose, onSaved }) {
               <label className="block"><span className="text-xs font-medium text-slate-500">Ketemu siapa</span><input className={inp} value={meet} onChange={(e) => setMeet(e.target.value)} placeholder="mis. Bu Rina (purchasing)" /></label>
             </div>
             <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Agenda</span><textarea className={inp} rows={2} value={agenda} onChange={(e) => setAgenda(e.target.value)} placeholder="mau bahas apa" /></label>
+
+            <div className="mt-2 rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-medium text-violet-700 flex items-center gap-1.5"><Sparkles size={13} /> Poin Diskusi (AI)</div>
+                <button
+                  type="button"
+                  onClick={suggestPoints}
+                  disabled={!sel || suggesting || !isProfessional}
+                  title={!isProfessional ? "Khusus paket Professional ke atas" : undefined}
+                  className="text-[11px] font-medium text-violet-700 hover:underline disabled:opacity-50 flex items-center gap-1"
+                >
+                  {suggesting ? <Loader2 size={11} className="animate-spin" /> : !isProfessional ? <Lock size={11} /> : <Sparkles size={11} />}
+                  {suggesting ? "Nyiapin..." : !isProfessional ? "Professional" : "Siapin Poin"}
+                </button>
+              </div>
+              {suggestError && <p className="mt-2 text-[11px] text-rose-500">{suggestError}</p>}
+              {suggestedPoints && (
+                <div className="mt-2 space-y-1.5">
+                  {suggestedPoints.map((point, i) => (
+                    <div key={i} className="flex items-start justify-between gap-2 text-[11px] bg-white rounded-lg border border-violet-100 px-2 py-1.5">
+                      <span className="text-slate-700 flex-1">{point}</span>
+                      {appliedPoints[i] ? (
+                        <span className="shrink-0 text-emerald-600 flex items-center gap-0.5"><Check size={11} /> Dipakai</span>
+                      ) : (
+                        <button type="button" onClick={() => applyPoint(i, point)} className="shrink-0 text-violet-600 font-medium hover:underline">Pakai</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan visit</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button></div>
@@ -675,7 +728,7 @@ function MonthCalendar({ leads, onEdit, month, setMonth }) {
   );
 }
 
-function VisitView({ leads, onEdit, onChanged, isEnterprise }) {
+function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
   // BUG FIX (6 Sep 2026): form-nya masih blank waktu dibuka ulang (beda dari
   // Tambah Deal yang udah punya draft field) - tapi minimal MODAL-nya otomatis
   // kebuka lagi abis app di-reload paksa, gak keliatan "ilang" gitu aja.
@@ -744,7 +797,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise }) {
           </div>
         </>
       )}
-      {add && <AddVisitModal leads={leads} onClose={() => { setAdd(false); clearOpenModal("visit"); }} onSaved={() => { setAdd(false); clearOpenModal("visit"); onChanged(); }} />}
+      {add && <AddVisitModal leads={leads} onClose={() => { setAdd(false); clearOpenModal("visit"); }} onSaved={() => { setAdd(false); clearOpenModal("visit"); onChanged(); }} myLevel={myLevel} />}
       {recording && <MeetingRecorderModal leads={leads} onClose={() => setRecording(false)} onSaved={onChanged} />}
     </div>
   );
@@ -775,7 +828,7 @@ function FollowupView({ leads, onEdit, onChanged }) {
   );
 }
 
-export default function VisitFollowup({ leads, onEdit, onChanged, isEnterprise }) {
+export default function VisitFollowup({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
   const [tab, setTab] = useState("visit");
   const visitCount = leads.filter((c) => c.visit_date).length;
   const followupCount = leads.filter((c) => c.next_action && c.next_action.trim()).length;
@@ -795,7 +848,7 @@ export default function VisitFollowup({ leads, onEdit, onChanged, isEnterprise }
         </button>
       </div>
 
-      {tab === "visit" && <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} isEnterprise={isEnterprise} />}
+      {tab === "visit" && <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} isEnterprise={isEnterprise} myLevel={myLevel} />}
       {tab === "followup" && <FollowupView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
       {tab === "checkin" && <CheckinHistory isEnterprise={isEnterprise} />}
     </div>

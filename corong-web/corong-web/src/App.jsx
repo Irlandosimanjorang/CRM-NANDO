@@ -903,7 +903,7 @@ export default function App() {
                 {visitedTabs.has("visitfollowup") && (
                   <div style={{ display: effectiveTab === "visitfollowup" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("visitfollowup")} minLevel={TAB_MIN_LEVEL.visitfollowup}>
-                      <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} />
+                      <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} myLevel={myLevel} />
                     </PreviewLock>
                   </div>
                 )}
