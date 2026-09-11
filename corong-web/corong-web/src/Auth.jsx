@@ -1912,24 +1912,24 @@ function ProductDemoReel() {
 function MiniLeadCard({ name, category, city, stageLabel, stageHex, progress, phone, product, nextAction, urgencyNote, urgencyColor, avatarBg }) {
   const initials = name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   return (
-    <div className="rounded-2xl bg-white p-3.5" style={{ border: `1.5px solid ${urgencyColor}` }}>
-      <div className="flex items-start gap-2.5">
+    <div className="rounded-xl bg-white p-1.5 sm:rounded-2xl sm:p-3.5" style={{ border: `1.5px solid ${urgencyColor}` }}>
+      <div className="flex items-start gap-1 sm:gap-2.5">
         <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-extrabold text-white"
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[7px] font-extrabold text-white sm:h-8 sm:w-8 sm:rounded-lg sm:text-[10px]"
           style={{ background: avatarBg }}
         >
           {initials}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-bold leading-tight text-slate-900">{name}</div>
-          <div className="truncate text-[10px] text-slate-400">{[category, city].filter(Boolean).join(", ")}</div>
+          <div className="truncate text-[8px] font-bold leading-tight text-slate-900 sm:text-[13px]">{name}</div>
+          <div className="truncate text-[6.5px] text-slate-400 sm:text-[10px]">{[category, city].filter(Boolean).join(", ")}</div>
         </div>
       </div>
 
-      <div className="mt-2.5">
+      <div className="mt-1 sm:mt-2.5">
         <div className="mb-1 flex items-center justify-between">
           <span
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold"
+            className="inline-flex items-center gap-1 rounded-full px-1 py-0.5 text-[6px] font-semibold sm:px-2 sm:text-[9px]"
             style={{ background: `${stageHex}17`, color: stageHex }}
           >
             <span className="h-1 w-1 rounded-full" style={{ background: stageHex }} />
@@ -1941,7 +1941,7 @@ function MiniLeadCard({ name, category, city, stageLabel, stageHex, progress, ph
         </div>
       </div>
 
-      <div className="mt-2.5 flex gap-4">
+      <div className="mt-1.5 hidden gap-4 sm:mt-2.5 sm:flex">
         <div className="min-w-0 flex-1">
           <div className="text-[8.5px] text-slate-400">Telepon</div>
           <div className="truncate text-[10px] text-slate-600">{phone}</div>
@@ -1952,9 +1952,9 @@ function MiniLeadCard({ name, category, city, stageLabel, stageHex, progress, ph
         </div>
       </div>
 
-      <div className="mt-2.5 border-l-2 border-orange-400 pl-2.5">
-        <div className="truncate text-[10px] font-medium text-slate-800">{nextAction}</div>
-        <div className="mt-0.5 text-[9px] font-medium" style={{ color: urgencyColor }}>{urgencyNote}</div>
+      <div className="mt-1.5 border-l-2 border-orange-400 pl-1 sm:mt-2.5 sm:pl-2.5">
+        <div className="truncate text-[7px] font-medium text-slate-800 sm:text-[10px]">{nextAction}</div>
+        <div className="mt-0.5 hidden text-[9px] font-medium sm:block" style={{ color: urgencyColor }}>{urgencyNote}</div>
       </div>
     </div>
   );
@@ -1964,7 +1964,7 @@ function DemoScene({ sceneKey }) {
   if (sceneKey === "leads") {
     return (
       <div className="h-full rounded-xl bg-[#fafbfc] p-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
           <MiniLeadCard
             name="PT Sumber Jaya" category="Bahan Baku" city="Tangerang"
             stageLabel="Baru" stageHex="#94a3b8" progress={15}
