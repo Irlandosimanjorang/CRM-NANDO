@@ -366,7 +366,7 @@ const INDUSTRIES = [
 const STANDARD_FEATURES = [
   "Kelola Leads — kartu per perusahaan",
   "Smart Import AI",
-  "Vector Memory ringan (AI inget catatan lama yang relevan)",
+  "Vector Memory ringan (Nexto inget catatan lama yang relevan)",
   "Recycle Bin",
   "Deteksi Duplikat",
   "Nex — Komunitas Sesama Sales",
@@ -377,7 +377,7 @@ const PROFESSIONAL_FEATURES = [
   "Semua fitur Standard",
   "Bot Telegram (edit CRM, progress harian, jadwal visit)",
   "Sinkron otomatis ke Google Calendar",
-  "Generate Leads AI (4x/bulan)",
+  "Generate Leads AI",
   "Rekam Meeting otomatis (AI)",
   "Customer State (AI)",
   "Outcome Memory (AI)",

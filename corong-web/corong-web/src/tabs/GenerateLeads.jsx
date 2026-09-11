@@ -196,11 +196,11 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                 </select>
               </label>
               <label className="block sm:col-span-2">
-                <span className="text-xs font-medium text-slate-500">Target pembeli (opsional - kosongin biar AI yang nentuin)</span>
+                <span className="text-xs font-medium text-slate-500">Target pembeli (opsional - kosongin biar Nexto yang nentuin)</span>
                 <select className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={targetType} onChange={(e) => setTargetType(e.target.value)}>
-                  <option value="">Biar AI yang nentuin</option>
+                  <option value="">Biar Nexto yang nentuin</option>
                   <option value="company">Perusahaan/organisasi (B2B) - beli buat operasional/produksi mereka</option>
-                  <option value="individual">Individu/perorangan - AI cari organisasi perantara (HRD, komunitas, agen), bukan data pribadi orang</option>
+                  <option value="individual">Individu/perorangan - Nexto cari organisasi perantara (HRD, komunitas, agen), bukan data pribadi orang</option>
                 </select>
               </label>
             </div>
