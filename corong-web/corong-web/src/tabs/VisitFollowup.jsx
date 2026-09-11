@@ -255,12 +255,22 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
     if (!isEnterprise || todayVisits.length === 0 || !navigator.geolocation) return;
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        // Jangan biarin fix jelek nimpa fix bagus yang udah kedapet - GPS
-        // suka "loncat" sesaat (multipath di gedung dll), keep yang paling
-        // presisi selama belum ada fix baru yang lebih presisi lagi.
-        setMyPos((prev) => (prev && prev.accuracy <= pos.coords.accuracy && prev.accuracy <= GOOD_ACCURACY_M
-          ? prev
-          : { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }));
+        // Selalu update posisi kalau fix BARU ini udah cukup presisi
+        // (GOOD_ACCURACY_M) - PENTING biar jarak ke lokasi tetep ke-update
+        // beneran pas rep jalan mendekat, gak "beku" di fix bagus pertama.
+        // Fix baru cuma DITOLAK kalau dia jelek DAN kita udah kadung punya
+        // fix bagus sebelumnya (anomali GPS sesaat - multipath di gedung
+        // dll - bukan berarti makin jauh dari lokasi). Bug yang ketemu pas
+        // audit 11 Sep 2026: versi lama malah nolak fix baru yang BAGUS
+        // juga kalau kebetulan sedikit kurang presisi dari fix terbaik
+        // sebelumnya, jadi posisi kepentok gak pernah ke-update lagi
+        // begitu satu fix bagus kedapet - padahal user masih jalan.
+        setMyPos((prev) => {
+          const newFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+          if (pos.coords.accuracy <= GOOD_ACCURACY_M) return newFix;
+          if (!prev || prev.accuracy > GOOD_ACCURACY_M) return newFix;
+          return prev;
+        });
         setGeoError(false);
       },
       () => setGeoError(true),

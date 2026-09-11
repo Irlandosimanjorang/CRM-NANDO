@@ -2291,7 +2291,7 @@ export default function Auth() {
                 Berapa banyak "karyawan AI"
                 <span className="block text-slate-500">yang mau Anda pekerjakan?</span>
               </h2>
-              {new Date() < EARLY_BIRD_DEADLINE && (
+              {isEarlyBird && (
                 <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[13px] font-bold text-orange-300 sm:text-sm">
                   <span className="relative flex h-2 w-2 shrink-0">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
