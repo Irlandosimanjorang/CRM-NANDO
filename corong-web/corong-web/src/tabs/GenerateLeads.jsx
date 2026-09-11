@@ -77,7 +77,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
 
   const generate = async () => {
     if (!productSold.trim() || !keyword.trim() || !targetRole.trim()) {
-      setMsg("Gagal: kolom barang yang dijual, kata kunci, dan jabatan wajib diisi (provinsi opsional).");
+      setMsg("Gagal: kolom barang yang dijual, kata kunci, dan jabatan wajib diisi (provinsi/kota opsional).");
       return;
     }
     setBusy(true); setMsg("");
@@ -123,7 +123,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
             <Info size={14} />
           </button>
         </div>
-        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk Anda — bukan cuma perusahaan sejenis. Provinsi opsional (kosongin buat cari se-Indonesia), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 4x sebulan.</p>
+        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk Anda — bukan cuma perusahaan sejenis. Provinsi/kota opsional (kosongin buat cari se-Indonesia, atau isi nama kota buat hasil yang lebih lokal), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 15 lead per generate, 4x sebulan.</p>
 
         {showInfo && (
           <div className="mt-3 bg-orange-50/60 border border-orange-100 rounded-2xl p-4 relative">
@@ -172,8 +172,8 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                 <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder={`misal: ${example.keyword}`} value={keyword} onChange={(e) => setKeyword(e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Provinsi (opsional - kosongin buat cari se-Indonesia)</span>
-                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Jawa Timur" value={province} onChange={(e) => setProvince(e.target.value)} />
+                <span className="text-xs font-medium text-slate-500">Provinsi/Kota (opsional - kosongin buat cari se-Indonesia)</span>
+                <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Jawa Timur, atau Surabaya" value={province} onChange={(e) => setProvince(e.target.value)} />
               </label>
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Jabatan/peran yang dicari <span className="text-rose-500">*</span></span>
