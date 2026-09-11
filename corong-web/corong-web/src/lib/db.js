@@ -1009,6 +1009,15 @@ export async function getTodayAdvisorRun() {
   return data || null;
 }
 
+// "Pipeline Review" - laporan kesehatan pipeline yang di-generate OTOMATIS
+// 2x/bulan lewat cron (edge function pipeline-review), bukan on-demand.
+// Cuma nampilin yang PALING BARU di Dashboard.
+export async function getLatestPipelineReview() {
+  const { data, error } = await supabase.from("pipeline_reviews").select("*").order("generated_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
 // ---- BACKUP / EXPORT SEMUA DATA ----
 export async function exportAllData() {
   const [leadsRes, compRes, stagesRes, settingsRes, advisorRes] = await Promise.all([

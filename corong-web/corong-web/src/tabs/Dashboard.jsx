@@ -78,6 +78,68 @@ const markPlayedToday = () => { try { localStorage.setItem(playedTodayKey(), "1"
 // with a safety timeout so the card never gets stuck if audio fails/is blocked.
 // Audio cuma diputer SEKALI per hari - abis itu (atau abis di-skip/diklik
 // Listen), langsung ke tampilan statistik tiap balik ke Dashboard.
+// "Pipeline Review" - laporan kesehatan pipeline yang di-generate OTOMATIS
+// 2x/bulan lewat cron (edge function pipeline-review), BUKAN tombol
+// on-demand kayak fitur AI lain di Nexto - kartu ini cuma nampilin hasil
+// TERBARU yang udah ke-generate. Khusus Professional ke atas.
+function PipelineReviewCard({ leads, onOpenLead, isProfessional }) {
+  const [review, setReview] = useState(undefined); // undefined = loading, null = gak ada
+  useEffect(() => {
+    if (!isProfessional) { setReview(null); return; }
+    let alive = true;
+    db.getLatestPipelineReview().then((r) => { if (alive) setReview(r); }).catch(() => { if (alive) setReview(null); });
+    return () => { alive = false; };
+  }, [isProfessional]);
+
+  if (!isProfessional || !review) return null;
+
+  const stats = review.stats || {};
+  const focusLeads = review.focus_leads || [];
+  const generatedDate = new Date(review.generated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+
+  return (
+    <div className="bg-white border border-violet-100 rounded-[28px] p-5">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Sparkles size={16} className="text-violet-500" /> Pipeline Review</div>
+        <span className="text-[11px] text-slate-400">{generatedDate}</span>
+      </div>
+      <p className="text-sm text-slate-600 leading-relaxed">{review.summary}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+        {[
+          ["Lead aktif", stats.total_active],
+          ["Stuck", stats.stuck_count],
+          ["Lead baru", stats.new_leads],
+          ["Menang/Kalah", `${stats.won_recent ?? 0}/${stats.lost_recent ?? 0}`],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl bg-slate-50 px-3 py-2">
+            <div className="text-base font-bold text-slate-800">{value}</div>
+            <div className="text-[10px] text-slate-500">{label}</div>
+          </div>
+        ))}
+      </div>
+      {focusLeads.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          <div className="text-xs font-semibold text-slate-500">Fokus minggu ini</div>
+          {focusLeads.map((f) => {
+            const lead = leads.find((l) => l.id === f.lead_id);
+            return (
+              <button
+                key={f.lead_id}
+                onClick={() => lead && onOpenLead(lead)}
+                disabled={!lead}
+                className="w-full text-left rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/40 px-3 py-2 transition-colors disabled:opacity-50"
+              >
+                <div className="text-sm font-medium text-slate-800">{f.name}</div>
+                <div className="text-xs text-slate-500 mt-0.5">{f.reason}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
   const [state, setState] = useState({ status: "loading", run: null });
   const [audioPhase, setAudioPhase] = useState("idle"); // idle | playing | needs-tap | done
@@ -538,6 +600,8 @@ export default function Dashboard({ leads, stages, dealTransactions, settings, o
       <GettingStartedChecklist leads={leads} myLevel={myLevel} onGo={onGo} />
 
       <GoodMorningCard settings={settings} onGo={onGo} onOpenLead={onOpenLead} leads={leads} />
+
+      <PipelineReviewCard leads={leads} onOpenLead={onOpenLead} isProfessional={myLevel >= 2} />
 
       <RevenuePanel year={s.revYear} month={s.revMonth} />
 
