@@ -763,6 +763,16 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
   const visits = useMemo(() => leads.filter((c) => c.visit_date).sort((a, b) => (a.visit_date < b.visit_date ? -1 : 1)), [leads]);
   const upcoming = visits.filter((c) => c.visit_date >= todayISO());
 
+  // BUG FIX (11 Sep 2026): klik baris jadwal visit sebelumnya buka LeadModal
+  // (kartu lead umum) - gak ada tanggal/ketemu siapa/agenda/"Poin Diskusi
+  // (AI)"-nya sama sekali. Sekarang buka modal Visit yang sama dipake pas
+  // "Tambah visit", cuma di-prefill data visit lead ini biar user langsung
+  // liat detail + bisa minta poin AI, bukan malah lompat ke kartu lead umum.
+  const openVisitDetail = (c) => {
+    saveOpenModal("visit", { leadId: c.id, date: c.visit_date || todayISO(), meet: c.visit_meet || c.key_person || "", agenda: c.visit_agenda || "" });
+    setAdd(true);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -781,7 +791,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
       {visits.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana aja.</div>
       ) : view === "calendar" ? (
-        <MonthCalendar leads={leads} onEdit={onEdit} month={month} setMonth={setMonth} />
+        <MonthCalendar leads={leads} onEdit={openVisitDetail} month={month} setMonth={setMonth} />
       ) : (
         <>
           <div className="bg-white border border-slate-100 rounded-[28px] p-4 mb-4">
@@ -803,7 +813,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
               </tr></thead>
               <tbody>
                 {visits.map((c) => { const past = c.visit_date < todayISO(); const today = c.visit_date === todayISO(); const meet = c.visit_meet || c.key_person; return (
-                  <tr key={c.id} className={`border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer ${past ? "opacity-50" : ""}`} onClick={() => onEdit(c)}>
+                  <tr key={c.id} className={`border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer ${past ? "opacity-50" : ""}`} onClick={() => openVisitDetail(c)}>
                     <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
                     <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
                     <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
