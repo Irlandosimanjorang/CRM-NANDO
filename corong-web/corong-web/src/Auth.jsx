@@ -365,25 +365,25 @@ const INDUSTRIES = [
 //    6 Sep 2026 - sebelumnya "1x/minggu").
 const STANDARD_FEATURES = [
   "Kelola Leads — kartu per perusahaan",
-  "Smart Import AI",
+  "Smart Import",
   "Vector Memory ringan (Nexto inget catatan lama yang relevan)",
   "Recycle Bin",
   "Deteksi Duplikat",
   "Nex — Komunitas Sesama Sales",
-  "Daily Digest (rekomendasi AI harian)",
+  "Daily Digest (rekomendasi harian)",
 ];
 
 const PROFESSIONAL_FEATURES = [
   "Semua fitur Standard",
   "Bot Telegram (edit CRM, progress harian, jadwal visit)",
   "Sinkron otomatis ke Google Calendar",
-  "Generate Leads AI",
-  "Rekam Meeting otomatis (AI)",
-  "Customer State (AI)",
-  "Outcome Memory (AI)",
-  "AI Advisor harian",
-  "Pipeline Review",
-  "AI Draft Follow-up (WhatsApp & Email)",
+  "Generate Leads",
+  "Rekam Meeting otomatis",
+  "Customer State",
+  "Outcome Memory",
+  "Advisor harian",
+  "Pipeline Review otomatis",
+  "Draft Follow-up (WhatsApp & Email)",
   "Analisa Kompetitor",
 ];
 
@@ -2328,7 +2328,7 @@ export default function Auth() {
                 </div>
 
                 <div className="mt-1 text-[10px] text-slate-500">
-                  CRM inti + AI ringan — untuk yang mau rapiin data leads dulu
+                  CRM inti + otomatisasi ringan — untuk yang mau rapiin data leads dulu
                 </div>
                 <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
                 {isEarlyBird && (
@@ -2369,7 +2369,7 @@ export default function Auth() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-60" />
                     <span className="relative inline-flex h-full w-full rounded-full bg-orange-400" />
                   </span>
-                  AI Engine Aktif
+                  Sales Engine Aktif
                 </div>
 
                 <div className="relative mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-orange-400">
@@ -2389,7 +2389,7 @@ export default function Auth() {
                 </div>
 
                 <div className="relative mt-1 text-[10px] text-slate-400">
-                  AI Sales Engine penuh — solo, tapi kerja kayak ada tim
+                  Sales Engine penuh — solo, tapi kerja kayak ada tim
                 </div>
                 <div className="relative">
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
@@ -2430,7 +2430,7 @@ export default function Auth() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
                       <span className="relative inline-flex h-full w-full rounded-full bg-violet-400" />
                     </span>
-                    AI Engine + Tim
+                    Sales Engine + Tim
                   </div>
 
                   <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300">
