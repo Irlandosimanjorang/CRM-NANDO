@@ -34,6 +34,7 @@ import {
   LayoutDashboard,
   Trophy,
   CalendarCheck,
+  CalendarClock,
   Swords,
   Users2,
   Settings as SettingsIcon,
@@ -1787,13 +1788,14 @@ function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
 // Visit & Follow-up, Kompetitor, Nex, Pengaturan).
 const DEMO_SCENES = [
   { key: "leads", label: "Kelola Leads", navKey: "leads" },
+  { key: "deal", label: "Deal", navKey: "deal" },
   { key: "telegram", label: "Bot Telegram", navKey: "leads" },
   { key: "generate", label: "Generate Leads AI", navKey: "generateleads" },
   { key: "visit", label: "Visit & Follow-up", navKey: "visitfollowup" },
   { key: "advisor", label: "Advisor Harian", navKey: "dashboard" },
   { key: "pipeline", label: "Pipeline Review", navKey: "dashboard" },
 ];
-const DEMO_SCENE_MS = 4500;
+const DEMO_SCENE_MS = 4200;
 
 const DEMO_NAV = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -2026,25 +2028,86 @@ function DemoScene({ sceneKey }) {
     );
   }
 
-  if (sceneKey === "visit") {
+  if (sceneKey === "deal") {
+    // Mini versi dari tab Deal beneran (Deal.jsx) - header Trophy, 2 stat
+    // tile (Total Deal / Total Rp), lalu tabel grouped per lead dengan
+    // badge "2x" oranye kalau lebih dari 1 transaksi, nilai duit emerald.
+    const rows = [
+      { name: "PT Karya Mandiri", count: "2x", ton: "8 ton", value: "Rp 33.400.000" },
+      { name: "CV Sinar Abadi", count: null, ton: "3.5 ton", value: "Rp 14.200.000" },
+      { name: "PT Multi Compound", count: null, ton: "5 ton", value: "Rp 21.750.000" },
+    ];
     return (
-      <div>
-        <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-[#141a26] px-3 py-2">
-          <div>
-            <div className="text-[10px] font-semibold text-slate-100">PT Global Teknindo</div>
-            <div className="text-[8px] text-slate-500">Kamis, 10:00 — kantor pusat</div>
-          </div>
-          <CalendarCheck size={14} className="text-cyan-400" />
+      <div className="h-full rounded-xl bg-[#fafbfc] p-3">
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-800">
+          <Trophy size={12} className="text-emerald-500" />
+          Deal
         </div>
-        <div className="mt-3 rounded-lg border border-dashed border-violet-400/25 bg-violet-500/[0.05] p-3">
-          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-violet-300">
-            <Sparkles size={11} />
-            Poin Diskusi (AI)
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5">
+            <div className="text-[7.5px] text-slate-400">Total Deal</div>
+            <div className="mt-0.5 text-[13px] font-bold text-slate-800">16.5 ton</div>
           </div>
-          <ul className="mt-2 space-y-1 text-[9.5px] leading-4 text-slate-300">
-            <li>— Tanyain progress approval budget dari internal mereka</li>
-            <li>— Bahas ulang skema diskon volume yang sempet ditolak</li>
-          </ul>
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5">
+            <div className="text-[7.5px] text-slate-400">Total Rp</div>
+            <div className="mt-0.5 truncate text-[13px] font-bold tabular-nums text-slate-800">Rp 69.350.000</div>
+          </div>
+        </div>
+        <div className="mt-2 overflow-hidden rounded-xl border border-slate-100 bg-white">
+          {rows.map((r, i) => (
+            <div key={r.name} className={`flex items-center justify-between px-2.5 py-2 ${i > 0 ? "border-t border-slate-100" : ""}`}>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate text-[9.5px] font-medium text-slate-700">{r.name}</span>
+                {r.count && (
+                  <span className="shrink-0 rounded-full bg-orange-100 px-1.5 py-0.5 text-[6.5px] font-bold text-orange-700">{r.count}</span>
+                )}
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="font-mono text-[8px] text-slate-400">{r.ton}</div>
+                <div className="font-mono text-[9.5px] font-semibold text-emerald-700">{r.value}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (sceneKey === "visit") {
+    // Mini versi dari tab Visit & Follow-up beneran (VisitFollowup.jsx) -
+    // 2 stat tile, tabel jadwal, ditutup 1 highlight fitur "Poin Diskusi (AI)".
+    const rows = [
+      { name: "PT Global Teknindo", time: "Kamis, 10:00" },
+      { name: "CV Aneka Karya", time: "Jumat, 13:30" },
+      { name: "PT Sumber Jaya", time: "Senin, 09:00" },
+    ];
+    return (
+      <div className="h-full rounded-xl bg-[#fafbfc] p-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5">
+            <div className="flex items-center gap-1 text-[7.5px] text-slate-400"><CalendarCheck size={9} /> Akan datang</div>
+            <div className="mt-0.5 text-[13px] font-bold text-slate-800">4</div>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5">
+            <div className="flex items-center gap-1 text-[7.5px] text-slate-400"><CalendarClock size={9} /> Total terjadwal</div>
+            <div className="mt-0.5 text-[13px] font-bold text-slate-800">11</div>
+          </div>
+        </div>
+        <div className="mt-2 overflow-hidden rounded-xl border border-slate-100 bg-white">
+          <div className="flex items-center justify-between bg-slate-50/80 px-2.5 py-1 text-[6.5px] font-bold uppercase tracking-wide text-slate-400">
+            <span>Lead</span>
+            <span>Jadwal</span>
+          </div>
+          {rows.map((r) => (
+            <div key={r.name} className="flex items-center justify-between border-t border-slate-100 px-2.5 py-1.5">
+              <span className="truncate text-[9.5px] font-medium text-slate-700">{r.name}</span>
+              <span className="shrink-0 text-[8.5px] text-slate-400">{r.time}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-dashed border-violet-300 bg-violet-50 px-2.5 py-1.5 text-[8.5px] font-medium text-violet-600">
+          <Sparkles size={10} />
+          Poin Diskusi (AI) siap sebelum Anda visit
         </div>
       </div>
     );
