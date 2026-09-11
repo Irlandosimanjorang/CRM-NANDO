@@ -351,10 +351,13 @@ export async function getLeadGenCooldown() {
 }
 
 export async function importGeneratedLead(genLead, defaultStageKey) {
+  // BUG FIX (11 Sep 2026, ketauan pas audit): category & email yang udah
+  // ditemuin AI (keliatan di kartu hasil generate) dulu KEBUANG pas import -
+  // category di-hardcode "Lainnya" dan email gak diteruskan sama sekali.
   await upsertLead({
-    name: genLead.name, category: "Lainnya", stage_key: defaultStageKey || "",
+    name: genLead.name, category: genLead.category || "Lainnya", stage_key: defaultStageKey || "",
     key_person: genLead.key_person || "", key_person_title: genLead.key_person_title || "",
-    website: genLead.website || "", phone: genLead.phone || "", city: genLead.city || "",
+    website: genLead.website || "", phone: genLead.phone || "", email: genLead.email || "", city: genLead.city || "",
     product: genLead.product || "", source: "ai_generated",
   });
   const { error } = await supabase.from("generated_leads").update({ status: "imported" }).eq("id", genLead.id);
