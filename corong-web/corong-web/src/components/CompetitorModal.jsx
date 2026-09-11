@@ -19,7 +19,12 @@ export default function CompetitorModal({ comp, onClose, onSaved }) {
     try { await db.upsertCompetitor(f); onSaved(); }
     catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
-  const del = async () => { if (!window.confirm("Hapus kompetitor ini?")) return; setBusy(true); await db.deleteCompetitor(comp.id); onSaved(); };
+  const del = async () => {
+    if (!window.confirm("Hapus kompetitor ini?")) return;
+    setBusy(true);
+    try { await db.deleteCompetitor(comp.id); onSaved(); }
+    catch (e) { alert("Gagal hapus: " + e.message); setBusy(false); }
+  };
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>

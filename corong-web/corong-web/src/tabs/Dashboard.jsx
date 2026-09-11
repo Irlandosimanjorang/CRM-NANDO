@@ -154,7 +154,7 @@ function PipelineReviewCard({ leads, onOpenLead, isProfessional }) {
   );
 }
 
-function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
+function GoodMorningCard({ settings, onGo, onOpenLead, leads, onChanged }) {
   const [state, setState] = useState({ status: "loading", run: null });
   const [audioPhase, setAudioPhase] = useState("idle"); // idle | playing | needs-tap | done
   const [revealed, setRevealed] = useState(false);
@@ -382,7 +382,7 @@ function GoodMorningCard({ settings, onGo, onOpenLead, leads }) {
           initialChannel={draftPopup.channel}
           onChannelChange={(ch) => saveOpenPopup("dashboard", draftPopup.lead.id, ch)}
           onClose={closeDraftPopup}
-          onSent={() => {}}
+          onSent={() => onChanged && onChanged()}
         />
       )}
     </div>
@@ -548,7 +548,7 @@ function PerformanceInsight({ leads, stages }) {
   );
 }
 
-export default function Dashboard({ leads, stages, dealTransactions, settings, onGo, onOpenLead, myLevel }) {
+export default function Dashboard({ leads, stages, dealTransactions, settings, onGo, onOpenLead, myLevel, onChanged }) {
   const s = useMemo(() => {
     const won = stages.filter((x) => x.type === "won").map((x) => x.key);
     const activeKeys = stages.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
@@ -613,7 +613,7 @@ export default function Dashboard({ leads, stages, dealTransactions, settings, o
 
       <GettingStartedChecklist leads={leads} myLevel={myLevel} onGo={onGo} />
 
-      <GoodMorningCard settings={settings} onGo={onGo} onOpenLead={onOpenLead} leads={leads} />
+      <GoodMorningCard settings={settings} onGo={onGo} onOpenLead={onOpenLead} leads={leads} onChanged={onChanged} />
 
       <PipelineReviewCard leads={leads} onOpenLead={onOpenLead} isProfessional={myLevel >= 2} />
 

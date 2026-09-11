@@ -240,8 +240,8 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     }
     if (!window.confirm("Hapus lead ini?")) return;
     setBusy(true);
-    await db.deleteLead(lead.id);
-    onSaved();
+    try { await db.deleteLead(lead.id); onSaved(); }
+    catch (e) { alert("Gagal hapus: " + e.message); setBusy(false); }
   };
 
   const addProg = async () => {

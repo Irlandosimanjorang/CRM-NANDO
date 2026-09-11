@@ -165,10 +165,19 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
 
   const toggleExpand = (leadId) => setExpanded((prev) => { const n = new Set(prev); n.has(leadId) ? n.delete(leadId) : n.add(leadId); return n; });
 
+  // BUG FIX (11 Sep 2026, ketauan pas audit) - klik ganda cepet di tombol
+  // hapus sebelumnya bisa nembak 2x db.deleteDealTransaction buat id yang
+  // sama sebelum list sempet re-render, bikin panggilan kedua gagal (row
+  // udah gak ada) & muncul alert "Gagal hapus" yang gak perlu. Digurad
+  // pake Set id yang lagi diproses.
+  const [deletingTxIds, setDeletingTxIds] = useState(() => new Set());
   const delTx = async (id) => {
+    if (deletingTxIds.has(id)) return;
     if (!window.confirm("Hapus transaksi ini?")) return;
+    setDeletingTxIds((prev) => new Set(prev).add(id));
     try { await db.deleteDealTransaction(id); onChanged(); }
     catch (e) { alert("Gagal hapus: " + e.message); }
+    finally { setDeletingTxIds((prev) => { const n = new Set(prev); n.delete(id); return n; }); }
   };
 
   return (
@@ -259,7 +268,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                         <td className="px-3 py-1.5 font-mono text-emerald-700 font-semibold">
                           <div className="flex items-center justify-between gap-2">
                             {t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : "••••••") : "—"}
-                            <button onClick={(e) => { e.stopPropagation(); delTx(t.id); }} className="text-slate-300 hover:text-rose-500"><Trash2 size={12} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); delTx(t.id); }} disabled={deletingTxIds.has(t.id)} className="text-slate-300 hover:text-rose-500 disabled:opacity-40"><Trash2 size={12} /></button>
                           </div>
                         </td>
                       </tr>

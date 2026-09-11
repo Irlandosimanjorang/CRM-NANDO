@@ -473,6 +473,12 @@ export default function Leads({
   const [fType, setFType] =
     useState("");
 
+  // BUG FIX (11 Sep 2026, ketauan pas audit) - tombol KPI "Active"/"Hot"/
+  // "Won"/"No Contact" sebelumnya cuma manggil clearFilters() doang, gak
+  // pernah beneran nge-filter apa-apa (dead code sisa refactor lama).
+  // Sekarang beneran nge-filter lewat state fKpi ini.
+  const [fKpi, setFKpi] = useState("");
+
   // Daftar anggota tim (buat filter "leads siapa" & reassign) - owner ATAU
   // manager yang butuh ini, karena RLS leads_role_access ngasih owner/manager
   // dua-duanya akses liat & ubah lead SEMUA orang di orgnya (sales_rep cuma
@@ -763,6 +769,15 @@ export default function Leads({
      FILTER
   ========================================================= */
 
+  const kpiActiveStageKeys = useMemo(
+    () => stages.filter((s, i) => s.type === "normal" && i !== 0).map((s) => s.key),
+    [stages]
+  );
+  const kpiWonStageKeys = useMemo(
+    () => stages.filter((s) => s.type === "won").map((s) => s.key),
+    [stages]
+  );
+
   const filtered =
     useMemo(
       () =>
@@ -773,6 +788,19 @@ export default function Leads({
             c.category !==
               fCat
           ) {
+            return false;
+          }
+
+          if (fKpi === "active" && !kpiActiveStageKeys.includes(c.stage_key)) {
+            return false;
+          }
+          if (fKpi === "hot" && String(c.priority || "").toLowerCase() !== "hot") {
+            return false;
+          }
+          if (fKpi === "won" && !kpiWonStageKeys.includes(c.stage_key)) {
+            return false;
+          }
+          if (fKpi === "noContact" && (c.phone || c.email)) {
             return false;
           }
 
@@ -849,6 +877,9 @@ export default function Leads({
         fCat,
         fType,
         fAssignee,
+        fKpi,
+        kpiActiveStageKeys,
+        kpiWonStageKeys,
       ]
     );
 
@@ -866,6 +897,7 @@ export default function Leads({
     fCat,
     fType,
     fAssignee,
+    fKpi,
   ]);
 
 
@@ -917,52 +949,22 @@ export default function Leads({
     setQ("");
     setFCat("");
     setFType("");
+    setFKpi("");
   };
 
-
-  const filterActive = () => {
-
-    clearFilters();
-
-    const activeStageKeys =
-      stages
-        .filter(
-          (s, i) =>
-            s.type === "normal" &&
-            i !== 0
-        )
-        .map(
-          (s) => s.key
-        );
-
-    const firstActive =
-      activeStageKeys[0];
-
-    if (firstActive) {
-
-      const stage =
-        stages.find(
-          (s) =>
-            s.key ===
-            firstActive
-        );
-
-      if (stage) {
-        setQ("");
-      }
-
-    }
-
-  };
-
-
-  const filterHot = () => {
-
-    clearFilters();
-
+  // Toggle: klik KPI yang lagi aktif lagi -> balik ke "Total Leads" (gak
+  // ada filter). Klik KPI lain -> ganti ke situ, sambil bersihin filter
+  // lain (search/kategori/tipe) biar hasilnya gak nyampur.
+  const toggleKpiFilter = (kind) => {
     setQ("");
-
+    setFCat("");
+    setFType("");
+    setFKpi((prev) => (prev === kind ? "" : kind));
   };
+  const filterActive = () => toggleKpiFilter("active");
+  const filterHot = () => toggleKpiFilter("hot");
+  const filterWon = () => toggleKpiFilter("won");
+  const filterNoContact = () => toggleKpiFilter("noContact");
 
 
   /* =========================================================
@@ -1393,7 +1395,8 @@ export default function Leads({
           active={
             !q &&
             !fCat &&
-            !fType
+            !fType &&
+            !fKpi
           }
           onClick={
             clearFilters
@@ -1406,6 +1409,7 @@ export default function Leads({
           label="Active"
           value={kpi.active}
           iconClass="text-blue-500"
+          active={fKpi === "active"}
           onClick={
             filterActive
           }
@@ -1416,6 +1420,7 @@ export default function Leads({
           label="Hot"
           value={kpi.hot}
           iconClass="text-orange-500"
+          active={fKpi === "hot"}
           onClick={
             filterHot
           }
@@ -1426,9 +1431,8 @@ export default function Leads({
           label="Won"
           value={kpi.won}
           iconClass="text-emerald-500"
-          onClick={() => {
-            clearFilters();
-          }}
+          active={fKpi === "won"}
+          onClick={filterWon}
         />
 
         <MiniKpi
@@ -1436,9 +1440,8 @@ export default function Leads({
           label="No Contact"
           value={kpi.noContact}
           iconClass="text-rose-500"
-          onClick={() => {
-            clearFilters();
-          }}
+          active={fKpi === "noContact"}
+          onClick={filterNoContact}
         />
 
       </div>
@@ -1694,7 +1697,10 @@ export default function Leads({
             onProgress={(lead) => { setProgressPopup({ lead, autoFocus: true }); saveOpenModal("progress", { leadId: lead.id }); }}
             canManage={canManage}
             members={members}
-            onReassign={async (leadId, uid) => { await db.updateLeadAssignee(leadId, uid); onChanged(); }}
+            onReassign={async (leadId, uid) => {
+              try { await db.updateLeadAssignee(leadId, uid); onChanged(); }
+              catch (e) { alert("Gagal reassign: " + e.message); }
+            }}
           />
         ))}
 

@@ -20,7 +20,7 @@ import {
   X,
   Bot,
   Pencil,
-  CheckCircle2,  MessageCircle,
+  CheckCircle2, MessageCircle,
   Database,
   Layers,
   Volume2,

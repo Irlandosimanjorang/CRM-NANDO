@@ -288,6 +288,20 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   // aslinya, gak berubah) baru jalan abis user klik "Ya, Lanjut Foto" -
   // proceed* baru munculin PhotoCheckinModal (yang sekarang juga verifikasi AI).
   const geoReqIdRef = useRef(0);
+  // BUG FIX (11 Sep 2026, ketauan pas audit) - watchPosition & setTimeout di
+  // askSavePin dibikin imperatif (di luar useEffect), jadi kalau component
+  // ini unmount (user pindah tab) SAAT scan GPS lagi jalan, watch-nya gak
+  // pernah ke-clear - GPS tetep nyala nguras baterai di background sia-sia.
+  // Disimpen ke ref di sini biar bisa dibersihin lewat cleanup useEffect
+  // di bawah.
+  const scanWatchIdRef = useRef(null);
+  const scanTimeoutRef = useRef(null);
+  useEffect(() => {
+    return () => {
+      if (scanWatchIdRef.current !== null) navigator.geolocation.clearWatch(scanWatchIdRef.current);
+      if (scanTimeoutRef.current !== null) clearTimeout(scanTimeoutRef.current);
+    };
+  }, []);
 
   const askCheckIn = (lead, distance) => {
     if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
@@ -314,6 +328,8 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
     const finish = async () => {
       if (geoReqIdRef.current !== reqId) return;
       navigator.geolocation.clearWatch(watchId);
+      if (scanTimeoutRef.current !== null) { clearTimeout(scanTimeoutRef.current); scanTimeoutRef.current = null; }
+      scanWatchIdRef.current = null;
       if (!best) {
         setLocationConfirm(null);
         alert("Gagal dapetin sinyal GPS yang cukup presisi. Coba pindah ke tempat terbuka (bukan dalam ruangan/gedung), lalu coba lagi.");
@@ -334,12 +350,15 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
       () => {
         if (geoReqIdRef.current !== reqId) return;
         navigator.geolocation.clearWatch(watchId);
+        if (scanTimeoutRef.current !== null) { clearTimeout(scanTimeoutRef.current); scanTimeoutRef.current = null; }
+        scanWatchIdRef.current = null;
         setLocationConfirm(null);
         alert("Gagal ambil lokasi. Kalau ini dari laptop, laptop emang gak punya GPS asli (beda sama HP) - cek Windows Settings > Privacy > Location harus nyala, dan izin lokasi Chrome buat nexto.site harus \"Allow\". Coba pake HP kalau masih gagal.");
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
-    setTimeout(finish, 20000);
+    scanWatchIdRef.current = watchId;
+    scanTimeoutRef.current = setTimeout(finish, 20000);
   };
 
   // Kedua alur (udah ada titik lokasi ATAU baru pertama kali) sama-sama minta
@@ -834,7 +853,10 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
 
 function FollowupView({ leads, onEdit, onChanged }) {
   const todo = useMemo(() => leads.filter((c) => c.next_action && c.next_action.trim()), [leads]);
-  const done = async (id) => { await db.upsertLead({ ...leads.find((l) => l.id === id), next_action: "" }); onChanged(); };
+  const done = async (id) => {
+    try { await db.upsertLead({ ...leads.find((l) => l.id === id), next_action: "" }); onChanged(); }
+    catch (e) { alert("Gagal nandain selesai: " + e.message); }
+  };
 
   return (
     <div>
