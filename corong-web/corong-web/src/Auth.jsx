@@ -1765,6 +1765,185 @@ function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
   );
 }
 
+// Demo reel di hero - pengganti video produk. Muter otomatis lewat 5 "scene"
+// yang masing-masing nunjukin 1 fitur beneran kerja (Kelola Leads, Bot
+// Telegram, Generate Leads AI, Advisor Harian, Pipeline Review), dibungkus
+// mockup browser window biar berasa kayak lagi liat app-nya jalan sendiri.
+// Total loop ~25 detik (5 scene x 5 detik) - user minta demo singkat 20-30
+// detik nunjukin Nexto kerja dgn berbagai fitur (11 Sep 2026). Dibikin CSS/
+// React murni (bukan file video) karena environment ini gak punya tool
+// rekam/edit video.
+const DEMO_SCENES = [
+  { key: "leads", label: "Kelola Leads" },
+  { key: "telegram", label: "Bot Telegram" },
+  { key: "generate", label: "Generate Leads AI" },
+  { key: "advisor", label: "Advisor Harian" },
+  { key: "pipeline", label: "Pipeline Review" },
+];
+const DEMO_SCENE_MS = 5000;
+
+function ProductDemoReel() {
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setActive((i) => (i + 1) % DEMO_SCENES.length), DEMO_SCENE_MS);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="mx-auto mt-12 max-w-3xl">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1119] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.7)]">
+        {/* title bar */}
+        <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.03] px-4 py-2.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
+          <span className="ml-3 rounded-md bg-white/[0.05] px-2.5 py-0.5 text-[9px] text-slate-500">
+            nexto.site/app
+          </span>
+        </div>
+
+        {/* stage */}
+        <div className="relative h-[280px] overflow-hidden sm:h-[300px]">
+          {DEMO_SCENES.map((scene, i) => (
+            <div
+              key={scene.key}
+              className={`absolute inset-0 p-5 transition-all duration-700 ease-out sm:p-6 ${
+                i === active ? "opacity-100 translate-y-0" : "pointer-events-none opacity-0 translate-y-2"
+              }`}
+            >
+              <DemoScene sceneKey={scene.key} />
+            </div>
+          ))}
+        </div>
+
+        {/* scene dots */}
+        <div className="flex items-center justify-center gap-2 border-t border-white/[0.06] bg-white/[0.02] py-3">
+          {DEMO_SCENES.map((scene, i) => (
+            <button
+              key={scene.key}
+              onClick={() => setActive(i)}
+              className="group flex items-center gap-1.5"
+              aria-label={scene.label}
+            >
+              <span
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  i === active ? "w-5 bg-orange-500" : "w-1.5 bg-white/15 group-hover:bg-white/30"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-3 text-center text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">
+        {DEMO_SCENES[active].label}
+      </div>
+    </div>
+  );
+}
+
+function DemoScene({ sceneKey }) {
+  if (sceneKey === "leads") {
+    const cols = [
+      { label: "Baru", color: "bg-slate-500", cards: ["PT Sumber Jaya", "CV Aneka Karya"] },
+      { label: "Nego", color: "bg-orange-500", cards: ["PT Asiaplast"] },
+      { label: "Deal", color: "bg-emerald-500", cards: ["PT Karya Mandiri"] },
+    ];
+    return (
+      <div className="grid h-full grid-cols-3 gap-3">
+        {cols.map((col) => (
+          <div key={col.label} className="rounded-xl bg-white/[0.03] p-2.5">
+            <div className="flex items-center gap-1.5 px-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
+              <span className={`h-1.5 w-1.5 rounded-full ${col.color}`} />
+              {col.label}
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {col.cards.map((c) => (
+                <div key={c} className="rounded-lg border border-white/[0.06] bg-[#141a26] px-2 py-2 text-[9px] font-semibold text-slate-200 shadow-sm">
+                  {c}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (sceneKey === "telegram") {
+    return (
+      <div className="mx-auto flex h-full max-w-[280px] flex-col justify-end gap-2 pb-1">
+        <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-orange-600 px-3 py-2 text-[10px] font-medium text-white">
+          update PT Asiaplast ke Nego, harga nego Rp33.400/kg
+        </div>
+        <div className="mr-auto flex max-w-[90%] items-start gap-2 rounded-2xl rounded-bl-sm bg-[#141a26] px-3 py-2 text-[10px] text-slate-200">
+          <Bot size={13} className="mt-0.5 shrink-0 text-emerald-400" />
+          <span>Sip, PT Asiaplast udah dipindah ke stage <b>Nego</b>. Next action gue set: follow-up 3 hari lagi.</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (sceneKey === "generate") {
+    const results = [
+      { name: "PT Sumber Plastindo", city: "Karawang", score: 92 },
+      { name: "CV Rejeki Kimia", city: "Sidoarjo", score: 87 },
+      { name: "PT Multi Compound", city: "Cikarang", score: 81 },
+    ];
+    return (
+      <div>
+        <div className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-[#141a26] px-3 py-2 text-[9px] text-slate-500">
+          <Sparkles size={12} className="text-orange-400" />
+          Nyari "distributor resin PVC" di Jawa Timur…
+        </div>
+        <div className="mt-3 space-y-1.5">
+          {results.map((r) => (
+            <div key={r.name} className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-[#141a26] px-3 py-2">
+              <div>
+                <div className="text-[10px] font-semibold text-slate-100">{r.name}</div>
+                <div className="text-[8px] text-slate-500">{r.city}</div>
+              </div>
+              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-bold text-emerald-400">
+                {r.score}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (sceneKey === "advisor") {
+    return (
+      <div className="flex h-full flex-col justify-center">
+        <div className="rounded-xl border border-violet-400/15 bg-violet-500/[0.05] p-4">
+          <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wide text-violet-300">
+            <BrainCircuit size={13} />
+            Advisor Harian
+          </div>
+          <p className="mt-2 text-[11px] leading-5 text-slate-300">
+            3 lead belum ada next action lebih dari seminggu. Prioritasin <b>PT Global Teknindo</b> — udah 2x diskusi harga tapi belum ada follow-up terakhir.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // pipeline
+  return (
+    <div className="flex h-full flex-col justify-center">
+      <div className="rounded-xl border border-orange-400/15 bg-orange-500/[0.05] p-4">
+        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wide text-orange-300">
+          <TrendingUp size={13} />
+          Pipeline Review
+        </div>
+        <p className="mt-2 text-[11px] leading-5 text-slate-300">
+          14 hari terakhir: 6 lead baru, 2 closing, 1 lead stuck 18 hari di Nego. Fokus minggu ini: dorong PT Karya Mandiri sebelum harga penawaran expired.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function Auth() {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
@@ -2136,6 +2315,8 @@ export default function Auth() {
                 Untuk semua industri
               </span>
             </div>
+
+            <ProductDemoReel />
 
           </div>
         </section>
