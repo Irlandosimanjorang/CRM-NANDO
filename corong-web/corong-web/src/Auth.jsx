@@ -2328,7 +2328,7 @@ export default function Auth() {
                 </div>
 
                 <div className="mt-1 text-[10px] text-slate-500">
-                  CRM inti + otomatisasi ringan — untuk yang mau rapiin data leads dulu
+                  CRM inti + AI ringan — untuk yang mau rapiin data leads dulu
                 </div>
                 <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
                 {isEarlyBird && (
@@ -2369,7 +2369,7 @@ export default function Auth() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-60" />
                     <span className="relative inline-flex h-full w-full rounded-full bg-orange-400" />
                   </span>
-                  Sales Engine Aktif
+                  AI Engine Aktif
                 </div>
 
                 <div className="relative mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-orange-400">
@@ -2389,7 +2389,7 @@ export default function Auth() {
                 </div>
 
                 <div className="relative mt-1 text-[10px] text-slate-400">
-                  Sales Engine penuh — solo, tapi kerja kayak ada tim
+                  AI Sales Engine penuh — solo, tapi kerja kayak ada tim
                 </div>
                 <div className="relative">
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
@@ -2430,7 +2430,7 @@ export default function Auth() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
                       <span className="relative inline-flex h-full w-full rounded-full bg-violet-400" />
                     </span>
-                    Sales Engine + Tim
+                    AI Engine + Tim
                   </div>
 
                   <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300">
