@@ -1897,30 +1897,80 @@ function ProductDemoReel() {
   );
 }
 
+// Mini versi dari kartu lead beneran di tab Leads (lihat LeadCard di
+// Leads.jsx) - avatar inisial, pill tahap + progress bar warna sesuai
+// stage, baris kontak/produk, dan "next action" digarisbawahin border
+// oranye kayak aslinya. Dibikin mirip persis biar demo reel gak berasa
+// generic, user minta "card di tab lead dibikin mirip yang asli" (11 Sep 2026).
+function MiniLeadCard({ name, category, city, stageLabel, stageHex, progress, phone, product, nextAction, urgencyNote, urgencyColor, avatarBg }) {
+  const initials = name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  return (
+    <div className="rounded-xl bg-white p-2.5" style={{ border: `1.5px solid ${urgencyColor}` }}>
+      <div className="flex items-start gap-2">
+        <div
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[8px] font-extrabold text-white"
+          style={{ background: avatarBg }}
+        >
+          {initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[10.5px] font-bold leading-tight text-slate-900">{name}</div>
+          <div className="truncate text-[8.5px] text-slate-400">{[category, city].filter(Boolean).join(", ")}</div>
+        </div>
+      </div>
+
+      <div className="mt-2">
+        <div className="mb-1 flex items-center justify-between">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[7.5px] font-semibold"
+            style={{ background: `${stageHex}17`, color: stageHex }}
+          >
+            <span className="h-1 w-1 rounded-full" style={{ background: stageHex }} />
+            {stageLabel}
+          </span>
+        </div>
+        <div className="h-1 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full" style={{ width: `${progress}%`, background: stageHex }} />
+        </div>
+      </div>
+
+      <div className="mt-2 flex gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-[7px] text-slate-400">Telepon</div>
+          <div className="truncate text-[8.5px] text-slate-600">{phone}</div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[7px] text-slate-400">Produk</div>
+          <div className="truncate text-[8.5px] text-slate-600">{product}</div>
+        </div>
+      </div>
+
+      <div className="mt-2 border-l-2 border-orange-400 pl-2">
+        <div className="truncate text-[8.5px] font-medium text-slate-800">{nextAction}</div>
+        <div className="mt-0.5 text-[7.5px] font-medium" style={{ color: urgencyColor }}>{urgencyNote}</div>
+      </div>
+    </div>
+  );
+}
+
 function DemoScene({ sceneKey }) {
   if (sceneKey === "leads") {
-    const cols = [
-      { label: "Baru", color: "bg-slate-500", cards: ["PT Sumber Jaya", "CV Aneka Karya"] },
-      { label: "Nego", color: "bg-orange-500", cards: ["PT Asiaplast"] },
-      { label: "Deal", color: "bg-emerald-500", cards: ["PT Karya Mandiri"] },
-    ];
     return (
-      <div className="grid h-full grid-cols-3 gap-3">
-        {cols.map((col) => (
-          <div key={col.label} className="rounded-xl bg-white/[0.03] p-2.5">
-            <div className="flex items-center gap-1.5 px-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
-              <span className={`h-1.5 w-1.5 rounded-full ${col.color}`} />
-              {col.label}
-            </div>
-            <div className="mt-2 space-y-1.5">
-              {col.cards.map((c) => (
-                <div key={c} className="rounded-lg border border-white/[0.06] bg-[#141a26] px-2 py-2 text-[9px] font-semibold text-slate-200 shadow-sm">
-                  {c}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="h-full rounded-xl bg-[#fafbfc] p-2.5">
+        <div className="grid grid-cols-2 gap-2.5">
+          <MiniLeadCard
+            name="PT Asiaplast" category="Kimia" city="Jawa Timur"
+            stageLabel="Nego" stageHex="#f59e0b" progress={60}
+            phone="0812xxxx01" product="Resin PVC" nextAction="Follow up harga penawaran"
+            urgencyNote="3 hari sejak kontak" urgencyColor="#b45309" avatarBg="#f97316"
+          />
+          <MiniLeadCard
+            name="PT Karya Mandiri" category="Barang Jadi" city="Bekasi"
+            stageLabel="Deal" stageHex="#10b981" progress={100}
+            phone="0812xxxx02" product="Pipa PVC" nextAction="Kirim kontrak & invoice"
+            urgencyNote="Dihubungi 1 hari lalu" urgencyColor="#059669" avatarBg="#6366f1"
+          />
+        </div>
       </div>
     );
   }
