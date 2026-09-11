@@ -56,6 +56,13 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   const [targetRole, setTargetRole] = useState("");
   const [productSold, setProductSold] = useState("");
   const [companyScale, setCompanyScale] = useState("");
+  // Dulu AI harus NEBAK sendiri dari kata kunci/produk apakah target
+  // pembelinya perusahaan atau individu (misal "asuransi kesehatan" bisa
+  // B2B employee-benefit ATAU B2C individu) - sering ketebak salah. Field
+  // ini opsional (kosong = biar AI tetep nebak sendiri kayak sebelumnya,
+  // biar gak breaking buat yang udah biasa pakai) tapi kalau diisi,
+  // instruksinya eksplisit ke backend, gak perlu tebak-tebakan lagi.
+  const [targetType, setTargetType] = useState("");
   const [busy, setBusy] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [msg, setMsg] = useState("");
@@ -82,7 +89,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
     }
     setBusy(true); setMsg("");
     try {
-      const res = await db.generateLeads({ keyword, province, targetRole, productSold, companyScale });
+      const res = await db.generateLeads({ keyword, province, targetRole, productSold, companyScale, targetType });
       const successMsg = `✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`;
       setMsg(successMsg);
       onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
@@ -186,6 +193,14 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                   <option value="UMKM / Kecil">UMKM / Kecil</option>
                   <option value="Menengah">Menengah</option>
                   <option value="Besar / Korporat">Besar / Korporat</option>
+                </select>
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-xs font-medium text-slate-500">Target pembeli (opsional - kosongin biar AI yang nentuin)</span>
+                <select className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={targetType} onChange={(e) => setTargetType(e.target.value)}>
+                  <option value="">Biar AI yang nentuin</option>
+                  <option value="company">Perusahaan/organisasi (B2B) - beli buat operasional/produksi mereka</option>
+                  <option value="individual">Individu/perorangan - AI cari organisasi perantara (HRD, komunitas, agen), bukan data pribadi orang</option>
                 </select>
               </label>
             </div>

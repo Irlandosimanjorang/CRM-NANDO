@@ -294,8 +294,8 @@ export async function mergeCustomFieldLabels(newLabels) {
 }
 
 // ---- GENERATE LEADS (AI cari calon lead lewat web search) ----
-export async function generateLeads({ keyword, province, targetRole, productSold, companyScale } = {}) {
-  const { data, error } = await supabase.functions.invoke("generate-leads", { body: { keyword, province, targetRole, productSold, companyScale } });
+export async function generateLeads({ keyword, province, targetRole, productSold, companyScale, targetType } = {}) {
+  const { data, error } = await supabase.functions.invoke("generate-leads", { body: { keyword, province, targetRole, productSold, companyScale, targetType } });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
   return data;
