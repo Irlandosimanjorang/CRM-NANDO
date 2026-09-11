@@ -2220,23 +2220,21 @@ export default function Auth() {
         </section>
 
         {/* =========================================================
-            KEAMANAN AKUN - carousel horizontal, warna disamain sama
-            palet gelap+orange yang dipake section lain (bukan biru/ungu
-            kayak referensi awalnya - direstyle 11 Sep 2026).
+            KEAMANAN - carousel horizontal (layout ala Hostinger), tapi
+            warna balik terang (bg-[#fbfaf8]) matching sisa landing page -
+            versi gelap sempet dicoba, user minta balik terang lagi
+            (11 Sep 2026).
         ========================================================== */}
-        <section id="keamanan" className="relative overflow-hidden bg-[#0b0f1a] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
-          <div className="pointer-events-none absolute left-[-8%] top-[-15%] h-[420px] w-[420px] rounded-full bg-orange-500/[0.09] blur-[130px]" />
-          <div className="pointer-events-none absolute bottom-[-20%] right-[-6%] h-[380px] w-[380px] rounded-full bg-orange-600/[0.07] blur-[130px]" />
-
+        <section id="keamanan" className="relative overflow-hidden bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
           <div className="relative mx-auto max-w-7xl">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
               <div className="max-w-xl">
-                <SectionLabel>Keamanan akun</SectionLabel>
-                <h2 className="mt-4 text-[32px] font-bold leading-tight tracking-[-0.04em] text-white sm:text-[44px]">
+                <SectionLabel>Keamanan</SectionLabel>
+                <h2 className="mt-4 text-[32px] font-bold leading-tight tracking-[-0.04em] text-slate-950 sm:text-[44px]">
                   Data lead Anda,
-                  <span className="block text-orange-400">dijaga kayak brankas.</span>
+                  <span className="block text-orange-600">dijaga kayak brankas.</span>
                 </h2>
-                <p className="mt-4 text-[13px] leading-6 text-slate-400">
+                <p className="mt-4 text-[13px] leading-6 text-slate-500">
                   Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis Anda. Makanya keamanan akun bukan fitur tempelan.
                 </p>
               </div>
@@ -2244,14 +2242,14 @@ export default function Auth() {
                 <button
                   onClick={() => scrollSecurity(-1)}
                   aria-label="Kartu sebelumnya"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-orange-400/40 hover:text-orange-400"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-orange-300 hover:text-orange-600"
                 >
                   <ChevronLeft size={18} />
                 </button>
                 <button
                   onClick={() => scrollSecurity(1)}
                   aria-label="Kartu berikutnya"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-slate-400 transition hover:border-orange-400/40 hover:text-orange-400"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-orange-300 hover:text-orange-600"
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -2268,26 +2266,26 @@ export default function Auth() {
                 return (
                   <div
                     key={f.title}
-                    className="group w-[270px] shrink-0 rounded-[24px] border border-white/10 bg-white/[0.035] p-6 transition hover:border-orange-400/30 hover:bg-white/[0.05]"
+                    className="group w-[270px] shrink-0 rounded-[24px] border border-slate-200 bg-white p-6 transition hover:border-orange-200"
                     style={{ scrollSnapAlign: "start" }}
                   >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500/15 text-orange-400">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
                       <Icon size={19} />
                     </div>
-                    <div className="mt-5 text-[15px] font-bold tracking-tight text-white">{f.title}</div>
-                    <p className="mt-2 text-[12px] leading-5 text-slate-400">{f.desc}</p>
+                    <div className="mt-5 text-[15px] font-bold tracking-tight text-slate-900">{f.title}</div>
+                    <p className="mt-2 text-[12px] leading-5 text-slate-500">{f.desc}</p>
                   </div>
                 );
               })}
             </div>
 
-            <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 text-center">
-              <div className="text-[12px] font-bold text-white">
+            <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
+              <div className="text-[12px] font-bold text-slate-800">
                 Transparan soal data Anda
               </div>
               <div className="mt-1 text-[10px] leading-5 text-slate-400">
                 Data lead/progress tetap milik Anda, gak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) &amp; OpenAI untuk diproses — kami sebutkan jelas apa & kenapa di{" "}
-                <button onClick={() => setLegalModal("privacy")} className="font-semibold text-orange-400 underline hover:text-orange-300">
+                <button onClick={() => setLegalModal("privacy")} className="font-semibold text-orange-600 underline hover:text-orange-700">
                   Kebijakan Privasi
                 </button>.
               </div>
