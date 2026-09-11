@@ -422,12 +422,12 @@ const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 const PRICING_NORMAL = {
   standard: { monthlyPrice: "Rp79rb", quarterlyTotal: "Rp237rb" },
   professional: { monthlyPrice: "Rp269rb", quarterlyTotal: "Rp807rb" },
-  enterprise: { monthlyPrice: "Rp1,3jt", quarterlyTotal: "Rp3,9jt" },
+  enterprise: { monthlyPrice: "Rp1,3jt", quarterlyTotal: "Rp3,9jt", perPerson: "Rp325rb" },
 };
 const PRICING_EARLY_BIRD = {
   standard: { monthlyPrice: "Rp67rb", monthlySavings: "Rp12rb", quarterlyTotal: "Rp201rb", quarterlySavings: "Rp36rb" },
   professional: { monthlyPrice: "Rp229rb", monthlySavings: "Rp40rb", quarterlyTotal: "Rp686rb", quarterlySavings: "Rp121rb" },
-  enterprise: { monthlyPrice: "Rp1,11jt", monthlySavings: "Rp195rb", quarterlyTotal: "Rp3,315jt", quarterlySavings: "Rp585rb" },
+  enterprise: { monthlyPrice: "Rp1,11jt", monthlySavings: "Rp195rb", quarterlyTotal: "Rp3,315jt", quarterlySavings: "Rp585rb", perPerson: "Rp276rb" },
 };
 const PRICING = isEarlyBird ? PRICING_EARLY_BIRD : PRICING_NORMAL;
 
@@ -2449,7 +2449,7 @@ export default function Auth() {
                   </div>
 
                   <div className="mt-1 text-[10px] text-slate-400">
-                    Untuk 4 orang (≈Rp325rb/orang) — tim sales dengan visibilitas penuh
+                    Untuk 4 orang (≈{PRICING.enterprise.perPerson}/orang) — tim sales dengan visibilitas penuh
                   </div>
 
                   {/* Tim lebih dari 4 orang - bukan harga standar, arahin
