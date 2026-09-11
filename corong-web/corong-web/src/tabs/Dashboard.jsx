@@ -78,22 +78,13 @@ const markPlayedToday = () => { try { localStorage.setItem(playedTodayKey(), "1"
 // with a safety timeout so the card never gets stuck if audio fails/is blocked.
 // Audio cuma diputer SEKALI per hari - abis itu (atau abis di-skip/diklik
 // Listen), langsung ke tampilan statistik tiap balik ke Dashboard.
-// Tanggal review pipeline berikutnya (tanggal 1 & 16 tiap bulan, WIB) -
-// dipake buat placeholder pas belum ada laporan yang ke-generate sama sekali.
-function nextPipelineReviewDateLabel() {
-  const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
-  const nowWIB = new Date(Date.now() + WIB_OFFSET_MS);
-  const y = nowWIB.getUTCFullYear(), m = nowWIB.getUTCMonth(), d = nowWIB.getUTCDate();
-  const target = d < 16 ? new Date(Date.UTC(y, m, 16)) : new Date(Date.UTC(y, m + 1, 1));
-  return target.toLocaleDateString("id-ID", { day: "numeric", month: "long" });
-}
-
 // "Pipeline Review" - laporan kesehatan pipeline yang di-generate OTOMATIS
 // 2x/bulan lewat cron (edge function pipeline-review), BUKAN tombol
-// on-demand kayak fitur AI lain di Nexto. Kartunya SELALU ke-embed di
-// Dashboard (biar user tau fitur ini ada) - konten detailnya BARU muncul
-// begitu laporan pertama ke-generate, sebelum itu nampilin placeholder
-// tanggal review berikutnya. Khusus Professional ke atas.
+// on-demand kayak fitur AI lain di Nexto. Badge/header-nya SELALU
+// ke-embed di Dashboard (biar user tau fitur ini ada) - isi laporannya
+// (summary, statistik, fokus minggu ini) BARU muncul begitu ada laporan
+// yang beneran ke-generate; sebelum itu cuma badge doang yang keliatan,
+// gak ada teks penjelasan apapun. Khusus Professional ke atas.
 function PipelineReviewCard({ leads, onOpenLead, isProfessional }) {
   const [review, setReview] = useState(undefined); // undefined = loading, null = belum pernah ada
   useEffect(() => {
@@ -111,19 +102,12 @@ function PipelineReviewCard({ leads, onOpenLead, isProfessional }) {
 
   return (
     <div className="bg-white border border-violet-100 rounded-[28px] p-5">
-      <div className="flex items-center justify-between gap-2 mb-2">
+      <div className={`flex items-center justify-between gap-2 ${review ? "mb-2" : ""}`}>
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Sparkles size={16} className="text-violet-500" /> Pipeline Review</div>
         {generatedDate && <span className="text-[11px] text-slate-400">{generatedDate}</span>}
       </div>
 
-      {review === undefined ? (
-        <p className="text-xs text-slate-400">Memuat…</p>
-      ) : review === null ? (
-        <p className="text-sm text-slate-500 leading-relaxed">
-          Laporan kesehatan pipeline otomatis, 2x sebulan (tanggal 1 & 16) - gak perlu diklik, Nexto yang nyiapin sendiri.
-          Laporan pertama Anda bakal muncul di sini sekitar tanggal <b className="text-slate-700">{nextPipelineReviewDateLabel()}</b>.
-        </p>
-      ) : (
+      {review && (
         <>
           <p className="text-sm text-slate-600 leading-relaxed">{review.summary}</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
