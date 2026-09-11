@@ -365,25 +365,25 @@ const INDUSTRIES = [
 //    6 Sep 2026 - sebelumnya "1x/minggu").
 const STANDARD_FEATURES = [
   "Kelola Leads — kartu per perusahaan",
-  "Smart Import AI",
+  "Smart Import",
   "Vector Memory ringan (Nexto inget catatan lama yang relevan)",
   "Recycle Bin",
   "Deteksi Duplikat",
   "Nex — Komunitas Sesama Sales",
-  "Daily Digest (rekomendasi AI harian)",
+  "Daily Digest (rekomendasi harian)",
 ];
 
 const PROFESSIONAL_FEATURES = [
   "Semua fitur Standard",
   "Bot Telegram (edit CRM, progress harian, jadwal visit)",
   "Sinkron otomatis ke Google Calendar",
-  "Generate Leads AI",
-  "Rekam Meeting otomatis (AI)",
-  "Customer State (AI)",
-  "Outcome Memory (AI)",
-  "AI Advisor harian",
+  "Generate Leads",
+  "Rekam Meeting otomatis",
+  "Customer State",
+  "Outcome Memory",
+  "Advisor harian",
   "Pipeline Review otomatis",
-  "AI Draft Follow-up (WhatsApp & Email)",
+  "Draft Follow-up (WhatsApp & Email)",
   "Analisa Kompetitor",
 ];
 
