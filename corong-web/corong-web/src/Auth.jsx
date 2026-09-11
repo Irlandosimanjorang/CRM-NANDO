@@ -37,6 +37,8 @@ import {
   Swords,
   Users2,
   Settings as SettingsIcon,
+  Sun,
+  Clock,
 } from "lucide-react";
 
 // Klip suara robot buat landing page - STATIS, di-generate SEKALI aja lewat
@@ -1905,24 +1907,24 @@ function ProductDemoReel() {
 function MiniLeadCard({ name, category, city, stageLabel, stageHex, progress, phone, product, nextAction, urgencyNote, urgencyColor, avatarBg }) {
   const initials = name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   return (
-    <div className="rounded-xl bg-white p-2.5" style={{ border: `1.5px solid ${urgencyColor}` }}>
-      <div className="flex items-start gap-2">
+    <div className="rounded-2xl bg-white p-3.5" style={{ border: `1.5px solid ${urgencyColor}` }}>
+      <div className="flex items-start gap-2.5">
         <div
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[8px] font-extrabold text-white"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-extrabold text-white"
           style={{ background: avatarBg }}
         >
           {initials}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[10.5px] font-bold leading-tight text-slate-900">{name}</div>
-          <div className="truncate text-[8.5px] text-slate-400">{[category, city].filter(Boolean).join(", ")}</div>
+          <div className="truncate text-[13px] font-bold leading-tight text-slate-900">{name}</div>
+          <div className="truncate text-[10px] text-slate-400">{[category, city].filter(Boolean).join(", ")}</div>
         </div>
       </div>
 
-      <div className="mt-2">
+      <div className="mt-2.5">
         <div className="mb-1 flex items-center justify-between">
           <span
-            className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[7.5px] font-semibold"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold"
             style={{ background: `${stageHex}17`, color: stageHex }}
           >
             <span className="h-1 w-1 rounded-full" style={{ background: stageHex }} />
@@ -1934,20 +1936,20 @@ function MiniLeadCard({ name, category, city, stageLabel, stageHex, progress, ph
         </div>
       </div>
 
-      <div className="mt-2 flex gap-3">
+      <div className="mt-2.5 flex gap-4">
         <div className="min-w-0 flex-1">
-          <div className="text-[7px] text-slate-400">Telepon</div>
-          <div className="truncate text-[8.5px] text-slate-600">{phone}</div>
+          <div className="text-[8.5px] text-slate-400">Telepon</div>
+          <div className="truncate text-[10px] text-slate-600">{phone}</div>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[7px] text-slate-400">Produk</div>
-          <div className="truncate text-[8.5px] text-slate-600">{product}</div>
+          <div className="text-[8.5px] text-slate-400">Produk</div>
+          <div className="truncate text-[10px] text-slate-600">{product}</div>
         </div>
       </div>
 
-      <div className="mt-2 border-l-2 border-orange-400 pl-2">
-        <div className="truncate text-[8.5px] font-medium text-slate-800">{nextAction}</div>
-        <div className="mt-0.5 text-[7.5px] font-medium" style={{ color: urgencyColor }}>{urgencyNote}</div>
+      <div className="mt-2.5 border-l-2 border-orange-400 pl-2.5">
+        <div className="truncate text-[10px] font-medium text-slate-800">{nextAction}</div>
+        <div className="mt-0.5 text-[9px] font-medium" style={{ color: urgencyColor }}>{urgencyNote}</div>
       </div>
     </div>
   );
@@ -1956,19 +1958,13 @@ function MiniLeadCard({ name, category, city, stageLabel, stageHex, progress, ph
 function DemoScene({ sceneKey }) {
   if (sceneKey === "leads") {
     return (
-      <div className="h-full rounded-xl bg-[#fafbfc] p-2.5">
-        <div className="grid grid-cols-2 gap-2.5">
+      <div className="h-full rounded-xl bg-[#fafbfc] p-3">
+        <div className="mx-auto max-w-[230px]">
           <MiniLeadCard
             name="PT Asiaplast" category="Kimia" city="Jawa Timur"
             stageLabel="Nego" stageHex="#f59e0b" progress={60}
             phone="0812xxxx01" product="Resin PVC" nextAction="Follow up harga penawaran"
             urgencyNote="3 hari sejak kontak" urgencyColor="#b45309" avatarBg="#f97316"
-          />
-          <MiniLeadCard
-            name="PT Karya Mandiri" category="Barang Jadi" city="Bekasi"
-            stageLabel="Deal" stageHex="#10b981" progress={100}
-            phone="0812xxxx02" product="Pipa PVC" nextAction="Kirim kontrak & invoice"
-            urgencyNote="Dihubungi 1 hari lalu" urgencyColor="#059669" avatarBg="#6366f1"
           />
         </div>
       </div>
@@ -2043,32 +2039,82 @@ function DemoScene({ sceneKey }) {
   }
 
   if (sceneKey === "advisor") {
+    // Mini versi dari GoodMorningCard beneran di Dashboard.jsx - gradient
+    // gelap, robot head, 3 kotak statistik, 1 baris rekomendasi dgn badge
+    // urgensi + tombol "Handle".
     return (
-      <div className="flex h-full flex-col justify-center">
-        <div className="rounded-xl border border-violet-400/15 bg-violet-500/[0.05] p-4">
-          <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wide text-violet-300">
-            <BrainCircuit size={13} />
-            Advisor Harian
+      <div className="flex h-full items-center">
+        <div className="w-full rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 p-3.5 shadow-[0_8px_30px_-10px_rgba(15,23,42,0.4)]">
+          <div className="flex items-center gap-2">
+            <NextoRobotHead size={26} />
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-white">
+              <Sun size={11} className="text-orange-400" />
+              Selamat pagi, Mr Nando
+            </div>
           </div>
-          <p className="mt-2 text-[11px] leading-5 text-slate-300">
-            3 lead belum ada next action lebih dari seminggu. Prioritasin <b>PT Global Teknindo</b> — udah 2x diskusi harga tapi belum ada follow-up terakhir.
-          </p>
+
+          <div className="mt-3 grid grid-cols-3 gap-1.5">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+              <div className="text-[13px] font-bold text-white">18</div>
+              <div className="mt-0.5 text-[7px] text-slate-400">Active leads</div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+              <div className="text-[13px] font-bold text-rose-400">3</div>
+              <div className="mt-0.5 text-[7px] text-slate-400">Overdue</div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+              <div className="text-[13px] font-bold text-emerald-400">42%</div>
+              <div className="mt-0.5 text-[7px] text-slate-400">Win rate</div>
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-orange-500/20 text-orange-400">
+              <Clock size={12} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-[10px] font-semibold text-white">PT Global Teknindo</span>
+                <span className="shrink-0 rounded-full bg-rose-500 px-1.5 py-0.5 text-[6.5px] font-bold text-white">URGENT</span>
+              </div>
+              <div className="mt-0.5 truncate text-[8.5px] text-slate-400">Belum follow-up 8 hari, udah 2x diskusi harga</div>
+            </div>
+            <span className="mt-0.5 shrink-0 rounded-lg bg-orange-500 px-2 py-1 text-[8px] font-semibold text-white">Handle</span>
+          </div>
         </div>
       </div>
     );
   }
 
-  // pipeline
+  // pipeline - mini versi dari PipelineReviewCard beneran di Dashboard.jsx
   return (
-    <div className="flex h-full flex-col justify-center">
-      <div className="rounded-xl border border-orange-400/15 bg-orange-500/[0.05] p-4">
-        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wide text-orange-300">
-          <TrendingUp size={13} />
-          Pipeline Review
+    <div className="h-full rounded-xl bg-[#fafbfc] p-3">
+      <div className="rounded-2xl border border-violet-100 bg-white p-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-800">
+            <Sparkles size={12} className="text-violet-500" />
+            Pipeline Review
+          </div>
+          <span className="text-[8.5px] text-slate-400">16 Sep</span>
         </div>
-        <p className="mt-2 text-[11px] leading-5 text-slate-300">
-          14 hari terakhir: 6 lead baru, 2 closing, 1 lead stuck 18 hari di Nego. Fokus minggu ini: dorong PT Karya Mandiri sebelum harga penawaran expired.
+        <p className="mt-1.5 text-[9.5px] leading-4 text-slate-600">
+          14 hari terakhir: 6 lead baru, 2 closing. Fokus dorong PT Karya Mandiri sebelum harga penawaran expired.
         </p>
+        <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+          {[["Aktif", 18], ["Stuck", 2], ["Baru", 6], ["M/K", "2/1"]].map(([label, value]) => (
+            <div key={label} className="rounded-lg bg-slate-50 px-1 py-1.5 text-center">
+              <div className="text-[11px] font-bold text-slate-800">{value}</div>
+              <div className="text-[6.5px] text-slate-500">{label}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2.5">
+          <div className="text-[8px] font-semibold text-slate-500">Fokus minggu ini</div>
+          <div className="mt-1 rounded-lg border border-slate-100 px-2 py-1.5">
+            <div className="text-[9.5px] font-medium text-slate-800">PT Karya Mandiri</div>
+            <div className="text-[8px] text-slate-500">Harga penawaran expired 2 hari lagi</div>
+          </div>
+        </div>
       </div>
     </div>
   );
