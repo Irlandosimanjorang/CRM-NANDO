@@ -1959,12 +1959,24 @@ function DemoScene({ sceneKey }) {
   if (sceneKey === "leads") {
     return (
       <div className="h-full rounded-xl bg-[#fafbfc] p-3">
-        <div className="mx-auto max-w-[230px]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <MiniLeadCard
+            name="PT Sumber Jaya" category="Bahan Baku" city="Tangerang"
+            stageLabel="Baru" stageHex="#94a3b8" progress={15}
+            phone="0812xxxx09" product="Kompon PVC" nextAction="Kirim penawaran awal"
+            urgencyNote="Belum pernah dihubungi" urgencyColor="#cbd5e1" avatarBg="#0ea5e9"
+          />
           <MiniLeadCard
             name="PT Asiaplast" category="Kimia" city="Jawa Timur"
             stageLabel="Nego" stageHex="#f59e0b" progress={60}
             phone="0812xxxx01" product="Resin PVC" nextAction="Follow up harga penawaran"
             urgencyNote="3 hari sejak kontak" urgencyColor="#b45309" avatarBg="#f97316"
+          />
+          <MiniLeadCard
+            name="PT Karya Mandiri" category="Barang Jadi" city="Bekasi"
+            stageLabel="Deal" stageHex="#10b981" progress={100}
+            phone="0812xxxx02" product="Pipa PVC" nextAction="Kirim kontrak & invoice"
+            urgencyNote="Dihubungi 1 hari lalu" urgencyColor="#059669" avatarBg="#6366f1"
           />
         </div>
       </div>
