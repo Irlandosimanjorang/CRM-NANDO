@@ -31,6 +31,12 @@ import {
   EyeOff,
   ChevronLeft,
   ChevronRight,
+  LayoutDashboard,
+  Trophy,
+  CalendarCheck,
+  Swords,
+  Users2,
+  Settings as SettingsIcon,
 } from "lucide-react";
 
 // Klip suara robot buat landing page - STATIS, di-generate SEKALI aja lewat
@@ -1773,14 +1779,30 @@ function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
 // detik nunjukin Nexto kerja dgn berbagai fitur (11 Sep 2026). Dibikin CSS/
 // React murni (bukan file video) karena environment ini gak punya tool
 // rekam/edit video.
+// navKey = item sidebar yang ikut nyala nyorot pas scene ini aktif, biar
+// keliatan jelas menu mana yang lagi "dibuka" - persis kayak sidebar app
+// beneran (lihat NAV di App.jsx: Dashboard, Leads, Generate Leads, Deal,
+// Visit & Follow-up, Kompetitor, Nex, Pengaturan).
 const DEMO_SCENES = [
-  { key: "leads", label: "Kelola Leads" },
-  { key: "telegram", label: "Bot Telegram" },
-  { key: "generate", label: "Generate Leads AI" },
-  { key: "advisor", label: "Advisor Harian" },
-  { key: "pipeline", label: "Pipeline Review" },
+  { key: "leads", label: "Kelola Leads", navKey: "leads" },
+  { key: "telegram", label: "Bot Telegram", navKey: "leads" },
+  { key: "generate", label: "Generate Leads AI", navKey: "generateleads" },
+  { key: "visit", label: "Visit & Follow-up", navKey: "visitfollowup" },
+  { key: "advisor", label: "Advisor Harian", navKey: "dashboard" },
+  { key: "pipeline", label: "Pipeline Review", navKey: "dashboard" },
 ];
-const DEMO_SCENE_MS = 5000;
+const DEMO_SCENE_MS = 4500;
+
+const DEMO_NAV = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "leads", label: "Leads", icon: Users },
+  { key: "generateleads", label: "Generate Leads", icon: Sparkles },
+  { key: "deal", label: "Deal", icon: Trophy },
+  { key: "visitfollowup", label: "Visit & Follow-up", icon: CalendarCheck },
+  { key: "kompetitor", label: "Kompetitor", icon: Swords },
+  { key: "komunitas", label: "Nex", icon: Users2 },
+  { key: "settings", label: "Pengaturan", icon: SettingsIcon },
+];
 
 function ProductDemoReel() {
   const [active, setActive] = useState(0);
@@ -1788,9 +1810,10 @@ function ProductDemoReel() {
     const t = setInterval(() => setActive((i) => (i + 1) % DEMO_SCENES.length), DEMO_SCENE_MS);
     return () => clearInterval(t);
   }, []);
+  const activeNav = DEMO_SCENES[active].navKey;
 
   return (
-    <div className="mx-auto mt-12 max-w-3xl">
+    <div className="mx-auto mt-12 max-w-4xl">
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1119] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.7)]">
         {/* title bar */}
         <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.03] px-4 py-2.5">
@@ -1802,18 +1825,51 @@ function ProductDemoReel() {
           </span>
         </div>
 
-        {/* stage */}
-        <div className="relative h-[280px] overflow-hidden sm:h-[300px]">
-          {DEMO_SCENES.map((scene, i) => (
-            <div
-              key={scene.key}
-              className={`absolute inset-0 p-5 transition-all duration-700 ease-out sm:p-6 ${
-                i === active ? "opacity-100 translate-y-0" : "pointer-events-none opacity-0 translate-y-2"
-              }`}
-            >
-              <DemoScene sceneKey={scene.key} />
+        <div className="flex">
+          {/* sidebar nav - versi mini dari sidebar app beneran */}
+          <div className="hidden w-[168px] shrink-0 border-r border-white/[0.06] bg-white/[0.015] p-3 sm:block">
+            <div className="mb-3 flex items-center gap-1.5 px-1">
+              <NextoRobotHead size={18} />
+              <span className="text-[10px] font-extrabold tracking-[-0.03em] text-white">
+                NE<span className="text-orange-500">X</span>TO
+              </span>
             </div>
-          ))}
+            <div className="space-y-0.5">
+              {DEMO_NAV.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.key === activeNav;
+                return (
+                  <div
+                    key={item.key}
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-[9.5px] transition-colors duration-500 ${
+                      item.key === "komunitas"
+                        ? "text-violet-300"
+                        : isActive
+                        ? "bg-white/[0.08] font-semibold text-white"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    <Icon size={11} strokeWidth={isActive ? 2.4 : 1.9} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* stage */}
+          <div className="relative h-[280px] flex-1 overflow-hidden sm:h-[300px]">
+            {DEMO_SCENES.map((scene, i) => (
+              <div
+                key={scene.key}
+                className={`absolute inset-0 p-5 transition-all duration-700 ease-out sm:p-6 ${
+                  i === active ? "opacity-100 translate-y-0" : "pointer-events-none opacity-0 translate-y-2"
+                }`}
+              >
+                <DemoScene sceneKey={scene.key} />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* scene dots */}
@@ -1907,6 +1963,30 @@ function DemoScene({ sceneKey }) {
               </span>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (sceneKey === "visit") {
+    return (
+      <div>
+        <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-[#141a26] px-3 py-2">
+          <div>
+            <div className="text-[10px] font-semibold text-slate-100">PT Global Teknindo</div>
+            <div className="text-[8px] text-slate-500">Kamis, 10:00 — kantor pusat</div>
+          </div>
+          <CalendarCheck size={14} className="text-cyan-400" />
+        </div>
+        <div className="mt-3 rounded-lg border border-dashed border-violet-400/25 bg-violet-500/[0.05] p-3">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-violet-300">
+            <Sparkles size={11} />
+            Poin Diskusi (AI)
+          </div>
+          <ul className="mt-2 space-y-1 text-[9.5px] leading-4 text-slate-300">
+            <li>— Tanyain progress approval budget dari internal mereka</li>
+            <li>— Bahas ulang skema diskon volume yang sempet ditolak</li>
+          </ul>
         </div>
       </div>
     );
