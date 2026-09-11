@@ -2416,6 +2416,9 @@ export default function Auth() {
                 <div className="relative mt-1 text-[10px] text-slate-400">
                   AI Sales Engine penuh — solo, tapi kerja kayak ada tim
                 </div>
+                <div className="relative mt-1 text-[10px] text-orange-300/70">
+                  Makin lama dipakai, makin ngerti pola closing bisnis Anda
+                </div>
                 <div className="relative">
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
                 </div>
