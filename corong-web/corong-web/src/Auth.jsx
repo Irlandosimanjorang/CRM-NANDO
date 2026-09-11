@@ -40,6 +40,8 @@ import {
   Settings as SettingsIcon,
   Sun,
   Clock,
+  Send,
+  RefreshCw,
 } from "lucide-react";
 
 // Klip suara robot buat landing page - STATIS, di-generate SEKALI aja lewat
@@ -1792,10 +1794,11 @@ const DEMO_SCENES = [
   { key: "telegram", label: "Bot Telegram", navKey: "leads" },
   { key: "generate", label: "Generate Leads AI", navKey: "generateleads" },
   { key: "visit", label: "Visit & Follow-up", navKey: "visitfollowup" },
+  { key: "settings", label: "Sinkron Telegram & Calendar", navKey: "settings" },
   { key: "advisor", label: "Advisor Harian", navKey: "dashboard" },
   { key: "pipeline", label: "Pipeline Review", navKey: "dashboard" },
 ];
-const DEMO_SCENE_MS = 4200;
+const DEMO_SCENE_MS = 3800;
 
 const DEMO_NAV = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -2108,6 +2111,47 @@ function DemoScene({ sceneKey }) {
         <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-dashed border-violet-300 bg-violet-50 px-2.5 py-1.5 text-[8.5px] font-medium text-violet-600">
           <Sparkles size={10} />
           Poin Diskusi (AI) siap sebelum Anda visit
+        </div>
+      </div>
+    );
+  }
+
+  if (sceneKey === "settings") {
+    // Mini versi dari tab Pengaturan beneran (Settings.jsx) - kartu
+    // "Terhubung sebagai ..." warna emerald buat Telegram Bot & Google
+    // Calendar, persis state udah tersambung di app asli.
+    return (
+      <div className="h-full space-y-2 rounded-xl bg-[#fafbfc] p-3">
+        <div className="rounded-xl border border-slate-100 bg-white p-3">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-800">
+            <Send size={11} className="text-sky-500" />
+            Telegram Bot
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-1 truncate text-[9px] font-medium text-emerald-700">
+              <CheckCircle2 size={11} className="shrink-0" />
+              Terhubung sebagai @nando_sales
+            </span>
+            <span className="shrink-0 rounded-lg border border-rose-200 px-2 py-1 text-[7.5px] font-medium text-rose-500">Putuskan</span>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-100 bg-white p-3">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-800">
+            <Calendar size={11} className="text-rose-500" />
+            Google Calendar
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-1 truncate text-[9px] font-medium text-emerald-700">
+              <CheckCircle2 size={11} className="shrink-0" />
+              Terhubung sebagai nando@gmail.com
+            </span>
+            <span className="shrink-0 rounded-lg border border-rose-200 px-2 py-1 text-[7.5px] font-medium text-rose-500">Putuskan</span>
+          </div>
+          <div className="mt-2 flex w-fit items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 py-1.5 text-[8px] font-medium text-white">
+            <RefreshCw size={9} />
+            Sync semua jadwal lama
+          </div>
         </div>
       </div>
     );
