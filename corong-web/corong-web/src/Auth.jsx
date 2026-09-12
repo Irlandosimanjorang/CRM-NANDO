@@ -347,6 +347,12 @@ const SECURITY_FEATURES = [
   },
 ];
 
+// Offset vertikal per kartu (pas lagi GAK aktif) buat ritme "naik-turun" ala
+// video referensi Hostinger - kartu-kartu gak sejajar rata semua, ada yang
+// nongol lebih tinggi ada yang lebih rendah. Kartu yang lagi aktif selalu
+// balik ke marginTop 0 (lihat pemakaiannya di section Keamanan).
+const SECURITY_OFFSETS = [0, 34, 14, 42, 22];
+
 // === PRICING UPDATE (5 Sep 2026) ===
 // 1. Good Morning Dashboard (daily digest) sekarang RESMI jadi fitur Standard
 //    (bukan cuma Professional) - backend daily-digest.ts udah dibenerin buat
@@ -2687,10 +2693,17 @@ export default function Auth() {
               </div>
             </div>
 
-            <div ref={securityRowRef} className="mt-10 flex items-stretch gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* Ritme naik-turun ala referensi Hostinger - kartu yang lagi
+                gak aktif punya offset vertikal beda-beda (SECURITY_OFFSETS),
+                bukan rata sejajar semua. Kartu yang lagi AKTIF selalu balik
+                ke posisi paling atas (offset 0) - itu yang bikin efek
+                "nongol"/pop-up pas gantian nyala, sesuai video referensi
+                Nando dimana kartu yang lagi disorot naik ke atas duluan. */}
+            <div ref={securityRowRef} className="mt-10 flex items-start gap-3 overflow-x-auto px-1 pb-2 pt-10 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {SECURITY_FEATURES.map((f, i) => {
                 const Icon = f.icon;
                 const isActive = i === securityActiveIdx;
+                const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
                 return (
                   <button
                     key={f.title}
@@ -2698,11 +2711,15 @@ export default function Auth() {
                     ref={(el) => { securityCardRefs.current[i] = el; }}
                     onClick={() => focusSecurityCard(i)}
                     onMouseEnter={() => focusSecurityCard(i)}
-                    className="security-card group relative flex h-[270px] shrink-0 flex-col overflow-hidden rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-6 text-left sm:h-[290px]"
+                    className="security-card group relative flex h-[250px] shrink-0 flex-col overflow-hidden rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-6 text-left sm:h-[270px]"
                     style={{
                       width: isActive ? 340 : 152,
                       minWidth: isActive ? 280 : 152,
-                      borderColor: isActive ? "rgba(249,115,22,0.3)" : undefined,
+                      borderColor: isActive ? "rgba(249,115,22,0.3)" : "rgba(255,255,255,0.08)",
+                      marginTop: isActive ? 0 : SECURITY_OFFSETS[i % SECURITY_OFFSETS.length],
+                      transitionProperty: "width, min-width, border-color, margin-top, box-shadow",
+                      transitionDuration: "550ms",
+                      transitionTimingFunction: EASE,
                     }}
                   >
                     {/* Gradient & glow oranye di kartu aktif - dipisah jadi
@@ -2710,24 +2727,44 @@ export default function Auth() {
                         class background langsung. background-image (gradient)
                         gak bisa di-transisi browser, kalau di-swap lewat
                         class dia bakal "nyentak" instan padahal properti lain
-                        udah mulus - makanya sebelumnya kerasa kaku. */}
-                    <div className="security-card-glow pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/[0.18] via-orange-500/[0.05] to-transparent" style={{ opacity: isActive ? 1 : 0 }} />
-                    <div className="security-card-glow pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/25 blur-2xl" style={{ opacity: isActive ? 1 : 0 }} />
+                        udah mulus - makanya sebelumnya kerasa kaku. Warning:
+                        SEMUA style yang berubah wajib ada `transition*` -
+                        kelupaan pas refactor gradient kemarin bikin lebar
+                        kartu jadi snap instan tanpa animasi sama sekali. */}
+                    <div
+                      className="security-card-glow pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/[0.18] via-orange-500/[0.05] to-transparent"
+                      style={{ opacity: isActive ? 1 : 0, transition: `opacity 600ms ${EASE}` }}
+                    />
+                    <div
+                      className="security-card-glow pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/25 blur-2xl"
+                      style={{ opacity: isActive ? 1 : 0, transition: `opacity 600ms ${EASE}` }}
+                    />
 
                     <div
                       className="security-card-icon relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
-                      style={{ backgroundColor: isActive ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.06)", color: isActive ? "#fb923c" : "#94a3b8" }}
+                      style={{
+                        backgroundColor: isActive ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.06)",
+                        color: isActive ? "#fb923c" : "#94a3b8",
+                        transition: `background-color 500ms ${EASE}, color 500ms ${EASE}`,
+                      }}
                     >
                       <Icon size={18} />
                     </div>
                     <div
                       className="security-card-title relative mt-4 shrink-0 whitespace-nowrap font-bold tracking-tight"
-                      style={{ fontSize: isActive ? 15 : 12.5, color: isActive ? "#ffffff" : "#cbd5e1" }}
+                      style={{
+                        fontSize: isActive ? 15 : 12.5,
+                        color: isActive ? "#ffffff" : "#cbd5e1",
+                        transition: `font-size 500ms ${EASE}, color 500ms ${EASE}`,
+                      }}
                     >
                       {f.title}
                     </div>
                     <div className="relative mt-2 min-h-0 flex-1 overflow-hidden">
-                      <p className="security-card-desc text-[12px] leading-5 text-slate-400" style={{ opacity: isActive ? 1 : 0 }}>
+                      <p
+                        className="security-card-desc text-[12px] leading-5 text-slate-400"
+                        style={{ opacity: isActive ? 1 : 0, transition: `opacity 450ms ${EASE}`, transitionDelay: isActive ? "120ms" : "0ms" }}
+                      >
                         {f.desc}
                       </p>
                     </div>
