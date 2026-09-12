@@ -8,6 +8,12 @@ function fmtTimer(sec) {
   return `${m}:${s}`;
 }
 
+// Batas rekaman 30 menit (permintaan Nando, 12 Sep 2026) - begitu kena batas,
+// rekaman OTOMATIS diberhentiin dan LANGSUNG lanjut ke transkrip (bukan
+// dibuang/dianggap error) - user gak kehilangan hasil meeting-nya cuma
+// karena kelamaan.
+const MAX_RECORDING_SECONDS = 30 * 60;
+
 export default function MeetingRecorderModal({ lead: initialLead, leads, onClose, onSaved }) {
   const [lead, setLead] = useState(initialLead || null);
   const [q, setQ] = useState("");
@@ -53,24 +59,31 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       mr.start();
       setStage("recording");
       setSeconds(0);
-      timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+      timerRef.current = setInterval(() => {
+        setSeconds((s) => {
+          const next = s + 1;
+          if (next >= MAX_RECORDING_SECONDS) {
+            // Kena batas 30 menit - langsung distop & diproses (bukan
+            // dibuang), setTimeout biar gak manggil finishRecording() di
+            // tengah-tengah setState updater ini.
+            setTimeout(() => finishRecording(), 0);
+          }
+          return next;
+        });
+      }, 1000);
     } catch (e) {
       alert("Gagal akses mic. Pastikan izin mikrofon diaktifkan di browser/HP Anda.");
     }
   };
 
-  const stopRecording = () => {
+  // Beneran ngestop MediaRecorder & lanjut ke transkrip - dipake baik buat
+  // stop manual (tombol) MAUPUN auto-stop pas kena batas 30 menit. Gak
+  // gantung ke state `seconds` sama sekali (aman dipanggil dari closure
+  // interval yang direkam pas startRecording, gak akan pernah stale).
+  const finishRecording = () => {
     clearInterval(timerRef.current);
     const mr = mediaRecorderRef.current;
     if (!mr) return;
-    // Rekaman kependekan (misal ke-tap gak sengaja) - gausah buang-buang panggilan
-    // API buat proses audio yang hampir kosong.
-    if (seconds < 3) {
-      mr.stream.getTracks().forEach((t) => t.stop());
-      setStage("idle");
-      alert("Rekamannya kependekan, coba lagi ya.");
-      return;
-    }
     setStage("processing");
     mr.onstop = async () => {
       mr.stream.getTracks().forEach((t) => t.stop());
@@ -88,6 +101,22 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       }
     };
     mr.stop();
+  };
+
+  const stopRecording = () => {
+    // Rekaman kependekan (misal ke-tap gak sengaja) - gausah buang-buang panggilan
+    // API buat proses audio yang hampir kosong. Cek ini CUMA relevan buat stop
+    // manual - auto-stop di batas 30 menit manggil finishRecording() langsung,
+    // gak lewat sini.
+    if (seconds < 3) {
+      clearInterval(timerRef.current);
+      const mr = mediaRecorderRef.current;
+      if (mr) mr.stream.getTracks().forEach((t) => t.stop());
+      setStage("idle");
+      alert("Rekamannya kependekan, coba lagi ya.");
+      return;
+    }
+    finishRecording();
   };
 
   const save = async () => {
@@ -141,7 +170,10 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
 
             {stage === "recording" && (
               <div className="text-center py-8">
-                <div className="text-3xl font-mono font-bold text-slate-800 mb-3">{fmtTimer(seconds)}</div>
+                <div className={`text-3xl font-mono font-bold mb-1 ${seconds >= MAX_RECORDING_SECONDS - 60 ? "text-rose-600" : "text-slate-800"}`}>
+                  {fmtTimer(seconds)} <span className="text-base font-medium text-slate-400">/ {fmtTimer(MAX_RECORDING_SECONDS)}</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mb-3">Maks 30 menit - kalau kena batas, otomatis stop &amp; langsung ditranskrip</p>
                 <button onClick={stopRecording} className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center mx-auto shadow-lg shadow-rose-600/30 animate-pulse">
                   <Square size={20} fill="white" />
                 </button>
