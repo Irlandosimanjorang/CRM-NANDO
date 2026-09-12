@@ -2751,7 +2751,7 @@ export default function Auth() {
                       <Icon size={18} />
                     </div>
                     <div
-                      className="security-card-title relative mt-4 shrink-0 whitespace-nowrap font-bold tracking-tight"
+                      className="security-card-title relative mt-4 shrink-0 font-bold leading-snug tracking-tight"
                       style={{
                         fontSize: isActive ? 15 : 12.5,
                         color: isActive ? "#ffffff" : "#cbd5e1",
