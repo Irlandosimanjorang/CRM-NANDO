@@ -240,7 +240,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
                     tombolnya. */}
                 <div className="relative mx-auto h-[76px] w-[76px]">
                   <svg viewBox="0 0 76 76" className="absolute inset-0 h-full w-full animate-[spin_1.4s_linear_infinite]">
-                    <circle cx="38" cy="38" r="34" fill="none" stroke="#e11d48" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="70 143" />
+                    <circle cx="38" cy="38" r="34" fill="none" stroke="#f97316" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="70 143" />
                   </svg>
                   <button onClick={stopRecording} className="absolute inset-0 m-auto h-16 w-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30">
                     <Square size={20} fill="white" />
