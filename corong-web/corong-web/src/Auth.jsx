@@ -2562,15 +2562,6 @@ export default function Auth() {
     <LangContext.Provider value={lang}>
     <div className="min-h-screen overflow-x-hidden bg-white text-slate-900 selection:bg-orange-100 selection:text-orange-900">
       {/* =========================================================
-          BAR BAHASA - paling atas halaman, di atas nav utama.
-      ========================================================== */}
-      <div className="border-b border-slate-200/70 bg-slate-50">
-        <div className="mx-auto flex h-9 max-w-7xl items-center justify-end px-5 sm:px-7 lg:px-10">
-          <LanguageToggle lang={lang} setLang={setLang} />
-        </div>
-      </div>
-
-      {/* =========================================================
           NAVIGATION
       ========================================================== */}
       <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
@@ -2600,7 +2591,9 @@ export default function Auth() {
             </a>
           </nav>
 
-          <div className="hidden items-center gap-2.5 md:flex">
+          <div className="hidden items-center gap-3 md:flex">
+            <LanguageToggle lang={lang} setLang={setLang} />
+
             <button
               onClick={goToSignin}
               className="px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:text-slate-950"
@@ -2617,13 +2610,16 @@ export default function Auth() {
             </button>
           </div>
 
-          <button
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 md:hidden"
-            aria-label="Menu"
-          >
-            {showMobileMenu ? <X size={17} /> : <span className="text-lg">☰</span>}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <LanguageToggle lang={lang} setLang={setLang} />
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600"
+              aria-label="Menu"
+            >
+              {showMobileMenu ? <X size={17} /> : <span className="text-lg">☰</span>}
+            </button>
+          </div>
         </div>
 
         {showMobileMenu && (
