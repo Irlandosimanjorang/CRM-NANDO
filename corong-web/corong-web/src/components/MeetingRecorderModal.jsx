@@ -25,10 +25,21 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
   const [showTranscript, setShowTranscript] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+  // Sub-tahap pas stage === "processing" - biar user tau lagi ngapain
+  // (upload vs transkrip), bukan spinner generik doang yang kerasa "macet"
+  // buat rekaman panjang. recordedSeconds dicatet KHUSUS pas mulai proses,
+  // biar tetep akurat walau `seconds` kepake lagi buat rekaman berikutnya.
+  const [processingStep, setProcessingStep] = useState("uploading"); // uploading | transcribing
+  const [recordedSeconds, setRecordedSeconds] = useState(0);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const wakeLockRef = useRef(null);
+  // Selalu nyimpen detik terkini - dibaca finishRecording() sebagai
+  // pengganti state `seconds` biar aman dipanggil dari closure interval
+  // lama (auto-stop di batas 30 menit) yang gak akan pernah nge-refresh
+  // ke render terbaru.
+  const secondsRef = useRef(0);
 
   // Layar HP wajib nyala terus selama recording (permintaan Nando, 12 Sep
   // 2026) - meeting bisa sampe 30 menit, kalau layar mati/terkunci di
@@ -96,9 +107,11 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       acquireWakeLock();
       setStage("recording");
       setSeconds(0);
+      secondsRef.current = 0;
       timerRef.current = setInterval(() => {
         setSeconds((s) => {
           const next = s + 1;
+          secondsRef.current = next;
           if (next >= MAX_RECORDING_SECONDS) {
             // Kena batas 30 menit - langsung distop & diproses (bukan
             // dibuang), setTimeout biar gak manggil finishRecording() di
@@ -122,12 +135,15 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     releaseWakeLock();
     const mr = mediaRecorderRef.current;
     if (!mr) return;
+    setRecordedSeconds(secondsRef.current);
+    setProcessingStep("uploading");
     setStage("processing");
     mr.onstop = async () => {
       mr.stream.getTracks().forEach((t) => t.stop());
       const blob = new Blob(chunksRef.current, { type: "audio/webm" });
       try {
         const path = await db.uploadMeetingAudio(lead.id, blob);
+        setProcessingStep("transcribing");
         const result = await db.transcribeMeeting(path, lead.name);
         setNotes(result.notes || "");
         setNextAction(result.next_action || "");
@@ -253,8 +269,20 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
             {stage === "processing" && (
               <div className="text-center py-10">
                 <Loader2 size={32} className="mx-auto text-orange-500 animate-spin mb-3" />
-                <p className="text-sm text-slate-500">Transkrip &amp; rapiin catatan…</p>
-                <p className="text-xs text-slate-400 mt-1">Bisa beberapa puluh detik ya</p>
+                <p className="text-sm text-slate-500">
+                  {processingStep === "uploading" ? "Ngirim rekaman…" : "Mentranskrip & rapiin catatan…"}
+                </p>
+                {/* Estimasi kasar - makin panjang rekamannya, makin jujur
+                    kasih tau bakal makin lama (bukan "beberapa puluh detik"
+                    generik buat semua durasi kayak sebelumnya, yang kerasa
+                    "macet" pas rekamannya 10+ menit). */}
+                <p className="text-xs text-slate-400 mt-1">
+                  {recordedSeconds < 180
+                    ? "Biasanya sekitar 30 detik"
+                    : recordedSeconds < 600
+                    ? "Rekaman segini biasanya 1-2 menit ya"
+                    : "Rekaman panjang gini bisa 2-4 menit - Whisper transkrip proporsional sama durasi audio, sabar dikit ya"}
+                </p>
               </div>
             )}
 
