@@ -799,6 +799,17 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                 {mcpBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Buat API Key
               </button>
             </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <p className="text-[11px] font-medium text-slate-500 mb-1.5">Cara sambungin ke Grok Bot:</p>
+              <ol className="text-[11px] text-slate-500 space-y-1 list-decimal list-inside">
+                <li>Buat API Key di atas, salin Server URL & key-nya.</li>
+                <li>Di chat Grok Bot, bilang "Pasang Nexto MCP" lalu kirim Server URL + API Key-nya (jangan di-screenshot/share ke publik).</li>
+                <li>Grok Bot bakal nambahin sebagai connector - tunggu sampai statusnya "connected".</li>
+                <li>Tes dengan suruh Grok Bot: "cek pipeline stats gua" atau "list lead yang overdue".</li>
+              </ol>
+              <p className="text-[11px] text-slate-400 mt-2">Tiap user generate & pasang key-nya sendiri-sendiri - bukan sekali pasang buat semua anggota tim.</p>
+            </div>
           </>
         )}
       </div>
