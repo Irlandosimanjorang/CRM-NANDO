@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -355,6 +355,55 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     finally { setGcalBusy(false); }
   };
 
+  // ---- MCP / AI Agent (Grok Bot dkk) - API key self-serve ----
+  const [mcpKeys, setMcpKeys] = useState([]);
+  const [mcpLoading, setMcpLoading] = useState(true);
+  const [mcpBusy, setMcpBusy] = useState(false);
+  const [mcpMsg, setMcpMsg] = useState("");
+  const [mcpNewLabel, setMcpNewLabel] = useState("");
+  const [mcpNewPlaintext, setMcpNewPlaintext] = useState(null);
+  const MCP_SERVER_URL = "https://cewggulyfshnbebcpyui.supabase.co/functions/v1/mcp-server";
+
+  const loadMcpKeys = () => {
+    setMcpLoading(true);
+    supabase.functions.invoke("mcp-keys", { body: { action: "list" } })
+      .then(({ data, error }) => { if (error) throw error; setMcpKeys(data?.keys || []); })
+      .catch(() => setMcpKeys([]))
+      .finally(() => setMcpLoading(false));
+  };
+  useEffect(() => { loadMcpKeys(); }, []);
+
+  const createMcpKey = async () => {
+    setMcpBusy(true); setMcpMsg("");
+    try {
+      const { data, error } = await supabase.functions.invoke("mcp-keys", { body: { action: "create", label: mcpNewLabel } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setMcpNewPlaintext(data.plaintext);
+      setMcpNewLabel("");
+      loadMcpKeys();
+    } catch (e) {
+      setMcpMsg("Gagal bikin key: " + e.message);
+    } finally {
+      setMcpBusy(false);
+    }
+  };
+
+  const revokeMcpKey = async (id, label) => {
+    if (!window.confirm(`Cabut API key "${label}"? Agent yang masih pakai key ini bakal langsung gagal connect.`)) return;
+    setMcpBusy(true); setMcpMsg("");
+    try {
+      const { data, error } = await supabase.functions.invoke("mcp-keys", { body: { action: "revoke", key_id: id } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      loadMcpKeys();
+    } catch (e) {
+      setMcpMsg("Gagal cabut key: " + e.message);
+    } finally {
+      setMcpBusy(false);
+    }
+  };
+
   const syncOldData = async () => {
     setSyncBusy(true); setSyncMsg("");
     try {
@@ -685,6 +734,72 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           <button onClick={connectGcal} disabled={gcalBusy} className="text-sm bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
             {gcalBusy ? <Loader2 size={15} className="animate-spin" /> : <Calendar size={15} />} Hubungkan Google Calendar
           </button>
+        )}
+      </div>
+
+      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Bot size={15} className="text-violet-500" /> Integrasi MCP / AI Agent</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          Sambungin agent AI luar (misal Grok Bot dari xAI) ke data CRM Anda lewat protokol MCP - agent bisa baca lead, update stage,
+          dan tambah catatan progress atas nama akun Anda, tanpa perlu login pakai email/password.
+        </p>
+        {myLevel < 2 ? (
+          <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-start gap-3">
+            <span className="w-8 h-8 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
+            <div className="text-sm">
+              <div className="font-medium text-violet-900">Integrasi MCP itu fitur Professional</div>
+              <div className="text-xs text-violet-700 mt-0.5">Upgrade ke Professional buat bisa generate API key & sambungin agent AI luar.</div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3">
+              <p className="text-[11px] font-medium text-slate-500 mb-1">Server URL (masukin ini di konfigurasi connector/MCP agent-nya)</p>
+              <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-[11px]">
+                <span className="flex-1 break-all">{MCP_SERVER_URL}</span>
+                <button onClick={() => navigator.clipboard.writeText(MCP_SERVER_URL)} className="text-slate-400 hover:text-slate-700 shrink-0"><Copy size={13} /></button>
+              </div>
+            </div>
+
+            {mcpNewPlaintext && (
+              <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang - API key ini CUMA ditampilin sekali dan gak bisa dilihat ulang.</p>
+                <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg px-3 py-2 font-mono text-[11px]">
+                  <span className="flex-1 break-all">{mcpNewPlaintext}</span>
+                  <button onClick={() => navigator.clipboard.writeText(mcpNewPlaintext)} className="text-amber-600 hover:text-amber-800 shrink-0"><Copy size={13} /></button>
+                </div>
+                <button onClick={() => setMcpNewPlaintext(null)} className="mt-2 w-full text-xs bg-amber-600 hover:bg-amber-700 text-white rounded-lg py-1.5 font-medium">Sudah saya simpan</button>
+              </div>
+            )}
+
+            {mcpLoading ? (
+              <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
+            ) : (
+              <div className="space-y-1.5 mb-3">
+                {mcpKeys.filter((k) => !k.revoked_at).map((k) => (
+                  <div key={k.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
+                    <div className="text-xs">
+                      <div className="font-medium text-slate-700">{k.label}</div>
+                      <div className="text-slate-400">
+                        Dibuat {new Date(k.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        {k.last_used_at ? ` · Terakhir dipakai ${new Date(k.last_used_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}` : " · Belum pernah dipakai"}
+                      </div>
+                    </div>
+                    <button onClick={() => revokeMcpKey(k.id, k.label)} disabled={mcpBusy} className="text-xs border border-rose-300 text-rose-600 rounded-lg px-2.5 py-1 hover:bg-rose-50 disabled:opacity-50 shrink-0">Cabut</button>
+                  </div>
+                ))}
+                {mcpKeys.filter((k) => !k.revoked_at).length === 0 && <p className="text-xs text-slate-400">Belum ada API key aktif.</p>}
+              </div>
+            )}
+
+            {mcpMsg && <div className="text-xs rounded-lg p-2 mb-2 bg-rose-50 text-rose-700">{mcpMsg}</div>}
+            <div className="flex gap-2">
+              <input className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl" placeholder="Label (misal: Grok Bot)" value={mcpNewLabel} onChange={(e) => setMcpNewLabel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && createMcpKey()} />
+              <button onClick={createMcpKey} disabled={mcpBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5 shrink-0">
+                {mcpBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Buat API Key
+              </button>
+            </div>
+          </>
         )}
       </div>
 
