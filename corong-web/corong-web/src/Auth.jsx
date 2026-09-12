@@ -2234,13 +2234,6 @@ export default function Auth() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "tos" | "privacy" | null
 
-  // Carousel horizontal section "Keamanan Akun" - scroll manual lewat
-  // tombol panah, bukan library carousel terpisah (cuma 5 kartu, overkill).
-  const securityScrollRef = useRef(null);
-  const scrollSecurity = (dir) => {
-    securityScrollRef.current?.scrollBy({ left: dir * 300, behavior: "smooth" });
-  };
-
   // Cloudflare Turnstile (captcha) - token sekali-pake, di-reset abis tiap
   // percobaan submit (sukses maupun gagal) biar gak nyoba dipake dua kali.
   const [captchaToken, setCaptchaToken] = useState("");
@@ -2645,53 +2638,58 @@ export default function Auth() {
                   Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis Anda. Makanya keamanan akun bukan fitur tempelan.
                 </p>
               </div>
-              <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                <button
-                  onClick={() => scrollSecurity(-1)}
-                  aria-label="Kartu sebelumnya"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-slate-400 transition hover:border-orange-500/40 hover:text-orange-400"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  onClick={() => scrollSecurity(1)}
-                  aria-label="Kartu berikutnya"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-slate-400 transition hover:border-orange-500/40 hover:text-orange-400"
-                >
-                  <ChevronRight size={18} />
-                </button>
+              <div className="hidden shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-[9px] font-mono uppercase tracking-wide text-slate-500 sm:flex">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-500" />
+                </span>
+                Live
               </div>
             </div>
 
+            {/* Marquee otomatis - list kartu di-render 2x berdampingan lalu
+                digeser terus-terusan setengah lebarnya via keyframe (loop
+                mulus, gak keliatan "patah" pas balik ke awal). Ini yang
+                bikin section-nya BERGERAK sendiri kayak referensi video dari
+                Nando, bukan carousel diem yang cuma bisa digeser manual
+                (versi sebelumnya). Berhenti sejenak pas di-hover/disentuh
+                biar kartu bisa dibaca, dan gak jalan sama sekali kalau
+                prefers-reduced-motion aktif. */}
             <div
-              ref={securityScrollRef}
-              className="mt-10 flex items-stretch gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              style={{ scrollSnapType: "x mandatory" }}
+              className="security-marquee-mask mt-10 overflow-hidden"
+              style={{ WebkitMaskImage: "linear-gradient(to right, transparent, black 6%, black 94%, transparent)", maskImage: "linear-gradient(to right, transparent, black 6%, black 94%, transparent)" }}
             >
-              {SECURITY_FEATURES.map((f, i) => {
-                const Icon = f.icon;
-                const isHero = i === 0;
-                return (
-                  <div
-                    key={f.title}
-                    className={`group relative shrink-0 overflow-hidden rounded-[24px] border p-6 transition ${
-                      isHero
-                        ? "w-[320px] border-orange-500/25 bg-gradient-to-b from-orange-500/[0.1] to-white/[0.02] sm:w-[380px]"
-                        : "w-[210px] border-white/[0.08] bg-white/[0.03] hover:border-orange-500/25 sm:w-[230px]"
-                    }`}
-                    style={{ scrollSnapAlign: "start" }}
-                  >
-                    {isHero && (
-                      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/20 blur-2xl transition group-hover:bg-orange-400/25" />
-                    )}
-                    <div className={`relative flex items-center justify-center rounded-2xl ${isHero ? "h-12 w-12 bg-orange-500/15 text-orange-400" : "h-10 w-10 bg-white/[0.06] text-orange-400"}`}>
-                      <Icon size={isHero ? 21 : 17} />
+              <style>{`
+                @keyframes security-marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+                .security-marquee-track { animation: security-marquee-scroll 32s linear infinite; }
+                .security-marquee-track:hover { animation-play-state: paused; }
+                @media (prefers-reduced-motion: reduce) { .security-marquee-track { animation: none; } }
+              `}</style>
+              <div className="security-marquee-track flex w-max items-stretch gap-4">
+                {[...SECURITY_FEATURES, ...SECURITY_FEATURES].map((f, i) => {
+                  const Icon = f.icon;
+                  const isHero = i % SECURITY_FEATURES.length === 0;
+                  return (
+                    <div
+                      key={`${f.title}-${i}`}
+                      className={`group relative shrink-0 overflow-hidden rounded-[24px] border p-6 transition ${
+                        isHero
+                          ? "w-[320px] border-orange-500/25 bg-gradient-to-b from-orange-500/[0.1] to-white/[0.02] sm:w-[380px]"
+                          : "w-[210px] border-white/[0.08] bg-white/[0.03] hover:border-orange-500/25 sm:w-[230px]"
+                      }`}
+                    >
+                      {isHero && (
+                        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/20 blur-2xl transition group-hover:bg-orange-400/25" />
+                      )}
+                      <div className={`relative flex items-center justify-center rounded-2xl ${isHero ? "h-12 w-12 bg-orange-500/15 text-orange-400" : "h-10 w-10 bg-white/[0.06] text-orange-400"}`}>
+                        <Icon size={isHero ? 21 : 17} />
+                      </div>
+                      <div className={`relative mt-5 font-bold tracking-tight text-white ${isHero ? "text-[17px]" : "text-[13px]"}`}>{f.title}</div>
+                      <p className={`relative mt-2 leading-5 text-slate-400 ${isHero ? "text-[12.5px]" : "text-[11px] line-clamp-3"}`}>{f.desc}</p>
                     </div>
-                    <div className={`relative mt-5 font-bold tracking-tight text-white ${isHero ? "text-[17px]" : "text-[13px]"}`}>{f.title}</div>
-                    <p className={`relative mt-2 leading-5 text-slate-400 ${isHero ? "text-[12.5px]" : "text-[11px] line-clamp-3"}`}>{f.desc}</p>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
             <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-white/[0.08] bg-white/[0.03] px-6 py-5 text-center">
