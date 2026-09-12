@@ -2694,7 +2694,18 @@ export default function Auth() {
               {SECURITY_FEATURES.map((f, i) => {
                 const Icon = f.icon;
                 const isActive = i === securityActiveIdx;
-                const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+                // Satu durasi+easing yang SAMA buat semua elemen di kartu ini
+                // (lebar, warna, offset, opacity, ukuran font) - sebelumnya
+                // tiap elemen punya durasi beda-beda dikit (450-600ms) yang
+                // bikin gerakannya kerasa "gak kompak"/agak kaku walau
+                // masing-masing udah smooth sendiri-sendiri. Sekarang semua
+                // gerak bareng persis, cuma desc yang nyala belakangan
+                // dikit (DESC_DELAY) - sengaja, biar kerasa alami (kartu
+                // duluan yang "buka", tulisannya nyusul), bukan gak sinkron.
+                const DURATION = "620ms";
+                const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+                const T = (props) => props.map((p) => `${p} ${DURATION} ${EASE}`).join(", ");
+                const DESC_DELAY = isActive ? "140ms" : "0ms";
                 return (
                   <button
                     key={f.title}
@@ -2708,9 +2719,8 @@ export default function Auth() {
                       minWidth: isActive ? 280 : 152,
                       borderColor: isActive ? "rgba(249,115,22,0.3)" : "rgba(255,255,255,0.08)",
                       marginTop: isActive ? 0 : SECURITY_OFFSETS[i % SECURITY_OFFSETS.length],
-                      transitionProperty: "width, min-width, border-color, margin-top, box-shadow",
-                      transitionDuration: "550ms",
-                      transitionTimingFunction: EASE,
+                      transition: T(["width", "min-width", "border-color", "margin-top", "box-shadow"]),
+                      willChange: "width, margin-top",
                     }}
                   >
                     {/* Gradient & glow oranye di kartu aktif - dipisah jadi
@@ -2724,11 +2734,11 @@ export default function Auth() {
                         kartu jadi snap instan tanpa animasi sama sekali. */}
                     <div
                       className="security-card-glow pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/[0.18] via-orange-500/[0.05] to-transparent"
-                      style={{ opacity: isActive ? 1 : 0, transition: `opacity 600ms ${EASE}` }}
+                      style={{ opacity: isActive ? 1 : 0, transition: T(["opacity"]) }}
                     />
                     <div
                       className="security-card-glow pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/25 blur-2xl"
-                      style={{ opacity: isActive ? 1 : 0, transition: `opacity 600ms ${EASE}` }}
+                      style={{ opacity: isActive ? 1 : 0, transition: T(["opacity"]) }}
                     />
 
                     <div
@@ -2736,7 +2746,7 @@ export default function Auth() {
                       style={{
                         backgroundColor: isActive ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.06)",
                         color: isActive ? "#fb923c" : "#94a3b8",
-                        transition: `background-color 500ms ${EASE}, color 500ms ${EASE}`,
+                        transition: T(["background-color", "color"]),
                       }}
                     >
                       <Icon size={18} />
@@ -2746,7 +2756,7 @@ export default function Auth() {
                       style={{
                         fontSize: isActive ? 15 : 12.5,
                         color: isActive ? "#ffffff" : "#cbd5e1",
-                        transition: `font-size 500ms ${EASE}, color 500ms ${EASE}`,
+                        transition: T(["font-size", "color"]),
                       }}
                     >
                       {f.title}
@@ -2754,7 +2764,7 @@ export default function Auth() {
                     <div className="relative mt-2 min-h-0 flex-1 overflow-hidden">
                       <p
                         className="security-card-desc text-[12px] leading-5 text-slate-400"
-                        style={{ opacity: isActive ? 1 : 0, transition: `opacity 450ms ${EASE}`, transitionDelay: isActive ? "120ms" : "0ms" }}
+                        style={{ opacity: isActive ? 1 : 0, transition: T(["opacity"]), transitionDelay: DESC_DELAY }}
                       >
                         {f.desc}
                       </p>
