@@ -1,4 +1,7 @@
 {
+  "rewrites": [
+    { "source": "/grok-bot", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
