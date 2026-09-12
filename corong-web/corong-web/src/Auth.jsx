@@ -2255,8 +2255,19 @@ export default function Auth() {
   // Kartu aktif WAJIB tetep keliatan di viewport sempit (HP) - row-nya
   // scrollable, dan auto-cycle bisa geser fokus ke kartu yang lagi di luar
   // layar kalau gak di-scroll ngikutin.
+  //
+  // BUG FIX: sebelumnya pake card.scrollIntoView(), yang ternyata bisa ikut
+  // nge-scroll HALAMAN (bukan cuma baris kartunya) pas section Keamanan lagi
+  // di luar viewport - tiap 2.4 detik auto-cycle jalan, halaman "ketarik"
+  // balik ke section ini walau user udah scroll jauh ke bawah. Sekarang
+  // cuma nge-scroll scrollLeft baris (securityRowRef) doang lewat kalkulasi
+  // posisi manual, gak pernah nyentuh scroll window/halaman sama sekali.
   useEffect(() => {
-    securityCardRefs.current[securityActiveIdx]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    const row = securityRowRef.current;
+    const card = securityCardRefs.current[securityActiveIdx];
+    if (!row || !card) return;
+    const target = card.offsetLeft - (row.clientWidth - card.offsetWidth) / 2;
+    row.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
   }, [securityActiveIdx]);
   const focusSecurityCard = (i) => {
     setSecurityActiveIdx(i);
@@ -2687,24 +2698,38 @@ export default function Auth() {
                     ref={(el) => { securityCardRefs.current[i] = el; }}
                     onClick={() => focusSecurityCard(i)}
                     onMouseEnter={() => focusSecurityCard(i)}
-                    className={`group relative shrink-0 overflow-hidden rounded-[24px] border p-5 text-left transition-[width,background-color,border-color] duration-[550ms] ease-out sm:p-6 ${
-                      isActive
-                        ? "border-orange-500/30 bg-gradient-to-br from-orange-500/[0.18] via-orange-500/[0.05] to-white/[0.02]"
-                        : "border-white/[0.08] bg-white/[0.03] hover:border-orange-500/20"
-                    }`}
-                    style={{ width: isActive ? 340 : 152, minWidth: isActive ? 280 : 152 }}
+                    className="security-card group relative flex h-[270px] shrink-0 flex-col overflow-hidden rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-6 text-left sm:h-[290px]"
+                    style={{
+                      width: isActive ? 340 : 152,
+                      minWidth: isActive ? 280 : 152,
+                      borderColor: isActive ? "rgba(249,115,22,0.3)" : undefined,
+                    }}
                   >
-                    {isActive && (
-                      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/25 blur-2xl" />
-                    )}
-                    <div className={`relative flex items-center justify-center rounded-2xl transition-colors duration-500 ${isActive ? "h-11 w-11 bg-orange-500/15 text-orange-400" : "h-10 w-10 bg-white/[0.06] text-slate-400"}`}>
+                    {/* Gradient & glow oranye di kartu aktif - dipisah jadi
+                        overlay dengan opacity yang di-transisi, BUKAN ganti
+                        class background langsung. background-image (gradient)
+                        gak bisa di-transisi browser, kalau di-swap lewat
+                        class dia bakal "nyentak" instan padahal properti lain
+                        udah mulus - makanya sebelumnya kerasa kaku. */}
+                    <div className="security-card-glow pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/[0.18] via-orange-500/[0.05] to-transparent" style={{ opacity: isActive ? 1 : 0 }} />
+                    <div className="security-card-glow pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/25 blur-2xl" style={{ opacity: isActive ? 1 : 0 }} />
+
+                    <div
+                      className="security-card-icon relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                      style={{ backgroundColor: isActive ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.06)", color: isActive ? "#fb923c" : "#94a3b8" }}
+                    >
                       <Icon size={18} />
                     </div>
-                    <div className={`relative mt-4 whitespace-nowrap font-bold tracking-tight transition-colors duration-500 ${isActive ? "text-[15px] text-white" : "text-[12.5px] text-slate-300"}`}>
+                    <div
+                      className="security-card-title relative mt-4 shrink-0 whitespace-nowrap font-bold tracking-tight"
+                      style={{ fontSize: isActive ? 15 : 12.5, color: isActive ? "#ffffff" : "#cbd5e1" }}
+                    >
                       {f.title}
                     </div>
-                    <div className={`relative overflow-hidden transition-[max-height,opacity] duration-500 ease-out ${isActive ? "mt-2 max-h-32 opacity-100" : "max-h-0 opacity-0"}`}>
-                      <p className="text-[12px] leading-5 text-slate-400">{f.desc}</p>
+                    <div className="relative mt-2 min-h-0 flex-1 overflow-hidden">
+                      <p className="security-card-desc text-[12px] leading-5 text-slate-400" style={{ opacity: isActive ? 1 : 0 }}>
+                        {f.desc}
+                      </p>
                     </div>
                   </button>
                 );
