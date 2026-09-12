@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import LegalModal from "./components/LegalModal";
 import SupportChatWidget from "./components/SupportChatWidget";
@@ -2234,6 +2234,35 @@ export default function Auth() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "tos" | "privacy" | null
 
+  // Section Keamanan - "spotlight cycle" ala Hostinger: satu kartu gantian
+  // melebar+nyala tiap beberapa detik sendiri (auto-cycle), tapi hover/klik
+  // kartu manapun langsung motong ke situ & reset timer-nya - biar tetep
+  // kerasa interaktif, bukan cuma animasi pasif.
+  const [securityActiveIdx, setSecurityActiveIdx] = useState(0);
+  const securityTimerRef = useRef(null);
+  const securityRowRef = useRef(null);
+  const securityCardRefs = useRef([]);
+  const restartSecurityTimer = useCallback(() => {
+    if (securityTimerRef.current) clearInterval(securityTimerRef.current);
+    securityTimerRef.current = setInterval(() => {
+      setSecurityActiveIdx((i) => (i + 1) % SECURITY_FEATURES.length);
+    }, 2400);
+  }, []);
+  useEffect(() => {
+    restartSecurityTimer();
+    return () => clearInterval(securityTimerRef.current);
+  }, [restartSecurityTimer]);
+  // Kartu aktif WAJIB tetep keliatan di viewport sempit (HP) - row-nya
+  // scrollable, dan auto-cycle bisa geser fokus ke kartu yang lagi di luar
+  // layar kalau gak di-scroll ngikutin.
+  useEffect(() => {
+    securityCardRefs.current[securityActiveIdx]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [securityActiveIdx]);
+  const focusSecurityCard = (i) => {
+    setSecurityActiveIdx(i);
+    restartSecurityTimer();
+  };
+
   // Cloudflare Turnstile (captcha) - token sekali-pake, di-reset abis tiap
   // percobaan submit (sukses maupun gagal) biar gak nyoba dipake dua kali.
   const [captchaToken, setCaptchaToken] = useState("");
@@ -2604,13 +2633,13 @@ export default function Auth() {
         <AiEngineLoopSection robotVoice={engineLoopVoice} />
 
         {/* =========================================================
-            KEAMANAN - bento cards gelap ala Hostinger (referensi video dari
-            Nando, 12 Sep 2026): 1 kartu hero lebar + beberapa kartu sempit
-            di sebelahnya, background gelap + glow, warna diganti oranye
-            (brand Nexto) gantiin ungu Hostinger. Beda dari versi carousel
-            lama (semua kartu sama lebar) - sekarang kartu pertama sengaja
-            lebih lebar & lebih "berisi" (desc penuh) biar mata jatuh ke situ
-            duluan, sisanya ringkas (icon+judul+desc pendek).
+            KEAMANAN - "spotlight cycle" ala Hostinger (dicocokin ulang ke
+            video referensi Nando, 12 Sep 2026 - ternyata bukan marquee geser
+            terus, tapi SATU kartu gantian melebar+nyala tiap ~2 detik sambil
+            nampilin deskripsinya, sisanya nyusut jadi label doang, warna
+            diganti oranye gantiin ungu Hostinger). Auto-cycle jalan sendiri
+            (pakai securityAutoIdx), tapi hover/klik kartu langsung
+            "nyalain" kartu itu & reset timer - jadi tetep interaktif.
         ========================================================== */}
         <section id="keamanan" className="relative overflow-hidden bg-[#05070c] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
           <div
@@ -2647,49 +2676,39 @@ export default function Auth() {
               </div>
             </div>
 
-            {/* Marquee otomatis - list kartu di-render 2x berdampingan lalu
-                digeser terus-terusan setengah lebarnya via keyframe (loop
-                mulus, gak keliatan "patah" pas balik ke awal). Ini yang
-                bikin section-nya BERGERAK sendiri kayak referensi video dari
-                Nando, bukan carousel diem yang cuma bisa digeser manual
-                (versi sebelumnya). Berhenti sejenak pas di-hover/disentuh
-                biar kartu bisa dibaca, dan gak jalan sama sekali kalau
-                prefers-reduced-motion aktif. */}
-            <div
-              className="security-marquee-mask mt-10 overflow-hidden"
-              style={{ WebkitMaskImage: "linear-gradient(to right, transparent, black 6%, black 94%, transparent)", maskImage: "linear-gradient(to right, transparent, black 6%, black 94%, transparent)" }}
-            >
-              <style>{`
-                @keyframes security-marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-                .security-marquee-track { animation: security-marquee-scroll 32s linear infinite; }
-                .security-marquee-track:hover { animation-play-state: paused; }
-                @media (prefers-reduced-motion: reduce) { .security-marquee-track { animation: none; } }
-              `}</style>
-              <div className="security-marquee-track flex w-max items-stretch gap-4">
-                {[...SECURITY_FEATURES, ...SECURITY_FEATURES].map((f, i) => {
-                  const Icon = f.icon;
-                  const isHero = i % SECURITY_FEATURES.length === 0;
-                  return (
-                    <div
-                      key={`${f.title}-${i}`}
-                      className={`group relative shrink-0 overflow-hidden rounded-[24px] border p-6 transition ${
-                        isHero
-                          ? "w-[320px] border-orange-500/25 bg-gradient-to-b from-orange-500/[0.1] to-white/[0.02] sm:w-[380px]"
-                          : "w-[210px] border-white/[0.08] bg-white/[0.03] hover:border-orange-500/25 sm:w-[230px]"
-                      }`}
-                    >
-                      {isHero && (
-                        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/20 blur-2xl transition group-hover:bg-orange-400/25" />
-                      )}
-                      <div className={`relative flex items-center justify-center rounded-2xl ${isHero ? "h-12 w-12 bg-orange-500/15 text-orange-400" : "h-10 w-10 bg-white/[0.06] text-orange-400"}`}>
-                        <Icon size={isHero ? 21 : 17} />
-                      </div>
-                      <div className={`relative mt-5 font-bold tracking-tight text-white ${isHero ? "text-[17px]" : "text-[13px]"}`}>{f.title}</div>
-                      <p className={`relative mt-2 leading-5 text-slate-400 ${isHero ? "text-[12.5px]" : "text-[11px] line-clamp-3"}`}>{f.desc}</p>
+            <div ref={securityRowRef} className="mt-10 flex items-stretch gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {SECURITY_FEATURES.map((f, i) => {
+                const Icon = f.icon;
+                const isActive = i === securityActiveIdx;
+                return (
+                  <button
+                    key={f.title}
+                    type="button"
+                    ref={(el) => { securityCardRefs.current[i] = el; }}
+                    onClick={() => focusSecurityCard(i)}
+                    onMouseEnter={() => focusSecurityCard(i)}
+                    className={`group relative shrink-0 overflow-hidden rounded-[24px] border p-5 text-left transition-[width,background-color,border-color] duration-[550ms] ease-out sm:p-6 ${
+                      isActive
+                        ? "border-orange-500/30 bg-gradient-to-br from-orange-500/[0.18] via-orange-500/[0.05] to-white/[0.02]"
+                        : "border-white/[0.08] bg-white/[0.03] hover:border-orange-500/20"
+                    }`}
+                    style={{ width: isActive ? 340 : 152, minWidth: isActive ? 280 : 152 }}
+                  >
+                    {isActive && (
+                      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/25 blur-2xl" />
+                    )}
+                    <div className={`relative flex items-center justify-center rounded-2xl transition-colors duration-500 ${isActive ? "h-11 w-11 bg-orange-500/15 text-orange-400" : "h-10 w-10 bg-white/[0.06] text-slate-400"}`}>
+                      <Icon size={18} />
                     </div>
-                  );
-                })}
-              </div>
+                    <div className={`relative mt-4 whitespace-nowrap font-bold tracking-tight transition-colors duration-500 ${isActive ? "text-[15px] text-white" : "text-[12.5px] text-slate-300"}`}>
+                      {f.title}
+                    </div>
+                    <div className={`relative overflow-hidden transition-[max-height,opacity] duration-500 ease-out ${isActive ? "mt-2 max-h-32 opacity-100" : "max-h-0 opacity-0"}`}>
+                      <p className="text-[12px] leading-5 text-slate-400">{f.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-white/[0.08] bg-white/[0.03] px-6 py-5 text-center">
