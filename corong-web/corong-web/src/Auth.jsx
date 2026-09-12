@@ -347,25 +347,6 @@ const SECURITY_FEATURES = [
   },
 ];
 
-const INDUSTRIES = [
-  {
-    label: "PROPERTY",
-    flow: "Lead → Viewing → Negotiation → Closing",
-  },
-  {
-    label: "AUTOMOTIVE",
-    flow: "Lead → Test Drive → Financing → Closing",
-  },
-  {
-    label: "B2B",
-    flow: "Lead → Meeting → Trial → Quotation → PO",
-  },
-  {
-    label: "SAAS",
-    flow: "Lead → Demo → Trial → Proposal → Closing",
-  },
-];
-
 // === PRICING UPDATE (5 Sep 2026) ===
 // 1. Good Morning Dashboard (daily digest) sekarang RESMI jadi fitur Standard
 //    (bukan cuma Professional) - backend daily-digest.ts udah dibenerin buat
@@ -2630,87 +2611,37 @@ export default function Auth() {
         <AiEngineLoopSection robotVoice={engineLoopVoice} />
 
         {/* =========================================================
-            UNIVERSAL INDUSTRIES
+            KEAMANAN - bento cards gelap ala Hostinger (referensi video dari
+            Nando, 12 Sep 2026): 1 kartu hero lebar + beberapa kartu sempit
+            di sebelahnya, background gelap + glow, warna diganti oranye
+            (brand Nexto) gantiin ungu Hostinger. Beda dari versi carousel
+            lama (semua kartu sama lebar) - sekarang kartu pertama sengaja
+            lebih lebar & lebih "berisi" (desc penuh) biar mata jatuh ke situ
+            duluan, sisanya ringkas (icon+judul+desc pendek).
         ========================================================== */}
-        <section
-          id="industri"
-          className="bg-[#f8f7f4] px-5 py-20 sm:px-7 sm:py-28 lg:px-10"
-        >
-          <div className="mx-auto max-w-7xl">
-            <div className="mx-auto max-w-2xl text-center">
-              <SectionLabel>Universal sales engine</SectionLabel>
+        <section id="keamanan" className="relative overflow-hidden bg-[#05070c] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-[420px] opacity-60"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(148,163,184,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.045) 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
+              maskImage: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent 75%)",
+              WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent 75%)",
+            }}
+          />
+          <div className="pointer-events-none absolute -right-32 top-10 h-[420px] w-[420px] rounded-full bg-orange-600/[0.14] blur-[120px]" />
+          <div className="pointer-events-none absolute -left-32 bottom-0 h-[360px] w-[360px] rounded-full bg-orange-500/[0.08] blur-[110px]" />
 
-              <h2 className="mt-4 text-[34px] font-bold leading-tight tracking-[-0.045em] text-slate-950 sm:text-[48px]">
-                One sales engine.
-                <span className="block text-orange-600">Any industry.</span>
-              </h2>
-
-              <p className="mt-5 text-[13px] leading-6 text-slate-500">
-                Fundamental sales problem-nya sama. Nexto menyesuaikan konteks
-                dan proses penjualan perusahaan Anda.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-4 sm:grid-cols-2">
-              {INDUSTRIES.map((industry, index) => (
-                <div
-                  key={industry.label}
-                  className="group relative overflow-hidden rounded-[24px] border border-slate-200 bg-[#fbfaf8] p-6 transition hover:border-orange-200"
-                >
-                  <div className="absolute right-[-40px] top-[-40px] h-32 w-32 rounded-full bg-orange-100/50 blur-2xl transition group-hover:bg-orange-200/60" />
-
-                  <div className="relative">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[10px] font-bold tracking-[0.16em] text-orange-600">
-                        {industry.label}
-                      </div>
-                      <span className="text-[9px] font-bold text-slate-300">
-                        0{index + 1}
-                      </span>
-                    </div>
-
-                    <div className="mt-8 text-[13px] font-semibold tracking-tight text-slate-800 sm:text-[14px]">
-                      {industry.flow}
-                    </div>
-
-                    <div className="mt-4 flex items-center gap-2 text-[9px] font-medium text-slate-400">
-                      <CircleCheck size={12} className="text-emerald-500" />
-                      Powered by the same sales engine
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
-              <div className="text-[12px] font-bold text-slate-800">
-                Different industries. Same fundamental sales problem.
-              </div>
-              <div className="mt-1 text-[10px] leading-5 text-slate-400">
-                Lead → Understand → Contact → Offer → Follow-up → Negotiate →
-                Close → Repeat.
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        {/* =========================================================
-            KEAMANAN - carousel horizontal (layout ala Hostinger), tapi
-            warna balik terang (bg-[#fbfaf8]) matching sisa landing page -
-            versi gelap sempet dicoba, user minta balik terang lagi
-            (11 Sep 2026).
-        ========================================================== */}
-        <section id="keamanan" className="relative overflow-hidden bg-[#fbfaf8] px-5 py-20 sm:px-7 sm:py-28 lg:px-10">
           <div className="relative mx-auto max-w-7xl">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
               <div className="max-w-xl">
                 <SectionLabel>Keamanan</SectionLabel>
-                <h2 className="mt-4 text-[32px] font-bold leading-tight tracking-[-0.04em] text-slate-950 sm:text-[44px]">
+                <h2 className="mt-4 text-[32px] font-bold leading-tight tracking-[-0.04em] text-white sm:text-[44px]">
                   Data lead Anda,
-                  <span className="block text-orange-600">dijaga kayak brankas.</span>
+                  <span className="block text-orange-500">dijaga kayak brankas.</span>
                 </h2>
-                <p className="mt-4 text-[13px] leading-6 text-slate-500">
+                <p className="mt-4 text-[13px] leading-6 text-slate-400">
                   Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis Anda. Makanya keamanan akun bukan fitur tempelan.
                 </p>
               </div>
@@ -2718,14 +2649,14 @@ export default function Auth() {
                 <button
                   onClick={() => scrollSecurity(-1)}
                   aria-label="Kartu sebelumnya"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-orange-300 hover:text-orange-600"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-slate-400 transition hover:border-orange-500/40 hover:text-orange-400"
                 >
                   <ChevronLeft size={18} />
                 </button>
                 <button
                   onClick={() => scrollSecurity(1)}
                   aria-label="Kartu berikutnya"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-orange-300 hover:text-orange-600"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-slate-400 transition hover:border-orange-500/40 hover:text-orange-400"
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -2734,34 +2665,42 @@ export default function Auth() {
 
             <div
               ref={securityScrollRef}
-              className="mt-10 flex gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="mt-10 flex items-stretch gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               style={{ scrollSnapType: "x mandatory" }}
             >
-              {SECURITY_FEATURES.map((f) => {
+              {SECURITY_FEATURES.map((f, i) => {
                 const Icon = f.icon;
+                const isHero = i === 0;
                 return (
                   <div
                     key={f.title}
-                    className="group w-[270px] shrink-0 rounded-[24px] border border-slate-200 bg-white p-6 transition hover:border-orange-200"
+                    className={`group relative shrink-0 overflow-hidden rounded-[24px] border p-6 transition ${
+                      isHero
+                        ? "w-[320px] border-orange-500/25 bg-gradient-to-b from-orange-500/[0.1] to-white/[0.02] sm:w-[380px]"
+                        : "w-[210px] border-white/[0.08] bg-white/[0.03] hover:border-orange-500/25 sm:w-[230px]"
+                    }`}
                     style={{ scrollSnapAlign: "start" }}
                   >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
-                      <Icon size={19} />
+                    {isHero && (
+                      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/20 blur-2xl transition group-hover:bg-orange-400/25" />
+                    )}
+                    <div className={`relative flex items-center justify-center rounded-2xl ${isHero ? "h-12 w-12 bg-orange-500/15 text-orange-400" : "h-10 w-10 bg-white/[0.06] text-orange-400"}`}>
+                      <Icon size={isHero ? 21 : 17} />
                     </div>
-                    <div className="mt-5 text-[15px] font-bold tracking-tight text-slate-900">{f.title}</div>
-                    <p className="mt-2 text-[12px] leading-5 text-slate-500">{f.desc}</p>
+                    <div className={`relative mt-5 font-bold tracking-tight text-white ${isHero ? "text-[17px]" : "text-[13px]"}`}>{f.title}</div>
+                    <p className={`relative mt-2 leading-5 text-slate-400 ${isHero ? "text-[12.5px]" : "text-[11px] line-clamp-3"}`}>{f.desc}</p>
                   </div>
                 );
               })}
             </div>
 
-            <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
-              <div className="text-[12px] font-bold text-slate-800">
+            <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-white/[0.08] bg-white/[0.03] px-6 py-5 text-center">
+              <div className="text-[12px] font-bold text-slate-200">
                 Transparan soal data Anda
               </div>
-              <div className="mt-1 text-[10px] leading-5 text-slate-400">
+              <div className="mt-1 text-[10px] leading-5 text-slate-500">
                 Data lead/progress tetap milik Anda, gak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) &amp; OpenAI untuk diproses — kami sebutkan jelas apa & kenapa di{" "}
-                <button onClick={() => setLegalModal("privacy")} className="font-semibold text-orange-600 underline hover:text-orange-700">
+                <button onClick={() => setLegalModal("privacy")} className="font-semibold text-orange-400 underline hover:text-orange-300">
                   Kebijakan Privasi
                 </button>.
               </div>
