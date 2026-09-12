@@ -61,7 +61,7 @@ const SUPPORT_WA_NUMBER = "6281273059284";
 // file yang sama. Pilihan bahasa disimpen di localStorage biar nempel
 // walau reload/balik lagi ke situs.
 // ============================================================
-const LangContext = createContext("id");
+export const LangContext = createContext("id");
 function useLang() {
   return useContext(LangContext);
 }
@@ -70,12 +70,15 @@ function useLang() {
 // ProductDemoReel SENGAJA dibiarin Bahasa Indonesia terus (app CRM asli
 // cuma Bahasa Indonesia) - yang di-translate cuma copy marketing di
 // sekitarnya, biar gak ada demo yang nunjukkin UI app versi Inggris palsu.
-function useTr() {
+// Diexport (bukan cuma dipake internal Auth.jsx) - halaman berdiri sendiri
+// kayak GrokBotMcp.jsx pake helper yang sama biar toggle bahasa konsisten
+// di seluruh situs, gak bikin ulang logika translate/localStorage sendiri.
+export function useTr() {
   const lang = useLang();
   return (id, en) => (lang === "en" ? en : id);
 }
 
-function LanguageToggle({ lang, setLang, className }) {
+export function LanguageToggle({ lang, setLang, className }) {
   return (
     <div className={`inline-flex items-center rounded-full border border-slate-200 bg-white p-0.5 text-[11px] font-bold ${className || ""}`}>
       <button
