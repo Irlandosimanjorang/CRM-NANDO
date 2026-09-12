@@ -454,7 +454,7 @@ function PipelineFunnel({ stages, counts }) {
   const max = Math.max(...counts.map((c) => c.count), 1);
   return (
     <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><FunnelIcon size={14} /></span> Corong Pipeline</div>
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><FunnelIcon size={14} /></span> Nexto Pipeline</div>
       <div className="space-y-3">
         {counts.map((c, i) => (
           <div key={i}>
