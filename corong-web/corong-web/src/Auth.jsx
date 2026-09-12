@@ -345,26 +345,35 @@ export function NextoDarkWordmark({ width = 108, className = "" }) {
   );
 }
 
-// Ikon "spark" kecil buat nemenin link nav "Grok Bot" - bukan logo resmi xAI
-// (gak ada aset resminya buat dipake di sini), tapi bentuk bintang 4-sudut
-// yang jadi motif umum AI/agent, dikasih animasi muter+kedip pelan biar
-// keliatan "hidup" di nav bar sesuai request.
-function GrokSparkIcon({ size = 13, className = "" }) {
+// Ikon "wajah hantu" Grok (xAI) kecil buat nemenin link nav "Grok Bot" -
+// digambar ulang sbg SVG vektor (bukan pake file gambar resmi xAI, gak ada
+// aset itu di sini), ngikutin bentuk app icon Grok yang asli: kotak gelap
+// membulat, wajah putih besar, dua mata oval miring. Dikasih animasi
+// mengambang pelan biar keliatan "hidup" sesuai request.
+function GrokLogoIcon({ size = 16, className = "" }) {
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center ${className}`}
-      style={{ width: size, height: size, animation: "nexto-grok-spin 3.2s linear infinite" }}
+      style={{ width: size, height: size, animation: "nexto-grok-float 2.6s ease-in-out infinite" }}
       aria-hidden="true"
     >
       <style>{`
-        @keyframes nexto-grok-spin {
-          0% { transform: rotate(0deg) scale(0.85); opacity: .65; }
-          50% { transform: rotate(180deg) scale(1.05); opacity: 1; }
-          100% { transform: rotate(360deg) scale(0.85); opacity: .65; }
+        @keyframes nexto-grok-float {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-1.5px) rotate(-4deg); }
         }
       `}</style>
-      <svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor">
-        <path d="M12 0c.6 4.8 2.2 8.2 5 11 2.8 2.8 6.2 4.4 11 5-4.8.6-8.2 2.2-11 5-2.8 2.8-4.4 6.2-5 11-.6-4.8-2.2-8.2-5-11-2.8-2.8-6.2-4.4-11-5 4.8-.6 8.2-2.2 11-5 2.8-2.8 4.4-6.2 5-11z" />
+      <svg viewBox="0 0 24 24" width="100%" height="100%">
+        <defs>
+          <linearGradient id="grokBg" x1="0" y1="0" x2="24" y2="24">
+            <stop offset="0" stopColor="#3f3f42" />
+            <stop offset="1" stopColor="#0d0d0e" />
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="22" height="22" rx="6.5" fill="url(#grokBg)" />
+        <path d="M5.2 14.3c0-6 3.9-10.4 8.8-10.4 4.9 0 8.5 4.6 8.5 9.8 0 4.3-3.6 6.9-8.6 6.9-5.1 0-8.7-2.6-8.7-6.3z" fill="#f5f5f6" />
+        <ellipse cx="10.3" cy="13.5" rx="1.1" ry="1.9" fill="#19191b" transform="rotate(-10 10.3 13.5)" />
+        <ellipse cx="15.1" cy="13.5" rx="1.1" ry="1.9" fill="#19191b" transform="rotate(10 15.1 13.5)" />
       </svg>
     </span>
   );
@@ -2619,7 +2628,7 @@ export default function Auth() {
               href="/grok-bot"
               className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
             >
-              <GrokSparkIcon className="text-violet-500" />
+              <GrokLogoIcon />
               Grok Bot
               <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold text-orange-700">{tr("BARU", "NEW")}</span>
             </a>
@@ -2671,7 +2680,7 @@ export default function Auth() {
                   onClick={() => setShowMobileMenu(false)}
                   className="flex items-center gap-1.5 rounded-xl px-3 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
                 >
-                  {href === "/grok-bot" && <GrokSparkIcon size={14} className="text-violet-500" />}
+                  {href === "/grok-bot" && <GrokLogoIcon size={15} />}
                   {label}
                 </a>
               ))}

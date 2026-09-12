@@ -30,7 +30,7 @@ const PROMPTS = [
 const STEPS = [
   { icon: KeyRound, title: "Buat API Key", desc: "Buka Pengaturan → Integrasi MCP di Nexto, klik \"Buat API Key\". Sekali klik, langsung dapet key + Server URL." },
   { icon: Link2, title: "Sambungin ke Grok Bot", desc: "Bilang \"Pasang Nexto MCP\" ke Grok Bot, kirim Server URL + API Key-nya. Grok Bot connect sebagai custom MCP." },
-  { icon: MessageSquareText, title: "Suruh dia kerja", desc: "Tinggal ngobrol biasa - \"cek lead overdue\", \"update stage PT Asiaplast\" - Grok Bot yang eksekusi ke CRM Anda." },
+  { icon: MessageSquareText, title: "Suruh dia kerja", desc: "Tinggal ngobrol biasa - \"cek lead overdue\", \"update stage PT Asiaplast\" - Grok Bot yang eksekusi ke Nexto." },
 ];
 
 function ToolCard({ tool }) {
@@ -78,7 +78,7 @@ export default function GrokBotMcp() {
             <Sparkles size={13} /> Integrasi baru · Nexto × Grok Bot (xAI)
           </div>
           <h1 className="mt-5 text-center text-[34px] font-extrabold leading-[1.12] tracking-tight sm:text-5xl">
-            Grok Bot sekarang bisa<br className="hidden sm:block" /> masuk & <span className="text-orange-500">kerja langsung</span> di CRM Anda.
+            Grok Bot sekarang bisa<br className="hidden sm:block" /> masuk & <span className="text-orange-500">kerja langsung</span> di Nexto.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-center text-[15px] leading-relaxed text-slate-400 sm:text-base">
             Lewat protokol MCP, agent AI seperti Grok Bot bisa baca lead, pindahin stage pipeline, dan catat progress -
@@ -207,7 +207,7 @@ export default function GrokBotMcp() {
 
       {/* ---- CTA akhir ---- */}
       <section className="border-t border-white/[0.06] px-5 py-16 text-center sm:px-7 sm:py-20 lg:px-10">
-        <h2 className="text-2xl font-bold sm:text-3xl">Siap sambungin Grok Bot ke CRM Anda?</h2>
+        <h2 className="text-2xl font-bold sm:text-3xl">Siap sambungin Grok Bot ke Nexto?</h2>
         <p className="mx-auto mt-3 max-w-md text-[13.5px] text-slate-400">
           Tersedia buat paket Professional & Enterprise. Generate API key-nya dari Pengaturan, sambungin, langsung jalan.
         </p>
