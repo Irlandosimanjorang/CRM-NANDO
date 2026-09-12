@@ -345,6 +345,31 @@ export function NextoDarkWordmark({ width = 108, className = "" }) {
   );
 }
 
+// Ikon "spark" kecil buat nemenin link nav "Grok Bot" - bukan logo resmi xAI
+// (gak ada aset resminya buat dipake di sini), tapi bentuk bintang 4-sudut
+// yang jadi motif umum AI/agent, dikasih animasi muter+kedip pelan biar
+// keliatan "hidup" di nav bar sesuai request.
+function GrokSparkIcon({ size = 13, className = "" }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center ${className}`}
+      style={{ width: size, height: size, animation: "nexto-grok-spin 3.2s linear infinite" }}
+      aria-hidden="true"
+    >
+      <style>{`
+        @keyframes nexto-grok-spin {
+          0% { transform: rotate(0deg) scale(0.85); opacity: .65; }
+          50% { transform: rotate(180deg) scale(1.05); opacity: 1; }
+          100% { transform: rotate(360deg) scale(0.85); opacity: .65; }
+        }
+      `}</style>
+      <svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor">
+        <path d="M12 0c.6 4.8 2.2 8.2 5 11 2.8 2.8 6.2 4.4 11 5-4.8.6-8.2 2.2-11 5-2.8 2.8-4.4 6.2-5 11-.6-4.8-2.2-8.2-5-11-2.8-2.8-6.2-4.4-11-5 4.8-.6 8.2-2.2 11-5 2.8-2.8 4.4-6.2 5-11z" />
+      </svg>
+    </span>
+  );
+}
+
 
 // ============================================================
 // SECTION KEAMANAN AKUN (5 Sep 2026) - trust-building sebelum masuk ke
@@ -2594,6 +2619,7 @@ export default function Auth() {
               href="/grok-bot"
               className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
             >
+              <GrokSparkIcon className="text-violet-500" />
               Grok Bot
               <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold text-orange-700">{tr("BARU", "NEW")}</span>
             </a>
@@ -2643,8 +2669,9 @@ export default function Auth() {
                   key={href}
                   href={href}
                   onClick={() => setShowMobileMenu(false)}
-                  className="rounded-xl px-3 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  className="flex items-center gap-1.5 rounded-xl px-3 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
                 >
+                  {href === "/grok-bot" && <GrokSparkIcon size={14} className="text-violet-500" />}
                   {label}
                 </a>
               ))}
