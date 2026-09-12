@@ -39,12 +39,12 @@ export default function CompetitorModal({ comp, onClose, onSaved }) {
             <div className="flex items-center justify-between mb-2"><span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5"><Building2 size={14} /> Company pemakai ({f.usages.length})</span><button onClick={addUse} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={12} /> tambah company</button></div>
             {f.usages.length === 0 && <p className="text-xs text-slate-400 mb-2">Tambah company pemakai produk ini.</p>}
             {f.usages.map((u, i) => (
-              <div key={i} className="grid grid-cols-12 gap-1.5 mb-1.5 items-center">
-                <input className="col-span-3 px-2 py-1.5 text-xs border border-slate-300 rounded-lg" placeholder="Company" value={u.company} onChange={(e) => setUse(i, "company", e.target.value)} />
-                <input className="col-span-3 px-2 py-1.5 text-xs border border-slate-300 rounded-lg" placeholder="Produk dipakai" value={u.product} onChange={(e) => setUse(i, "product", e.target.value)} />
-                <input className="col-span-2 px-2 py-1.5 text-xs border border-slate-300 rounded-lg" placeholder="Harga" value={u.price} onChange={(e) => setUse(i, "price", e.target.value)} />
-                <input className="col-span-2 px-2 py-1.5 text-xs border border-slate-300 rounded-lg" placeholder="Jumlah" value={u.quantity} onChange={(e) => setUse(i, "quantity", e.target.value)} />
-                <button onClick={() => delUse(i)} className="col-span-2 text-slate-300 hover:text-rose-500"><X size={14} /></button>
+              <div key={i} className="grid grid-cols-2 sm:grid-cols-12 gap-1.5 mb-2 sm:mb-1.5 items-center pb-2 sm:pb-0 border-b sm:border-b-0 border-slate-200">
+                <input className="col-span-1 sm:col-span-3 px-2 py-1.5 text-xs border border-slate-300 rounded-lg min-w-0" placeholder="Company" value={u.company} onChange={(e) => setUse(i, "company", e.target.value)} />
+                <input className="col-span-1 sm:col-span-3 px-2 py-1.5 text-xs border border-slate-300 rounded-lg min-w-0" placeholder="Produk dipakai" value={u.product} onChange={(e) => setUse(i, "product", e.target.value)} />
+                <input className="col-span-1 sm:col-span-2 px-2 py-1.5 text-xs border border-slate-300 rounded-lg min-w-0" placeholder="Harga" value={u.price} onChange={(e) => setUse(i, "price", e.target.value)} />
+                <input className="col-span-1 sm:col-span-2 px-2 py-1.5 text-xs border border-slate-300 rounded-lg min-w-0" placeholder="Jumlah" value={u.quantity} onChange={(e) => setUse(i, "quantity", e.target.value)} />
+                <button onClick={() => delUse(i)} className="col-span-2 sm:col-span-2 flex items-center justify-center gap-1 text-[11px] text-slate-400 hover:text-rose-500 sm:justify-start"><X size={14} /> <span className="sm:hidden">Hapus baris</span></button>
               </div>
             ))}
           </div>
