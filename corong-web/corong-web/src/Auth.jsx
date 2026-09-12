@@ -29,8 +29,6 @@ import {
   History,
   Radar,
   EyeOff,
-  ChevronLeft,
-  ChevronRight,
   LayoutDashboard,
   Trophy,
   CalendarCheck,
@@ -2464,12 +2462,6 @@ export default function Auth() {
               Cara Kerja
             </a>
             <a
-              href="#industri"
-              className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
-            >
-              Industri
-            </a>
-            <a
               href="#keamanan"
               className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
             >
@@ -2514,7 +2506,6 @@ export default function Auth() {
             <div className="mx-auto flex max-w-7xl flex-col gap-1">
               {[
                 ["#cara-kerja", "Cara Kerja"],
-                ["#industri", "Industri"],
                 ["#keamanan", "Keamanan"],
                 ["#harga", "Harga"],
               ].map(([href, label]) => (
