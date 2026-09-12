@@ -234,13 +234,15 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
                   {fmtTimer(seconds)} <span className="text-base font-medium text-slate-400">/ {fmtTimer(MAX_RECORDING_SECONDS)}</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mb-3">Maks 30 menit - kalau kena batas, otomatis stop &amp; langsung ditranskrip</p>
-                {/* Animasi "sonar" - 2 cincin ngembang+ilang gantian (delay
-                    beda), biar keliatan jelas kalau lagi live recording,
-                    bukan cuma tombol diem doang. */}
-                <div className="relative mx-auto h-16 w-16">
-                  <span className="absolute inset-0 rounded-full bg-rose-500/50 animate-ping" />
-                  <span className="absolute inset-0 rounded-full bg-rose-500/40 animate-ping" style={{ animationDelay: "0.6s" }} />
-                  <button onClick={stopRecording} className="relative h-16 w-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30">
+                {/* Animasi cincin muter ngelilingin tombol (bukan ngembang
+                    kayak sebelumnya) - 1 lengkungan yang muter terus 360°,
+                    kesannya kayak "lagi ngerekam/scanning" di sekitar
+                    tombolnya. */}
+                <div className="relative mx-auto h-[76px] w-[76px]">
+                  <svg viewBox="0 0 76 76" className="absolute inset-0 h-full w-full animate-[spin_1.4s_linear_infinite]">
+                    <circle cx="38" cy="38" r="34" fill="none" stroke="#e11d48" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="70 143" />
+                  </svg>
+                  <button onClick={stopRecording} className="absolute inset-0 m-auto h-16 w-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30">
                     <Square size={20} fill="white" />
                   </button>
                 </div>
