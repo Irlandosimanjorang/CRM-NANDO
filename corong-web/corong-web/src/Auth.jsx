@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import LegalModal from "./components/LegalModal";
 import SupportChatWidget from "./components/SupportChatWidget";
@@ -53,6 +53,46 @@ const ROBOT_ENGINE_LOOP_AUDIO = `${LANDING_AUDIO_BASE}/robot-engine-loop.mp3`;
 // Nomor WhatsApp support Nexto - satu tempat doang, gampang diganti kalau
 // suatu saat nomornya berubah.
 const SUPPORT_WA_NUMBER = "6281273059284";
+
+// ============================================================
+// BAHASA (ID/EN) - landing page doang, app CRM tetap Bahasa Indonesia.
+// Context dipake (bukan prop drilling) karena banyak section landing page
+// adalah komponen terpisah (ProductDemoReel, NextoAISalesEngine, dst) di
+// file yang sama. Pilihan bahasa disimpen di localStorage biar nempel
+// walau reload/balik lagi ke situs.
+// ============================================================
+const LangContext = createContext("id");
+function useLang() {
+  return useContext(LangContext);
+}
+// tr(teksIndonesia, englishText) - dipanggil di dalam komponen yang render
+// teks, balikin salah satu sesuai bahasa aktif. Konten mockup app di
+// ProductDemoReel SENGAJA dibiarin Bahasa Indonesia terus (app CRM asli
+// cuma Bahasa Indonesia) - yang di-translate cuma copy marketing di
+// sekitarnya, biar gak ada demo yang nunjukkin UI app versi Inggris palsu.
+function useTr() {
+  const lang = useLang();
+  return (id, en) => (lang === "en" ? en : id);
+}
+
+function LanguageToggle({ lang, setLang, className }) {
+  return (
+    <div className={`inline-flex items-center rounded-full border border-slate-200 bg-white p-0.5 text-[11px] font-bold ${className || ""}`}>
+      <button
+        onClick={() => setLang("id")}
+        className={`rounded-full px-2.5 py-1 transition ${lang === "id" ? "bg-slate-950 text-white" : "text-slate-400 hover:text-slate-700"}`}
+      >
+        ID
+      </button>
+      <button
+        onClick={() => setLang("en")}
+        className={`rounded-full px-2.5 py-1 transition ${lang === "en" ? "bg-slate-950 text-white" : "text-slate-400 hover:text-slate-700"}`}
+      >
+        EN
+      </button>
+    </div>
+  );
+}
 
 // Hook kecil buat tombol "Dengerin" robot - play sekali klik, gak ada
 // autoplay (etika landing page publik: jangan maksa suara ke pengunjung
@@ -320,28 +360,43 @@ export function NextoDarkWordmark({ width = 108, className = "" }) {
 const SECURITY_FEATURES = [
   {
     icon: Radar,
-    title: "Dipantau AI 24 Jam",
-    desc: "Sistem internal kami ngecek kesehatan & keamanan platform tiap beberapa jam sepanjang hari, dan langsung notif tim kami kalau ada yang janggal — bukan nunggu ada yang lapor duluan.",
+    title: { id: "Dipantau AI 24 Jam", en: "Monitored by AI 24/7" },
+    desc: {
+      id: "Sistem internal kami ngecek kesehatan & keamanan platform tiap beberapa jam sepanjang hari, dan langsung notif tim kami kalau ada yang janggal — bukan nunggu ada yang lapor duluan.",
+      en: "Our internal system checks the platform's health & security every few hours around the clock, and instantly alerts our team if anything looks off — not waiting for someone to report it.",
+    },
   },
   {
     icon: ShieldCheck,
-    title: "Login Aman Berlapis",
-    desc: "Aktifin 2FA pakai app authenticator, dan kalau HP hilang ada 10 kode cadangan sekali-pakai — akun Anda gak pernah kekunci permanen dari diri sendiri.",
+    title: { id: "Login Aman Berlapis", en: "Layered Secure Login" },
+    desc: {
+      id: "Aktifin 2FA pakai app authenticator, dan kalau HP hilang ada 10 kode cadangan sekali-pakai — akun Anda gak pernah kekunci permanen dari diri sendiri.",
+      en: "Turn on 2FA with an authenticator app, and if your phone is lost there are 10 one-time backup codes — your account is never permanently locked out on you.",
+    },
   },
   {
     icon: Lock,
-    title: "Data Terisolasi & Terenkripsi",
-    desc: "Row Level Security mastiin data organisasi Anda gak bisa ketembus organisasi lain, dan semuanya disimpan terenkripsi baik saat disimpan maupun saat dikirim lewat internet.",
+    title: { id: "Data Terisolasi & Terenkripsi", en: "Isolated & Encrypted Data" },
+    desc: {
+      id: "Row Level Security mastiin data organisasi Anda gak bisa ketembus organisasi lain, dan semuanya disimpan terenkripsi baik saat disimpan maupun saat dikirim lewat internet.",
+      en: "Row Level Security makes sure your organization's data can never be reached by another organization, and everything is encrypted both at rest and in transit.",
+    },
   },
   {
     icon: EyeOff,
-    title: "Kredensial Gak Pernah ke Browser",
-    desc: "Kunci-kunci sensitif (API key, service credential) cuma hidup di server kami, gak pernah dikirim ke browser Anda — gak ada yang bisa dicuri lewat sisi perangkat pengguna.",
+    title: { id: "Kredensial Gak Pernah ke Browser", en: "Credentials Never Reach the Browser" },
+    desc: {
+      id: "Kunci-kunci sensitif (API key, service credential) cuma hidup di server kami, gak pernah dikirim ke browser Anda — gak ada yang bisa dicuri lewat sisi perangkat pengguna.",
+      en: "Sensitive keys (API keys, service credentials) only ever live on our servers, never sent to your browser — nothing can be stolen from the user's device side.",
+    },
   },
   {
     icon: History,
-    title: "Audit Log & Backup Berkala",
-    desc: "Perubahan sensitif tercatat rapi dan gampang ditelusuri, sementara database di-backup otomatis secara berkala — data Anda gak gantung di satu titik kegagalan.",
+    title: { id: "Audit Log & Backup Berkala", en: "Audit Log & Regular Backups" },
+    desc: {
+      id: "Perubahan sensitif tercatat rapi dan gampang ditelusuri, sementara database di-backup otomatis secara berkala — data Anda gak gantung di satu titik kegagalan.",
+      en: "Sensitive changes are logged cleanly and easy to trace, while the database is backed up automatically on a schedule — your data never hangs on a single point of failure.",
+    },
   },
 ];
 
@@ -361,41 +416,41 @@ const SECURITY_OFFSETS = [0, 34, 14, 42, 22];
 // 2. Generate Leads AI: "4x/bulan" (sesuai batas terbaru di generate-leads.ts,
 //    6 Sep 2026 - sebelumnya "1x/minggu").
 const STANDARD_FEATURES = [
-  "Kelola Leads — kartu per perusahaan",
-  "Smart Import",
-  "Vector Memory ringan (Nexto inget catatan lama yang relevan)",
-  "Recycle Bin",
-  "Deteksi Duplikat",
-  "Nex — Komunitas Sesama Sales",
-  "Daily Digest (rekomendasi harian)",
+  { id: "Kelola Leads — kartu per perusahaan", en: "Manage Leads — card per company" },
+  { id: "Smart Import", en: "Smart Import" },
+  { id: "Vector Memory ringan (Nexto inget catatan lama yang relevan)", en: "Light Vector Memory (Nexto recalls relevant old notes)" },
+  { id: "Recycle Bin", en: "Recycle Bin" },
+  { id: "Deteksi Duplikat", en: "Duplicate Detection" },
+  { id: "Nex — Komunitas Sesama Sales", en: "Nex — Sales Community" },
+  { id: "Daily Digest (rekomendasi harian)", en: "Daily Digest (daily recommendations)" },
 ];
 
 const PROFESSIONAL_FEATURES = [
-  "Semua fitur Standard",
-  "Bot Telegram (edit CRM, progress harian, jadwal visit)",
-  "Sinkron otomatis ke Google Calendar",
-  "Generate Leads",
-  "Rekam Meeting otomatis",
-  "Meeting Prep",
-  "Customer State",
-  "Outcome Memory",
-  "Advisor harian",
-  "Pipeline Review otomatis",
-  "Draft Follow-up (WhatsApp & Email)",
-  "Data Kompetitor",
+  { id: "Semua fitur Standard", en: "Everything in Standard" },
+  { id: "Bot Telegram (edit CRM, progress harian, jadwal visit)", en: "Telegram Bot (edit CRM, daily progress, visit scheduling)" },
+  { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
+  { id: "Generate Leads", en: "Generate Leads" },
+  { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },
+  { id: "Meeting Prep", en: "Meeting Prep" },
+  { id: "Customer State", en: "Customer State" },
+  { id: "Outcome Memory", en: "Outcome Memory" },
+  { id: "Advisor harian", en: "Daily Advisor" },
+  { id: "Pipeline Review otomatis", en: "Automatic Pipeline Review" },
+  { id: "Draft Follow-up (WhatsApp & Email)", en: "Follow-up Drafts (WhatsApp & Email)" },
+  { id: "Data Kompetitor", en: "Competitor Data" },
 ];
 
 const ENTERPRISE_FEATURES = [
-  "Semua fitur Professional",
-  "GPS Check-in (tracking kunjungan tim real-time)",
-  "4 anggota tim dalam satu organisasi",
-  "Role-based visibility (Owner/Manager/Sales Rep)",
-  "Assign & filter leads per anggota tim",
-  "Laporan Performa Tim (leaderboard revenue & win rate)",
-  "Undang anggota tim via kode invite",
-  "Bot Telegram kirim email otonom",
-  "Approval-gate: hapus lead & export data butuh persetujuan owner/manager",
-  "Prioritas support",
+  { id: "Semua fitur Professional", en: "Everything in Professional" },
+  { id: "GPS Check-in (tracking kunjungan tim real-time)", en: "GPS Check-in (real-time team visit tracking)" },
+  { id: "4 anggota tim dalam satu organisasi", en: "4 team members in one organization" },
+  { id: "Role-based visibility (Owner/Manager/Sales Rep)", en: "Role-based visibility (Owner/Manager/Sales Rep)" },
+  { id: "Assign & filter leads per anggota tim", en: "Assign & filter leads per team member" },
+  { id: "Laporan Performa Tim (leaderboard revenue & win rate)", en: "Team Performance Report (revenue & win-rate leaderboard)" },
+  { id: "Undang anggota tim via kode invite", en: "Invite team members via invite code" },
+  { id: "Bot Telegram kirim email otonom", en: "Telegram bot sends emails autonomously" },
+  { id: "Approval-gate: hapus lead & export data butuh persetujuan owner/manager", en: "Approval gate: deleting leads & exporting data needs owner/manager sign-off" },
+  { id: "Prioritas support", en: "Priority support" },
 ];
 
 // Site key Cloudflare Turnstile (aman ditaro di frontend - beda dari secret
@@ -455,6 +510,7 @@ const AI_DEMO_STATES = [
 ];
 
 function NextoAISalesEngine({ robotVoice }) {
+  const tr = useTr();
   const [active, setActive] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
 
@@ -532,17 +588,37 @@ function NextoAISalesEngine({ robotVoice }) {
           </div>
 
           <h2 className="mt-5 text-3xl md:text-5xl font-bold tracking-[-0.045em] leading-[1.05]">
-            Anda cukup{" "}
-            <span className="text-orange-500">ngomong.</span>
-            <br />
-            Nexto yang kerja.
+            {tr(
+              <>
+                Anda cukup{" "}
+                <span className="text-orange-500">ngomong.</span>
+                <br />
+                Nexto yang kerja.
+              </>,
+              <>
+                You just{" "}
+                <span className="text-orange-500">talk.</span>
+                <br />
+                Nexto does the work.
+              </>
+            )}
           </h2>
 
           <p className="mt-5 text-sm md:text-base leading-7 text-stone-400 max-w-2xl mx-auto">
-            Chatbot Nexto menjadi pusat kendali sales Anda. Satu chat bisa
-            mengatur visit, memperbarui progress, mengedit CRM, bahkan
-            <span className="text-orange-400 font-medium"> menyuruh Nexto kirim email follow-up ke lead secara otomatis</span> —
-            tanpa harus buka satu-satu.
+            {tr(
+              <>
+                Chatbot Nexto menjadi pusat kendali sales Anda. Satu chat bisa
+                mengatur visit, memperbarui progress, mengedit CRM, bahkan
+                <span className="text-orange-400 font-medium"> menyuruh Nexto kirim email follow-up ke lead secara otomatis</span> —
+                tanpa harus buka satu-satu.
+              </>,
+              <>
+                Nexto's chatbot becomes your sales command center. One chat can
+                schedule visits, update progress, edit your CRM, and even
+                <span className="text-orange-400 font-medium"> tell Nexto to send a follow-up email to a lead automatically</span> —
+                without opening anything one by one.
+              </>
+            )}
           </p>
         </div>
 
@@ -578,7 +654,10 @@ function NextoAISalesEngine({ robotVoice }) {
               icon={<Calendar size={19} />}
               title="Setting Visit"
               accent="Google Calendar"
-              description="Cukup bilang kapan dan siapa yang mau Anda visit. Nexto otomatis membuat jadwal dan menyinkronkannya ke Google Calendar."
+              description={tr(
+                "Cukup bilang kapan dan siapa yang mau Anda visit. Nexto otomatis membuat jadwal dan menyinkronkannya ke Google Calendar.",
+                "Just say when and who you want to visit. Nexto automatically creates the schedule and syncs it to Google Calendar."
+              )}
             >
               <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/30 p-3">
                 <div className="flex items-center justify-between mb-3">
@@ -627,8 +706,11 @@ function NextoAISalesEngine({ robotVoice }) {
               number="03"
               icon={<Pencil size={19} />}
               title="Edit CRM"
-              accent="AI yang Kerjain"
-              description="Update status, edit lead, ubah next action, tambah catatan — cukup perintah lewat chat."
+              accent={tr("AI yang Kerjain", "AI Does It")}
+              description={tr(
+                "Update status, edit lead, ubah next action, tambah catatan — cukup perintah lewat chat.",
+                "Update status, edit a lead, change the next action, add a note — just say it in chat."
+              )}
             >
               <div className="mt-4 space-y-2.5">
                 <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.06] p-3">
@@ -758,7 +840,10 @@ function NextoAISalesEngine({ robotVoice }) {
               icon={<Mic size={19} />}
               title="Update Progress"
               accent="Voice & Text"
-              description="Lagi di jalan? Tinggal ngomong. Lagi bisa mengetik? Chat. Nexto memahami dan menyimpan progress ke CRM."
+              description={tr(
+                "Lagi di jalan? Tinggal ngomong. Lagi bisa mengetik? Chat. Nexto memahami dan menyimpan progress ke CRM.",
+                "On the road? Just talk. Able to type? Chat. Nexto understands and saves the progress to your CRM."
+              )}
             >
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-xl border border-white/[0.08] bg-black/30 p-3">
@@ -815,7 +900,7 @@ function NextoAISalesEngine({ robotVoice }) {
               <DemoButton
                 active={active === 0}
                 icon={<Calendar size={13} />}
-                label="Atur Visit"
+                label={tr("Atur Visit", "Schedule Visit")}
                 onClick={() => setDemo(0)}
               />
 
@@ -851,7 +936,7 @@ function NextoAISalesEngine({ robotVoice }) {
         <div className="mt-10 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.05] px-3.5 py-2 text-[9px] text-emerald-400">
             <CheckCircle2 size={12} />
-            Satu percakapan → semua aktivitas sales terhubung
+            {tr("Satu percakapan → semua aktivitas sales terhubung", "One conversation → every sales activity connected")}
           </div>
         </div>
 
@@ -862,8 +947,8 @@ function NextoAISalesEngine({ robotVoice }) {
         ========================================================== */}
         <div className="mt-16 flex flex-col items-center gap-3 text-center">
           <p className="max-w-xs text-[11px] leading-relaxed text-slate-500">
-            Itu yang Anda liat & ajak ngobrol.
-            <span className="block text-white font-medium">Ini yang jalan di baliknya.</span>
+            {tr("Itu yang Anda liat & ajak ngobrol.", "That's what you see and talk to.")}
+            <span className="block text-white font-medium">{tr("Ini yang jalan di baliknya.", "This is what runs behind it.")}</span>
           </p>
           <span
             className="flex h-8 w-8 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/[0.06]"
@@ -1185,6 +1270,7 @@ const ENGINE_NODES = [
 ];
 
 function AiEngineLoopSection({ robotVoice }) {
+  const tr = useTr();
   const [activeLoop, setActiveLoop] = useState(0);
 
   useEffect(() => {
@@ -1542,7 +1628,7 @@ function AiEngineLoopSection({ robotVoice }) {
                 ))}
               </div>
               <p className="mt-2 text-[10px] leading-5 text-slate-500">
-                Hasil hari ini menjadi konteks untuk keputusan berikutnya.
+                {tr("Hasil hari ini menjadi konteks untuk keputusan berikutnya.", "Today's result becomes the context for tomorrow's decision.")}
               </p>
             </div>
           </div>
@@ -1558,10 +1644,13 @@ function AiEngineLoopSection({ robotVoice }) {
             }}
           />
           <p className="text-[11px] leading-5 text-slate-500">
-            Sekarang:{" "}
+            {tr("Sekarang:", "Now:")}{" "}
             <span className="font-semibold text-slate-300">{activeNode.label}</span>
             {" — "}
-            Nexto terus menjalankan loop ini tanpa harus menunggu sales membuka CRM.
+            {tr(
+              "Nexto terus menjalankan loop ini tanpa harus menunggu sales membuka CRM.",
+              "Nexto keeps running this loop without waiting for sales to open the CRM."
+            )}
           </p>
         </div>
       </div>
@@ -1570,6 +1659,7 @@ function AiEngineLoopSection({ robotVoice }) {
 }
 
 function EngineContextCard({ active = false }) {
+  const tr = useTr();
   return (
     <div
       className={`nexto-command-glass rounded-[22px] p-4 transition-all duration-500 ${
@@ -1592,10 +1682,10 @@ function EngineContextCard({ active = false }) {
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         {[
-          ["Percakapan", "8.4K"],
+          [tr("Percakapan", "Conversations"), "8.4K"],
           ["Opportunity", "367"],
-          ["Aktivitas", "2.1K"],
-          ["Riwayat deal", "12.8K"],
+          [tr("Aktivitas", "Activities"), "2.1K"],
+          [tr("Riwayat deal", "Deal history"), "12.8K"],
         ].map(([label, value]) => (
           <div key={label} className="rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
             <div className="text-[8px] text-slate-500">{label}</div>
@@ -1608,6 +1698,7 @@ function EngineContextCard({ active = false }) {
 }
 
 function EngineMemoryCard({ active = false, compact = false }) {
+  const tr = useTr();
   return (
     <div
       className={`nexto-command-glass rounded-[22px] ${compact ? "p-4" : "p-5"} transition-all duration-500 ${
@@ -1629,12 +1720,14 @@ function EngineMemoryCard({ active = false, compact = false }) {
       </div>
 
       <p className="mt-4 text-[10px] leading-5 text-slate-400">
-        Simpan customer state, histori, dan outcome supaya keputusan berikutnya
-        tidak mulai dari nol.
+        {tr(
+          "Simpan customer state, histori, dan outcome supaya keputusan berikutnya tidak mulai dari nol.",
+          "Store customer state, history, and outcomes so the next decision doesn't start from zero."
+        )}
       </p>
 
       <div className="mt-3 space-y-2">
-        {["Customer state", "Outcome menang / kalah", "Pattern yang ditemukan"].map((item) => (
+        {[tr("Customer state", "Customer state"), tr("Outcome menang / kalah", "Won / lost outcomes"), tr("Pattern yang ditemukan", "Patterns detected")].map((item) => (
           <div key={item} className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2">
             <CheckCircle2 size={11} className="text-cyan-300" />
             <span className="text-[8px] text-slate-300">{item}</span>
@@ -1646,6 +1739,7 @@ function EngineMemoryCard({ active = false, compact = false }) {
 }
 
 function EngineDecisionCard({ active = false, compact = false }) {
+  const tr = useTr();
   return (
     <div
       className={`nexto-command-glass rounded-[22px] ${compact ? "p-4" : "p-5"} transition-all duration-500 ${
@@ -1674,14 +1768,14 @@ function EngineDecisionCard({ active = false, compact = false }) {
           PT ABC · Rp280 Juta
         </div>
         <div className="mt-1 text-[8px] leading-4 text-slate-500">
-          Quotation 11 hari lalu · belum ada respons
+          {tr("Quotation 11 hari lalu · belum ada respons", "Quotation sent 11 days ago · no response yet")}
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between">
         <span className="flex items-center gap-2 text-[8px] text-emerald-300">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          Follow-up hari ini
+          {tr("Follow-up hari ini", "Follow up today")}
         </span>
         <ArrowRight size={12} className="text-orange-300" />
       </div>
@@ -1690,6 +1784,7 @@ function EngineDecisionCard({ active = false, compact = false }) {
 }
 
 function EngineActionCard({ active = false, compact = false }) {
+  const tr = useTr();
   return (
     <div
       className={`nexto-command-glass rounded-[22px] ${compact ? "p-4" : "p-5"} transition-all duration-500 ${
@@ -1714,14 +1809,17 @@ function EngineActionCard({ active = false, compact = false }) {
       </div>
 
       <p className="mt-4 text-[10px] leading-5 text-slate-400">
-        Dari keputusan menjadi action nyata — tanpa kehilangan hasilnya dari loop.
+        {tr(
+          "Dari keputusan menjadi action nyata — tanpa kehilangan hasilnya dari loop.",
+          "From decision to real action — without losing the result from the loop."
+        )}
       </p>
 
       <div className={`mt-4 grid ${compact ? "grid-cols-1" : "grid-cols-3"} gap-2`}>
         {[
-          [MessageCircle, "Kirim follow-up"],
-          [Calendar, "Jadwalkan"],
-          [TrendingUp, "Ukur hasil"],
+          [MessageCircle, tr("Kirim follow-up", "Send follow-up")],
+          [Calendar, tr("Jadwalkan", "Schedule")],
+          [TrendingUp, tr("Ukur hasil", "Measure result")],
         ].map(([Icon, label]) => (
           <div key={label} className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
             <Icon size={12} className="text-purple-300" />
@@ -1739,6 +1837,7 @@ function EngineActionCard({ active = false, compact = false }) {
 // satu/shared dari parent, jadi klik toggle di kartu mana pun ngubah
 // ketiga kartu sekaligus - cuma kontrolnya yang ditaro di tiap kartu.
 function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
+  const tr = useTr();
   const activeBg = { slate: "bg-white text-slate-950", orange: "bg-orange-500 text-white", violet: "bg-violet-500 text-white" }[accent];
   return (
     <div className="mt-2 inline-flex items-center gap-0.5 rounded-full bg-white/[0.06] p-0.5">
@@ -1750,13 +1849,13 @@ function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
         onClick={() => setBillingCycle("monthly")}
         className={`min-h-[34px] rounded-full px-3 text-[10px] font-bold transition-colors ${billingCycle === "monthly" ? activeBg : "text-slate-400 hover:text-slate-200"}`}
       >
-        Bulanan
+        {tr("Bulanan", "Monthly")}
       </button>
       <button
         onClick={() => setBillingCycle("quarterly")}
         className={`min-h-[34px] rounded-full px-3 text-[10px] font-bold transition-colors ${billingCycle === "quarterly" ? activeBg : "text-slate-400 hover:text-slate-200"}`}
       >
-        3 Bulan
+        {tr("3 Bulan", "3 Months")}
       </button>
     </div>
   );
@@ -2239,6 +2338,21 @@ export default function Auth() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // "tos" | "privacy" | null
 
+  // Bahasa landing page - default Indonesia, disimpen di localStorage biar
+  // nempel walau reload. Cuma landing page yang kena, app CRM abis login
+  // tetap Bahasa Indonesia (gak disentuh sama sekali).
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem("nexto_landing_lang") || "id"; } catch { return "id"; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("nexto_landing_lang", lang); } catch {}
+  }, [lang]);
+  // Auth() sendiri PUNYA `lang` langsung (state di atas), jadi tr() versi
+  // lokal ini gak perlu lewat Context (Context cuma buat sub-komponen
+  // terpisah di bawah - ProductDemoReel, NextoAISalesEngine, dst).
+  const tr = (id, en) => (lang === "en" ? en : id);
+
+
   // Section Keamanan - "spotlight cycle" ala Hostinger: satu kartu gantian
   // melebar+nyala tiap beberapa detik sendiri (auto-cycle), tapi hover/klik
   // kartu manapun langsung motong ke situ & reset timer-nya - biar tetep
@@ -2314,15 +2428,15 @@ export default function Auth() {
 
     if (mode === "signup") {
       if (!fullName.trim() || !companyName.trim()) {
-        setMsg("Nama lengkap dan nama perusahaan wajib diisi.");
+        setMsg(tr("Nama lengkap dan nama perusahaan wajib diisi.", "Full name and company name are required."));
         return;
       }
       if (!Object.values(pwChecks(pw)).every(Boolean)) {
-        setMsg("Password belum memenuhi semua syarat di bawah.");
+        setMsg(tr("Password belum memenuhi semua syarat di bawah.", "Password doesn't meet all the requirements below."));
         return;
       }
       if (!agreedTerms) {
-        setMsg("Centang dulu persetujuan ketentuan layanan & kebijakan privasi.");
+        setMsg(tr("Centang dulu persetujuan ketentuan layanan & kebijakan privasi.", "Please check the terms of service & privacy policy agreement first."));
         return;
       }
     }
@@ -2368,7 +2482,7 @@ export default function Auth() {
         } catch {}
 
         if (!data.session) {
-          setMsg("Akun dibuat. Cek email buat verifikasi, lalu masuk.");
+          setMsg(tr("Akun dibuat. Cek email buat verifikasi, lalu masuk.", "Account created. Check your email to verify, then sign in."));
         }
       }
     } catch (e) {
@@ -2445,7 +2559,17 @@ export default function Auth() {
   };
 
   return (
+    <LangContext.Provider value={lang}>
     <div className="min-h-screen overflow-x-hidden bg-white text-slate-900 selection:bg-orange-100 selection:text-orange-900">
+      {/* =========================================================
+          BAR BAHASA - paling atas halaman, di atas nav utama.
+      ========================================================== */}
+      <div className="border-b border-slate-200/70 bg-slate-50">
+        <div className="mx-auto flex h-9 max-w-7xl items-center justify-end px-5 sm:px-7 lg:px-10">
+          <LanguageToggle lang={lang} setLang={setLang} />
+        </div>
+      </div>
+
       {/* =========================================================
           NAVIGATION
       ========================================================== */}
@@ -2460,19 +2584,19 @@ export default function Auth() {
               href="#cara-kerja"
               className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
             >
-              Cara Kerja
+              {tr("Cara Kerja", "How It Works")}
             </a>
             <a
               href="#keamanan"
               className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
             >
-              Keamanan
+              {tr("Keamanan", "Security")}
             </a>
             <a
               href="#harga"
               className="text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
             >
-              Harga
+              {tr("Harga", "Pricing")}
             </a>
           </nav>
 
@@ -2481,7 +2605,7 @@ export default function Auth() {
               onClick={goToSignin}
               className="px-3 py-2 text-[12px] font-semibold text-slate-600 transition hover:text-slate-950"
             >
-              Masuk
+              {tr("Masuk", "Sign In")}
             </button>
 
             <button
@@ -2506,9 +2630,9 @@ export default function Auth() {
           <div className="border-t border-slate-100 bg-white px-5 py-4 md:hidden">
             <div className="mx-auto flex max-w-7xl flex-col gap-1">
               {[
-                ["#cara-kerja", "Cara Kerja"],
-                ["#keamanan", "Keamanan"],
-                ["#harga", "Harga"],
+                ["#cara-kerja", tr("Cara Kerja", "How It Works")],
+                ["#keamanan", tr("Keamanan", "Security")],
+                ["#harga", tr("Harga", "Pricing")],
               ].map(([href, label]) => (
                 <a
                   key={href}
@@ -2604,7 +2728,7 @@ export default function Auth() {
                 className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-3.5 text-[12px] font-bold text-slate-200 transition hover:border-white/25 hover:bg-white/[0.08]"
               >
                 <Play size={12} />
-                Lihat cara kerja
+                {tr("Lihat cara kerja", "See how it works")}
               </a>
             </div>
 
@@ -2615,11 +2739,11 @@ export default function Auth() {
               </span>
               <span className="flex items-center gap-1.5">
                 <CircleCheck size={12} className="text-emerald-500" />
-                Tanpa setup ribet
+                {tr("Tanpa setup ribet", "No complicated setup")}
               </span>
               <span className="flex items-center gap-1.5">
                 <CircleCheck size={12} className="text-emerald-500" />
-                Untuk semua industri
+                {tr("Untuk semua industri", "For every industry")}
               </span>
             </div>
 
@@ -2667,13 +2791,16 @@ export default function Auth() {
           <div className="relative mx-auto max-w-7xl">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
               <div className="max-w-xl">
-                <SectionLabel>Keamanan</SectionLabel>
+                <SectionLabel>{tr("Keamanan", "Security")}</SectionLabel>
                 <h2 className="mt-4 text-[32px] font-bold leading-tight tracking-[-0.04em] text-white sm:text-[44px]">
-                  Data lead Anda,
-                  <span className="block text-orange-500">dijaga kayak brankas.</span>
+                  {tr("Data lead Anda,", "Your lead data,")}
+                  <span className="block text-orange-500">{tr("dijaga kayak brankas.", "guarded like a vault.")}</span>
                 </h2>
                 <p className="mt-4 text-[13px] leading-6 text-slate-400">
-                  Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis Anda. Makanya keamanan akun bukan fitur tempelan.
+                  {tr(
+                    "Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis Anda. Makanya keamanan akun bukan fitur tempelan.",
+                    "Thousands of leads & progress history live in this CRM — we know that's your business asset. That's why account security isn't a bolted-on feature."
+                  )}
                 </p>
               </div>
               <div className="hidden shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-[9px] font-mono uppercase tracking-wide text-slate-500 sm:flex">
@@ -2709,7 +2836,7 @@ export default function Auth() {
                 const DESC_DELAY = isActive ? "140ms" : "0ms";
                 return (
                   <button
-                    key={f.title}
+                    key={f.title.id}
                     type="button"
                     ref={(el) => { securityCardRefs.current[i] = el; }}
                     onClick={() => focusSecurityCard(i)}
@@ -2760,14 +2887,14 @@ export default function Auth() {
                         transition: T(["font-size", "color"]),
                       }}
                     >
-                      {f.title}
+                      {f.title[lang]}
                     </div>
                     <div className="relative mt-2 min-h-0 flex-1 overflow-hidden">
                       <p
                         className="security-card-desc text-[12px] leading-5 text-slate-400"
                         style={{ opacity: isActive ? 1 : 0, transition: T(["opacity"]), transitionDelay: DESC_DELAY }}
                       >
-                        {f.desc}
+                        {f.desc[lang]}
                       </p>
                     </div>
                   </button>
@@ -2777,12 +2904,15 @@ export default function Auth() {
 
             <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-white/[0.08] bg-white/[0.03] px-6 py-5 text-center">
               <div className="text-[12px] font-bold text-slate-200">
-                Transparan soal data Anda
+                {tr("Transparan soal data Anda", "Transparent about your data")}
               </div>
               <div className="mt-1 text-[10px] leading-5 text-slate-500">
-                Data lead/progress tetap milik Anda, gak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) &amp; OpenAI untuk diproses — kami sebutkan jelas apa & kenapa di{" "}
+                {tr(
+                  <>Data lead/progress tetap milik Anda, gak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) &amp; OpenAI untuk diproses — kami sebutkan jelas apa & kenapa di{" "}</>,
+                  <>Your lead/progress data stays yours, never sold to third parties. Some AI features do send relevant data to Anthropic (Claude) &amp; OpenAI for processing — we clearly state what & why in our{" "}</>
+                )}
                 <button onClick={() => setLegalModal("privacy")} className="font-semibold text-orange-400 underline hover:text-orange-300">
-                  Kebijakan Privasi
+                  {tr("Kebijakan Privasi", "Privacy Policy")}
                 </button>.
               </div>
             </div>
@@ -2810,8 +2940,8 @@ export default function Auth() {
           <div className="relative mx-auto max-w-7xl">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-[34px] font-bold leading-tight tracking-[-0.045em] text-white sm:text-[46px]">
-                Berapa banyak "karyawan AI"
-                <span className="block text-slate-500">yang mau Anda pekerjakan?</span>
+                {tr('Berapa banyak "karyawan AI"', 'How many "AI employees"')}
+                <span className="block text-slate-500">{tr("yang mau Anda pekerjakan?", "do you want to hire?")}</span>
               </h2>
               {isEarlyBird && (
                 <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[13px] font-bold text-orange-300 sm:text-sm">
@@ -2819,7 +2949,7 @@ export default function Auth() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
                   </span>
-                  Early Bird Registration — daftar sebelum 30 September 2026
+                  {tr("Early Bird Registration — daftar sebelum 30 September 2026", "Early Bird Registration — sign up before September 30, 2026")}
                 </div>
               )}
             </div>
@@ -2829,7 +2959,7 @@ export default function Auth() {
               <div className="rounded-[26px] border border-white/[0.08] bg-white/[0.02] p-7">
                 <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-[0.16em] text-slate-500">
                   <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
-                  Mode Standar
+                  {tr("Mode Standar", "Standard Mode")}
                 </div>
 
                 <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
@@ -2845,15 +2975,15 @@ export default function Auth() {
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
                     {standardCycle === "monthly" ? PRICING.standard.monthlyPrice : PRICING.standard.quarterlyTotal}
                   </span>
-                  <span className="mb-1.5 text-[10px] text-slate-500">{standardCycle === "monthly" ? "/bulan" : "/3 bulan"}</span>
+                  <span className="mb-1.5 text-[10px] text-slate-500">{standardCycle === "monthly" ? tr("/bulan", "/month") : tr("/3 bulan", "/3 months")}</span>
                 </div>
 
                 <div className="mt-1 text-[10px] text-slate-500">
-                  CRM inti + AI ringan — untuk yang mau rapiin data leads dulu
+                  {tr("CRM inti + AI ringan — untuk yang mau rapiin data leads dulu", "Core CRM + light AI — for those who want to organize lead data first")}
                 </div>
                 <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
                 {isEarlyBird && (
-                  <div className="mt-1.5 text-[9px] text-slate-500">Hemat {standardCycle === "monthly" ? PRICING.standard.monthlySavings + "/bulan" : PRICING.standard.quarterlySavings} selama early bird</div>
+                  <div className="mt-1.5 text-[9px] text-slate-500">{tr("Hemat", "Save")} {standardCycle === "monthly" ? PRICING.standard.monthlySavings + tr("/bulan", "/month") : PRICING.standard.quarterlySavings} {tr("selama early bird", "during early bird")}</div>
                 )}
 
                 <div className="my-7 h-px bg-white/[0.06]" />
@@ -2861,11 +2991,11 @@ export default function Auth() {
                 <ul className="space-y-3">
                   {STANDARD_FEATURES.map((feature) => (
                     <li
-                      key={feature}
+                      key={feature.id}
                       className="flex items-start gap-2.5 text-[11px] text-slate-400"
                     >
                       <Check size={13} className="mt-0.5 shrink-0 text-slate-500" />
-                      {feature}
+                      {feature[lang]}
                     </li>
                   ))}
                 </ul>
@@ -2874,7 +3004,7 @@ export default function Auth() {
                   onClick={() => chooseTierAndSignup("standard")}
                   className="mt-8 w-full rounded-xl border border-white/10 py-3 text-[11px] font-bold text-slate-300 transition hover:bg-white/[0.05]"
                 >
-                  Mulai Standard
+                  {tr("Mulai Standard", "Start Standard")}
                 </button>
               </div>
 
@@ -2882,7 +3012,7 @@ export default function Auth() {
               <div className="relative overflow-hidden rounded-[26px] border border-orange-500/30 bg-gradient-to-b from-orange-500/[0.07] to-white/[0.02] p-7 shadow-[0_25px_70px_-35px_rgba(234,88,12,0.5)] lg:-translate-y-3">
                 <div className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-orange-500/20 blur-[70px]" />
                 <div className="absolute right-5 top-5 rounded-full bg-orange-500/10 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.12em] text-orange-400">
-                  Paling Direkomendasikan
+                  {tr("Paling Direkomendasikan", "Most Recommended")}
                 </div>
 
                 <div className="relative flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-[0.16em] text-orange-400">
@@ -2890,7 +3020,7 @@ export default function Auth() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-60" />
                     <span className="relative inline-flex h-full w-full rounded-full bg-orange-400" />
                   </span>
-                  AI Engine Aktif
+                  {tr("AI Engine Aktif", "AI Engine Active")}
                 </div>
 
                 <div className="relative mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-orange-400">
@@ -2906,20 +3036,20 @@ export default function Auth() {
                   <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
                     {professionalCycle === "monthly" ? PRICING.professional.monthlyPrice : PRICING.professional.quarterlyTotal}
                   </span>
-                  <span className="mb-1.5 text-[10px] text-slate-500">{professionalCycle === "monthly" ? "/bulan" : "/3 bulan"}</span>
+                  <span className="mb-1.5 text-[10px] text-slate-500">{professionalCycle === "monthly" ? tr("/bulan", "/month") : tr("/3 bulan", "/3 months")}</span>
                 </div>
 
                 <div className="relative mt-1 text-[10px] text-slate-400">
-                  AI Sales Engine penuh — solo, tapi kerja kayak ada tim
+                  {tr("AI Sales Engine penuh — solo, tapi kerja kayak ada tim", "Full AI Sales Engine — solo, but working like you have a team")}
                 </div>
                 <div className="relative mt-1 text-[10px] text-orange-300/70">
-                  Makin lama dipakai, makin ngerti pola closing bisnis Anda
+                  {tr("Makin lama dipakai, makin ngerti pola closing bisnis Anda", "The longer you use it, the better it understands your business's closing patterns")}
                 </div>
                 <div className="relative">
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
                 </div>
                 {isEarlyBird && (
-                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">Hemat {professionalCycle === "monthly" ? PRICING.professional.monthlySavings + "/bulan" : PRICING.professional.quarterlySavings} selama early bird</div>
+                  <div className="relative mt-1.5 text-[9px] text-orange-300/80">{tr("Hemat", "Save")} {professionalCycle === "monthly" ? PRICING.professional.monthlySavings + tr("/bulan", "/month") : PRICING.professional.quarterlySavings} {tr("selama early bird", "during early bird")}</div>
                 )}
 
                 <div className="relative my-7 h-px bg-white/[0.08]" />
@@ -2927,11 +3057,11 @@ export default function Auth() {
                 <ul className="relative space-y-3">
                   {PROFESSIONAL_FEATURES.map((feature) => (
                     <li
-                      key={feature}
+                      key={feature.id}
                       className="flex items-start gap-2.5 text-[11px] text-slate-300"
                     >
                       <Check size={13} className="mt-0.5 shrink-0 text-orange-400" />
-                      {feature}
+                      {feature[lang]}
                     </li>
                   ))}
                 </ul>
@@ -2940,7 +3070,7 @@ export default function Auth() {
                   onClick={() => chooseTierAndSignup("premium")}
                   className="relative mt-8 w-full rounded-xl bg-orange-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-orange-500"
                 >
-                  Upgrade ke Professional
+                  {tr("Upgrade ke Professional", "Upgrade to Professional")}
                 </button>
               </div>
 
@@ -2954,7 +3084,7 @@ export default function Auth() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
                       <span className="relative inline-flex h-full w-full rounded-full bg-violet-400" />
                     </span>
-                    AI Engine + Tim
+                    {tr("AI Engine + Tim", "AI Engine + Team")}
                   </div>
 
                   <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300">
@@ -2970,11 +3100,14 @@ export default function Auth() {
                     <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
                       {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.quarterlyTotal}
                     </span>
-                    <span className="mb-1.5 text-[10px] text-slate-500">{enterpriseCycle === "monthly" ? "/bulan" : "/3 bulan"}</span>
+                    <span className="mb-1.5 text-[10px] text-slate-500">{enterpriseCycle === "monthly" ? tr("/bulan", "/month") : tr("/3 bulan", "/3 months")}</span>
                   </div>
 
                   <div className="mt-1 text-[10px] text-slate-400">
-                    Untuk 4 orang (≈{PRICING.enterprise.perPerson}/orang) — tim sales dengan visibilitas penuh
+                    {tr(
+                      <>Untuk 4 orang (≈{PRICING.enterprise.perPerson}/orang) — tim sales dengan visibilitas penuh</>,
+                      <>For 4 people (≈{PRICING.enterprise.perPerson}/person) — a sales team with full visibility</>
+                    )}
                   </div>
 
                   {/* Tim lebih dari 4 orang - bukan harga standar, arahin
@@ -2989,14 +3122,14 @@ export default function Auth() {
                     onClick={() => window.__nextoOpenSasaChat?.("Saya butuh tim lebih dari 4 orang, ada opsi harga khusus?")}
                     className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 px-3 py-1.5 text-[10px] font-semibold text-violet-200 transition hover:border-violet-400/50 hover:text-white"
                   >
-                    Butuh tim lebih dari 4 orang? Hubungi kami
+                    {tr("Butuh tim lebih dari 4 orang? Hubungi kami", "Need a team of more than 4? Contact us")}
                   </button>
 
                   <div className="mt-3">
                     <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
                   </div>
                   {isEarlyBird && (
-                    <div className="mt-1.5 text-[9px] text-violet-300/80">Hemat {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlySavings + "/bulan" : PRICING.enterprise.quarterlySavings} selama early bird</div>
+                    <div className="mt-1.5 text-[9px] text-violet-300/80">{tr("Hemat", "Save")} {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlySavings + tr("/bulan", "/month") : PRICING.enterprise.quarterlySavings} {tr("selama early bird", "during early bird")}</div>
                   )}
 
                   <div className="my-7 h-px bg-white/10" />
@@ -3004,11 +3137,11 @@ export default function Auth() {
                   <ul className="space-y-3">
                     {ENTERPRISE_FEATURES.map((feature) => (
                       <li
-                        key={feature}
+                        key={feature.id}
                         className="flex items-start gap-2.5 text-[11px] text-slate-300"
                       >
                         <Check size={13} className="mt-0.5 shrink-0 text-violet-400" />
-                        {feature}
+                        {feature[lang]}
                       </li>
                     ))}
                   </ul>
@@ -3017,14 +3150,17 @@ export default function Auth() {
                     onClick={() => chooseTierAndSignup("enterprise")}
                     className="mt-8 w-full rounded-xl bg-violet-600 py-3 text-[11px] font-bold text-white shadow-sm transition hover:bg-violet-500"
                   >
-                    Upgrade ke Enterprise
+                    {tr("Upgrade ke Enterprise", "Upgrade to Enterprise")}
                   </button>
                 </div>
               </div>
             </div>
 
             <p className="mx-auto mt-8 max-w-xl text-center text-[10px] leading-relaxed text-slate-500">
-              Penting: pas isi form di halaman pembayaran, pakai <b className="text-slate-300">email yang sama persis</b> dengan email akun Nexto Anda — supaya akun Anda otomatis ke-upgrade begitu pembayaran selesai.
+              {tr(
+                <>Penting: pas isi form di halaman pembayaran, pakai <b className="text-slate-300">email yang sama persis</b> dengan email akun Nexto Anda — supaya akun Anda otomatis ke-upgrade begitu pembayaran selesai.</>,
+                <>Important: when filling out the payment page form, use the <b className="text-slate-300">exact same email</b> as your Nexto account — so your account upgrades automatically once payment is complete.</>
+              )}
             </p>
           </div>
         </section>
@@ -3052,8 +3188,10 @@ export default function Auth() {
                 </h2>
 
                 <p className="mt-5 max-w-xl text-[13px] leading-6 text-slate-400">
-                  Start Free dan biarkan Nexto membantu sales Anda tahu
-                  apa yang harus dilakukan berikutnya.
+                  {tr(
+                    "Start Free dan biarkan Nexto membantu sales Anda tahu apa yang harus dilakukan berikutnya.",
+                    "Start Free and let Nexto help your sales know what to do next."
+                  )}
                 </p>
 
                 <div className="mt-7 flex flex-wrap gap-4 text-[10px] text-slate-500">
@@ -3090,14 +3228,14 @@ export default function Auth() {
 
                     <h3 className="mt-2 text-[22px] font-bold tracking-tight text-white">
                       {mode === "signin"
-                        ? "Masuk ke Nexto"
-                        : "Buat akun Nexto"}
+                        ? tr("Masuk ke Nexto", "Sign in to Nexto")
+                        : tr("Buat akun Nexto", "Create your Nexto account")}
                     </h3>
 
                     <p className="mt-1 text-[10px] leading-5 text-slate-500">
                       {mode === "signin"
-                        ? "Lanjutkan mengelola sales loop Anda."
-                        : "Gratis buat mulai. Upgrade kapan Anda siap."}
+                        ? tr("Lanjutkan mengelola sales loop Anda.", "Continue managing your sales loop.")
+                        : tr("Gratis buat mulai. Upgrade kapan Anda siap.", "Free to start. Upgrade whenever you're ready.")}
                     </p>
 
                     {mode === "signup" && (() => {
@@ -3107,7 +3245,10 @@ export default function Auth() {
                       if (!label) return null;
                       return (
                         <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/[0.06] px-3 py-2 text-[10px] leading-4 text-orange-300">
-                          Anda pilih paket <b>{label}</b> — daftar gratis dulu di sini, abis itu kita arahin buat pembayarannya.
+                          {tr(
+                            <>Anda pilih paket <b>{label}</b> — daftar gratis dulu di sini, abis itu kita arahin buat pembayarannya.</>,
+                            <>You picked the <b>{label}</b> plan — sign up for free here first, then we'll guide you to payment.</>
+                          )}
                         </div>
                       );
                     })()}
@@ -3118,12 +3259,12 @@ export default function Auth() {
                       <>
                         <div>
                           <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                            NAMA LENGKAP <span className="text-orange-400">*</span>
+                            {tr("NAMA LENGKAP", "FULL NAME")} <span className="text-orange-400">*</span>
                           </label>
                           <input
                             type="text"
                             className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
-                            placeholder="Nama Anda"
+                            placeholder={tr("Nama Anda", "Your name")}
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                           />
@@ -3132,7 +3273,7 @@ export default function Auth() {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                              JABATAN
+                              {tr("JABATAN", "JOB TITLE")}
                             </label>
                             <input
                               type="text"
@@ -3144,7 +3285,7 @@ export default function Auth() {
                           </div>
                           <div>
                             <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                              NO. WHATSAPP
+                              {tr("NO. WHATSAPP", "WHATSAPP NO.")}
                             </label>
                             <input
                               type="tel"
@@ -3158,12 +3299,12 @@ export default function Auth() {
 
                         <div>
                           <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                            NAMA PERUSAHAAN <span className="text-orange-400">*</span>
+                            {tr("NAMA PERUSAHAAN", "COMPANY NAME")} <span className="text-orange-400">*</span>
                           </label>
                           <input
                             type="text"
                             className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
-                            placeholder="PT / CV Anda"
+                            placeholder={tr("PT / CV Anda", "Your company")}
                             value={companyName}
                             onChange={(e) => setCompanyName(e.target.value)}
                           />
@@ -3201,11 +3342,11 @@ export default function Auth() {
                       {mode === "signup" && (() => {
                         const checks = pwChecks(pw);
                         const items = [
-                          [checks.length, "Minimal 8 karakter"],
-                          [checks.upper, "Ada huruf besar (A-Z)"],
-                          [checks.lower, "Ada huruf kecil (a-z)"],
-                          [checks.number, "Ada angka (0-9)"],
-                          [checks.special, "Ada karakter spesial (!@#$dll, minimal 1)"],
+                          [checks.length, tr("Minimal 8 karakter", "At least 8 characters")],
+                          [checks.upper, tr("Ada huruf besar (A-Z)", "Has an uppercase letter (A-Z)")],
+                          [checks.lower, tr("Ada huruf kecil (a-z)", "Has a lowercase letter (a-z)")],
+                          [checks.number, tr("Ada angka (0-9)", "Has a number (0-9)")],
+                          [checks.special, tr("Ada karakter spesial (!@#$dll, minimal 1)", "Has a special character (!@#$ etc., at least 1)")],
                         ];
                         return (
                           <div className="mt-2.5 grid grid-cols-1 gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
@@ -3236,11 +3377,11 @@ export default function Auth() {
                           onChange={(e) => setAgreedTerms(e.target.checked)}
                         />
                         <span>
-                          Saya setuju menggunakan Nexto sesuai{" "}
-                          <button type="button" onClick={(e) => { e.preventDefault(); setLegalModal("tos"); }} className="text-orange-400 underline hover:text-orange-300">ketentuan layanan</button>{" "}
-                          dan{" "}
-                          <button type="button" onClick={(e) => { e.preventDefault(); setLegalModal("privacy"); }} className="text-orange-400 underline hover:text-orange-300">kebijakan privasi</button>{" "}
-                          yang berlaku.
+                          {tr("Saya setuju menggunakan Nexto sesuai", "I agree to use Nexto according to the")}{" "}
+                          <button type="button" onClick={(e) => { e.preventDefault(); setLegalModal("tos"); }} className="text-orange-400 underline hover:text-orange-300">{tr("ketentuan layanan", "terms of service")}</button>{" "}
+                          {tr("dan", "and")}{" "}
+                          <button type="button" onClick={(e) => { e.preventDefault(); setLegalModal("privacy"); }} className="text-orange-400 underline hover:text-orange-300">{tr("kebijakan privasi", "privacy policy")}</button>{" "}
+                          {tr("yang berlaku.", "in effect.")}
                         </span>
                       </label>
                     )}
@@ -3256,14 +3397,14 @@ export default function Auth() {
                         <Loader2 size={14} className="animate-spin" />
                       )}
                       {mode === "signin"
-                        ? "Masuk ke Nexto"
-                        : "Buat Akun Gratis"}
+                        ? tr("Masuk ke Nexto", "Sign in to Nexto")
+                        : tr("Buat Akun Gratis", "Create Free Account")}
                       {!loading && <ArrowRight size={13} />}
                     </button>
 
                     <div className="flex items-center gap-3 py-1">
                       <div className="h-px flex-1 bg-white/[0.08]" />
-                      <span className="text-[9px] uppercase tracking-wide text-slate-500">atau</span>
+                      <span className="text-[9px] uppercase tracking-wide text-slate-500">{tr("atau", "or")}</span>
                       <div className="h-px flex-1 bg-white/[0.08]" />
                     </div>
 
@@ -3278,7 +3419,7 @@ export default function Auth() {
                         <path fill="#4CAF50" d="M24 45c5.1 0 9.8-2 13.3-5.2l-6.2-5.2c-2 1.4-4.5 2.2-7.1 2.2-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.8 40.6 16.3 45 24 45z" />
                         <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.2 5.2C40.9 36 44 30.5 44 24c0-1.4-.1-2.7-.4-3.5z" />
                       </svg>
-                      {mode === "signin" ? "Masuk dengan Google" : "Daftar dengan Google"}
+                      {mode === "signin" ? tr("Masuk dengan Google", "Sign in with Google") : tr("Daftar dengan Google", "Sign up with Google")}
                     </button>
 
                     <button
@@ -3289,18 +3430,18 @@ export default function Auth() {
                       className="w-full py-2 text-[9px] font-medium text-slate-500 transition hover:text-white"
                     >
                       {mode === "signin"
-                        ? "Belum punya akun? Daftar gratis"
-                        : "Sudah punya akun? Masuk"}
+                        ? tr("Belum punya akun? Daftar gratis", "Don't have an account? Sign up free")
+                        : tr("Sudah punya akun? Masuk", "Already have an account? Sign in")}
                     </button>
                   </div>
 
                   {mode === "signin" && (
                     <div className="mt-5 border-t border-white/[0.06] pt-4 text-center text-[8px] leading-4 text-slate-600">
-                      Dengan masuk, Anda setuju menggunakan Nexto sesuai{" "}
-                      <button onClick={() => setLegalModal("tos")} className="underline hover:text-slate-400">ketentuan layanan</button>{" "}
-                      dan{" "}
-                      <button onClick={() => setLegalModal("privacy")} className="underline hover:text-slate-400">kebijakan privasi</button>{" "}
-                      yang berlaku.
+                      {tr("Dengan masuk, Anda setuju menggunakan Nexto sesuai", "By signing in, you agree to use Nexto according to the")}{" "}
+                      <button onClick={() => setLegalModal("tos")} className="underline hover:text-slate-400">{tr("ketentuan layanan", "terms of service")}</button>{" "}
+                      {tr("dan", "and")}{" "}
+                      <button onClick={() => setLegalModal("privacy")} className="underline hover:text-slate-400">{tr("kebijakan privasi", "privacy policy")}</button>{" "}
+                      {tr("yang berlaku.", "in effect.")}
                     </div>
                   )}
                 </div>
@@ -3333,13 +3474,14 @@ export default function Auth() {
             kanan bawah begitu discroll ke footer. Jalan pintas ke WA
             sekarang ada DI DALAM panel SASA sendiri (header widget-nya). */}
         <div className="mx-auto mt-5 flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/[0.06] pt-5 text-[9px] text-slate-500">
-          <button onClick={() => setLegalModal("tos")} className="hover:text-slate-300 transition">Ketentuan Layanan</button>
-          <button onClick={() => setLegalModal("privacy")} className="hover:text-slate-300 transition">Kebijakan Privasi</button>
+          <button onClick={() => setLegalModal("tos")} className="hover:text-slate-300 transition">{tr("Ketentuan Layanan", "Terms of Service")}</button>
+          <button onClick={() => setLegalModal("privacy")} className="hover:text-slate-300 transition">{tr("Kebijakan Privasi", "Privacy Policy")}</button>
         </div>
       </footer>
 
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} supportWaNumber={SUPPORT_WA_NUMBER} />}
       <SupportChatWidget supportWaNumber={SUPPORT_WA_NUMBER} />
     </div>
+    </LangContext.Provider>
   );
 }
