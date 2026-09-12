@@ -376,7 +376,7 @@ const PROFESSIONAL_FEATURES = [
   "Sinkron otomatis ke Google Calendar",
   "Generate Leads",
   "Rekam Meeting otomatis",
-  "Meeting Prep (poin diskusi AI sebelum visit)",
+  "Meeting Prep",
   "Customer State",
   "Outcome Memory",
   "Advisor harian",
