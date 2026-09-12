@@ -738,7 +738,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Bot size={15} className="text-violet-500" /> Integrasi MCP / AI Agent</h3>
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Bot size={15} className="text-violet-500" /> Integrasi MCP ke Grok Bot</h3>
         <p className="text-xs text-slate-500 mb-3">
           Sambungin agent AI luar (misal Grok Bot dari xAI) ke data CRM Anda lewat protokol MCP - agent bisa baca lead, update stage,
           dan tambah catatan progress atas nama akun Anda, tanpa perlu login pakai email/password.
