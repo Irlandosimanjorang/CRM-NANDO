@@ -421,6 +421,7 @@ const STANDARD_FEATURES = [
   { id: "Vector Memory ringan (Nexto inget catatan lama yang relevan)", en: "Light Vector Memory (Nexto recalls relevant old notes)" },
   { id: "Recycle Bin", en: "Recycle Bin" },
   { id: "Deteksi Duplikat", en: "Duplicate Detection" },
+  { id: "Rapihin Data", en: "Data Cleanup" },
   { id: "Nex — Komunitas Sesama Sales", en: "Nex — Sales Community" },
   { id: "Daily Digest (rekomendasi harian)", en: "Daily Digest (daily recommendations)" },
 ];
