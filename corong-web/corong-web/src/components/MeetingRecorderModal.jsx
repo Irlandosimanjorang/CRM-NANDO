@@ -174,9 +174,16 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
                   {fmtTimer(seconds)} <span className="text-base font-medium text-slate-400">/ {fmtTimer(MAX_RECORDING_SECONDS)}</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mb-3">Maks 30 menit - kalau kena batas, otomatis stop &amp; langsung ditranskrip</p>
-                <button onClick={stopRecording} className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center mx-auto shadow-lg shadow-rose-600/30 animate-pulse">
-                  <Square size={20} fill="white" />
-                </button>
+                {/* Animasi "sonar" - 2 cincin ngembang+ilang gantian (delay
+                    beda), biar keliatan jelas kalau lagi live recording,
+                    bukan cuma tombol diem doang. */}
+                <div className="relative mx-auto h-16 w-16">
+                  <span className="absolute inset-0 rounded-full bg-rose-500/50 animate-ping" />
+                  <span className="absolute inset-0 rounded-full bg-rose-500/40 animate-ping" style={{ animationDelay: "0.6s" }} />
+                  <button onClick={stopRecording} className="relative h-16 w-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30">
+                    <Square size={20} fill="white" />
+                  </button>
+                </div>
                 <p className="text-xs text-slate-400 mt-3">Lagi rekam… tekan buat stop</p>
               </div>
             )}
