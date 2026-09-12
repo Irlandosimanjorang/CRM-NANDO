@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Mic, Square, X, Save, Loader2, Search, FileAudio } from "lucide-react";
 import * as db from "../lib/db";
 
@@ -28,6 +28,42 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
+  const wakeLockRef = useRef(null);
+
+  // Layar HP wajib nyala terus selama recording (permintaan Nando, 12 Sep
+  // 2026) - meeting bisa sampe 30 menit, kalau layar mati/terkunci di
+  // tengah jalan resiko rekaman kepotong (browser/OS bisa nge-suspend tab
+  // pas layar mati di beberapa HP). Wake Lock API - gagal diam-diam kalau
+  // browser gak support (Safari lama dll), gak bikin recording gagal.
+  const acquireWakeLock = async () => {
+    try {
+      if ("wakeLock" in navigator) wakeLockRef.current = await navigator.wakeLock.request("screen");
+    } catch (_) { /* gak didukung / ditolak - rekaman tetep jalan normal */ }
+  };
+  const releaseWakeLock = () => {
+    try { wakeLockRef.current?.release(); } catch (_) {}
+    wakeLockRef.current = null;
+  };
+
+  // Beberapa browser OTOMATIS ngelepas wake lock pas tab disembunyiin
+  // (pindah app lain sebentar), dan gak ngembaliin sendiri pas balik lagi
+  // - kalau lagi recording, coba ambil ulang biar layar tetep nyala begitu
+  // user balik ke tab ini. Efek ini SENGAJA gak nge-release apa-apa di
+  // cleanup-nya (beda dari efek unmount di bawah) - kalau ikut nge-release
+  // di sini, tiap pindah stage (idle->recording) bakal langsung nge-cancel
+  // wake lock yang baru aja diambil acquireWakeLock() di startRecording().
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && stage === "recording" && !wakeLockRef.current) acquireWakeLock();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [stage]);
+
+  // Safety net - kalau modal ke-unmount (misal parent maksa nutup) sementara
+  // wake lock masih nyala, jangan sampe nyangkut biarin layar HP gak pernah
+  // mati lagi selamanya.
+  useEffect(() => releaseWakeLock, []);
 
   const matches = !lead && q.trim() ? (leads || []).filter((l) => l.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
 
@@ -57,6 +93,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorderRef.current = mr;
       mr.start();
+      acquireWakeLock();
       setStage("recording");
       setSeconds(0);
       timerRef.current = setInterval(() => {
@@ -82,6 +119,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
   // interval yang direkam pas startRecording, gak akan pernah stale).
   const finishRecording = () => {
     clearInterval(timerRef.current);
+    releaseWakeLock();
     const mr = mediaRecorderRef.current;
     if (!mr) return;
     setStage("processing");
@@ -110,6 +148,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     // gak lewat sini.
     if (seconds < 3) {
       clearInterval(timerRef.current);
+      releaseWakeLock();
       const mr = mediaRecorderRef.current;
       if (mr) mr.stream.getTracks().forEach((t) => t.stop());
       setStage("idle");
@@ -117,6 +156,21 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       return;
     }
     finishRecording();
+  };
+
+  // Batalin rekaman yang lagi jalan - dipake KHUSUS dari tombol X pas
+  // stage === "recording" (permintaan Nando, 12 Sep 2026: modal WAJIB
+  // "stay" selama recording, cuma bisa dibatalin lewat tombol X, gak lewat
+  // klik area gelap di belakangnya - kejadian gak sengaja ke-tap gelap
+  // biasa bikin rekaman ilang tanpa sadar). Beda dari finishRecording():
+  // ini BUANG audio-nya, gak ditranskrip sama sekali.
+  const cancelRecording = () => {
+    clearInterval(timerRef.current);
+    releaseWakeLock();
+    const mr = mediaRecorderRef.current;
+    if (mr) mr.stream.getTracks().forEach((t) => t.stop());
+    chunksRef.current = [];
+    onClose();
   };
 
   const save = async () => {
@@ -130,12 +184,18 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
 
+  // Pas lagi recording, modal WAJIB "stay" di layar - klik area gelap di
+  // belakang gak boleh nutup (biar gak ke-tap gak sengaja bikin rekaman
+  // ilang). Satu-satunya jalan keluar pas recording adalah tombol X
+  // (cancelRecording, di bawah).
+  const isRecordingLive = stage === "recording";
+
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={isRecordingLive ? undefined : onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg flex items-center gap-2"><FileAudio size={18} className="text-orange-500" /> Rekam Meeting</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+          <button onClick={isRecordingLive ? cancelRecording : onClose} className="text-slate-400 hover:text-slate-700" aria-label={isRecordingLive ? "Batalin rekaman" : "Tutup"}><X size={20} /></button>
         </div>
 
         {!lead ? (
