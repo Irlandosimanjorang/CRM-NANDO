@@ -2590,6 +2590,13 @@ export default function Auth() {
             >
               {tr("Harga", "Pricing")}
             </a>
+            <a
+              href="/grok-bot"
+              className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500 transition hover:text-slate-950"
+            >
+              Grok Bot
+              <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold text-orange-700">{tr("BARU", "NEW")}</span>
+            </a>
           </nav>
 
           <div className="hidden items-center gap-3 md:flex">
@@ -2630,6 +2637,7 @@ export default function Auth() {
                 ["#cara-kerja", tr("Cara Kerja", "How It Works")],
                 ["#keamanan", tr("Keamanan", "Security")],
                 ["#harga", tr("Harga", "Pricing")],
+                ["/grok-bot", tr("Integrasi Grok Bot (Baru)", "Grok Bot Integration (New)")],
               ].map(([href, label]) => (
                 <a
                   key={href}
