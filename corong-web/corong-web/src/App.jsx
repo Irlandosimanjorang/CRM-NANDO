@@ -1,4 +1,3 @@
-```
 import { useEffect, useState, useMemo, useRef, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
@@ -1683,4 +1682,3 @@ function Splash({ inline }) {
     </div>
   );
 }
-```
