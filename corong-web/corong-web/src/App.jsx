@@ -1,3 +1,4 @@
+```
 import { useEffect, useState, useMemo, useRef, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
@@ -13,7 +14,6 @@ import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // buka salah satu dari ini begitu login, jadi lazy-load-nya cuma nambah
 // flicker Suspense tanpa beneran ngirit apa-apa (chunk-nya bakal langsung
 // diambil ulang beberapa detik kemudian).
-import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
 import SettingsTab from "./tabs/Settings";
 // BUNDLE SIZE FIX (9 Sep 2026): sebelumnya SEMUA tab (termasuk yang jarang
@@ -45,7 +45,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, Bell,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell, Plus, ArrowUpRight, MapPin,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -133,6 +133,289 @@ function Toast({ toast, onDismiss }) {
 
 // MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL: lihat ./lib/plans.js (satu
 // sumber kebenaran, jangan definisi ulang di sini).
+
+
+// ---- NEXT-GEN DASHBOARD HOME ----
+// Dashboard baru mengikuti konsep "No. 3": quick actions, AI insight,
+// pipeline visual, activity, agenda, dan visit focus. Semua data tetap
+// berasal dari props yang sudah dimiliki App.jsx - tidak mengubah DB/API.
+function NextoDashboardHome({ leads = [], stages = [], dealTransactions = [], settings = {}, onGo, onOpenLead }) {
+  const safeStages = stages?.length ? stages : [{ key: "prospek", label: "Prospek", type: "normal" }];
+  const activeStages = safeStages.filter((s, i) => s.type !== "lost" && i !== 0);
+  const wonKeys = safeStages.filter((s) => s.type === "won").map((s) => s.key);
+  const lostKeys = safeStages.filter((s) => s.type === "lost").map((s) => s.key);
+
+  const activeLeads = leads.filter((l) => !wonKeys.includes(l.stage_key) && !lostKeys.includes(l.stage_key));
+  const wonLeads = leads.filter((l) => wonKeys.includes(l.stage_key));
+  const followups = leads.filter((l) => l.next_action?.trim());
+  const today = new Date();
+  const todayKey = today.toISOString().slice(0, 10);
+  const weekAgo = new Date(today.getTime() - 6 * 86400000);
+  const visitsThisWeek = leads.filter((l) => {
+    if (!l.visit_date) return false;
+    const d = new Date(`${l.visit_date}T00:00:00`);
+    return !Number.isNaN(d.getTime()) && d >= new Date(`${weekAgo.toISOString().slice(0, 10)}T00:00:00`) && d <= new Date(`${todayKey}T23:59:59`);
+  }).length;
+  const winRate = leads.length ? Math.round((wonLeads.length / leads.length) * 100) : 0;
+
+  const sortedActionLeads = [...leads]
+    .filter((l) => l.next_action?.trim() || l.visit_date)
+    .sort((a, b) => {
+      const ad = a.visit_date || a.last_contact || "9999-12-31";
+      const bd = b.visit_date || b.last_contact || "9999-12-31";
+      return ad.localeCompare(bd);
+    });
+
+  const agenda = [...leads]
+    .filter((l) => l.visit_date === todayKey || l.next_action?.trim())
+    .sort((a, b) => (a.visit_date || "9999-12-31").localeCompare(b.visit_date || "9999-12-31"))
+    .slice(0, 4);
+
+  const cityCounts = leads.reduce((acc, l) => {
+    if (l.city) acc[l.city] = (acc[l.city] || 0) + 1;
+    return acc;
+  }, {});
+  const cities = Object.entries(cityCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+  // Aktivitas 7 hari berdasarkan last_contact. Tidak ada data sintetis.
+  const activity = Array.from({ length: 7 }, (_, idx) => {
+    const d = new Date(today.getTime() - (6 - idx) * 86400000);
+    const key = d.toISOString().slice(0, 10);
+    const count = leads.filter((l) => l.last_contact === key).length;
+    return { key, label: d.toLocaleDateString("id-ID", { weekday: "short" }).slice(0, 3), count };
+  });
+  const maxActivity = Math.max(1, ...activity.map((x) => x.count));
+
+  const pipeline = activeStages.slice(0, 4).map((stage) => ({
+    ...stage,
+    items: leads.filter((l) => l.stage_key === stage.key).slice(0, 3),
+    count: leads.filter((l) => l.stage_key === stage.key).length,
+  }));
+
+  const highValue = [...activeLeads]
+    .sort((a, b) => {
+      const av = Number(a.deal_value || a.value || 0);
+      const bv = Number(b.deal_value || b.value || 0);
+      return bv - av;
+    })
+    .slice(0, 1)[0];
+
+  const overdue = [...followups].sort((a, b) => (a.last_contact || "").localeCompare(b.last_contact || ""))[0];
+  const opportunity = cities[0];
+
+  const formatValue = (value) => {
+    const n = Number(value || 0);
+    if (!n) return null;
+    if (n >= 1000000000) return `Rp ${(n / 1000000000).toFixed(1)} M`;
+    if (n >= 1000000) return `Rp ${(n / 1000000).toFixed(1)} jt`;
+    if (n >= 1000) return `Rp ${(n / 1000).toFixed(0)} rb`;
+    return `Rp ${n.toLocaleString("id-ID")}`;
+  };
+
+  const kpis = [
+    { label: "Total Leads", value: leads.length, trend: activeLeads.length ? `${activeLeads.length} aktif` : "Belum ada lead", icon: Users, cls: "text-blue-600 bg-blue-50" },
+    { label: "Follow-up Hari Ini", value: followups.length, trend: followups.length ? "Perlu action" : "Semua aman", icon: Bell, cls: "text-rose-600 bg-rose-50" },
+    { label: "Visit Minggu Ini", value: visitsThisWeek, trend: visitsThisWeek ? "Terjadwal" : "Belum ada", icon: CalendarCheck, cls: "text-violet-600 bg-violet-50" },
+    { label: "Deal / Won", value: wonLeads.length, trend: dealTransactions.length ? `${dealTransactions.length} transaksi` : "Belum ada transaksi", icon: Trophy, cls: "text-emerald-600 bg-emerald-50" },
+  ];
+
+  return (
+    <div className="space-y-5">
+      {/* Welcome + quick actions */}
+      <section className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">☀️</span>
+            <h1 className="text-[28px] md:text-[34px] leading-tight font-extrabold tracking-[-0.04em] text-[#0b1020]">
+              Good morning, {settings?.community_display_name || "Mr. Nando"}
+            </h1>
+          </div>
+          <p className="mt-1.5 text-[13px] text-slate-400">Let's close more deals today!</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => onGo?.("leads")} className="inline-flex items-center gap-2 rounded-xl bg-[#2563eb] px-4 py-2.5 text-[11px] font-bold text-white shadow-[0_10px_24px_-12px_rgba(37,99,235,.7)] hover:bg-blue-700">
+            <Plus size={14} /> Add Lead
+          </button>
+          <button onClick={() => onGo?.("visitfollowup")} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+            <CalendarCheck size={14} /> Log Meeting
+          </button>
+          <button onClick={() => onGo?.("generateleads")} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+            <Sparkles size={14} className="text-violet-500" /> Generate Leads (AI)
+          </button>
+          <button onClick={() => onGo?.("deal")} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+            <Trophy size={14} className="text-emerald-500" /> Create Deal
+          </button>
+        </div>
+      </section>
+
+      {/* AI + agenda */}
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,.75fr)]">
+        <div className="overflow-hidden rounded-[22px] bg-[#10182f] p-5 text-white shadow-[0_18px_50px_-28px_rgba(15,23,42,.65)] relative">
+          <div className="absolute -right-10 -top-16 h-44 w-44 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="relative flex items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 border border-white/10">
+              <NextoRobotHead size={42} status="thinking" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-300">Nexto AI</div>
+              <h2 className="mt-1 text-[18px] font-bold">Sales copilot kamu hari ini.</h2>
+              <p className="mt-1.5 max-w-2xl text-[12px] leading-5 text-slate-300">
+                {highValue
+                  ? `${highValue.name || "Lead ini"} adalah lead aktif yang layak diprioritaskan.`
+                  : activeLeads.length
+                  ? `${activeLeads.length} lead aktif siap kamu follow-up.`
+                  : "Belum ada cukup data untuk membuat rekomendasi."}
+              </p>
+              <button onClick={() => onGo?.("advisor")} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-[10px] font-bold text-slate-900 hover:bg-slate-100">
+                Lihat Rekomendasi <ArrowUpRight size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_35px_-28px_rgba(15,23,42,.35)]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[14px] font-bold text-slate-900">Agenda Hari Ini</h2>
+            <button onClick={() => onGo?.("visitfollowup")} className="text-[10px] font-semibold text-blue-600">Lihat Semua</button>
+          </div>
+          <div className="mt-3 space-y-2.5">
+            {agenda.length ? agenda.map((lead) => (
+              <button key={lead.id} onClick={() => onOpenLead?.(lead)} className="w-full flex items-start gap-3 text-left group">
+                <div className="mt-1.5 h-2 w-2 rounded-full bg-blue-500 ring-4 ring-blue-50 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-semibold text-blue-600">{lead.visit_date === todayKey ? "Hari ini" : "Follow-up"}</div>
+                  <div className="truncate text-[11px] font-semibold text-slate-700 group-hover:text-blue-600">{lead.name}</div>
+                  <div className="truncate text-[10px] text-slate-400">{lead.next_action || lead.visit_agenda || "Cek progress lead"}</div>
+                </div>
+              </button>
+            )) : (
+              <div className="py-5 text-center text-[11px] text-slate-400">Belum ada agenda.</div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* KPI */}
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {kpis.map((k) => {
+          const Icon = k.icon;
+          return (
+            <div key={k.label} className="rounded-[18px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_10px_30px_-26px_rgba(15,23,42,.4)]">
+              <div className="flex items-center justify-between gap-2">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${k.cls}`}><Icon size={16} /></div>
+                <span className="text-[9px] font-semibold text-emerald-600">{k.trend}</span>
+              </div>
+              <div className="mt-3 text-[24px] font-extrabold tracking-[-0.04em] text-slate-900">{k.value}</div>
+              <div className="text-[10px] text-slate-400">{k.label}</div>
+            </div>
+          );
+        })}
+        <div className="rounded-[18px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_10px_30px_-26px_rgba(15,23,42,.4)] col-span-2 xl:col-span-1">
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] text-slate-400">Win Rate</div>
+            <div className="h-9 w-9 rounded-full border-[6px] border-blue-500/20 border-t-blue-500 border-r-violet-500" />
+          </div>
+          <div className="mt-1 text-[24px] font-extrabold tracking-[-0.04em] text-slate-900">{winRate}%</div>
+          <div className="text-[10px] text-slate-400">Closed Won / Total Leads</div>
+        </div>
+      </section>
+
+      {/* Pipeline + activity + visits */}
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(270px,.72fr)]">
+        <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_35px_-28px_rgba(15,23,42,.35)]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-slate-900">Sales Pipeline</h2>
+            <button onClick={() => onGo?.("leads")} className="text-[10px] font-semibold text-blue-600">Lihat Semua</button>
+          </div>
+          <div className="mt-4 grid gap-2 md:grid-cols-2">
+            {pipeline.length ? pipeline.map((stage, idx) => (
+              <div key={stage.key} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="truncate text-[10px] font-bold text-slate-700">{stage.label}</div>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-slate-500">{stage.count}</span>
+                </div>
+                <div className="mt-2 space-y-1.5">
+                  {stage.items.length ? stage.items.map((lead) => (
+                    <button key={lead.id} onClick={() => onOpenLead?.(lead)} className="w-full rounded-xl bg-white border border-slate-100 px-2.5 py-2 text-left hover:border-blue-200 hover:shadow-sm">
+                      <div className="truncate text-[10px] font-semibold text-slate-700">{lead.name}</div>
+                      <div className="mt-0.5 truncate text-[9px] text-slate-400">{formatValue(lead.deal_value || lead.value) || lead.city || "Open opportunity"}</div>
+                    </button>
+                  )) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 px-2.5 py-3 text-center text-[9px] text-slate-400">Kosong</div>
+                  )}
+                </div>
+                {stage.count > 3 && <button onClick={() => onGo?.("leads")} className="mt-2 text-[9px] font-semibold text-blue-600">+{stage.count - 3} lainnya</button>}
+              </div>
+            )) : <div className="col-span-full py-10 text-center text-xs text-slate-400">Pipeline belum tersedia.</div>}
+          </div>
+        </div>
+
+        <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_35px_-28px_rgba(15,23,42,.35)]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-slate-900">Aktivitas Penjualan</h2>
+            <span className="text-[9px] font-semibold text-slate-400">7 hari</span>
+          </div>
+          <div className="mt-7 h-40 flex items-end gap-2">
+            {activity.map((d) => (
+              <div key={d.key} className="flex-1 h-full flex flex-col items-center justify-end gap-2">
+                <div className="text-[8px] font-semibold text-slate-400">{d.count || ""}</div>
+                <div className="w-full max-w-[22px] rounded-t-lg bg-gradient-to-t from-blue-600 to-violet-400 transition-all" style={{ height: `${Math.max(8, (d.count / maxActivity) * 100)}%` }} />
+                <div className="text-[8px] text-slate-400">{d.label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 flex items-center gap-4 text-[9px] text-slate-400">
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-500" /> Lead activity</span>
+            <span>{activeLeads.length} active sekarang</span>
+          </div>
+        </div>
+
+        <div className="rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_35px_-28px_rgba(15,23,42,.35)]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-slate-900">Visit Focus</h2>
+            <button onClick={() => onGo?.("visitfollowup")} className="text-[10px] font-semibold text-blue-600">Lihat Semua</button>
+          </div>
+          <div className="mt-4 relative h-40 overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
+            <div className="absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(35deg, transparent 47%, rgba(148,163,184,.35) 48%, transparent 50%), linear-gradient(-25deg, transparent 48%, rgba(148,163,184,.3) 49%, transparent 51%)", backgroundSize: "70px 55px" }} />
+            <div className="absolute left-[18%] top-[30%] h-2 w-2 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+            <div className="absolute left-[55%] top-[55%] h-2 w-2 rounded-full bg-violet-600 ring-4 ring-violet-100" />
+            <div className="absolute left-[74%] top-[24%] h-2 w-2 rounded-full bg-emerald-600 ring-4 ring-emerald-100" />
+            <div className="absolute inset-x-3 bottom-3 rounded-xl bg-white/90 backdrop-blur px-3 py-2 shadow-sm">
+              <div className="flex items-center gap-2 text-[9px] font-semibold text-slate-600"><MapPin size={11} className="text-blue-600" /> {cities.length ? `${cities[0][0]} · ${cities[0][1]} lead` : "Belum ada lokasi customer"}</div>
+              <div className="mt-0.5 text-[8px] text-slate-400">{visitsThisWeek} visit terjadwal minggu ini</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AI insights */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles size={15} className="text-violet-500" />
+          <h2 className="text-[14px] font-bold text-slate-900">AI Insights untuk Anda</h2>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <button onClick={() => highValue && onOpenLead?.(highValue)} className="rounded-[18px] border border-orange-100 bg-orange-50/70 p-4 text-left hover:shadow-sm">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-orange-700">🔥 High Chance to Win</div>
+            <div className="mt-2 text-[12px] font-bold text-slate-800 truncate">{highValue?.name || "Belum ada lead prioritas"}</div>
+            <p className="mt-1 text-[10px] leading-4 text-slate-500">{highValue ? "Prioritaskan follow-up dan dorong ke next stage." : "Tambahkan lebih banyak lead agar Nexto bisa membaca pola."}</p>
+          </button>
+          <button onClick={() => overdue && onOpenLead?.(overdue)} className="rounded-[18px] border border-amber-100 bg-amber-50/70 p-4 text-left hover:shadow-sm">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-amber-700">⚠️ At Risk</div>
+            <div className="mt-2 text-[12px] font-bold text-slate-800 truncate">{overdue?.name || "Tidak ada lead berisiko"}</div>
+            <p className="mt-1 text-[10px] leading-4 text-slate-500">{overdue ? "Ada action/follow-up yang perlu segera ditangani." : "Belum ada sinyal risiko dari data saat ini."}</p>
+          </button>
+          <button onClick={() => onGo?.("generateleads")} className="rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-4 text-left hover:shadow-sm">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-700">💡 Opportunity</div>
+            <div className="mt-2 text-[12px] font-bold text-slate-800 truncate">{opportunity ? `${opportunity[0]} · ${opportunity[1]} lead` : "Generate opportunity baru"}</div>
+            <p className="mt-1 text-[10px] leading-4 text-slate-500">Gunakan Generate Leads untuk menemukan akun baru di industri ini.</p>
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -804,25 +1087,36 @@ export default function App() {
           </div>
         </header>
 
-        {/* DESKTOP TOPBAR */}
-        <header className="hidden md:flex sticky top-0 z-20 h-[68px] items-center justify-between border-b border-slate-200/70 bg-white/72 px-6 lg:px-8 backdrop-blur-2xl">
-          <div className="flex items-center gap-3">
-            <div>
+        {/* DESKTOP TOPBAR - clean command bar ala modern SaaS CRM */}
+        <header className="hidden md:flex sticky top-0 z-20 h-[72px] items-center justify-between gap-4 border-b border-slate-200/70 bg-white/80 px-5 lg:px-8 backdrop-blur-2xl">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <button
+              onClick={() => setTab("leads")}
+              className="hidden lg:flex w-full max-w-[360px] items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-left text-[11px] text-slate-400 hover:border-blue-200 hover:bg-white transition-colors"
+              title="Buka Leads"
+            >
+              <span className="text-slate-300">⌕</span>
+              <span className="flex-1">Search leads, company, or notes...</span>
+              <span className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[8px] font-semibold text-slate-400">Ctrl K</span>
+            </button>
+            <div className="min-w-0">
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-500">Sales Workspace</div>
-              <div className="mt-0.5 flex items-center gap-2 text-[13px] font-medium text-slate-400">
-                <span>Workspace</span>
+              <div className="mt-0.5 flex items-center gap-2 text-[12px] font-medium text-slate-400">
+                <span className="truncate">Workspace</span>
                 <span className="text-slate-300">/</span>
-                <span className="text-slate-700">{NAV.find((n) => n.key === effectiveTab)?.label}</span>
+                <span className="truncate text-slate-700">{NAV.find((n) => n.key === effectiveTab)?.label || "Dashboard"}</span>
               </div>
             </div>
           </div>
 
-          {effectiveTab === "dashboard" && <EngineHeaderMini stats={headerStats} />}
-
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/75 px-3.5 py-2 text-[10px] text-slate-400 shadow-sm">
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden xl:flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3.5 py-2 text-[10px] text-slate-400 shadow-sm">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Data tersinkron
+            </div>
+            <div className="hidden lg:flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3.5 py-2 text-[10px] font-medium text-slate-500 shadow-sm">
+              <CalendarCheck size={12} className="text-slate-400" />
+              {new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
             </div>
             <NotificationBell onNavigate={setTab} />
           </div>
@@ -880,7 +1174,7 @@ export default function App() {
                   rekam meeting, dst) yang lagi jalan di tab manapun GAK KEPUTUS
                   cuma gara-gara user pindah tab pas nungguin. ---- */}
               <div style={{ display: effectiveTab === "dashboard" ? "block" : "none" }}>
-                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} />
+                <NextoDashboardHome leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
                 <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
@@ -1389,3 +1683,4 @@ function Splash({ inline }) {
     </div>
   );
 }
+```
