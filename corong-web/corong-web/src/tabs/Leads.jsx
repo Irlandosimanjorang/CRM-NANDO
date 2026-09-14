@@ -174,43 +174,31 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
   const del = async (id) => { if (!window.confirm("Hapus lead ini?")) return; await db.deleteLead(id); onChanged(); };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-500">Sales Workspace</div>
-          <h1 className="mt-1 text-[28px] font-black tracking-[-0.04em] text-slate-950">Leads</h1>
-          <p className="mt-1 text-[12px] font-medium text-slate-500">Kelola prospek, prioritaskan follow-up, dan jaga setiap opportunity tetap bergerak.</p>
-        </div>
-        <div className="text-right">
-          <div className="text-[11px] font-semibold text-slate-400">Database</div>
-          <div className="mt-0.5 text-sm font-bold text-slate-800">{leads.length} total lead</div>
-        </div>
-      </div>
-
-      <div className="sticky top-14 md:top-0 z-20 rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_-24px_rgba(15,23,42,.45)]">
+    <div>
+      <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-2">
         <div className="flex flex-wrap gap-2 items-center mb-2">
-          <div className="relative flex-1 min-w-40"><Search size={14} className="absolute left-3 top-3 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-9 pr-3 py-2.5 text-[12px] border border-slate-200 rounded-xl bg-slate-50/70 focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 placeholder:text-slate-400" /></div>
-          <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-[12px] border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50/70 text-slate-600 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"><option value="">Semua kategori</option>{categories.map((c) => <option key={c}>{c}</option>)}</select>
+          <div className="relative flex-1 min-w-40"><Search size={14} className="absolute left-2.5 top-2 text-slate-400" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama / kota / PIC / produk / progress…" className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" /></div>
+          <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua kategori</option>{categories.map((c) => <option key={c}>{c}</option>)}</select>
           {showTypeFilter && (
-            <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-[12px] border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50/70 text-slate-600 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"><option value="">Semua tipe</option>{companyTypeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select>
+            <select value={fType} onChange={(e) => setFType(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"><option value="">Semua tipe</option>{companyTypeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select>
           )}
-          <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-800 text-white text-[12px] px-4 py-2.5 rounded-xl font-bold shadow-[0_12px_24px_-14px_rgba(15,23,42,.8)]"><Plus size={14} /> Lead</button>
+          <button onClick={() => setEdit(blank())} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={14} /> Lead</button>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <label className="text-[11px] flex items-center gap-1.5 border border-emerald-200 text-emerald-700 rounded-xl px-3 py-2 bg-emerald-50/70 hover:bg-emerald-50 cursor-pointer font-semibold"><FileSpreadsheet size={12} /> {busy ? "Mengimpor…" : "Import Excel / CSV"}<input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { importFile(e.target.files[0]); e.target.value = ""; }} /></label>
-          <button onClick={exportCSV} className="text-[11px] flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2 bg-white hover:bg-slate-50 font-semibold text-slate-600"><Download size={12} /> Export</button>
-          <button onClick={() => setShowDup(true)} className="text-[11px] flex items-center gap-1.5 border border-slate-200 rounded-xl px-3 py-2 bg-white hover:bg-slate-50 font-semibold text-slate-600"><Copy size={12} /> Cek Duplikat</button>
-          <span className="text-[11px] text-slate-400 self-center ml-auto font-semibold">{filtered.length} / {leads.length}</span>
+          <label className="text-xs flex items-center gap-1.5 border border-emerald-300 text-emerald-700 rounded-lg px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 cursor-pointer"><FileSpreadsheet size={12} /> {busy ? "Mengimpor…" : "Import Excel / CSV"}<input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { importFile(e.target.files[0]); e.target.value = ""; }} /></label>
+          <button onClick={exportCSV} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"><Download size={12} /> Export</button>
+          <button onClick={() => setShowDup(true)} className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"><Copy size={12} /> Cek Duplikat</button>
+          <span className="text-xs text-slate-400 self-center ml-auto">{filtered.length} / {leads.length}</span>
         </div>
       </div>
 
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 rounded-[26px] p-3 sm:p-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 rounded-[32px] p-4 sm:p-5"
         style={{
-          background: "#f8fafc",
-          backgroundImage: "radial-gradient(rgba(79,70,229,0.035) 1px, transparent 1px)",
-          backgroundSize: "20px 20px",
+          background: "#fafbfc",
+          backgroundImage: "radial-gradient(rgba(15,23,42,0.045) 1px, transparent 1px)",
+          backgroundSize: "18px 18px",
         }}
       >
         {pageItems.map((c) => {
@@ -221,27 +209,27 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
             <div
               key={c.id}
               onClick={() => setEdit(c)}
-              className="relative rounded-[22px] cursor-pointer hover:-translate-y-1 transition-all duration-200"
-              style={{ boxShadow: "0 12px 30px -22px rgba(15,23,42,.55)" }}
+              className="relative rounded-3xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+              style={{ boxShadow: "0 8px 20px -10px rgba(15,23,42,0.18)" }}
             >
-              <CornerBrackets color="transparent" />
+              <CornerBrackets color="#0891b2" />
               <div
-                className="rounded-[22px] overflow-hidden bg-white"
-                style={{ border: "1px solid rgba(15,23,42,0.07)" }}
+                className="rounded-3xl overflow-hidden bg-white"
+                style={{ border: "1px solid rgba(15,23,42,0.08)" }}
               >
                 {/* Bar atas oranye tetap - identitas Nexto, KONSISTEN di semua kartu,
                     gak lagi ngikutin warna tahap pipeline */}
-                <div style={{ height: 3, background: "linear-gradient(90deg, #4f46e5, #818cf8)" }} />
+                <div style={{ height: 3, background: "linear-gradient(90deg, #f97316, #fb923c)" }} />
 
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-slate-900 text-[13px] leading-5 flex items-center gap-1.5 flex-wrap">
+                      <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
                         <span className="truncate">{c.name}</span>
                         {typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600 shrink-0">{typeBadge(c.company_type)}</span>}
                         {isNewLead(c) && <span className="text-[9px] font-bold px-1 rounded bg-emerald-500 text-white shrink-0">NEW</span>}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5 truncate font-medium">{c.category || "—"}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 truncate">{c.category || "—"}</div>
                     </div>
                     {c.verified ? <ShieldCheck size={14} className="text-emerald-500 shrink-0" /> : <ShieldAlert size={14} className="text-slate-300 shrink-0" />}
                   </div>
@@ -251,7 +239,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                     {c.priority && prioMeta(c.priority) && <StageChip hex={prioMeta(c.priority).hex} label={prioMeta(c.priority).label} />}
                   </div>
 
-                  <div className="mt-3.5 space-y-1.5 text-[11px] text-slate-600">
+                  <div className="mt-3 space-y-1.5 text-xs text-slate-600">
                     <div className="flex items-center gap-1.5 truncate"><MapPin size={12} className="text-slate-300 shrink-0" /> {c.city || "—"}</div>
                     {c.product && <div className="truncate"><span className="text-slate-400">{productLabel}:</span> {c.product}</div>}
                     {!hideKeyPerson && c.key_person && <div className="truncate"><span className="text-slate-400">{keyPersonLabel}:</span> {c.key_person}</div>}
@@ -262,16 +250,16 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                     {customSlots.map((slot) => c[slot.key] ? (
                       <div key={slot.key} className="truncate"><span className="text-slate-400">{slot.label}:</span> {c[slot.key]}</div>
                     ) : null)}
-                    {c.next_action && <div className="mt-2 text-[10.5px] leading-4 text-indigo-700 bg-indigo-50/70 border border-indigo-100 rounded-xl px-2.5 py-2 line-clamp-2">📌 {c.next_action}</div>}
+                    {c.next_action && <div className="mt-2 text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5 line-clamp-2">📌 {c.next_action}</div>}
                     {c.wait_until && new Date(c.wait_until) >= new Date(todayISO()) && (
-                      <div className="mt-1.5 text-[10.5px] text-sky-700 bg-sky-50 border border-sky-100 rounded-xl px-2.5 py-2">⏸️ Nunggu sampai {new Date(c.wait_until).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
+                      <div className="mt-1.5 text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5">⏸️ Nunggu sampai {new Date(c.wait_until).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
                     )}
                   </div>
 
-                  <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {c.phone && (wa ? <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone}><Phone size={13} /></a> : <span className="p-1.5 text-slate-300" title={c.phone}><Phone size={13} /></span>)}
                     {c.email && <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50" title={c.email}><Mail size={13} /></a>}
-                    <button onClick={(e) => setDraftPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() })} className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50" title="Draft follow-up (AI)"><Sparkles size={13} /></button>
+                    <button onClick={(e) => setDraftPopup({ lead: c, rect: e.currentTarget.getBoundingClientRect() })} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50" title="Draft follow-up (AI)"><Sparkles size={13} /></button>
                     <div className="ml-auto flex items-center gap-0.5">
                       <button onClick={() => setEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"><Pencil size={13} /></button>
                       <button onClick={() => del(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 size={13} /></button>
@@ -282,7 +270,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                       command-line, nyala biru-cyan pas di-hover (senada bracket sudut) */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setProgressPopup({ lead: c, autoFocus: true }); }}
-                    className="mt-2.5 w-full flex items-center gap-2 text-left text-[10.5px] font-medium text-slate-500 border border-slate-200 bg-slate-50/80 rounded-xl px-3 py-2.5 hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50/50 transition-colors"
+                    className="mt-2.5 w-full flex items-center gap-2 text-left text-xs font-mono text-slate-500 border-2 border-slate-200 bg-slate-50 rounded-xl px-3 py-2 hover:border-cyan-400 hover:text-cyan-700 hover:bg-cyan-50 transition-colors"
                     title="Update progress harian"
                   >
                     <ClipboardList size={13} className="shrink-0 text-slate-400" />
@@ -293,7 +281,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
             </div>
           );
         })}
-        {filtered.length === 0 && <div className="col-span-full p-10 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-[22px]">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
+        {filtered.length === 0 && <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-3xl">Belum ada lead yang cocok. Import Excel atau tambah manual.</div>}
       </div>
 
       {filtered.length > 0 && totalPages > 1 && (
@@ -317,7 +305,7 @@ export default function Leads({ leads, stages, settings, industry, onChanged }) 
                 <button
                   key={n}
                   onClick={() => setPage(n)}
-                  className={`min-w-[34px] h-[34px] px-2 rounded-lg text-sm font-semibold ${n === page ? "bg-slate-950 text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                  className={`min-w-[34px] h-[34px] px-2 rounded-lg text-sm font-medium ${n === page ? "bg-orange-600 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                 >
                   {n}
                 </button>
