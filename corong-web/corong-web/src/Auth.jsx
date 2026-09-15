@@ -461,6 +461,7 @@ const SECURITY_OFFSETS = [0, 34, 14, 42, 22];
 // sendiri Professional+. Jadi fiturnya balik ke Standard, bukan pindah tier.
 const STANDARD_FEATURES = [
   { id: "Kelola Leads — kartu per perusahaan", en: "Manage Leads — card per company" },
+  { id: "Integrasi MCP ke Grok Bot", en: "Grok Bot MCP Integration" },
   { id: "Smart Import", en: "Smart Import" },
   { id: "Vector Memory (Nexto inget catatan lama yang relevan)", en: "Vector Memory (Nexto recalls relevant old notes)" },
   { id: "Recycle Bin", en: "Recycle Bin" },
@@ -470,7 +471,6 @@ const STANDARD_FEATURES = [
   { id: "Rapihin Data", en: "Data Cleanup" },
   { id: "Visit & Follow-up", en: "Visit & Follow-up" },
   { id: "Meeting Prep", en: "Meeting Prep" },
-  { id: "Integrasi MCP ke Grok Bot", en: "Grok Bot MCP Integration" },
 ];
 
 const PROFESSIONAL_FEATURES = [
