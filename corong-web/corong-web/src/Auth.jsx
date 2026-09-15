@@ -462,12 +462,12 @@ const SECURITY_OFFSETS = [0, 34, 14, 42, 22];
 const STANDARD_FEATURES = [
   { id: "Kelola Leads — kartu per perusahaan", en: "Manage Leads — card per company" },
   { id: "Smart Import", en: "Smart Import" },
-  { id: "Vector Memory ringan (Nexto inget catatan lama yang relevan)", en: "Light Vector Memory (Nexto recalls relevant old notes)" },
+  { id: "Vector Memory (Nexto inget catatan lama yang relevan)", en: "Vector Memory (Nexto recalls relevant old notes)" },
   { id: "Recycle Bin", en: "Recycle Bin" },
   { id: "Deteksi Duplikat", en: "Duplicate Detection" },
   { id: "Nex — Komunitas Sesama Sales", en: "Nex — Sales Community" },
   { id: "Daily Digest (rekomendasi harian)", en: "Daily Digest (daily recommendations)" },
-  { id: "Rapihin Data (konfirmasi via Bot Telegram)", en: "Data Cleanup (confirm via Telegram Bot)" },
+  { id: "Rapihin Data", en: "Data Cleanup" },
   { id: "Meeting Prep", en: "Meeting Prep" },
 ];
 
