@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import Papa from "papaparse";
 import {
   Search,
   Plus,
@@ -1228,98 +1227,58 @@ export default function Leads({
      EXPORT
   ========================================================= */
 
-  const doExportCSV =
-    () => {
+  // EXPORT (15 Sep 2026, permintaan Nando) - file Excel (.xlsx) beneran,
+  // bukan CSV, biar kebuka langsung rapi di Excel/Sheets dengan lebar kolom
+  // yang enak dibaca. Kolomnya disamain urutannya sama informasi yang
+  // keliatan di kartu lead (LeadCard) dari atas ke bawah: nama+prioritas ->
+  // kategori/kota -> tahap pipeline -> nilai deal -> kontak (telepon/key
+  // person/jabatan/email) -> produk -> next action -> kapan terakhir
+  // dikontak -> sisanya (tipe, provinsi, website). XLSX dimuat DINAMIS
+  // (bukan static import) - sama pola kayak dipake buat import Excel, biar
+  // gak nambah ukuran bundle awal buat orang yang gak pernah export.
+  const doExportExcel = async () => {
+    const rows = filtered.map((c) => ({
+      Nama: c.name,
+      Prioritas: c.priority === "high" ? "Tinggi" : c.priority === "medium" ? "Sedang" : c.priority === "low" ? "Rendah" : "",
+      Kategori: c.category,
+      Kota: c.city,
+      Provinsi: c.province,
+      Tahap: stageMeta(stages, c.stage_key).label,
+      Nilai_Deal: c.deal_value || "",
+      Telepon_WA: c.phone,
+      Key_Person: c.key_person,
+      Jabatan: c.key_person_title,
+      Email: c.email,
+      Produk: c.product,
+      Next_Action: c.next_action,
+      Terakhir_Dikontak: c.last_contact || "",
+      Tipe: c.company_type,
+      Website: c.website,
+    }));
 
-      const rows =
-        filtered.map(
-          (c) => ({
-
-            Nama:
-              c.name,
-
-            Kategori:
-              c.category,
-
-            Tipe:
-              c.company_type,
-
-            Produk:
-              c.product,
-
-            Tahap:
-              stageMeta(
-                stages,
-                c.stage_key
-              ).label,
-
-            Email:
-              c.email,
-
-            Telepon_WA:
-              c.phone,
-
-            Key_Person:
-              c.key_person,
-
-            Jabatan:
-              c.key_person_title,
-
-            Kota:
-              c.city,
-
-            Website:
-              c.website,
-
-          })
-        );
-
-
-      const csv =
-        Papa.unparse(
-          rows
-        );
-
-
-      const blob =
-        new Blob(
-          [
-            "\ufeff" +
-              csv,
-          ],
-          {
-            type:
-              "text/csv;charset=utf-8;",
-          }
-        );
-
-
-      const a =
-        document.createElement(
-          "a"
-        );
-
-      a.href =
-        URL.createObjectURL(
-          blob
-        );
-
-      a.download =
-        `nexto-leads-${todayISO()}.csv`;
-
-      a.click();
-
-    };
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Lebar kolom manual - biar isi kayak nama perusahaan/website gak
+    // kepotong pas pertama dibuka, gak perlu user resize satu-satu.
+    ws["!cols"] = [
+      { wch: 28 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
+      { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
+      { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 24 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Leads");
+    XLSX.writeFile(wb, `nexto-leads-${todayISO()}.xlsx`);
+  };
 
   // Approval-gate (Enterprise) - sales_rep gak bisa langsung klik-export,
   // harus minta approve owner/manager dulu. Approval cuma berlaku SEKALI
   // pake (langsung ditandain "used" abis kepake), biar tiap mau export lagi
   // harus minta izin lagi, bukan approval sekali buat selamanya.
   const handleExportClick = async () => {
-    if (!isEnterprise || canManage) { doExportCSV(); return; }
+    if (!isEnterprise || canManage) { await doExportExcel(); return; }
 
     if (exportApproval?.status === "approved") {
-      doExportCSV();
+      await doExportExcel();
       try { await db.markApprovalUsed(exportApproval.id); } catch (_) {}
       refreshExportApproval();
       return;

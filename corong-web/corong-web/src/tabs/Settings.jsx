@@ -49,6 +49,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [tgLink, setTgLink] = useState(null);
   const [tgCode, setTgCode] = useState(getSavedTgCode);
   const [tgBusy, setTgBusy] = useState(false);
@@ -442,6 +443,81 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       a.click();
     } catch (e) { alert("Gagal export: " + e.message); }
     finally { setExporting(false); }
+  };
+
+  // EXPORT EXCEL RAPI (15 Sep 2026, permintaan Nando) - beda dari exportBackup
+  // di atas (JSON mentah dump semua kolom DB, dipertahanin apa adanya buat
+  // restore darurat kalau Supabase Free-nya kenapa-napa). Ini versi buat
+  // DIBACA manusia - field internal (id, user_id, org_id, custom_field
+  // kosong, gcal event id, dst) dibuang, nama kolom Bahasa Indonesia, dan
+  // dipisah per sheet (Leads, Kompetitor, Tahap Pipeline, Histori AI
+  // Advisor) biar gampang dibuka di Excel/Sheets.
+  const exportExcelClean = async () => {
+    setExportingExcel(true);
+    try {
+      const data = await db.exportAllData();
+      const XLSX = await import("xlsx");
+      const wb = XLSX.utils.book_new();
+
+      const stageLabel = (key) => (data.stages.find((s) => s.key === key) || {}).label || key || "";
+      const leadRows = (data.leads || []).map((c) => ({
+        Nama: c.name,
+        Prioritas: c.priority === "high" ? "Tinggi" : c.priority === "medium" ? "Sedang" : c.priority === "low" ? "Rendah" : "",
+        Kategori: c.category,
+        Kota: c.city,
+        Provinsi: c.province,
+        Tahap: stageLabel(c.stage_key),
+        Nilai_Deal: c.deal_value || "",
+        Telepon_WA: c.phone,
+        Key_Person: c.key_person,
+        Jabatan: c.key_person_title,
+        Email: c.email,
+        Produk: c.product,
+        Next_Action: c.next_action,
+        Terakhir_Dikontak: c.last_contact || "",
+        Tipe: c.company_type,
+        Website: c.website,
+        Catatan_Progress_Terbaru: (c.progress_notes || []).slice().sort((a, b) => (a.note_date < b.note_date ? 1 : -1))[0]?.text || "",
+      }));
+      const leadsSheet = XLSX.utils.json_to_sheet(leadRows);
+      leadsSheet["!cols"] = [
+        { wch: 28 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
+        { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
+        { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 40 },
+      ];
+      XLSX.utils.book_append_sheet(wb, leadsSheet, "Leads");
+
+      const compRows = (data.competitors || []).map((k) => ({
+        Nama: k.name,
+        Latar_Belakang: k.background,
+        Produk: k.product,
+        Catatan: k.notes,
+      }));
+      const compSheet = XLSX.utils.json_to_sheet(compRows);
+      compSheet["!cols"] = [{ wch: 28 }, { wch: 36 }, { wch: 28 }, { wch: 36 }];
+      XLSX.utils.book_append_sheet(wb, compSheet, "Kompetitor");
+
+      const stageRows = (data.stages || []).map((s) => ({ Nama_Tahap: s.label, Tipe: s.type, Urutan: s.position }));
+      const stageSheet = XLSX.utils.json_to_sheet(stageRows);
+      stageSheet["!cols"] = [{ wch: 24 }, { wch: 12 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, stageSheet, "Tahap Pipeline");
+
+      const advisorRows = (data.advisor_history || []).flatMap((run) =>
+        (run.recs || []).map((r) => ({
+          Tanggal: run.run_date,
+          Lead: r.name,
+          Urgensi: r.urgency,
+          Rekomendasi: r.action,
+          Penilaian: r.assessment,
+        }))
+      );
+      const advisorSheet = XLSX.utils.json_to_sheet(advisorRows);
+      advisorSheet["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 10 }, { wch: 36 }, { wch: 50 }];
+      XLSX.utils.book_append_sheet(wb, advisorSheet, "Histori AI Advisor");
+
+      XLSX.writeFile(wb, `nexto-data-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (e) { alert("Gagal export Excel: " + e.message); }
+    finally { setExportingExcel(false); }
   };
 
   const changePassword = async () => {
@@ -926,9 +1002,14 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
         <h3 className="font-semibold text-sm mb-1">Backup data</h3>
         <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori AI Advisor) jadi 1 file — simpen di komputer/HP Anda sesekali biar aman.</p>
-        <button onClick={exportBackup} disabled={exporting} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
-          {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export semua data"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={exportExcelClean} disabled={exportingExcel} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
+            {exportingExcel ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exportingExcel ? "Menyiapkan…" : "Export Excel (rapi, buat dibaca)"}
+          </button>
+          <button onClick={exportBackup} disabled={exporting} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
+            {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export JSON mentah (buat restore)"}
+          </button>
+        </div>
       </div>
       </PreviewLock>
 
