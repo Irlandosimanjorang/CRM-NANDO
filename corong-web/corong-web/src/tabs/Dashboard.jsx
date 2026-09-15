@@ -1,636 +1,227 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Users, TrendingUp, CheckCircle2, AlertCircle, Mail, CalendarCheck, Eye, EyeOff, Wallet, BarChart3, Filter as FunnelIcon, Sparkles, Sun, Phone, MessageCircle, MapPin, FileText, Clock, CalendarClock, TriangleAlert, Volume2, Zap } from "lucide-react";
-import * as db from "../lib/db";
-import { todayISO, fmtRp } from "../lib/helpers";
+import React, { useMemo } from "react";
+import {
+  Users, MessageCircle, MapPin, Trophy, ArrowRight, Plus,
+  CalendarDays, CheckCircle2, Clock3, Sparkles, Target,
+} from "lucide-react";
 import { NextoRobotHead } from "../Auth";
-import AiDraftPopup from "../components/AiDraftPopup";
-import GettingStartedChecklist from "../components/GettingStartedChecklist";
-import TeamLeaderboard from "../components/TeamLeaderboard";
-import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
-// === BUG FIX (5 Sep 2026, dipindah ke lib/uiPersist.js bareng modal lain 6
-// Sep 2026) ===
-// Popup draft AI ("Handle Now") di-"ingat" lewat localStorage - kalau
-// browser/tab HP di-reload total (bukan cuma pindah menu doang) SAAT popup ini
-// lagi kebuka, dia otomatis kebuka LAGI pas Nexto dibuka ulang, LENGKAP sama
-// channel (WhatsApp/Email) yang lagi diproses - jadi draft-nya ikut auto-ke-ambil
-// lagi dari server (yang udah nyimpen hasilnya duluan, lihat draft-followup.ts),
-// gak perlu klik "Handle Now" manual lagi dari awal. "source" dipake buat
-// bedain restore punya tab Dashboard vs tab Leads, biar gak dobel kebuka di
-// dua tempat sekaligus (soalnya sekarang semua tab selalu ke-mount bareng).
-function saveOpenPopup(source, leadId, channel) { saveOpenModal("draft", { source, leadId, channel: channel || null }); }
-function clearOpenPopup() { clearOpenModal("draft"); }
-function getOpenPopup(source) {
-  const data = getOpenModal("draft");
-  return data?.source === source ? data : null;
+const cn = (...v) => v.filter(Boolean).join(" ");
+
+function sameDay(value) {
+  if (!value) return false;
+  const d = new Date(`${value}T00:00:00`);
+  const n = new Date();
+  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 }
 
-// Mapping action_type -> channel draft yang paling relevan. Action_type yang
-// gak ada di sini (Call, Visit, Jadwalkan Meeting, Tunggu, Eskalasi, Closing)
-// gak ada draft otomatisnya - "Handle Now" buat itu langsung buka lead-nya aja.
-const ACTION_TYPE_TO_CHANNEL = {
-  WhatsApp: "whatsapp",
-  "Follow-up": "whatsapp",
-  "Kirim Penawaran": "email",
-};
-
-const ACTION_ICON = {
-  Call: Phone, WhatsApp: MessageCircle, Visit: MapPin, "Kirim Penawaran": FileText,
-  "Follow-up": Clock, "Jadwalkan Meeting": CalendarClock, Tunggu: Clock, Eskalasi: TriangleAlert, Closing: CheckCircle2,
-};
-const URGENCY_META = { high: { label: "High", hex: "#e11d48" }, medium: { label: "Medium", hex: "#d97706" }, low: { label: "Low", hex: "#64748b" } };
-
-// Angka statistik "ngitung naik" dari 0 ke nilai asli pas pertama kali kereveal
-// - detail kecil yang bikin dashboard kerasa lebih modern/premium.
-function CountUp({ value, suffix = "", duration = 700 }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    if (value === null || value === undefined) return;
-    let raf;
-    const start = performance.now();
-    const from = 0;
-    const tick = (now) => {
-      const t = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out-cubic
-      setDisplay(Math.round(from + (value - from) * eased));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
-  if (value === null || value === undefined) return "—";
-  return `${display}${suffix}`;
+function formatValue(value) {
+  const n = Number(value || 0);
+  if (!n) return "—";
+  if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)} M`;
+  if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(0)} jt`;
+  return `Rp ${n.toLocaleString("id-ID")}`;
 }
 
-const isMobileDevice = () => typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function Card({ children, className = "" }) {
+  return <section className={cn("rounded-[20px] border border-slate-200/80 bg-white shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]", className)}>{children}</section>;
+}
 
-// Kunci localStorage buat nandain "audio Good Morning udah pernah diputer hari
-// ini" - biar gak keulang tiap balik-balik ke tab Dashboard di hari yang sama.
-const playedTodayKey = () => `nexto-morning-played-${todayISO()}`;
-const alreadyPlayedToday = () => { try { return localStorage.getItem(playedTodayKey()) === "1"; } catch (_) { return false; } };
-const markPlayedToday = () => { try { localStorage.setItem(playedTodayKey(), "1"); } catch (_) {} };
-
-// "Good Morning" card - reads the AI digest that ALREADY RAN this morning (cron
-// at 8am, Mon-Fri), never triggers a new AI call OR new voice generation on open
-// - purely plays/displays what's already stored, so it's FREE every time the
-// dashboard is opened. Robot "talks" the greeting first (audio pre-generated
-// server-side); stats & recommendations only reveal once the audio finishes -
-// with a safety timeout so the card never gets stuck if audio fails/is blocked.
-// Audio cuma diputer SEKALI per hari - abis itu (atau abis di-skip/diklik
-// Listen), langsung ke tampilan statistik tiap balik ke Dashboard.
-// "Pipeline Review" - laporan kesehatan pipeline yang di-generate OTOMATIS
-// 2x/bulan lewat cron (edge function pipeline-review), BUKAN tombol
-// on-demand kayak fitur AI lain di Nexto. Badge/header-nya SELALU
-// ke-embed di Dashboard (biar user tau fitur ini ada) - isi laporannya
-// (summary, statistik, fokus minggu ini) cuma keliatan kalau laporan
-// itu umurnya <=4 hari dari generated_at, di luar itu balik ke badge
-// doang (biar dashboard gak "nyangkut" nunjukin laporan basi berhari-hari
-// sampe periode berikutnya, ~10-11 hari kemudian). Khusus Professional ke atas.
-function PipelineReviewCard({ leads, onOpenLead, isProfessional }) {
-  const [review, setReview] = useState(undefined); // undefined = loading, null = belum pernah ada
-  useEffect(() => {
-    if (!isProfessional) return;
-    let alive = true;
-    db.getLatestPipelineReview().then((r) => { if (alive) setReview(r); }).catch(() => { if (alive) setReview(null); });
-    return () => { alive = false; };
-  }, [isProfessional]);
-
-  if (!isProfessional) return null;
-
-  // Laporan cuma keliatan isinya kalau umurnya <=4 hari - di luar itu balik
-  // ke badge doang (biar dashboard gak keliatan "nyangkut" nunjukin laporan
-  // basi berhari-hari sampe periode berikutnya, 10-11 hari kemudian).
-  const isFresh = review && (Date.now() - new Date(review.generated_at).getTime()) <= 4 * 86400000;
-
-  const stats = review?.stats || {};
-  const focusLeads = review?.focus_leads || [];
-  const generatedDate = isFresh ? new Date(review.generated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : null;
-
+function SectionTitle({ title, action, onClick }) {
   return (
-    <div className="bg-white border border-violet-100 rounded-[28px] p-5">
-      <div className={`flex items-center justify-between gap-2 ${isFresh ? "mb-2" : ""}`}>
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Sparkles size={16} className="text-violet-500" /> Pipeline Review</div>
-        {generatedDate && <span className="text-[11px] text-slate-400">{generatedDate}</span>}
-      </div>
-
-      {isFresh && (
-        <>
-          <p className="text-sm text-slate-600 leading-relaxed">{review.summary}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-            {[
-              ["Lead aktif", stats.total_active],
-              ["Stuck", stats.stuck_count],
-              ["Lead baru", stats.new_leads],
-              ["Menang/Kalah", `${stats.won_recent ?? 0}/${stats.lost_recent ?? 0}`],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-slate-50 px-3 py-2">
-                <div className="text-base font-bold text-slate-800">{value}</div>
-                <div className="text-[10px] text-slate-500">{label}</div>
-              </div>
-            ))}
-          </div>
-          {focusLeads.length > 0 && (
-            <div className="mt-3 space-y-1.5">
-              <div className="text-xs font-semibold text-slate-500">Fokus minggu ini</div>
-              {focusLeads.map((f) => {
-                const lead = leads.find((l) => l.id === f.lead_id);
-                return (
-                  <button
-                    key={f.lead_id}
-                    onClick={() => lead && onOpenLead(lead)}
-                    disabled={!lead}
-                    className="w-full text-left rounded-xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/40 px-3 py-2 transition-colors disabled:opacity-50"
-                  >
-                    <div className="text-sm font-medium text-slate-800">{f.name}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{f.reason}</div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
+    <div className="flex items-center justify-between gap-3 mb-4">
+      <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-slate-900">{title}</h2>
+      {action && <button onClick={onClick} className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">{action}<ArrowRight size={13}/></button>}
     </div>
   );
 }
 
-function GoodMorningCard({ settings, onGo, onOpenLead, leads, onChanged }) {
-  const [state, setState] = useState({ status: "loading", run: null });
-  const [audioPhase, setAudioPhase] = useState("idle"); // idle | playing | needs-tap | done
-  const [revealed, setRevealed] = useState(false);
-  const [listenUsed, setListenUsed] = useState(false);
-  const [draftPopup, setDraftPopup] = useState(null); // { lead, rect, channel }
-  const audioRef = useRef(null);
-  const revealTimerRef = useRef(null);
-
-  useEffect(() => {
-    let alive = true;
-    db.getTodayAdvisorRun()
-      .then((run) => { if (alive) setState({ status: run ? "ready" : "empty", run }); })
-      .catch(() => { if (alive) setState({ status: "empty", run: null }); });
-    return () => { alive = false; };
-  }, []);
-
-  // ---- RESTORE popup draft yang lagi kebuka pas terakhir kali app ke-reload
-  // total (lihat komentar BUG FIX di atas file). Nunggu `leads` beneran udah
-  // ke-load dulu sebelum nyoba restore, biar bisa nemuin lead-nya. ----
-  useEffect(() => {
-    if (!leads || leads.length === 0) return;
-    const saved = getOpenPopup("dashboard");
-    if (saved) {
-      const lead = leads.find((l) => l.id === saved.leadId);
-      if (lead) setDraftPopup({ lead, rect: null, channel: saved.channel || undefined });
-      else clearOpenPopup();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leads.length > 0]);
-
-  const openDraftPopup = (lead, rect, channel) => {
-    setDraftPopup({ lead, rect, channel });
-    saveOpenPopup("dashboard", lead.id, channel);
-  };
-  const closeDraftPopup = () => {
-    setDraftPopup(null);
-    clearOpenPopup();
-  };
-
-  const reveal = () => {
-    if (revealTimerRef.current) { clearTimeout(revealTimerRef.current); revealTimerRef.current = null; }
-    setRevealed(true);
-    setAudioPhase("done");
-    markPlayedToday();
-  };
-
-  // Pas data digest udah siap: kalau audio udah pernah diputer hari ini,
-  // langsung tampilin statistiknya, gak nyoba muter ulang. Kalau belum,
-  // coba muter audio (langsung di HP, tunggu tap di browser desktop) - dan
-  // pasang jaring pengaman biar kartu gak nyangkut nunggu audio kalau gagal/gak ada.
-  useEffect(() => {
-    if (state.status !== "ready") return;
-
-    if (alreadyPlayedToday()) {
-      setRevealed(true);
-      setAudioPhase("done");
-      return;
-    }
-
-    const audioUrl = state.run?.audio_url;
-    if (!audioUrl) {
-      // Gak ada audio (misal TTS gagal pas generate) - langsung tampilin abis jeda kecil.
-      revealTimerRef.current = setTimeout(reveal, 700);
-      return () => clearTimeout(revealTimerRef.current);
-    }
-
-    const audio = new Audio(audioUrl);
-    audioRef.current = audio;
-    audio.addEventListener("ended", reveal);
-    audio.addEventListener("error", reveal);
-    // Jaring pengaman - kalau dalam 8 detik audio gak selesai-selesai (atau
-    // gak kunjung mulai), tetep tampilin biar user gak nunggu kelamaan.
-    revealTimerRef.current = setTimeout(reveal, 8000);
-
-    if (isMobileDevice()) {
-      audio.play().then(() => setAudioPhase("playing")).catch(() => setAudioPhase("needs-tap"));
-    } else {
-      setAudioPhase("needs-tap");
-    }
-
-    return () => {
-      clearTimeout(revealTimerRef.current);
-      audio.pause();
-      audio.removeEventListener("ended", reveal);
-      audio.removeEventListener("error", reveal);
-    };
-  }, [state.status, state.run]);
-
-  const playNow = () => {
-    if (!audioRef.current || listenUsed) return;
-    setListenUsed(true); // disable tombolnya begitu diklik, gak bisa diklik ulang
-    audioRef.current.play().then(() => setAudioPhase("playing")).catch(() => reveal());
-  };
-
-  const hour = new Date().getHours();
-  const greeting = hour < 11 ? "Good morning" : hour < 15 ? "Good afternoon" : hour < 18 ? "Good afternoon" : "Good evening";
-  const name = (settings?.community_display_name || "").split(" ")[0];
-
-  if (state.status === "loading") {
-    return (
-      <div className="bg-white border border-slate-100 rounded-[28px] p-5 flex items-center gap-2.5 text-sm text-slate-400">
-        <NextoRobotHead size={26} status="thinking" /> Menyiapkan ringkasan…
-      </div>
-    );
-  }
-
-  if (state.status === "empty") {
-    return (
-      <div className="bg-white border border-slate-100 rounded-[28px] shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] p-5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700"><Sun size={16} className="text-orange-500" /> {greeting}{name ? `, Mr ${name}` : ""}</div>
-        <p className="text-xs text-slate-400 mt-2">No summary yet for today — automatic analysis runs every day at 8am (Mon–Fri). Check back later, or see your email.</p>
-      </div>
-    );
-  }
-
-  const { run } = state;
-  const stats = run.stats || {};
-  const topRecs = (run.recs || []).slice(0, 3);
-  const isSpeaking = audioPhase === "playing";
-
+function Kpi({ icon: Icon, value, label, trend, iconClass }) {
   return (
-    <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-[28px] shadow-[0_8px_30px_-10px_rgba(15,23,42,0.4)] p-5 text-white overflow-hidden">
+    <Card className="p-4">
       <div className="flex items-center gap-3">
-        <NextoRobotHead size={44} speaking={isSpeaking} />
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", iconClass)}><Icon size={19} strokeWidth={2}/></div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Sun size={15} className="text-orange-400 shrink-0" /> <span className="truncate">{greeting}{name ? `, Mr ${name}` : ""}</span></div>
-          {!revealed && (
-            <div className="text-[11px] text-slate-400 mt-0.5">
-              {audioPhase === "needs-tap" ? "Tap to hear today's briefing" : isSpeaking ? "Speaking…" : "Here's your recommendation for today"}
-            </div>
-          )}
-        </div>
-        {audioPhase === "needs-tap" && !revealed && (
-          <button onClick={playNow} disabled={listenUsed} className="shrink-0 flex items-center gap-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-full px-3.5 py-2">
-            <Volume2 size={13} /> {listenUsed ? "Playing…" : "Listen"}
-          </button>
-        )}
-      </div>
-
-      {!revealed && audioPhase !== "needs-tap" && (
-        <button onClick={reveal} className="text-[10px] text-slate-500 hover:text-slate-300 mt-3">Skip →</button>
-      )}
-
-      {revealed && (
-        <div className="nexto-reveal">
-          <style>{`
-            @keyframes revealUp {
-              from { opacity: 0; transform: translateY(10px) scale(0.98); }
-              to { opacity: 1; transform: translateY(0) scale(1); }
-            }
-            .nexto-reveal-item { opacity: 0; animation: revealUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-          `}</style>
-          <p className="nexto-reveal-item text-[11px] text-slate-400 mt-3" style={{ animationDelay: "0ms" }}>Here's your CRM summary for today.</p>
-
-          <div className="nexto-reveal-item grid grid-cols-3 gap-2 mt-3" style={{ animationDelay: "60ms" }}>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-              <div className="text-lg font-bold font-mono"><CountUp value={stats.total_active} /></div>
-              <div className="text-[9px] text-slate-400 mt-0.5">Active leads</div>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-              <div className="text-lg font-bold font-mono text-rose-400"><CountUp value={stats.overdue_followup} /></div>
-              <div className="text-[9px] text-slate-400 mt-0.5">Overdue follow-ups</div>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-2.5">
-              <div className="text-lg font-bold font-mono text-emerald-400">{stats.win_rate !== null && stats.win_rate !== undefined ? <CountUp value={stats.win_rate} suffix="%" /> : "—"}</div>
-              <div className="text-[9px] text-slate-400 mt-0.5">Win rate</div>
-            </div>
+          <div className="flex items-end justify-between gap-2">
+            <div className="text-[24px] leading-none font-black tracking-[-0.04em] text-slate-900">{value}</div>
+            {trend && <span className="text-[10px] font-bold text-emerald-500">{trend}</span>}
           </div>
-
-          {stats.waiting_count > 0 && (
-            <div className="nexto-reveal-item mt-2 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-xl px-3 py-2" style={{ animationDelay: "110ms" }}>⏸️ {stats.waiting_count} lead lagi ditunggu (customer minta waktu) - gak di-nudge sampai tanggalnya lewat.</div>
-          )}
-
-          {topRecs.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {topRecs.map((r, i) => {
-                const Icon = ACTION_ICON[r.action_type] || Clock;
-                const um = URGENCY_META[r.urgency] || URGENCY_META.low;
-                const lead = (leads || []).find((l) => l.id === r.id);
-                const draftChannel = ACTION_TYPE_TO_CHANNEL[r.action_type];
-                return (
-                  <div
-                    key={i}
-                    className="nexto-reveal-item flex items-start gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 transition-colors hover:border-orange-400/30"
-                    style={{ animationDelay: `${160 + i * 90}ms` }}
-                  >
-                    <button onClick={() => lead && onOpenLead && onOpenLead(lead)} className="flex items-start gap-2.5 text-left min-w-0 flex-1">
-                      <span className="w-7 h-7 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5"><Icon size={13} /></span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[12px] font-semibold truncate">{r.name}</span>
-                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: um.hex }}>{um.label}</span>
-                        </div>
-                        <div className="text-[10.5px] text-slate-400 mt-0.5 line-clamp-1">{r.action}</div>
-                      </div>
-                    </button>
-                    {lead && draftChannel && (
-                      <button
-                        onClick={(e) => openDraftPopup(lead, e.currentTarget.getBoundingClientRect(), draftChannel)}
-                        className="shrink-0 flex items-center gap-1 text-[10px] font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-2.5 py-1.5 transition-colors mt-0.5"
-                      >
-                        <Zap size={11} /> Handle Now
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <button
-            onClick={() => onGo("advisor")}
-            className="nexto-reveal-item w-full mt-4 text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors rounded-2xl py-2.5 text-center"
-            style={{ animationDelay: `${160 + topRecs.length * 90 + 60}ms` }}
-          >
-            View all recommendations →
-          </button>
+          <div className="mt-1 text-[10px] font-medium text-slate-500">{label}</div>
         </div>
-      )}
-
-      {draftPopup && (
-        <AiDraftPopup
-          lead={draftPopup.lead}
-          rect={draftPopup.rect}
-          initialChannel={draftPopup.channel}
-          onChannelChange={(ch) => saveOpenPopup("dashboard", draftPopup.lead.id, ch)}
-          onClose={closeDraftPopup}
-          onSent={() => onChanged && onChanged()}
-        />
-      )}
-    </div>
+      </div>
+    </Card>
   );
 }
 
-// Satu panel gabungan buat 2 angka pendapatan (dulu 2 kartu terpisah yang
-// visualnya saling rebutan perhatian) - dibagi kolom kiri/kanan dengan garis
-// tipis, 1 tombol sembunyikan/tampilkan buat keduanya sekaligus.
-function RevenuePanel({ year, month }) {
-  const [revealed, setRevealed] = useState(false);
-  return (
-    <div className="bg-slate-950 rounded-[28px] p-5 text-white">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-slate-300">
-          <span className="w-8 h-8 rounded-2xl bg-orange-500/15 text-orange-400 flex items-center justify-center"><Wallet size={15} /></span>
-          Pendapatan
-        </div>
-        <button onClick={() => setRevealed((v) => !v)} className="text-slate-400 hover:text-white transition-colors" title={revealed ? "Sembunyikan" : "Tampilkan"}>
-          {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
-        </button>
-      </div>
-      <div className="mt-5 flex items-stretch gap-5">
-        <div className="flex-1 min-w-0">
-          <div className="font-mono font-bold text-2xl tracking-tight tabular-nums truncate">{revealed ? fmtRp(year) : "Rp ••••••••"}</div>
-          <div className="text-[11px] text-slate-400 mt-1.5">Tahun ini</div>
-        </div>
-        <div className="w-px bg-white/10" />
-        <div className="flex-1 min-w-0">
-          <div className="font-mono font-bold text-2xl tracking-tight tabular-nums truncate">{revealed ? fmtRp(month) : "Rp ••••••••"}</div>
-          <div className="text-[11px] text-slate-400 mt-1.5">Bulan ini</div>
-        </div>
-      </div>
-    </div>
-  );
-}
+export default function Dashboard({
+  leads = [],
+  stages = [],
+  dealTransactions = [],
+  settings = {},
+  onGo,
+  onOpenLead,
+}) {
+  const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
 
-function RevenueTrendChart({ months }) {
-  const max = Math.max(...months.map((m) => m.value), 1);
-  const w = 100 / months.length;
-  return (
-    <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><BarChart3 size={14} /></span> Tren Pendapatan (6 Bulan Terakhir)</div>
-      <svg viewBox="0 0 300 140" className="w-full" style={{ height: "160px" }}>
-        <defs>
-          <linearGradient id="dashBarFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#fb923c" />
-            <stop offset="100%" stopColor="#ea580c" />
-          </linearGradient>
-        </defs>
-        <line x1="0" y1="110" x2="300" y2="110" stroke="#f1f5f9" strokeWidth="1" />
-        {months.map((m, i) => {
-          const barH = max > 0 ? (m.value / max) * 90 : 0;
-          const x = i * w;
-          const isLast = i === months.length - 1;
-          return (
-            <g key={i}>
-              <rect x={`${x + w * 0.2}%`} y={110 - barH} width={`${w * 0.6}%`} height={barH} rx="3" fill={m.value > 0 ? (isLast ? "url(#dashBarFill)" : "#fed7aa") : "#f1f5f9"} />
-              <text x={`${x + w * 0.5}%`} y="128" textAnchor="middle" fontSize="9" fill="#94a3b8">{m.label}</text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function PipelineFunnel({ stages, counts }) {
-  const max = Math.max(...counts.map((c) => c.count), 1);
-  return (
-    <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><FunnelIcon size={14} /></span> Nexto Pipeline</div>
-      <div className="space-y-3">
-        {counts.map((c, i) => (
-          <div key={i}>
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-slate-600 font-medium">{c.label}</span>
-              <span className="text-slate-400 tabular-nums">{c.count}</span>
-            </div>
-            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(c.count / max) * 100}%`, backgroundColor: c.hex }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Ringkasan 6 metrik yang dulu jadi 6 kartu terpisah (border+shadow diulang
-// 6x) - sekarang jadi SATU panel, kolom-kolom dibedain lewat ikon+warna,
-// bukan lewat kotak yang sama persis di-copy-paste.
-function StatsStrip({ items }) {
-  return (
-    <div className="bg-white border border-slate-100 rounded-[28px] p-5">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-5">
-        {items.map((it, i) => (
-          <div key={i} className="flex items-center gap-2.5 min-w-0">
-            <span className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${it.bub}`}><it.icon size={16} /></span>
-            <div className="min-w-0">
-              <div className={`font-bold text-lg leading-none tabular-nums truncate ${it.ac || "text-slate-900"}`}>{it.value}</div>
-              <div className="text-[11px] text-slate-400 mt-1 truncate">{it.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Win rate, rata-rata hari closing, dan kategori teratas - dihitung dari lead
-// yang udah closed (won/lost). Ambang 8 lead sama kayak AI Advisor & proactive
-// check, biar insight-nya konsisten di seluruh app.
-function PerformanceInsight({ leads, stages }) {
-  const wonKeys = stages.filter((s) => s.type === "won").map((s) => s.key);
-  const lostKeys = stages.filter((s) => s.type === "lost").map((s) => s.key);
-  const closedWon = leads.filter((l) => wonKeys.includes(l.stage_key));
-  const closedLost = leads.filter((l) => lostKeys.includes(l.stage_key));
-  const totalClosed = closedWon.length + closedLost.length;
-
-  if (totalClosed < 8) {
-    return (
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><Sparkles size={14} /></span> Insight Performa</div>
-        <p className="text-xs text-slate-400 mt-2">Baru {totalClosed} lead yang closed (won/lost). Kumpulin minimal 8 dulu biar polanya kelihatan di sini.</p>
-      </div>
-    );
-  }
-
-  const winRate = Math.round((closedWon.length / totalClosed) * 100);
-  const daysArr = closedWon
-    .map((l) => {
-      if (!l.created_at || !l.deal_date) return null;
-      const d = Math.floor((new Date(l.deal_date) - new Date(l.created_at)) / 86400000);
-      return d >= 0 ? d : null;
-    })
-    .filter((d) => d !== null);
-  const avgDays = daysArr.length ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length) : null;
-
-  const catWin = {};
-  for (const l of closedWon) { const k = l.category || "Lainnya"; catWin[k] = (catWin[k] || 0) + 1; }
-  const topCat = Object.entries(catWin).sort((a, b) => b[1] - a[1])[0];
-
-  return (
-    <div className="bg-white border border-slate-100 rounded-[28px] p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4"><span className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center"><Sparkles size={14} /></span> Insight Performa</div>
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <div className="text-2xl font-bold tabular-nums text-orange-600">{winRate}%</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Win rate</div>
-        </div>
-        <div>
-          <div className="text-2xl font-bold tabular-nums text-slate-800">{avgDays ?? "—"}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Rata-rata hari closing</div>
-        </div>
-        <div>
-          <div className="text-sm font-bold text-slate-800 truncate" title={topCat ? topCat[0] : ""}>{topCat ? topCat[0] : "—"}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Kategori teratas</div>
-        </div>
-      </div>
-      <p className="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-100">Berdasarkan {totalClosed} lead yang udah closed.</p>
-    </div>
-  );
-}
-
-export default function Dashboard({ leads, stages, dealTransactions, settings, onGo, onOpenLead, myLevel, onChanged }) {
-  const s = useMemo(() => {
-    const won = stages.filter((x) => x.type === "won").map((x) => x.key);
-    const activeKeys = stages.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
-    const now = new Date();
-    const curYear = now.getFullYear();
-    const curMonth = now.getMonth();
-    // Revenue sekarang dihitung dari SEMUA transaksi deal (bukan cuma nilai
-    // terakhir per lead), biar repeat order/transaksi berkali-kali ke perusahaan
-    // yang sama kehitung semua, bukan cuma yang paling baru doang.
-    const txs = dealTransactions || [];
-    const revYear = txs.reduce((a, t) => {
-      const d = t.deal_date ? new Date(t.deal_date) : null;
-      return d && d.getFullYear() === curYear ? a + (Number(t.deal_value) || 0) : a;
-    }, 0);
-    const revMonth = txs.reduce((a, t) => {
-      const d = t.deal_date ? new Date(t.deal_date) : null;
-      return d && d.getFullYear() === curYear && d.getMonth() === curMonth ? a + (Number(t.deal_value) || 0) : a;
-    }, 0);
-
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const months = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(curYear, curMonth - i, 1);
-      const y = d.getFullYear(), m = d.getMonth();
-      const value = txs.reduce((a, t) => {
-        const dd = t.deal_date ? new Date(t.deal_date) : null;
-        return dd && dd.getFullYear() === y && dd.getMonth() === m ? a + (Number(t.deal_value) || 0) : a;
-      }, 0);
-      months.push({ label: monthNames[m], value });
-    }
-
-    const stageCounts = stages.map((st) => ({
-      label: st.label, hex: st.hex,
-      count: leads.filter((c) => c.stage_key === st.key).length,
-    }));
-
+  const stats = useMemo(() => {
+    const wonKeys = stages.filter(s => s.type === "won").map(s => s.key);
+    const lostKeys = stages.filter(s => s.type === "lost").map(s => s.key);
+    const won = leads.filter(l => wonKeys.includes(l.stage_key));
+    const lost = leads.filter(l => lostKeys.includes(l.stage_key));
+    const followups = leads.filter(l => l.next_action && String(l.next_action).trim());
+    const visits = leads.filter(l => sameDay(l.visit_date));
     return {
       total: leads.length,
-      active: leads.filter((c) => activeKeys.includes(c.stage_key)).length,
-      deals: leads.filter((c) => won.includes(c.stage_key)).length,
-      followup: leads.filter((c) => c.next_action && c.next_action.trim()).length,
-      contact: leads.filter((c) => c.email || c.phone).length,
-      visitsToday: leads.filter((c) => c.visit_date === todayISO()).length,
-      revYear, revMonth, months, stageCounts,
+      won: won.length,
+      lost: lost.length,
+      followups: followups.length,
+      visits: visits.length,
+      deals: dealTransactions.length,
+      winRate: won.length + lost.length ? Math.round((won.length / (won.length + lost.length)) * 100) : 0,
+      wonKeys,
     };
   }, [leads, stages, dealTransactions]);
 
-  const statItems = [
-    { icon: CalendarCheck, label: "Kunjungan hari ini", value: <CountUp value={s.visitsToday} />, bub: "bg-orange-50 text-orange-600", ac: "text-orange-600" },
-    { icon: Users, label: "Total lead", value: <CountUp value={s.total} />, bub: "bg-slate-100 text-slate-500" },
-    { icon: TrendingUp, label: "Lead aktif", value: <CountUp value={s.active} />, bub: "bg-slate-100 text-slate-500" },
-    { icon: CheckCircle2, label: "Deal", value: <CountUp value={s.deals} />, bub: "bg-emerald-50 text-emerald-600", ac: "text-emerald-600" },
-    { icon: AlertCircle, label: "Perlu follow-up", value: <CountUp value={s.followup} />, bub: "bg-orange-50 text-orange-600", ac: "text-orange-600" },
-    { icon: Mail, label: "Ada kontak", value: `${s.contact}/${s.total}`, bub: "bg-slate-100 text-slate-500" },
+  const pipeline = useMemo(() => {
+    const usable = stages.filter(s => s.type !== "lost").slice(0, 4);
+    return usable.length ? usable : [{ key: "prospek", label: "Prospek", type: "normal" }];
+  }, [stages]);
+
+  const colors = [
+    { bg: "bg-blue-50", text: "text-blue-700", bar: "bg-blue-500" },
+    { bg: "bg-violet-50", text: "text-violet-700", bar: "bg-violet-500" },
+    { bg: "bg-orange-50", text: "text-orange-700", bar: "bg-orange-500" },
+    { bg: "bg-emerald-50", text: "text-emerald-700", bar: "bg-emerald-500" },
   ];
+
+  const todayTasks = useMemo(() => {
+    const items = leads.filter(l => l.next_action || sameDay(l.visit_date)).slice(0, 4);
+    return items.map((l, i) => ({
+      lead: l,
+      time: l.visit_date ? "Hari ini" : i === 0 ? "Prioritas" : "Follow-up",
+      title: l.visit_date ? `Visit - ${l.name}` : String(l.next_action || "Follow-up lead"),
+      sub: l.city || l.key_person || "Lead aktif",
+    }));
+  }, [leads]);
+
+  const upcoming = useMemo(() => leads.filter(l => l.visit_date).sort((a,b) => String(a.visit_date).localeCompare(String(b.visit_date))).slice(0,3), [leads]);
+
+  const aiLead = useMemo(() => {
+    return leads.find(l => !stats.wonKeys.includes(l.stage_key) && l.next_action) || leads.find(l => !stats.wonKeys.includes(l.stage_key));
+  }, [leads, stats.wonKeys]);
+
+  const pipelineCounts = pipeline.map(s => leads.filter(l => l.stage_key === s.key).length);
+  const maxPipeline = Math.max(1, ...pipelineCounts);
 
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-xs text-slate-400 capitalize">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+      {/* Hero */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-500">Sales Workspace</div>
+          <h1 className="mt-1 text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">Good morning, {displayName}</h1>
+          <p className="mt-1 text-[13px] text-slate-500">Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
+        </div>
+        <button onClick={() => onGo?.("leads")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-[12px] font-bold text-white shadow-[0_12px_25px_-12px_rgba(15,23,42,.7)] hover:bg-slate-800">
+          <Plus size={16}/> Tambah Lead
+        </button>
       </div>
 
-      <GettingStartedChecklist leads={leads} myLevel={myLevel} onGo={onGo} />
-
-      <GoodMorningCard settings={settings} onGo={onGo} onOpenLead={onOpenLead} leads={leads} onChanged={onChanged} />
-
-      <PipelineReviewCard leads={leads} onOpenLead={onOpenLead} isProfessional={myLevel >= 2} />
-
-      <RevenuePanel year={s.revYear} month={s.revMonth} />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <RevenueTrendChart months={s.months} />
-        <PipelineFunnel stages={stages} counts={s.stageCounts} />
+      {/* KPIs */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <Kpi icon={Users} value={stats.total} label="Total Leads" trend="↑ aktif" iconClass="bg-indigo-50 text-indigo-600" />
+        <Kpi icon={MessageCircle} value={stats.followups} label="Follow-up" trend="hari ini" iconClass="bg-violet-50 text-violet-600" />
+        <Kpi icon={MapPin} value={stats.visits} label="Kunjungan Hari Ini" trend="agenda" iconClass="bg-emerald-50 text-emerald-600" />
+        <Kpi icon={Trophy} value={stats.won} label="Deal Won" trend={`${stats.winRate}% win rate`} iconClass="bg-amber-50 text-amber-600" />
       </div>
 
-      <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} />
+      {/* Main */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,.75fr)] gap-4">
+        <Card className="p-5">
+          <SectionTitle title="Sales Pipeline" action="Lihat Pipeline" onClick={() => onGo?.("leads")} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            {pipeline.map((stage, i) => {
+              const c = colors[i % colors.length];
+              const count = pipelineCounts[i] || 0;
+              const stageLeads = leads.filter(l => l.stage_key === stage.key).slice(0,3);
+              return (
+                <div key={stage.key} className={cn("rounded-2xl border border-slate-200/70 overflow-hidden", c.bg)}>
+                  <div className="px-3.5 pt-3 pb-2">
+                    <div className={cn("text-[11px] font-bold", c.text)}>{stage.label}</div>
+                    <div className="mt-1 flex items-end justify-between"><span className="text-[25px] leading-none font-black text-slate-900">{count}</span><span className="text-[9px] text-slate-400">lead</span></div>
+                    <div className="mt-3 h-1.5 rounded-full bg-white/80 overflow-hidden"><div className={cn("h-full rounded-full", c.bar)} style={{width:`${Math.max(8,(count/maxPipeline)*100)}%`}}/></div>
+                  </div>
+                  <div className="border-t border-white/70 bg-white/55">
+                    {stageLeads.length ? stageLeads.map(l => (
+                      <button key={l.id} onClick={() => onOpenLead?.(l)} className="w-full text-left px-3.5 py-2 border-b border-slate-200/40 last:border-0 hover:bg-white/70">
+                        <div className="truncate text-[10px] font-semibold text-slate-700">{l.name}</div>
+                        <div className="truncate text-[9px] text-slate-400">{formatValue(l.value || l.deal_value)}</div>
+                      </button>
+                    )) : <div className="px-3.5 py-3 text-[9px] text-slate-400">Belum ada lead</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
 
-      <StatsStrip items={statItems} />
+        <Card className="overflow-hidden bg-slate-950 text-white border-slate-800">
+          <div className="p-5 bg-[radial-gradient(circle_at_85%_10%,rgba(99,102,241,.42),transparent_35%)]">
+            <div className="flex items-start justify-between gap-3">
+              <div><div className="text-[10px] font-bold uppercase tracking-[.18em] text-indigo-300">NEXTO AI</div><h2 className="mt-2 text-[21px] font-black tracking-tight">Your Sales Copilot</h2><p className="mt-1 text-[11px] leading-5 text-slate-400">Insight singkat untuk membantu kamu menentukan langkah berikutnya.</p></div>
+              <NextoRobotHead size={52}/>
+            </div>
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[.06] p-3.5">
+              <div className="flex items-center gap-2 text-indigo-300"><Sparkles size={14}/><span className="text-[10px] font-bold">Next best action</span></div>
+              <p className="mt-2 text-[12px] leading-5 text-slate-200">{aiLead ? `Prioritaskan follow-up ${aiLead.name}.` : "Tambahkan lead baru agar AI bisa menemukan prioritas."}</p>
+            </div>
+            <button onClick={() => onGo?.("advisor")} className="mt-3 w-full rounded-xl bg-white text-slate-950 py-2.5 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka AI Advisor <ArrowRight size={14}/></button>
+          </div>
+        </Card>
+      </div>
 
-      <PerformanceInsight leads={leads} stages={stages} />
+      {/* Productivity */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr_.85fr] gap-4">
+        <Card className="p-5">
+          <SectionTitle title="Tugas Hari Ini" action="Lihat Semua" onClick={() => onGo?.("visitfollowup")} />
+          <div className="space-y-1">
+            {todayTasks.length ? todayTasks.map((item, i) => (
+              <button key={item.lead.id} onClick={() => onOpenLead?.(item.lead)} className="w-full flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-slate-50">
+                <div className={cn("h-5 w-5 rounded-md border flex items-center justify-center shrink-0", i === 0 ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 text-transparent")}><CheckCircle2 size={13}/></div>
+                <div className="min-w-0 flex-1"><div className="truncate text-[11px] font-semibold text-slate-800">{item.title}</div><div className="truncate text-[9px] text-slate-400 flex items-center gap-1"><Clock3 size={10}/>{item.time} · {item.sub}</div></div>
+              </button>
+            )) : <div className="py-8 text-center text-[11px] text-slate-400">Belum ada tugas.</div>}
+          </div>
+        </Card>
 
-      <button onClick={() => onGo("leads")} className="w-full text-sm text-orange-700 font-medium bg-orange-50 hover:bg-orange-100 transition-colors rounded-2xl py-3 text-center">Lihat semua lead →</button>
+        <Card className="p-5">
+          <SectionTitle title="Win Rate" />
+          <div className="flex items-center gap-5 py-2">
+            <div className="relative h-28 w-28 shrink-0 rounded-full" style={{background:`conic-gradient(#10b981 ${stats.winRate}%, #e2e8f0 0)`}}>
+              <div className="absolute inset-[9px] rounded-full bg-white flex items-center justify-center"><span className="text-[24px] font-black text-slate-900">{stats.winRate}%</span></div>
+            </div>
+            <div><div className="text-[12px] font-bold text-slate-800">Conversion sehat</div><p className="mt-1 text-[10px] leading-4 text-slate-400">Berdasarkan lead yang sudah berstatus Won/Lost.</p></div>
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <SectionTitle title="Kunjungan Mendatang" action="Lihat Semua" onClick={() => onGo?.("visitfollowup")} />
+          <div className="space-y-1">
+            {upcoming.length ? upcoming.map(l => (
+              <button key={l.id} onClick={() => onOpenLead?.(l)} className="w-full flex items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-slate-50">
+                <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><CalendarDays size={15}/></div>
+                <div className="min-w-0 flex-1"><div className="truncate text-[11px] font-semibold text-slate-800">{l.name}</div><div className="truncate text-[9px] text-slate-400 flex items-center gap-1"><MapPin size={10}/>{l.city || "Lokasi belum diisi"}</div></div>
+                <span className="text-[9px] font-bold text-indigo-600">{l.visit_date}</span>
+              </button>
+            )) : <div className="py-8 text-center text-[11px] text-slate-400">Belum ada kunjungan.</div>}
+          </div>
+        </Card>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-indigo-50/50 px-5 py-4 flex items-center gap-3">
+        <Target size={18} className="text-indigo-500 shrink-0"/>
+        <p className="text-[11px] font-medium text-slate-500">“Discipline in follow-up creates freedom in revenue.”</p>
+        <span className="ml-auto text-[10px] font-bold text-slate-400">— NEXTO</span>
+      </div>
     </div>
   );
 }

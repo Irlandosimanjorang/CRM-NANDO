@@ -620,13 +620,16 @@ export default function App() {
   const navItems = settings?.is_platform_admin ? [...NAV, ADMIN_NAV_ITEM] : NAV;
 
   return (
-    <div className="nexto-app min-h-screen bg-[#f5f7fb] text-slate-900 flex overflow-x-hidden">
+    <div className="nexto-app min-h-screen bg-[#f7f8fc] text-slate-900 flex overflow-x-hidden">
       <style>{`
         .nexto-app {
           --nexto-ink: #0b1020;
           --nexto-muted: #64748b;
           --nexto-line: rgba(148,163,184,.18);
           --nexto-orange: #f97316;
+          --nexto-purple: #6d5dfc;
+          --nexto-blue: #3b82f6;
+          --nexto-sidebar: #0b1220;
           --nexto-panel: rgba(255,255,255,.82);
         }
         .nexto-app .nexto-grid {
@@ -639,8 +642,8 @@ export default function App() {
         }
         .nexto-app .nexto-sidebar {
           background:
-            radial-gradient(circle at 15% 5%, rgba(249,115,22,.14), transparent 28%),
-            linear-gradient(180deg, #0b101a 0%, #080c14 100%);
+            radial-gradient(circle at 20% 0%, rgba(109,93,252,.16), transparent 30%),
+            linear-gradient(180deg, #0b1220 0%, #080d18 100%);
         }
         .nexto-app .nexto-panel {
           background: var(--nexto-panel);
@@ -652,8 +655,8 @@ export default function App() {
           -webkit-backdrop-filter: blur(18px);
         }
         .nexto-app .nexto-nav-active {
-          background: linear-gradient(135deg, rgba(249,115,22,.98), rgba(234,88,12,.94));
-          box-shadow: 0 12px 28px -15px rgba(249,115,22,.9);
+          background: linear-gradient(135deg, #5b5cf6 0%, #7c4dff 100%);
+          box-shadow: 0 12px 28px -15px rgba(91,92,246,.9);
         }
         .nexto-app .nexto-nav-item {
           transition: transform .16s ease, background .16s ease, color .16s ease;
@@ -666,12 +669,30 @@ export default function App() {
         }
         .nexto-app .nexto-content-glow {
           background:
-            radial-gradient(circle at 78% 2%, rgba(249,115,22,.09), transparent 24%),
+            radial-gradient(circle at 78% 2%, rgba(109,93,252,.08), transparent 24%),
             radial-gradient(circle at 20% 18%, rgba(99,102,241,.045), transparent 20%);
         }
+        .nexto-app button, .nexto-app input, .nexto-app textarea, .nexto-app select {
+          font-family: inherit;
+        }
+        .nexto-app ::selection {
+          background: rgba(109,93,252,.18);
+        }
+        .nexto-app .nexto-nav-item:not(.nexto-nav-active) {
+          border: 1px solid transparent;
+        }
+        .nexto-app .nexto-nav-item:not(.nexto-nav-active):hover {
+          background: rgba(255,255,255,.055);
+          border-color: rgba(255,255,255,.04);
+        }
+        .nexto-app main {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(100,116,139,.25) transparent;
+        }
+
         @media (max-width: 767px) {
           .nexto-app .nexto-content-glow {
-            background: radial-gradient(circle at 80% 0%, rgba(249,115,22,.08), transparent 30%);
+            background: radial-gradient(circle at 80% 0%, rgba(109,93,252,.07), transparent 30%);
           }
         }
       `}</style>
@@ -699,9 +720,9 @@ export default function App() {
       )}
 
       {/* DESKTOP SIDEBAR */}
-      <aside className="nexto-sidebar hidden md:flex flex-col w-[248px] fixed top-0 left-0 h-screen z-30 text-white border-r border-white/[0.06]">
-        <div className="px-4 pt-4 pb-3">
-          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3 shadow-[0_12px_30px_-22px_rgba(0,0,0,.9)]">
+      <aside className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-0 left-0 h-screen z-30 text-white border-r border-white/[0.06]">
+        <div className="px-4 pt-5 pb-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3.5 shadow-[0_14px_35px_-25px_rgba(0,0,0,.8)]">
             <div className="flex items-center gap-2.5">
               <NextoRobotHead size={30} />
               <NextoDarkWordmark width={70} />
@@ -735,7 +756,7 @@ export default function App() {
 
         <div className="mx-4 mb-3 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2.5 space-y-1 overflow-y-auto">
           <div className="px-3 pb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600">Menu utama</div>
           {navItems.map((n) => {
             const I = n.icon;
@@ -761,7 +782,7 @@ export default function App() {
                   }
                   setTab(n.key);
                 }}
-                className={`nexto-nav-item relative w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[14px] text-[13px] ${cls}`}
+                className={`nexto-nav-item relative w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[12.5px] ${cls}`}
               >
                 {active && !locked && !n.special && <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-white/90" />}
                 <I size={17} strokeWidth={active ? 2.4 : 1.9} />
@@ -786,7 +807,7 @@ export default function App() {
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow md:ml-[248px]">
+      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow md:ml-[228px]">
         <div className="nexto-grid pointer-events-none absolute inset-x-0 top-0 h-72 opacity-70" />
 
         {/* MOBILE TOPBAR */}
@@ -805,7 +826,7 @@ export default function App() {
         </header>
 
         {/* DESKTOP TOPBAR */}
-        <header className="hidden md:flex sticky top-0 z-20 h-[68px] items-center justify-between border-b border-slate-200/70 bg-white/72 px-6 lg:px-8 backdrop-blur-2xl">
+        <header className="hidden md:flex sticky top-0 z-20 h-[64px] items-center justify-between border-b border-slate-200/60 bg-white/78 px-6 lg:px-8 backdrop-blur-2xl">
           <div className="flex items-center gap-3">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-500">Sales Workspace</div>
@@ -828,7 +849,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="relative z-10 flex-1 w-full max-w-[1440px] mx-auto px-4 py-5 md:px-7 md:py-7 lg:px-9 pb-32">
+        <main className="relative z-10 flex-1 w-full max-w-[1440px] mx-auto px-4 py-5 md:px-7 md:py-6 lg:px-9 pb-32">
           {/* Banner ini cuma buat user Free - begitu udah bayar (Standard ke
               atas), gak perlu terus dipajang gede di ATAS SETIAP TAB (dulu
               nongol truss walau udah jadi pelanggan bayar, kesannya maksa).
