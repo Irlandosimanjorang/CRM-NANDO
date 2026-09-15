@@ -518,15 +518,27 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAEu6vGXceQD1CTOl";
 const EARLY_BIRD_DEADLINE = new Date("2026-09-30T23:59:59+07:00");
 const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 
+// === HARGA BARU (16 Sep 2026, hasil kalkulasi modal AI real) ===
+// PRICING_NORMAL: Standard 79->99, Professional 269->299, Enterprise
+// 1,3jt->1,356jt (per-orang 325rb->339rb). Early bird: Standard 69,
+// Professional 259, Enterprise 1,196jt (per-orang 299rb). Bukan hasil rumus
+// diskon 15% otomatis - tiap angka nominal final hasil keputusan Nando
+// langsung berdasar margin vs modal AI real per plan (lihat audit biaya
+// 15-16 Sep 2026: modal Standard ~Rp36rb, Professional ~Rp264rb, Enterprise
+// ~Rp266rb/orang worst-case).
+// PENTING: nominal ini WAJIB disamain manual di Mayar dashboard (produk
+// langganan), DAN AMOUNT_TO_TIER/AMOUNT_TO_MONTHS di mayar-webhook.ts WAJIB
+// ditambahin nominal baru ini (nominal lama TETEP dipertahanin, jangan
+// dihapus - subscriber lama masih ke-charge nominal lama tiap perpanjangan).
 const PRICING_NORMAL = {
-  standard: { monthlyPrice: "Rp79rb", quarterlyTotal: "Rp237rb" },
-  professional: { monthlyPrice: "Rp269rb", quarterlyTotal: "Rp807rb" },
-  enterprise: { monthlyPrice: "Rp1,3jt", quarterlyTotal: "Rp3,9jt", perPerson: "Rp325rb" },
+  standard: { monthlyPrice: "Rp99rb", quarterlyTotal: "Rp297rb" },
+  professional: { monthlyPrice: "Rp299rb", quarterlyTotal: "Rp897rb" },
+  enterprise: { monthlyPrice: "Rp1,356jt", quarterlyTotal: "Rp4,068jt", perPerson: "Rp339rb" },
 };
 const PRICING_EARLY_BIRD = {
-  standard: { monthlyPrice: "Rp67rb", monthlySavings: "Rp12rb", quarterlyTotal: "Rp201rb", quarterlySavings: "Rp36rb" },
-  professional: { monthlyPrice: "Rp229rb", monthlySavings: "Rp40rb", quarterlyTotal: "Rp686rb", quarterlySavings: "Rp121rb" },
-  enterprise: { monthlyPrice: "Rp1,11jt", monthlySavings: "Rp195rb", quarterlyTotal: "Rp3,315jt", quarterlySavings: "Rp585rb", perPerson: "Rp276rb" },
+  standard: { monthlyPrice: "Rp69rb", monthlySavings: "Rp30rb", quarterlyTotal: "Rp207rb", quarterlySavings: "Rp90rb" },
+  professional: { monthlyPrice: "Rp259rb", monthlySavings: "Rp40rb", quarterlyTotal: "Rp777rb", quarterlySavings: "Rp120rb" },
+  enterprise: { monthlyPrice: "Rp1,196jt", monthlySavings: "Rp160rb", quarterlyTotal: "Rp3,588jt", quarterlySavings: "Rp480rb", perPerson: "Rp299rb" },
 };
 const PRICING = isEarlyBird ? PRICING_EARLY_BIRD : PRICING_NORMAL;
 
