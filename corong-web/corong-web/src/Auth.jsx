@@ -452,12 +452,13 @@ const SECURITY_OFFSETS = [0, 34, 14, 42, 22];
 //    ulang di daftar Professional (biar gak dobel/rancu).
 // 2. Generate Leads AI: "4x/bulan" (sesuai batas terbaru di generate-leads.ts,
 //    6 Sep 2026 - sebelumnya "1x/minggu").
-// FIX (15 Sep 2026, permintaan Nando) - "Rapihin Data" (weekly-cleanup-check)
-// dipindah dari Standard ke Professional. Fitur ini ngirim saran & nunggu
-// konfirmasi "ya"/"gak" lewat Bot Telegram, yang emang Professional+ doang
-// (telegram-webhook nge-block semua pesan dari user non-Professional) -
-// sebelumnya dicatet sebagai fitur Standard padahal Standard gak bisa
-// benar-benar makein (gak akan pernah bisa balikin "ya").
+// FIX (15 Sep 2026, permintaan Nando): "Rapihin Data" (weekly-cleanup-check)
+// tetap fitur Standard. Sempet kepikiran dipindah ke Professional karena
+// konfirmasi "ya"/"gak"-nya lewat Bot Telegram yang tadinya di-block buat
+// non-Professional - tapi itu bug di telegram-webhook (blokir semua pesan
+// SEBELUM ngecek ada pending confirmation atau nggak), udah dibenerin biar
+// konfirmasi pending_actions tetep jalan buat Standard walau Bot Telegram-nya
+// sendiri Professional+. Jadi fiturnya balik ke Standard, bukan pindah tier.
 const STANDARD_FEATURES = [
   { id: "Kelola Leads — kartu per perusahaan", en: "Manage Leads — card per company" },
   { id: "Smart Import", en: "Smart Import" },
@@ -466,12 +467,12 @@ const STANDARD_FEATURES = [
   { id: "Deteksi Duplikat", en: "Duplicate Detection" },
   { id: "Nex — Komunitas Sesama Sales", en: "Nex — Sales Community" },
   { id: "Daily Digest (rekomendasi harian)", en: "Daily Digest (daily recommendations)" },
+  { id: "Rapihin Data (konfirmasi via Bot Telegram)", en: "Data Cleanup (confirm via Telegram Bot)" },
 ];
 
 const PROFESSIONAL_FEATURES = [
   { id: "Semua fitur Standard", en: "Everything in Standard" },
   { id: "Bot Telegram (edit CRM, progress harian, jadwal visit)", en: "Telegram Bot (edit CRM, daily progress, visit scheduling)" },
-  { id: "Rapihin Data (via Bot Telegram)", en: "Data Cleanup (via Telegram Bot)" },
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
   { id: "Generate Leads", en: "Generate Leads" },
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },
