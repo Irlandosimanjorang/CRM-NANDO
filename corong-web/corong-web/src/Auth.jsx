@@ -468,6 +468,7 @@ const STANDARD_FEATURES = [
   { id: "Nex — Komunitas Sesama Sales", en: "Nex — Sales Community" },
   { id: "Daily Digest (rekomendasi harian)", en: "Daily Digest (daily recommendations)" },
   { id: "Rapihin Data (konfirmasi via Bot Telegram)", en: "Data Cleanup (confirm via Telegram Bot)" },
+  { id: "Meeting Prep", en: "Meeting Prep" },
 ];
 
 const PROFESSIONAL_FEATURES = [
@@ -476,7 +477,6 @@ const PROFESSIONAL_FEATURES = [
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
   { id: "Generate Leads", en: "Generate Leads" },
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },
-  { id: "Meeting Prep", en: "Meeting Prep" },
   { id: "Customer State", en: "Customer State" },
   { id: "Outcome Memory", en: "Outcome Memory" },
   { id: "Advisor harian", en: "Daily Advisor" },
