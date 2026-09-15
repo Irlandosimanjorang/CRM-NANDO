@@ -468,7 +468,9 @@ const STANDARD_FEATURES = [
   { id: "Nex — Komunitas Sesama Sales", en: "Nex — Sales Community" },
   { id: "Daily Digest (rekomendasi harian)", en: "Daily Digest (daily recommendations)" },
   { id: "Rapihin Data", en: "Data Cleanup" },
+  { id: "Visit & Follow-up", en: "Visit & Follow-up" },
   { id: "Meeting Prep", en: "Meeting Prep" },
+  { id: "Integrasi MCP ke Grok Bot", en: "Grok Bot MCP Integration" },
 ];
 
 const PROFESSIONAL_FEATURES = [
