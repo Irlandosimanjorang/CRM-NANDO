@@ -350,6 +350,104 @@ export async function getLeadGenCooldown() {
   return { canGenerate, usedThisMonth, quotaMax: GEN_LEADS_QUOTA_MAX, nextAvailableAt };
 }
 
+// ---- AI CREDITS (panel transparansi pemakaian AI, 15 Sep 2026) ----
+// Gak ada tabel token/biaya per-call di backend (edge function cuma nyatet
+// COUNT panggilan di `edge_function_calls` + `lead_gen_runs`, bukan token
+// beneran). Jadi "AI Actions" itu ANGKA ASLI dari tabel, sedangkan "tokens
+// processed" & "estimasi biaya" itu ESTIMASI = jumlah panggilan real dikali
+// rata-rata token/biaya per fitur yang udah diukur manual pas audit biaya
+// (15 Sep 2026, lihat FEATURE_STATS). 1 kredit = Rp100 modal AI.
+const CREDIT_VALUE_IDR = 100;
+const CREDIT_QUOTA_BY_PLAN = { free: 100, standard: 400, premium: 2000, enterprise: 5000 };
+const PLAN_LEVEL_FOR_CREDITS = { free: 0, standard: 1, premium: 1 };
+
+// avgTokens & avgCostIdr per 1x panggilan, hasil ukur real (kurs Rp17.700):
+// draft-followup, smart-import-map-ts, guess-outcome-reason, suggest-visit-points
+// diukur langsung (temp-replica test). transcribe-meeting & enrich-lead belum
+// pernah diukur detail - dipukul rata mirip fitur setipe, ditandai estimasi.
+const FEATURE_STATS = {
+  "draft-followup": { category: "followup", avgTokens: 1108, avgCostIdr: 96 },
+  "smart-import-map-ts": { category: "other", avgTokens: 1664, avgCostIdr: 106 },
+  "guess-outcome-reason": { category: "other", avgTokens: 420, avgCostIdr: 41 },
+  "suggest-visit-points": { category: "other", avgTokens: 795, avgCostIdr: 101 },
+  "transcribe-meeting": { category: "other", avgTokens: 2200, avgCostIdr: 1593 }, // estimasi, Whisper ~15 menit/rekaman
+  "enrich-lead": { category: "other", avgTokens: 900, avgCostIdr: 106 }, // estimasi, belum diukur detail
+};
+const GENERATE_LEADS_STATS = { category: "leadanalysis", avgTokens: 8000, avgCostIdr: 9735 };
+const DAILY_DIGEST_STATS = { category: "dailybriefing", avgTokens: 16130, avgCostIdr: 1593 };
+const CATEGORY_LABELS = {
+  leadanalysis: { id: "Lead Analysis", en: "Lead Analysis" },
+  followup: { id: "Follow-up", en: "Follow-up" },
+  dailybriefing: { id: "Daily Briefing", en: "Daily Briefing" },
+  other: { id: "Lainnya", en: "Other" },
+};
+
+function wibElapsedWeekdaysThisMonth(d = new Date()) {
+  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
+  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth(), today = wibNow.getUTCDate();
+  let n = 0;
+  for (let day = 1; day <= today; day++) {
+    const dow = new Date(Date.UTC(y, m, day)).getUTCDay();
+    if (dow !== 0 && dow !== 6) n++;
+  }
+  return n;
+}
+
+export async function getAiCreditsUsage() {
+  const org = await getMyOrg();
+  const orgId = org.id;
+  const monthStart = wibMonthStartUTC().toISOString();
+
+  const { data: members, error: memErr } = await supabase
+    .from("organization_members").select("user_id").eq("org_id", orgId);
+  if (memErr) throw memErr;
+  const userIds = Array.from(new Set([org.owner_user_id, ...(members || []).map((m) => m.user_id)].filter(Boolean)));
+
+  const [{ data: calls, error: callsErr }, { data: leadRuns, error: runsErr }] = await Promise.all([
+    supabase.from("edge_function_calls").select("function_name").in("user_id", userIds).gte("called_at", monthStart),
+    supabase.from("lead_gen_runs").select("id").eq("org_id", orgId).gte("generated_at", monthStart),
+  ]);
+  if (callsErr) throw callsErr;
+  if (runsErr) throw runsErr;
+
+  const categoryTotals = { leadanalysis: 0, followup: 0, dailybriefing: 0, other: 0 };
+  let aiActions = 0, tokensProcessed = 0, estimatedCostIdr = 0;
+
+  const addUsage = (stats, count) => {
+    if (!count) return;
+    aiActions += count;
+    tokensProcessed += stats.avgTokens * count;
+    estimatedCostIdr += stats.avgCostIdr * count;
+    categoryTotals[stats.category] += stats.avgCostIdr * count;
+  };
+
+  for (const call of calls || []) {
+    const stats = FEATURE_STATS[call.function_name];
+    if (stats) addUsage(stats, 1);
+  }
+  addUsage(GENERATE_LEADS_STATS, (leadRuns || []).length);
+
+  // Daily Digest jalan otomatis tiap hari kerja WIB buat Standard+ (Free
+  // di-skip) - gak ada log per-panggilan, jadi dihitung dari hari kerja yang
+  // udah lewat bulan ini, bukan dari tabel.
+  const myLevel = org.plan === "enterprise" ? 2 : (PLAN_LEVEL_FOR_CREDITS[org.plan] ?? 0);
+  if (myLevel >= 1) addUsage(DAILY_DIGEST_STATS, wibElapsedWeekdaysThisMonth());
+
+  const quotaMax = CREDIT_QUOTA_BY_PLAN[org.plan] ?? CREDIT_QUOTA_BY_PLAN.free;
+  const creditsUsed = Math.round(estimatedCostIdr / CREDIT_VALUE_IDR);
+
+  const breakdown = Object.entries(categoryTotals)
+    .filter(([, costIdr]) => costIdr > 0)
+    .map(([category, costIdr]) => ({
+      category,
+      label: CATEGORY_LABELS[category],
+      pct: estimatedCostIdr > 0 ? Math.round((costIdr / estimatedCostIdr) * 100) : 0,
+    }))
+    .sort((a, b) => (a.category === "other" ? 1 : b.category === "other" ? -1 : b.pct - a.pct));
+
+  return { creditsUsed, quotaMax, aiActions, tokensProcessed, estimatedCostIdr, breakdown };
+}
+
 export async function importGeneratedLead(genLead, defaultStageKey) {
   // BUG FIX (11 Sep 2026, ketauan pas audit): category & email yang udah
   // ditemuin AI (keliatan di kartu hasil generate) dulu KEBUANG pas import -

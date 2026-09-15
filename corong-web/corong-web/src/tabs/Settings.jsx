@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot, Zap } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -189,6 +189,10 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [joinMsg, setJoinMsg] = useState("");
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
+  // ---- AI CREDITS (transparansi pemakaian AI bulan ini) ----
+  const [aiCredits, setAiCredits] = useState(null);
+  const [aiCreditsLoading, setAiCreditsLoading] = useState(true);
+
   const loadOrg = () => {
     setOrgLoading(true);
     Promise.all([db.getMyOrg(), db.getOrgMembers(), db.getCurrentUserId(), db.getPendingInviteCodes()])
@@ -211,6 +215,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     db.getGoogleCalendarLink().then((l) => { setGcalLink(l); setGcalLoading(false); }).catch(() => setGcalLoading(false));
     loadOrg();
     loadMfaFactors();
+    db.getAiCreditsUsage().then(setAiCredits).catch(() => {}).finally(() => setAiCreditsLoading(false));
   }, []);
 
   // Kode invite otomatis ilang dari layar begitu beneran expired (1 jam),
@@ -697,6 +702,61 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           </div>
         </div>
       )}
+
+      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Zap size={15} className="text-orange-500" /> AI Credits</h3>
+        {aiCreditsLoading ? (
+          <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
+        ) : !aiCredits ? (
+          <p className="text-xs text-slate-400">Gagal memuat data pemakaian AI.</p>
+        ) : (
+          <>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <span className="text-lg font-bold tabular-nums">{aiCredits.creditsUsed.toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">/ {aiCredits.quotaMax.toLocaleString("id-ID")}</span></span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden mb-4">
+              <div
+                className={`h-full rounded-full transition-all ${aiCredits.creditsUsed >= aiCredits.quotaMax ? "bg-rose-500" : "bg-orange-500"}`}
+                style={{ width: `${Math.min(100, (aiCredits.creditsUsed / (aiCredits.quotaMax || 1)) * 100)}%` }}
+              />
+            </div>
+
+            <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Bulan ini</p>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-slate-50 rounded-xl p-2.5">
+                <div className="text-[10px] text-slate-400 mb-0.5">AI Actions</div>
+                <div className="text-sm font-semibold tabular-nums">{aiCredits.aiActions.toLocaleString("id-ID")}</div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-2.5">
+                <div className="text-[10px] text-slate-400 mb-0.5">Tokens processed</div>
+                <div className="text-sm font-semibold tabular-nums">{aiCredits.tokensProcessed >= 1_000_000 ? `${(aiCredits.tokensProcessed / 1_000_000).toFixed(1)}M` : `${(aiCredits.tokensProcessed / 1000).toFixed(1)}K`}</div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-2.5">
+                <div className="text-[10px] text-slate-400 mb-0.5">Estimasi biaya AI</div>
+                <div className="text-sm font-semibold tabular-nums">Rp{aiCredits.estimatedCostIdr.toLocaleString("id-ID")}</div>
+              </div>
+            </div>
+
+            {aiCredits.breakdown.length > 0 && (
+              <>
+                <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Top AI usage</p>
+                <div className="space-y-2">
+                  {aiCredits.breakdown.map((b) => (
+                    <div key={b.category} className="flex items-center gap-2">
+                      <span className="text-xs text-slate-600 w-28 shrink-0 truncate">{b.label.id}</span>
+                      <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-orange-400" style={{ width: `${b.pct}%` }} />
+                      </div>
+                      <span className="text-xs text-slate-400 w-9 text-right shrink-0">{b.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <p className="text-[10px] text-slate-300 mt-3">Estimasi biaya & token dihitung dari rata-rata pemakaian nyata per fitur, bukan token exact per panggilan.</p>
+          </>
+        )}
+      </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
         <div className="flex items-center justify-between mb-2"><h3 className="font-semibold text-sm">Tahap pipeline</h3><button onClick={addStage} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={13} /> tambah tahap</button></div>
