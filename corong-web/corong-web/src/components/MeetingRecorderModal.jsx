@@ -97,10 +97,15 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
         },
       });
       chunksRef.current = [];
-      // Bitrate dinaikin ke 96kbps (dari default yang suka lebih rendah) - detail
-      // suara pelan/jauh lebih kejaga, ga ilang gara-gara kompresi kasar. Masih
-      // aman soal ukuran file (25 menit rekaman ~18MB, di bawah limit Whisper 25MB).
-      const mr = new MediaRecorder(stream, { audioBitsPerSecond: 96000 });
+      // BITRATE FIX (15 Sep 2026, keluhan Nando: upload rekaman lama) - 96kbps
+      // (dinaikin sebelumnya biar suara pelan/jauh gak ilang) bikin file 20
+      // menit ~13.7MB, kerasa lama di-upload pas koneksi lapangan lagi jelek.
+      // Diturunin ke 48kbps - file jadi ~setengahnya (20 menit ~6.9MB, upload
+      // ~2x lebih cepat), tapi Opus (codec WebM audio) didesain khusus buat
+      // suara ngomong jadi kualitasnya masih terjaga wajar buat kebanyakan
+      // kondisi - cuma suara yang BENERAN pelan/jauh yang sedikit lebih
+      // beresiko kurang jelas dibanding 96kbps. Trade-off ini disetujui Nando.
+      const mr = new MediaRecorder(stream, { audioBitsPerSecond: 48000 });
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorderRef.current = mr;
       mr.start();
