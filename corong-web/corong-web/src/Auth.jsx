@@ -452,13 +452,18 @@ const SECURITY_OFFSETS = [0, 34, 14, 42, 22];
 //    ulang di daftar Professional (biar gak dobel/rancu).
 // 2. Generate Leads AI: "4x/bulan" (sesuai batas terbaru di generate-leads.ts,
 //    6 Sep 2026 - sebelumnya "1x/minggu").
+// FIX (15 Sep 2026, permintaan Nando) - "Rapihin Data" (weekly-cleanup-check)
+// dipindah dari Standard ke Professional. Fitur ini ngirim saran & nunggu
+// konfirmasi "ya"/"gak" lewat Bot Telegram, yang emang Professional+ doang
+// (telegram-webhook nge-block semua pesan dari user non-Professional) -
+// sebelumnya dicatet sebagai fitur Standard padahal Standard gak bisa
+// benar-benar makein (gak akan pernah bisa balikin "ya").
 const STANDARD_FEATURES = [
   { id: "Kelola Leads — kartu per perusahaan", en: "Manage Leads — card per company" },
   { id: "Smart Import", en: "Smart Import" },
   { id: "Vector Memory ringan (Nexto inget catatan lama yang relevan)", en: "Light Vector Memory (Nexto recalls relevant old notes)" },
   { id: "Recycle Bin", en: "Recycle Bin" },
   { id: "Deteksi Duplikat", en: "Duplicate Detection" },
-  { id: "Rapihin Data", en: "Data Cleanup" },
   { id: "Nex — Komunitas Sesama Sales", en: "Nex — Sales Community" },
   { id: "Daily Digest (rekomendasi harian)", en: "Daily Digest (daily recommendations)" },
 ];
@@ -466,6 +471,7 @@ const STANDARD_FEATURES = [
 const PROFESSIONAL_FEATURES = [
   { id: "Semua fitur Standard", en: "Everything in Standard" },
   { id: "Bot Telegram (edit CRM, progress harian, jadwal visit)", en: "Telegram Bot (edit CRM, daily progress, visit scheduling)" },
+  { id: "Rapihin Data (via Bot Telegram)", en: "Data Cleanup (via Telegram Bot)" },
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
   { id: "Generate Leads", en: "Generate Leads" },
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },
