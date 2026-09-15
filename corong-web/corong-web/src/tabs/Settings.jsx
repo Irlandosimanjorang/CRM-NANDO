@@ -819,12 +819,12 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           Sambungin agent AI luar (misal Grok Bot dari xAI) ke data CRM Anda lewat protokol MCP - agent bisa baca lead, update stage,
           dan tambah catatan progress atas nama akun Anda, tanpa perlu login pakai email/password.
         </p>
-        {myLevel < 2 ? (
+        {myLevel < 1 ? (
           <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
             <div className="text-sm">
-              <div className="font-medium text-violet-900">Integrasi MCP itu fitur Professional</div>
-              <div className="text-xs text-violet-700 mt-0.5">Upgrade ke Professional buat bisa generate API key & sambungin agent AI luar.</div>
+              <div className="font-medium text-violet-900">Integrasi MCP itu fitur Standard ke atas</div>
+              <div className="text-xs text-violet-700 mt-0.5">Upgrade ke Standard buat bisa generate API key & sambungin agent AI luar.</div>
             </div>
           </div>
         ) : (

@@ -123,7 +123,7 @@ function GrokBotMcpContent({ lang, setLang }) {
             <a href="/" className="flex items-center gap-1.5 rounded-2xl bg-orange-600 px-5 py-3 text-[14px] font-semibold text-white shadow-[0_15px_35px_-12px_rgba(249,115,22,0.55)] hover:bg-orange-700">
               {tr("Aktifkan di Pengaturan", "Enable it in Settings")} <ArrowRight size={15} />
             </a>
-            <span className="text-[12.5px] text-slate-500">{tr("Fitur Professional & Enterprise", "Professional & Enterprise feature")}</span>
+            <span className="text-[12.5px] text-slate-500">{tr("Fitur Standard, Professional & Enterprise", "Standard, Professional & Enterprise feature")}</span>
           </div>
 
           {/* Mockup percakapan - konten mockup SENGAJA tetap Bahasa Indonesia
@@ -247,7 +247,7 @@ function GrokBotMcpContent({ lang, setLang }) {
       <section className="border-t border-white/[0.06] px-5 py-16 text-center sm:px-7 sm:py-20 lg:px-10">
         <h2 className="text-2xl font-bold sm:text-3xl">{tr("Siap sambungin Grok Bot ke Nexto?", "Ready to connect Grok Bot to Nexto?")}</h2>
         <p className="mx-auto mt-3 max-w-md text-[13.5px] text-slate-400">
-          {tr("Tersedia buat paket Professional & Enterprise. Generate API key-nya dari Pengaturan, sambungin, langsung jalan.", "Available on the Professional & Enterprise plans. Generate the API key from Settings, connect it, and you're running.")}
+          {tr("Tersedia buat paket Standard, Professional & Enterprise. Generate API key-nya dari Pengaturan, sambungin, langsung jalan.", "Available on the Standard, Professional & Enterprise plans. Generate the API key from Settings, connect it, and you're running.")}
         </p>
         <a href="/" className="mt-7 inline-flex items-center gap-1.5 rounded-2xl bg-orange-600 px-6 py-3.5 text-[14px] font-semibold text-white shadow-[0_15px_35px_-12px_rgba(249,115,22,0.55)] hover:bg-orange-700">
           {tr("Buka Nexto", "Open Nexto")} <ArrowRight size={15} />
