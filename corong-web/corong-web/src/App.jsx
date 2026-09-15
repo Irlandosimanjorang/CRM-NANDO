@@ -587,7 +587,11 @@ export default function App() {
   // Tab yang gak disebutin di sini otomatis level 0 (Free).
   const TAB_MIN_LEVEL = {
     settings: 1,
-    generateleads: 2, deal: 2, visitfollowup: 2, kompetitor: 2, advisor: 2,
+    // visitfollowup diturunin ke Standard (16 Sep 2026, permintaan Nando) -
+    // isinya (Meeting Prep) sekarang fitur Standard. Fitur Professional+ di
+    // dalam tab ini (Rekam Meeting, GPS Check-in Enterprise) tetep di-gate
+    // sendiri-sendiri di dalam VisitFollowup.jsx, bukan lewat lock tab ini.
+    generateleads: 2, deal: 2, visitfollowup: 1, kompetitor: 2, advisor: 2,
   };
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];

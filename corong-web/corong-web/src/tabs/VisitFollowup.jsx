@@ -586,7 +586,12 @@ function dateStr(y, m, d) {
 }
 
 function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
-  const isProfessional = myLevel >= 2;
+  // TIER FIX (16 Sep 2026, permintaan Nando): "Poin Diskusi (AI)" (Meeting
+  // Prep) sekarang fitur Standard ke atas, BUKAN Professional ke atas lagi -
+  // limitnya (10x/bulan) udah disamain ke semua plan berbayar di backend
+  // suggest-visit-points. Rename dari isProfessional ke canMeetingPrep biar
+  // gak nyesatin (myLevel>=1 = Standard, bukan Professional).
+  const canMeetingPrep = myLevel >= 1;
   // BUG FIX (11 Sep 2026): tab di-discard browser/OS (pindah app lain di HP,
   // balik lagi) bikin React kehilangan SEMUA state - modal-nya emang udah
   // otomatis kebuka lagi (lihat getOpenModal("visit") di VisitView), TAPI
@@ -672,12 +677,12 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
                 <button
                   type="button"
                   onClick={suggestPoints}
-                  disabled={!sel || suggesting || !isProfessional}
-                  title={!isProfessional ? "Khusus paket Professional ke atas" : undefined}
+                  disabled={!sel || suggesting || !canMeetingPrep}
+                  title={!canMeetingPrep ? "Khusus paket Standard ke atas" : undefined}
                   className="text-[11px] font-medium text-violet-700 hover:underline disabled:opacity-50 flex items-center gap-1"
                 >
-                  {suggesting ? <Loader2 size={11} className="animate-spin" /> : !isProfessional ? <Lock size={11} /> : <Sparkles size={11} />}
-                  {suggesting ? "Nyiapin..." : !isProfessional ? "Professional" : "Siapin Poin"}
+                  {suggesting ? <Loader2 size={11} className="animate-spin" /> : !canMeetingPrep ? <Lock size={11} /> : <Sparkles size={11} />}
+                  {suggesting ? "Nyiapin..." : !canMeetingPrep ? "Standard" : "Siapin Poin"}
                 </button>
               </div>
               {suggestError && <p className="mt-2 text-[11px] text-rose-500">{suggestError}</p>}
@@ -800,7 +805,16 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
           <button onClick={() => setView("calendar")} className={`text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${view === "calendar" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}><Calendar size={13} /> Kalender</button>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setRecording(true)} className="flex items-center gap-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm px-3 py-2 rounded-xl font-medium"><Mic size={15} /> Rekam Meeting</button>
+          {/* TIER FIX (16 Sep 2026): tab Visit & Follow-up dibuka ke Standard
+              (buat Meeting Prep), tapi Rekam Meeting otomatis TETEP
+              Professional ke atas - backend transcribe-meeting juga masih
+              nge-gate myPlanLevel < 2, jadi tombol ini disembunyiin biar
+              Standard gak mancing error 403 pas diklik. */}
+          {myLevel >= 2 ? (
+            <button onClick={() => setRecording(true)} className="flex items-center gap-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm px-3 py-2 rounded-xl font-medium"><Mic size={15} /> Rekam Meeting</button>
+          ) : (
+            <button disabled title="Khusus paket Professional ke atas" className="flex items-center gap-1.5 border border-slate-200 text-slate-300 text-sm px-3 py-2 rounded-xl font-medium cursor-not-allowed"><Lock size={13} /> Rekam Meeting</button>
+          )}
           <button onClick={() => { setAdd(true); saveOpenModal("visit", {}); }} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah visit</button>
         </div>
       </div>
