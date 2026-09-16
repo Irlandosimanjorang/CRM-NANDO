@@ -93,14 +93,23 @@ export default function Dashboard({
   // Stages" - satu sumber warna biar dua-duanya nyambung visualnya.
   const DONUT_COLORS = ["#f97316", "#6d5dfc", "#3b82f6", "#10b981"];
 
+  // BUG FIX (audit 16 Sep 2026): time/title sebelumnya ngecek `l.visit_date`
+  // ADA-GAKNYA doang, bukan `sameDay(l.visit_date)` - padahal lead bisa
+  // masuk list ini murni gara-gara punya next_action, dengan visit_date yang
+  // tanggalnya jauh ke depan (atau udah lewat). Akibatnya lead kayak gitu
+  // kelabelin "Hari ini · Visit - [nama]" padahal gak ada kunjungan hari
+  // ini sama sekali - nyasarin prioritas kerja user.
   const todayTasks = useMemo(() => {
     const items = leads.filter(l => l.next_action || sameDay(l.visit_date)).slice(0, 4);
-    return items.map((l, i) => ({
-      lead: l,
-      time: l.visit_date ? "Hari ini" : i === 0 ? "Prioritas" : "Follow-up",
-      title: l.visit_date ? `Visit - ${l.name}` : String(l.next_action || "Follow-up lead"),
-      sub: l.city || l.key_person || "Lead aktif",
-    }));
+    return items.map((l, i) => {
+      const visitToday = sameDay(l.visit_date);
+      return {
+        lead: l,
+        time: visitToday ? "Hari ini" : i === 0 ? "Prioritas" : "Follow-up",
+        title: visitToday ? `Visit - ${l.name}` : String(l.next_action || "Follow-up lead"),
+        sub: l.city || l.key_person || "Lead aktif",
+      };
+    });
   }, [leads]);
 
   // BUG FIX (audit 16 Sep 2026): sebelumnya gak nyaring tanggal - kunjungan
