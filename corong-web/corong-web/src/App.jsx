@@ -821,9 +821,16 @@ export default function App() {
         {/* DESKTOP TOPBAR */}
         <header className="hidden md:flex sticky top-0 z-20 h-[64px] items-center justify-between border-b border-slate-200/60 bg-white/78 px-6 lg:px-8 backdrop-blur-2xl">
           <div className="flex items-center gap-3">
-            {/* "Sales Workspace" + breadcrumb "Workspace /" dihapus (16 Sep
-                2026, permintaan Nando) - tinggal nama tab aktif doang. */}
-            <div className="text-[15px] font-semibold text-slate-800">{NAV.find((n) => n.key === effectiveTab)?.label}</div>
+            {/* Dibalikin persis kayak sebelumnya (16 Sep 2026, permintaan
+                Nando) - sempet dihapus terus header-nya keliatan sepi/kosong. */}
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-500">Sales Workspace</div>
+              <div className="mt-0.5 flex items-center gap-2 text-[13px] font-medium text-slate-400">
+                <span>Workspace</span>
+                <span className="text-slate-300">/</span>
+                <span className="text-slate-700">{NAV.find((n) => n.key === effectiveTab)?.label}</span>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
