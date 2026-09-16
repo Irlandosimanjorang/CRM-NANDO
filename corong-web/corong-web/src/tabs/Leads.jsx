@@ -906,6 +906,14 @@ export default function Leads({
       )
     );
 
+  // BUG FIX (audit 16 Sep 2026): sebelumnya page cuma di-reset pas filter
+  // ganti - kalau lead-nya sendiri yang berkurang (dihapus/dipindah stage)
+  // sementara lagi di halaman terakhir, page bisa nyangkut lebih besar dari
+  // totalPages yang baru, jadi kelihatan halaman kosong padahal masih ada
+  // lead di halaman sebelumnya.
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
 
   const pageItems =
     useMemo(() => {

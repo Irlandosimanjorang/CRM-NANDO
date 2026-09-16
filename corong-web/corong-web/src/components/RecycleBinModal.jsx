@@ -14,7 +14,7 @@ export default function RecycleBinModal({ onClose, onChanged }) {
 
   const load = async () => {
     try { setItems(await db.getDeletedLeads()); }
-    catch (e) { alert("Gagal muat: " + e.message); }
+    catch (e) { alert("Gagal muat: " + e.message); setItems([]); }
   };
   useEffect(() => { load(); }, []);
 

@@ -79,6 +79,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
   const matches = !lead && q.trim() ? (leads || []).filter((l) => l.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
 
   const startRecording = async () => {
+    let stream;
     try {
       // Setting audio khusus buat nangkep suara jarak agak jauh/pelan lebih baik:
       // - autoGainControl: browser otomatis "naikin volume" suara yang pelan/jauh
@@ -87,7 +88,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       //   speaker HP sendiri biar ga kedengeran balik di mic), TAPI algoritmanya
       //   suka salah nebak suara jarak jauh/pelan sebagai "noise" terus diredam.
       //   Buat rekam meeting (bukan panggilan 2 arah), fitur ini ga perlu & malah ngerugiin.
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: false,
           noiseSuppression: true,
@@ -127,6 +128,11 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
         });
       }, 1000);
     } catch (e) {
+      // Kalau getUserMedia sukses tapi MediaRecorder gagal dibuat (browser
+      // gak dukung opsi codec/bitrate-nya), stream yang udah kebuka tadi
+      // harus ditutup manual - kalau enggak, lampu mic HP nyala terus
+      // padahal gak lagi ngerekam apa-apa.
+      stream?.getTracks().forEach((t) => t.stop());
       alert("Gagal akses mic. Pastikan izin mikrofon diaktifkan di browser/HP Anda.");
     }
   };
