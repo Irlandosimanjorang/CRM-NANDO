@@ -179,23 +179,23 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       return;
     }
     setBusy(true); setMsg("");
-    // DETACH DARI KONEKSI KLIEN (16 Sep 2026) - backend sekarang cuma
-    // ngasih tau "udah mulai" (job_id) terus LANGSUNG balik respons, proses
-    // pencarian yang lama jalan di background server (lewat
-    // EdgeRuntime.waitUntil), gak nunggu koneksi browser ini tetep hidup.
-    // Jadi hasil AKHIRNYA (sukses/gagal) HARUS ditunggu lewat polling
-    // (pollJob), bukan dari respons await ini - respons ini cuma konfirmasi
-    // "mulai jalan", bukan hasil final.
+    // Backend nunggu SELURUH pencarian selesai sebelum balikin respons
+    // (percobaan detach via EdgeRuntime.waitUntil dicoba lalu dibatalin -
+    // gak ke-dukung di runtime ini). pollJob() tetap dijalanin sebagai
+    // JARING PENGAMAN TAMPILAN: kalau tab INI sendiri ke-reload/reset di
+    // tengah nunggu (misal Chrome discard tab background), begitu komponen
+    // ke-mount ulang dia bakal nemu job "running" ini lewat
+    // checkResumableJob() dan lanjut nunjukin status yang bener dari DB.
     pollJob();
     try {
-      await db.generateLeads({ keyword, province, targetRole, productSold, companyScale, targetType });
-      // Sengaja BUSY DIBIARIN TRUE di sini - pollJob() yang bakal matiin
-      // busy begitu status job beneran done/failed, walau tab ini ke-reload
-      // di tengah jalan sekalipun (lihat checkResumableJob di atas).
+      const res = await db.generateLeads({ keyword, province, targetRole, productSold, companyScale, targetType });
+      stopPolling();
+      const successMsg = `✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`;
+      setMsg(successMsg);
+      onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
+      load(true);
+      setBusy(false);
     } catch (e) {
-      // Gagal DI SINI artinya gagal cepet SEBELUM job sempet dibikin (belum
-      // login, plan gak cukup, kuota abis) - job belum ada, jadi polling
-      // gak akan nemu apa-apa. Aman langsung tampilin error & matiin busy.
       stopPolling();
       setMsg("Gagal: " + e.message);
       onNotify?.(`Generate Leads gagal: ${e.message}`, "error");
