@@ -386,8 +386,11 @@ export default function Dashboard({
               <button key={item.id} onClick={() => onOpenLead?.(item.lead)} className="w-full flex items-start gap-2.5 rounded-xl px-2 py-2.5 text-left hover:bg-slate-50">
                 <div className={cn("h-5 w-5 mt-0.5 rounded-md border flex items-center justify-center shrink-0", i === 0 ? "bg-orange-600 border-orange-600 text-white" : "border-slate-300 text-transparent")}><CheckCircle2 size={12} /></div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[11px] font-semibold text-slate-800">{item.title}</div>
-                  <div className="truncate text-[9px] text-slate-400 flex items-center gap-1 mt-0.5"><Clock3 size={9} />{item.meta}</div>
+                  {/* Judul tugas sebelumnya `truncate` (dipaksa 1 baris,
+                      kepotong rapi tanpa "..." kalau kepanjangan sampe
+                      nabrak tepi kartu). Sekarang boleh wrap 2 baris. */}
+                  <div className="text-[11px] font-semibold text-slate-800 leading-snug line-clamp-2">{item.title}</div>
+                  <div className="text-[9px] text-slate-400 flex items-center gap-1 mt-1"><Clock3 size={9} className="shrink-0" /><span className="truncate">{item.meta}</span></div>
                 </div>
               </button>
             )) : <div className="py-8 text-center text-[11px] text-slate-400">Belum ada tugas.</div>}
