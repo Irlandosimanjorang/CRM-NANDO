@@ -175,6 +175,9 @@ export async function decideApproval(id, approve) {
   if (approve && reqRow.action_type === "delete_lead" && reqRow.payload?.lead_id) {
     await deleteLead(reqRow.payload.lead_id);
   }
+  if (approve && reqRow.action_type === "delete_competitor" && reqRow.payload?.competitor_id) {
+    await deleteCompetitor(reqRow.payload.competitor_id);
+  }
   const uid = (await supabase.auth.getUser()).data.user.id;
   const { error } = await supabase
     .from("approval_requests")
