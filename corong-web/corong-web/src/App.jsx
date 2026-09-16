@@ -632,25 +632,18 @@ export default function App() {
           --nexto-line: rgba(148,163,184,.18);
           --nexto-orange: #f97316;
           --nexto-purple: #6d5dfc;
-          background: #f7f8fc;
-        }
-        /* Panel "melayang" (16 Sep 2026, permintaan Nando, niru referensi
-           Cortex) - sidebar & panel konten gak nempel mentok ke tepi layar
-           lagi di desktop, ada jarak yang nampilin backdrop gelap + glow
-           oranye/violet Nexto di celahnya. Cuma di desktop (md+) - mobile
-           dibiarin apa adanya (sidebar disembunyiin, bottom-nav udah
-           "melayang" dari sononya). */
-        @media (min-width: 768px) {
-          .nexto-app {
-            background:
-              radial-gradient(circle at 12% 0%, rgba(109,93,252,.16), transparent 38%),
-              radial-gradient(circle at 88% 100%, rgba(249,115,22,.12), transparent 42%),
-              #0b0f1a;
-          }
-        }
           --nexto-blue: #3b82f6;
           --nexto-sidebar: #0b1220;
           --nexto-panel: rgba(255,255,255,.82);
+          /* Panel "melayang" (16 Sep 2026, permintaan Nando, niru referensi
+             Cortex) - sidebar & panel konten gak nempel mentok ke tepi layar
+             lagi di desktop, ada jarak tipis di celahnya. Warna dasarnya
+             TETEP #f7f8fc (warna dasar Nexto yang udah ada), cuma ditambah
+             glow oranye/violet samar - bukan diganti gelap kayak referensi. */
+          background:
+            radial-gradient(circle at 12% 0%, rgba(109,93,252,.06), transparent 38%),
+            radial-gradient(circle at 88% 100%, rgba(249,115,22,.05), transparent 42%),
+            #f7f8fc;
         }
         .nexto-app .nexto-grid {
           background-image:
@@ -830,11 +823,11 @@ export default function App() {
       </aside>
 
       {/* Panel konten juga jadi "melayang" di desktop (16 Sep 2026) - margin
-          252px kiri (228px lebar sidebar + 12px gap awal + 12px gap kedua),
-          plus jarak atas/kanan/bawah biar backdrop gelap+glow keliatan
-          keliling. bg-[#f7f8fc] eksplisit di sini (bukan cuma warisan dari
-          .nexto-app) soalnya sekarang .nexto-app-nya sendiri gelap di
-          desktop - div ini yang jadi "kertas putih"-nya. */}
+          252px kiri (228px lebar sidebar + 12px inset kiri sidebar + 12px
+          gap ke panel ini), plus jarak atas/kanan/bawah biar backdrop
+          .nexto-app (tetep terang, cuma ditambah glow tipis) keliatan di
+          celahnya. bg-[#f7f8fc] eksplisit di sini biar warnanya presisi
+          sama walau nanti .nexto-app di-tweak lagi. */}
       <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow bg-[#f7f8fc] md:ml-[252px] md:mr-3 md:my-3 md:rounded-[28px] md:overflow-hidden md:shadow-[0_30px_70px_-35px_rgba(0,0,0,.5)]">
         <div className="nexto-grid pointer-events-none absolute inset-x-0 top-0 h-72 opacity-70" />
 

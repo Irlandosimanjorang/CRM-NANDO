@@ -96,7 +96,16 @@ export default function Dashboard({
     }));
   }, [leads]);
 
-  const upcoming = useMemo(() => leads.filter(l => l.visit_date).sort((a,b) => String(a.visit_date).localeCompare(String(b.visit_date))).slice(0,3), [leads]);
+  // BUG FIX (audit 16 Sep 2026): sebelumnya gak nyaring tanggal - kunjungan
+  // yang udah LEWAT bisa ikut nongol di sini dan kelabelin "Terjadwal" di
+  // kartu Upcoming Tasks, padahal harusnya cuma yang hari ini/ke depan.
+  const upcoming = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return leads
+      .filter(l => l.visit_date && l.visit_date >= todayStr)
+      .sort((a, b) => String(a.visit_date).localeCompare(String(b.visit_date)))
+      .slice(0, 3);
+  }, [leads]);
 
   // Tren 6 bulan terakhir: leads baru (dari created_at) vs deal menang (dari
   // deal_date/created_at dealTransactions) - dipakai buat area chart, biar
@@ -245,14 +254,14 @@ export default function Dashboard({
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={34} outerRadius={54} paddingAngle={3} strokeWidth={0}>
-                      {donutData.map((d, i) => <Cell key={d.name} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                      {donutData.map((d, i) => <Cell key={`${d.name}-${i}`} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
               </div>
               <div className="space-y-1.5 flex-1 min-w-0">
                 {donutData.map((d, i) => (
-                  <div key={d.name} className="flex items-center justify-between gap-2 text-[11px]">
+                  <div key={`${d.name}-${i}`} className="flex items-center justify-between gap-2 text-[11px]">
                     <span className="flex items-center gap-1.5 text-slate-600 truncate"><span className="h-2 w-2 rounded-full shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />{d.name}</span>
                     <span className="font-bold text-slate-800 shrink-0">{d.value}</span>
                   </div>
