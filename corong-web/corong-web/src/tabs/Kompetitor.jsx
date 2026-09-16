@@ -9,6 +9,15 @@ export default function Kompetitor({ competitors, onChanged }) {
   // BUG FIX (6 Sep 2026): restore abis app di-reload paksa - CUMA buat yang
   // lagi EDIT kompetitor yang udah ada (punya id beneran), bukan form "+
   // Kompetitor" kosong (gak ada isinya yang berharga buat direstore).
+  //
+  // BUG FIX (16 Sep 2026, ketauan pas audit) - dependency array sebelumnya
+  // `[competitors.length > 0]` ngevaluasi `competitors.length` LANGSUNG pas
+  // render (bukan di dalam effect) - kalau prop `competitors` kebetulan
+  // undefined/null pas render (bukan cuma array kosong), ini crash seluruh
+  // tab dengan TypeError sebelum sempet masuk ke pengecekan `!competitors`
+  // di baris pertama effect. Sekarang dependency-nya `competitors` langsung
+  // (referensinya, dicek null-safe di dalam effect), bukan ekspresi yang
+  // bisa meledak duluan.
   useEffect(() => {
     if (!competitors || competitors.length === 0) return;
     const saved = getOpenModal("competitor");
@@ -18,7 +27,7 @@ export default function Kompetitor({ competitors, onChanged }) {
       else clearOpenModal("competitor");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competitors.length > 0]);
+  }, [competitors]);
   return (
     <div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">

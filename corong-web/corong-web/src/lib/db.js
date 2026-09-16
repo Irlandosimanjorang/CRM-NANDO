@@ -851,13 +851,21 @@ export async function checkIn({ lead_id, lead_name, latitude, longitude, distanc
   return data;
 }
 
+// BUG FIX (16 Sep 2026, ketauan pas audit): sebelumnya pake
+// `new Date().toISOString().slice(0,10)` (tanggal UTC) buat batas
+// "hari ini", terus boundary jam-nya (`T00:00:00`/`T23:59:59.999`) dikirim
+// TANPA offset - PostgREST/Postgres nganggep string tanpa offset itu UTC,
+// bukan WIB. Efeknya check-in yang dilakuin jam 00:00-06:59 WIB (masih UTC
+// hari SEBELUMNYA) ketinggalan gak kehitung "hari ini" sampe jam 7 pagi WIB.
+// Sekarang tanggalnya pake todayISO() (WIB/lokal) dan boundary-nya eksplisit
+// dikasih offset +07:00 biar gak salah tafsir jadi UTC.
 export async function getTodayCheckedInLeadIds() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const { data, error } = await supabase
     .from("visit_checkins")
     .select("lead_id")
-    .gte("checked_in_at", `${today}T00:00:00`)
-    .lt("checked_in_at", `${today}T23:59:59.999`);
+    .gte("checked_in_at", `${today}T00:00:00+07:00`)
+    .lt("checked_in_at", `${today}T23:59:59.999+07:00`);
   if (error) throw error;
   return (data || []).map((r) => r.lead_id);
 }
@@ -1053,8 +1061,14 @@ export async function getAdvisorHistory() {
 // Ambil hasil digest HARI INI doang - dipake buat kartu "Good Morning" di
 // Dashboard. Balikin null kalau belum ada (misal weekend, atau cron belum
 // jalan) - biar UI bisa nampilin state kosong yang jelas, bukan error.
+// BUG FIX (16 Sep 2026, ketauan pas audit): sebelumnya pake tanggal UTC
+// (`new Date().toISOString().slice(0,10)`) buat nyari `run_date`, padahal
+// `run_date` disimpen sama daily-digest berdasarkan tanggal WIB - buat user
+// yang buka Dashboard jam 00:00-06:59 WIB, tanggal UTC-nya masih "kemarin"
+// jadi kartu "Good Morning" salah nampilin (null/kosong) padahal digest
+// hari ini udah ada. Disamain ke todayISO() (WIB/lokal).
 export async function getTodayAdvisorRun() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const { data, error } = await supabase.from("advisor_runs").select("*").eq("run_date", today).maybeSingle();
   if (error) throw error;
   return data || null;

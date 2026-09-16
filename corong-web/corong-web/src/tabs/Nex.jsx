@@ -157,9 +157,12 @@ function PostCard({ post, myId, onDeleted }) {
   };
 
   const share = async () => {
+    if (busy) return;
+    setBusy(true);
     setShareCount((c) => c + 1);
     try { await db.incrementCommunityShare(post.id); }
     catch (e) { setShareCount((c) => c - 1); }
+    finally { setBusy(false); }
   };
 
   const toggleComments = async () => {
@@ -183,14 +186,17 @@ function PostCard({ post, myId, onDeleted }) {
 
   const delReply = async (id) => {
     if (!window.confirm("Hapus komentar ini?")) return;
+    setBusy(true);
     try { await db.deleteReply(id); setReplies((prev) => prev.filter((r) => r.id !== id)); }
     catch (e) { alert("Gagal hapus: " + e.message); }
+    finally { setBusy(false); }
   };
 
   const delPost = async () => {
     if (!window.confirm("Hapus post ini?")) return;
+    setBusy(true);
     try { await db.deleteCommunityPost(post.id); onDeleted(post.id); }
-    catch (e) { alert("Gagal hapus: " + e.message); }
+    catch (e) { alert("Gagal hapus: " + e.message); setBusy(false); }
   };
 
   return (
@@ -202,7 +208,7 @@ function PostCard({ post, myId, onDeleted }) {
           <div className="text-[11px] text-slate-400">{fmtWhen(post.created_at)}</div>
         </div>
         {post.user_id === myId && (
-          <button onClick={delPost} className="text-slate-300 hover:text-rose-500 shrink-0"><Trash2 size={15} /></button>
+          <button onClick={delPost} disabled={busy} className="text-slate-300 hover:text-rose-500 shrink-0 disabled:opacity-50"><Trash2 size={15} /></button>
         )}
       </div>
 
@@ -223,7 +229,7 @@ function PostCard({ post, myId, onDeleted }) {
         <button onClick={toggleComments} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-xl hover:bg-slate-50">
           <MessageCircle size={15} /> {post.replyCount > 0 ? post.replyCount : ""} Komentar
         </button>
-        <button onClick={share} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-xl hover:bg-slate-50">
+        <button onClick={share} disabled={busy} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-xl hover:bg-slate-50 disabled:opacity-50">
           <Share2 size={15} /> {shareCount > 0 ? shareCount : ""} Bagikan
         </button>
       </div>
@@ -243,7 +249,7 @@ function PostCard({ post, myId, onDeleted }) {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-semibold text-slate-700">{r.author_name}</span>
                       {r.user_id === myId && (
-                        <button onClick={() => delReply(r.id)} className="text-slate-300 hover:text-rose-500"><X size={12} /></button>
+                        <button onClick={() => delReply(r.id)} disabled={busy} className="text-slate-300 hover:text-rose-500 disabled:opacity-50"><X size={12} /></button>
                       )}
                     </div>
                     <p className="text-xs text-slate-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{r.body}</p>
