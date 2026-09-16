@@ -1202,13 +1202,14 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
   // sebelumnya badge planInfo cuma keliatan di DALAM popup kartu profil,
   // gak kelihatan di baris avatar utama sidebar). Warna beda dari planInfo
   // (yang dibikin buat kartu putih) karena background trigger ini gelap.
-  const planBadgeDark = org?.plan === "enterprise"
-    ? { label: "Enterprise", cls: "bg-violet-400/15 text-violet-300 ring-1 ring-violet-400/30" }
-    : settings.plan === "premium"
-    ? { label: "Professional", cls: "bg-orange-400/15 text-orange-300 ring-1 ring-orange-400/30" }
-    : settings.plan === "standard"
-    ? { label: "Standard", cls: "bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/30" }
-    : { label: "Free", cls: "bg-white/10 text-slate-400 ring-1 ring-white/10" };
+  // Warna disamain netral putih buat SEMUA tier (16 Sep 2026, permintaan
+  // Nando: "jangan terlalu mencolok... putih biar clean rapih") - sebelumnya
+  // tiap tier punya warna sendiri (violet/orange/sky), kesannya rame di
+  // trigger kecil kayak gini. Sekarang cuma bedain teksnya doang.
+  const planBadgeDark = {
+    label: org?.plan === "enterprise" ? "Enterprise" : settings.plan === "premium" ? "Professional" : settings.plan === "standard" ? "Standard" : "Free",
+    cls: "bg-white/8 text-slate-300 ring-1 ring-white/10",
+  };
 
   return (
     <div className={`relative ${className}`}>
@@ -1223,7 +1224,7 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
                 (16 Sep 2026, permintaan Nando: "hapus aja industrinya ganti
                 dengan bedge plan") - lebih kepake buat cepet liat plan
                 lu tanpa buka popup profil. */}
-            <span className={`inline-block mt-0.5 text-[8.5px] font-bold uppercase tracking-wide rounded-full px-1.5 py-0.5 ${planBadgeDark.cls}`}>{planBadgeDark.label}</span>
+            <span className={`inline-block mt-0.5 text-[7px] font-semibold uppercase tracking-wide rounded-full px-1.5 py-0.5 ${planBadgeDark.cls}`}>{planBadgeDark.label}</span>
           </span>
         </button>
       ) : (
