@@ -47,10 +47,37 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
   const current = history.find((h) => h.run_date === selected);
   const recs = current?.recs || [];
 
+  // Overview (16 Sep 2026, permintaan Nando) - samain sama 3 kartu ringkasan
+  // yang udah ada di email "Nexto Good Morning" (Lead Aktif/Overdue
+  // follow-up/Win rate), sebelumnya tab ini langsung loncat ke daftar
+  // rekomendasi tanpa ringkasan sama sekali.
+  const wonKeys = stages.filter((s) => s.type === "won").map((s) => s.key);
+  const lostKeys = stages.filter((s) => s.type === "lost").map((s) => s.key);
+  const activeLeads = leads.filter((l) => !wonKeys.includes(l.stage_key) && !lostKeys.includes(l.stage_key));
+  const overdueCount = activeLeads.filter((l) => { const ds = daysSince(l.last_contact); return ds === null || ds > 7; }).length;
+  const wonCount = leads.filter((l) => wonKeys.includes(l.stage_key)).length;
+  const lostCount = leads.filter((l) => lostKeys.includes(l.stage_key)).length;
+  const winRate = wonCount + lostCount ? Math.round((wonCount / (wonCount + lostCount)) * 100) : 0;
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-1"><Lightbulb size={20} className="text-orange-500" /><h1 className="text-2xl font-bold tracking-tight">AI Advisor</h1></div>
       <p className="text-sm text-slate-500 mb-4">Rekomendasi lead paling potensial, dikirim otomatis tiap jam 8 pagi ke email Anda. Histori 7 hari terakhir bisa dilihat di sini.</p>
+
+      <div className="grid grid-cols-3 gap-2.5 mb-4">
+        <div className="bg-white border border-slate-100 rounded-2xl p-3.5">
+          <div className="text-[22px] font-black text-slate-900 leading-none">{activeLeads.length}</div>
+          <div className="mt-1 text-[10.5px] font-medium text-slate-400">Lead aktif</div>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-3.5">
+          <div className="text-[22px] font-black text-rose-600 leading-none">{overdueCount}</div>
+          <div className="mt-1 text-[10.5px] font-medium text-slate-400">Overdue follow-up</div>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-3.5">
+          <div className="text-[22px] font-black text-emerald-600 leading-none">{winRate}%</div>
+          <div className="mt-1 text-[10.5px] font-medium text-slate-400">Win rate</div>
+        </div>
+      </div>
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-slate-400 py-10 justify-center"><Loader2 size={16} className="animate-spin" /> Memuat histori…</div>
