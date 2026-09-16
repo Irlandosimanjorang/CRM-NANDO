@@ -176,18 +176,26 @@ export default function Dashboard({
   const pipelineCounts = pipeline.map(s => leads.filter(l => l.stage_key === s.key).length);
   const maxPipeline = Math.max(1, ...pipelineCounts);
 
-  // Donut "Prioritas Lead" (16 Sep 2026) - SUMBER DATA DIGANTI (audit sama
-  // Nando): awalnya narik dari field `priority` manual, ternyata 0 dari 40
-  // lead Nando yang keisi (gak pernah dipake tim). Diganti ke
-  // `customer_state.interest` - field yang SAMA (High/Medium/Low), tapi
-  // diisi OTOMATIS sama AI (fitur "Customer State", dari analisis progress
-  // notes) - beneran kepake, 11 dari 40 lead Nando udah punya nilainya.
-  const PRIORITY_COLORS = { high: "#e11d48", medium: "#d97706", low: "#64748b" };
+  // Donut "Kedalaman Riwayat Lead" (16 Sep 2026, ganti lagi dari "Minat Lead
+  // AI") - customer_state.interest cuma keisi buat lead yang udah dianalisis
+  // AI (Professional+), jadi Standard gak pernah liat apa-apa di kartu ini.
+  // Diganti ke jumlah progress notes per lead (0 / 1-2 / 3+) - data yang
+  // SELALU ada apapun plan-nya (progressLog udah include di getLeads()),
+  // dan langsung nunjukin lead mana yang histori-nya masih tipis (AI-nya
+  // "belum kenal baik" lead itu - Draft Follow-up/Poin Diskusi/dst mikir
+  // dari histori catatan ini).
+  const PRIORITY_COLORS = { rich: "#10b981", some: "#d97706", empty: "#94a3b8" };
   const priorityData = useMemo(() => {
     const active = leads.filter(l => !stats.wonKeys.includes(l.stage_key));
-    const order = [["high", "High"], ["medium", "Medium"], ["low", "Low"]];
+    const bucket = (l) => {
+      const n = (l.progressLog || l.progress_notes || []).length;
+      if (n >= 3) return "rich";
+      if (n >= 1) return "some";
+      return "empty";
+    };
+    const order = [["rich", "3+ catatan"], ["some", "1-2 catatan"], ["empty", "Belum ada catatan"]];
     return order
-      .map(([key, label]) => ({ key, name: label, value: active.filter(l => (l.customer_state?.interest || "").toLowerCase() === key).length, color: PRIORITY_COLORS[key] }))
+      .map(([key, label]) => ({ key, name: label, value: active.filter(l => bucket(l) === key).length, color: PRIORITY_COLORS[key] }))
       .filter(d => d.value > 0);
   }, [leads, stats.wonKeys]);
 
@@ -321,7 +329,7 @@ export default function Dashboard({
           </Card>
 
           <Card className="p-5">
-            <SectionTitle title="Minat Lead (AI)" action="Lihat" onClick={() => onGo?.("leads")} />
+            <SectionTitle title="Kedalaman Riwayat Lead" action="Lihat" onClick={() => onGo?.("leads")} />
             {priorityData.length > 0 ? (
               <div className="flex items-center gap-4">
                 <div className="h-28 w-28 shrink-0">
