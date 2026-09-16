@@ -200,19 +200,30 @@ export default function Dashboard({
   }, [leads, stats.wonKeys]);
 
   // "Kualitas Memori Nexto" (16 Sep 2026) - ringkasan tambahan di bawah
-  // donut Kedalaman Riwayat, biar kartunya sekalian ngasih angka total
-  // (bukan cuma sebaran per-lead). Total catatan = seberapa banyak yang
-  // udah "diinget" Vector Memory; rata-rata per lead aktif = seberapa
-  // dalam AI kenal lead-lead yang lagi jalan.
+  // donut Kedalaman Riwayat. Total catatan = seberapa banyak yang udah
+  // "diinget" Vector Memory; rata-rata per lead aktif = seberapa dalam AI
+  // kenal lead-lead yang lagi jalan.
+  //
+  // REVISI (audit sama Nando): angka ke-3 awalnya "% lead dengan riwayat" -
+  // ternyata cuma NGULANG info yang udah keliatan di donut di atas (donut
+  // udah nunjukin brapa yang "Belum ada catatan"). Diganti ke dimensi BARU:
+  // bukan seberapa BANYAK catatannya, tapi seberapa BASI - lead aktif yang
+  // udah 14+ hari gak di-update (last_contact). Lead bisa aja punya banyak
+  // catatan tapi yang terakhir udah lama - AI-nya "kenal" tapi infonya usang.
   const memoryQuality = useMemo(() => {
     const active = leads.filter(l => !stats.wonKeys.includes(l.stage_key));
     const totalNotes = leads.reduce((sum, l) => sum + (l.progressLog || l.progress_notes || []).length, 0);
-    const activeWithNotes = active.filter(l => (l.progressLog || l.progress_notes || []).length > 0).length;
     const avgPerActive = active.length ? (totalNotes / active.length) : 0;
+    const staleCount = active.filter(l => {
+      if (!l.last_contact) return true;
+      const days = Math.floor((Date.now() - new Date(`${l.last_contact}T00:00:00`).getTime()) / 86400000);
+      return days >= 14;
+    }).length;
     return {
       totalNotes,
       avgPerActive: avgPerActive.toFixed(1),
-      coveragePct: active.length ? Math.round((activeWithNotes / active.length) * 100) : 0,
+      staleCount,
+      stalePct: active.length ? Math.round((staleCount / active.length) * 100) : 0,
     };
   }, [leads, stats.wonKeys]);
 
@@ -389,10 +400,10 @@ export default function Dashboard({
               </div>
               <div className="mt-3">
                 <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-                  <span>Lead aktif dengan riwayat</span>
-                  <span className="font-bold text-slate-700">{memoryQuality.coveragePct}%</span>
+                  <span>Belum di-update 14 hari+</span>
+                  <span className={cn("font-bold", memoryQuality.stalePct >= 40 ? "text-rose-600" : "text-slate-700")}>{memoryQuality.staleCount} lead ({memoryQuality.stalePct}%)</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${memoryQuality.coveragePct}%` }} /></div>
+                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className={cn("h-full rounded-full", memoryQuality.stalePct >= 40 ? "bg-rose-500" : "bg-amber-500")} style={{ width: `${memoryQuality.stalePct}%` }} /></div>
               </div>
             </div>
           </Card>
