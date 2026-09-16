@@ -800,24 +800,15 @@ export default function App() {
           })}
         </nav>
 
-        {/* Profil + tombol Keluar dipindah ke footer sidebar (16 Sep 2026,
-            permintaan Nando) - pola app pada umumnya (Slack/Notion dst).
-            Klik avatar buka kartu profil (ProfileAvatar udah py sendiri),
-            tombol Keluar ditaro nempel di baris yang sama. */}
+        {/* Profil di footer sidebar (16 Sep 2026, permintaan Nando) - pola
+            app pada umumnya (Slack/Notion dst). Klik di mana aja di baris
+            ini (bukan cuma lingkaran avatar - lihat prop expanded di
+            ProfileAvatar) buka popup profil, dan tombol "Keluar" ada DI
+            DALAM popup itu (di bawah "Edit Profil"), bukan tombol terpisah
+            di sidebar lagi. */}
         <div className="px-3 pb-3 pt-2 border-t border-white/[0.06]">
-          <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2.5 py-2.5">
-            <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={36} align="left" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[12px] font-semibold text-white">{settings.community_display_name || "Akun Anda"}</div>
-              <div className="truncate text-[9.5px] text-slate-500">{session?.user?.email || ""}</div>
-            </div>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              title="Keluar"
-              className="shrink-0 p-2 rounded-xl text-slate-500 hover:bg-white/[0.06] hover:text-white transition-colors"
-            >
-              <LogOut size={15} />
-            </button>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.05] px-2.5 py-2.5 transition-colors">
+            <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={36} align="left" expanded />
           </div>
         </div>
       </aside>
@@ -1093,7 +1084,7 @@ function IndustryDemoSwitcher({ org, onSwitched }) {
 // z-index di dalamnya, jadi kartu ini gak akan pernah bisa nutupin konten
 // utama di sebelahnya walau z-index-nya udah paling tinggi sekalipun.
 // Portal ngebypass masalah itu total - kartu ini render langsung di root document.
-function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "right", className = "" }) {
+function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "right", className = "", expanded = false }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [jobTitle, setJobTitle] = useState(settings.job_title || "");
@@ -1175,6 +1166,10 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
                 </div>
               )}
               <button onClick={() => setEditing(true)} className="w-full mt-4 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 font-medium transition-colors">Edit Profil</button>
+              {/* Keluar dipindah ke DALAM kartu profil ini (16 Sep 2026,
+                  permintaan Nando) - sebelumnya tombol terpisah di footer
+                  sidebar, sekarang jadi bagian dari popup profil. */}
+              <button onClick={() => supabase.auth.signOut()} className="w-full mt-2 text-xs text-rose-600 hover:bg-rose-50 rounded-xl py-2.5 font-medium transition-colors flex items-center justify-center gap-1.5"><LogOut size={13} /> Keluar</button>
             </div>
           </>
         ) : (
@@ -1204,11 +1199,30 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
     </>
   );
 
+  // "expanded" (16 Sep 2026) - dipake di footer sidebar biar SELURUH baris
+  // (avatar + nama + email) jadi 1 tombol yang buka popup profil, bukan
+  // cuma lingkaran avatar-nya doang. Default (expanded=false) tetep persis
+  // kayak sebelumnya (cuma lingkaran avatar) - dipake di tempat lain
+  // (topbar mobile, dst).
+  const avatarImg = settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial;
+
   return (
     <div className={`relative ${className}`}>
-      <button ref={btnRef} onClick={toggleOpen} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
-        {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
-      </button>
+      {expanded ? (
+        <button ref={btnRef} onClick={toggleOpen} className="w-full flex items-center gap-2.5 text-left">
+          <span className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+            {avatarImg}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[12px] font-semibold text-white">{settings.community_display_name || "Akun Anda"}</span>
+            <span className="block truncate text-[9.5px] text-slate-500">{email}</span>
+          </span>
+        </button>
+      ) : (
+        <button ref={btnRef} onClick={toggleOpen} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+          {avatarImg}
+        </button>
+      )}
       {open && createPortal(card, document.body)}
     </div>
   );
