@@ -1224,7 +1224,13 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[12px] font-semibold text-white">{settings.community_display_name || "Akun Anda"}</span>
-            <span className="block truncate text-[9.5px] text-slate-500">{email}</span>
+            {/* Subtitle diganti dari email jadi "Industri / Jabatan" (16 Sep
+                2026, permintaan Nando) - misal "PVC / Sales". Industri
+                diambil segmen pertama doang dari label lengkap (yang
+                formatnya "X / Y (Z)") biar muat di baris sempit sidebar. */}
+            <span className="block truncate text-[9.5px] text-slate-500">
+              {[org?.industry ? getIndustryTemplate(org.industry).label.split(" / ")[0] : null, settings.job_title].filter(Boolean).join(" / ") || email}
+            </span>
           </span>
         </button>
       ) : (
