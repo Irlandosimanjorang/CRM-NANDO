@@ -732,7 +732,10 @@ export default function App() {
                   <IndustryDemoSwitcher org={org} onSwitched={reload} />
                 ) : (
                   org?.industry && (
-                    <span className="inline-block text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full">
+                    // Warna & ukuran disamain sama badge plan di footer sidebar
+                    // (16 Sep 2026, permintaan Nando) - biar 2 badge ini kerasa
+                    // 1 bahasa visual, bukan 2 gaya beda sendiri-sendiri.
+                    <span className="inline-block text-[7px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 rounded-full px-1.5 py-0.5 truncate max-w-full">
                       {getIndustryTemplate(org.industry).label}
                     </span>
                   )
