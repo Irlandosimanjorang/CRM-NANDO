@@ -199,6 +199,23 @@ export default function Dashboard({
       .filter(d => d.value > 0);
   }, [leads, stats.wonKeys]);
 
+  // "Kualitas Memori Nexto" (16 Sep 2026) - ringkasan tambahan di bawah
+  // donut Kedalaman Riwayat, biar kartunya sekalian ngasih angka total
+  // (bukan cuma sebaran per-lead). Total catatan = seberapa banyak yang
+  // udah "diinget" Vector Memory; rata-rata per lead aktif = seberapa
+  // dalam AI kenal lead-lead yang lagi jalan.
+  const memoryQuality = useMemo(() => {
+    const active = leads.filter(l => !stats.wonKeys.includes(l.stage_key));
+    const totalNotes = leads.reduce((sum, l) => sum + (l.progressLog || l.progress_notes || []).length, 0);
+    const activeWithNotes = active.filter(l => (l.progressLog || l.progress_notes || []).length > 0).length;
+    const avgPerActive = active.length ? (totalNotes / active.length) : 0;
+    return {
+      totalNotes,
+      avgPerActive: avgPerActive.toFixed(1),
+      coveragePct: active.length ? Math.round((activeWithNotes / active.length) * 100) : 0,
+    };
+  }, [leads, stats.wonKeys]);
+
   // "Key Accounts" - lead prioritas tinggi yang belum menang, dilabelin
   // "Aktif" kalau ada next_action/visit hari ini, selain itu "Lead".
   const keyAccounts = useMemo(() => {
@@ -351,8 +368,33 @@ export default function Dashboard({
                 </div>
               </div>
             ) : (
-              <div className="py-6 text-center text-[11px] text-slate-400">Belum ada lead dengan prioritas diisi.</div>
+              <div className="py-6 text-center text-[11px] text-slate-400">Belum ada progress notes tercatat.</div>
             )}
+
+            {/* "Kualitas Memori Nexto" - ringkasan tambahan (16 Sep 2026,
+                permintaan Nando), biar kartu ini gak cuma sebaran per-lead
+                tapi juga angka total seberapa "kenal" AI-nya Nexto sama
+                lead-lead yang lagi jalan. */}
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2.5">Kualitas Memori Nexto</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[20px] font-black text-slate-900 leading-none">{memoryQuality.totalNotes}</div>
+                  <div className="mt-1 text-[10px] text-slate-400">Total catatan diinget</div>
+                </div>
+                <div>
+                  <div className="text-[20px] font-black text-slate-900 leading-none">{memoryQuality.avgPerActive}</div>
+                  <div className="mt-1 text-[10px] text-slate-400">Rata-rata / lead aktif</div>
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+                  <span>Lead aktif dengan riwayat</span>
+                  <span className="font-bold text-slate-700">{memoryQuality.coveragePct}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${memoryQuality.coveragePct}%` }} /></div>
+              </div>
+            </div>
           </Card>
         </div>
 
