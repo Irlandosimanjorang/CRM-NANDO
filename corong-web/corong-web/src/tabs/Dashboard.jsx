@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from "react";
 import {
   Users, MessageCircle, MapPin, Trophy, ArrowRight, Plus,
-  CheckCircle2, Clock3, Target,
+  CheckCircle2, Clock3, Target, ChevronDown,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { NextoRobotHead } from "../Auth";
@@ -142,6 +142,7 @@ export default function Dashboard({
   // rekomendasi AI beneran), makanya bisa beda sama email/tab Advisor yang
   // sama-sama baca advisor_runs. Sekarang beneran narik data yang sama.
   const [advisorRun, setAdvisorRun] = useState(null);
+  const [recsOpen, setRecsOpen] = useState(true);
   useEffect(() => {
     db.getTodayAdvisorRun().then(setAdvisorRun).catch(() => setAdvisorRun(null));
   }, []);
@@ -218,10 +219,24 @@ export default function Dashboard({
                 <p className="mt-1 text-[11px] leading-5 text-slate-400">{aiRecs.length > 1 ? `${aiRecs.length} lead paling potensial buat difollow-up hari ini.` : "Tambahkan lead baru agar AI bisa menemukan prioritas."}</p>
               </div>
             </div>
-            <button onClick={() => onGo?.("advisor")} className="shrink-0 rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka AI Advisor <ArrowRight size={14} /></button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => onGo?.("advisor")} className="rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka AI Advisor <ArrowRight size={14} /></button>
+              {aiRecs.length > 0 && (
+                <button
+                  onClick={() => setRecsOpen((v) => !v)}
+                  aria-expanded={recsOpen}
+                  title={recsOpen ? "Sembunyikan daftar" : "Tampilkan daftar"}
+                  className="h-9 w-9 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center transition-colors"
+                >
+                  <ChevronDown size={16} className={`transition-transform duration-200 ${recsOpen ? "rotate-180" : ""}`} />
+                </button>
+              )}
+            </div>
           </div>
 
-          {aiRecs.length > 0 && (
+          {/* Dropdown (16 Sep 2026, permintaan Nando) - list rekomendasi
+              bisa ditutup/dibuka pakai tombol chevron di atas. */}
+          {aiRecs.length > 0 && recsOpen && (
             <div className="mt-4 pt-4 border-t border-white/10 grid sm:grid-cols-2 gap-x-6 gap-y-2">
               {aiRecs.map((r, i) => (
                 <div key={i} className="flex items-start gap-2 text-[11px] leading-5 min-w-0">
