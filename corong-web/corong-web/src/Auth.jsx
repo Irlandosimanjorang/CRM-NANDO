@@ -3014,7 +3014,7 @@ export default function Auth() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
                   </span>
-                  {tr("Early Bird Registration — daftar sebelum 30 September 2026", "Early Bird Registration — sign up before September 30, 2026")}
+                  {tr("Early Bird Registration — daftar sebelum 15 Oktober 2026", "Early Bird Registration — sign up before October 15, 2026")}
                 </div>
               )}
             </div>
