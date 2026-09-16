@@ -1029,13 +1029,16 @@ function IndustryDemoSwitcher({ org, onSwitched }) {
 
   return (
     <div className="relative">
+      {/* Warna & ukuran disamain sama badge plan/industri lain (16 Sep
+          2026, permintaan Nando) - sebelumnya oranye sendiri, sekarang
+          netral putih biar 1 bahasa visual. */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full transition-colors"
+        className="inline-flex items-center gap-1 text-[7px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 hover:bg-white/[0.12] rounded-full px-1.5 py-0.5 truncate max-w-full transition-colors"
         title="Mode demo - khusus admin, ganti industri buat pitching"
       >
         {current ? getIndustryTemplate(current).label : "Pilih industri"}
-        <span className="text-orange-400/70">▾</span>
+        <span className="text-slate-400">▾</span>
       </button>
       {open && (
         <>
