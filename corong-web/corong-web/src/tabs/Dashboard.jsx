@@ -173,6 +173,27 @@ export default function Dashboard({
         </button>
       </div>
 
+      {/* Rekomendasi AI (Next best action) - dipindah ke paling atas (16 Sep
+          2026, permintaan Nando) biar langsung keliatan begitu buka
+          Dashboard, gak ketutup di paling bawah. !bg-slate-950 pakai
+          modifier "!" (important) - tanpa itu, class bg-white bawaan dari
+          Card() bentrok sama bg-slate-950 di sini dan yang menang urutannya
+          ditentuin Tailwind pas generate CSS (bukan urutan di className),
+          jadi kartunya kemarin keliatan putih padahal harusnya gelap. */}
+      <Card className="!bg-slate-950 overflow-hidden text-white !border-slate-800">
+        <div className="p-5 bg-[radial-gradient(circle_at_85%_10%,rgba(109,93,252,.42),transparent_35%)] flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <NextoRobotHead size={44} />
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-300">NEXTO AI</div>
+              <h2 className="mt-1 text-[16px] font-black tracking-tight">Next best action</h2>
+              <p className="mt-1 text-[11px] leading-5 text-slate-400">{aiLead ? `Prioritaskan follow-up ${aiLead.name}.` : "Tambahkan lead baru agar AI bisa menemukan prioritas."}</p>
+            </div>
+          </div>
+          <button onClick={() => onGo?.("advisor")} className="shrink-0 rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka AI Advisor <ArrowRight size={14} /></button>
+        </div>
+      </Card>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <Kpi icon={Users} value={stats.total} label="Total Leads" trend="↑ aktif" iconClass="bg-orange-50 text-orange-600" />
@@ -288,23 +309,6 @@ export default function Dashboard({
           </div>
         </Card>
       </div>
-
-      {/* Bonus khusus Nexto (gak ada di referensi) - AI copilot, dipertahanin
-          karena udah jadi fitur unggulan Nexto sendiri, ditaro di bawah grid
-          utama biar gak ganggu kemiripan struktur sama referensi. */}
-      <Card className="overflow-hidden bg-slate-950 text-white border-slate-800">
-        <div className="p-5 bg-[radial-gradient(circle_at_85%_10%,rgba(109,93,252,.42),transparent_35%)] flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <NextoRobotHead size={44} />
-            <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-300">NEXTO AI</div>
-              <h2 className="mt-1 text-[16px] font-black tracking-tight">Next best action</h2>
-              <p className="mt-1 text-[11px] leading-5 text-slate-400">{aiLead ? `Prioritaskan follow-up ${aiLead.name}.` : "Tambahkan lead baru agar AI bisa menemukan prioritas."}</p>
-            </div>
-          </div>
-          <button onClick={() => onGo?.("advisor")} className="shrink-0 rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka AI Advisor <ArrowRight size={14} /></button>
-        </div>
-      </Card>
 
       <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-orange-50/50 px-5 py-4 flex items-center gap-3">
         <Target size={18} className="text-orange-500 shrink-0"/>
