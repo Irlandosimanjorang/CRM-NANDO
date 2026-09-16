@@ -471,6 +471,7 @@ const STANDARD_FEATURES = [
   { id: "Rapihin Data", en: "Data Cleanup" },
   { id: "Visit & Follow-up", en: "Visit & Follow-up" },
   { id: "Meeting Prep", en: "Meeting Prep" },
+  { id: "Advisor harian", en: "Daily Advisor" },
 ];
 
 const PROFESSIONAL_FEATURES = [
@@ -481,7 +482,6 @@ const PROFESSIONAL_FEATURES = [
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },
   { id: "Customer State", en: "Customer State" },
   { id: "Outcome Memory", en: "Outcome Memory" },
-  { id: "Advisor harian", en: "Daily Advisor" },
   { id: "Pipeline Review otomatis", en: "Automatic Pipeline Review" },
   { id: "Draft Follow-up (WhatsApp & Email)", en: "Follow-up Drafts (WhatsApp & Email)" },
   { id: "Data Kompetitor", en: "Competitor Data" },

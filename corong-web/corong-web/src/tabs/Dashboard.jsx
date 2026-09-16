@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState } from "react";
 import {
-  Users, MessageCircle, MapPin, Trophy, ArrowRight, Plus,
+  Users, MessageCircle, MapPin, Trophy, ArrowRight,
   CheckCircle2, Clock3, Target, ChevronDown,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -191,14 +191,9 @@ export default function Dashboard({
   return (
     <div className="space-y-5">
       {/* Hero */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">Good morning, {displayName}</h1>
-          <p className="mt-1 text-[13px] text-slate-500">Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
-        </div>
-        <button onClick={() => onGo?.("leads")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-[12px] font-bold text-white shadow-[0_12px_25px_-12px_rgba(15,23,42,.7)] hover:bg-slate-800">
-          <Plus size={16}/> Tambah Lead
-        </button>
+      <div>
+        <h1 className="text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">Good morning, {displayName}</h1>
+        <p className="mt-1 text-[13px] text-slate-500">Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
       </div>
 
       {/* Rekomendasi AI (Next best action) - dipindah ke paling atas (16 Sep

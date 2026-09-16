@@ -591,7 +591,10 @@ export default function App() {
     // isinya (Meeting Prep) sekarang fitur Standard. Fitur Professional+ di
     // dalam tab ini (Rekam Meeting, GPS Check-in Enterprise) tetep di-gate
     // sendiri-sendiri di dalam VisitFollowup.jsx, bukan lewat lock tab ini.
-    generateleads: 2, deal: 2, visitfollowup: 1, kompetitor: 2, advisor: 2,
+    // advisor diturunin ke Standard (16 Sep 2026, permintaan Nando) - daily
+    // digest (backend) emang udah lama ngelayanin Standard+ juga, tab
+    // Advisor-nya doang yang ketinggalan masih di-lock Professional.
+    generateleads: 2, deal: 2, visitfollowup: 1, kompetitor: 2, advisor: 1,
   };
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
