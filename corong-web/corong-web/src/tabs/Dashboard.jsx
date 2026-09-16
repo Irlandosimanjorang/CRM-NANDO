@@ -166,7 +166,20 @@ export default function Dashboard({
 
   const pipelineCounts = pipeline.map(s => leads.filter(l => l.stage_key === s.key).length);
   const maxPipeline = Math.max(1, ...pipelineCounts);
-  const donutData = useMemo(() => pipeline.map((s, i) => ({ name: s.label, value: pipelineCounts[i] || 0 })), [pipeline, pipelineCounts]);
+
+  // Donut diganti dari "Distribusi Pipeline" jadi "Prioritas Lead" (16 Sep
+  // 2026, permintaan Nando) - sebelumnya donut ini nunjukin PERSIS data yang
+  // sama kayak "Pipeline Stages" di sebelahnya (dobel, buang tempat). Info
+  // prioritas lead aktif ini beda & lebih actionable (langsung keliatan
+  // berapa yang high priority butuh perhatian duluan).
+  const PRIORITY_COLORS = { high: "#e11d48", medium: "#d97706", low: "#64748b" };
+  const priorityData = useMemo(() => {
+    const active = leads.filter(l => !stats.wonKeys.includes(l.stage_key));
+    const order = [["high", "High"], ["medium", "Medium"], ["low", "Low"]];
+    return order
+      .map(([key, label]) => ({ key, name: label, value: active.filter(l => (l.priority || "").toLowerCase() === key).length, color: PRIORITY_COLORS[key] }))
+      .filter(d => d.value > 0);
+  }, [leads, stats.wonKeys]);
 
   // "Key Accounts" - lead prioritas tinggi yang belum menang, dilabelin
   // "Aktif" kalau ada next_action/visit hari ini, selain itu "Lead".
@@ -295,26 +308,30 @@ export default function Dashboard({
           </Card>
 
           <Card className="p-5">
-            <SectionTitle title="Distribusi Pipeline" action="Lihat" onClick={() => onGo?.("leads")} />
-            <div className="flex items-center gap-4">
-              <div className="h-28 w-28 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={34} outerRadius={54} paddingAngle={3} strokeWidth={0}>
-                      {donutData.map((d, i) => <Cell key={`${d.name}-${i}`} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+            <SectionTitle title="Prioritas Lead" action="Lihat" onClick={() => onGo?.("leads")} />
+            {priorityData.length > 0 ? (
+              <div className="flex items-center gap-4">
+                <div className="h-28 w-28 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={priorityData} dataKey="value" nameKey="name" innerRadius={34} outerRadius={54} paddingAngle={3} strokeWidth={0}>
+                        {priorityData.map((d) => <Cell key={d.key} fill={d.color} />)}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  {priorityData.map((d) => (
+                    <div key={d.key} className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="flex items-center gap-1.5 text-slate-600 truncate"><span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />{d.name}</span>
+                      <span className="font-bold text-slate-800 shrink-0">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1.5 flex-1 min-w-0">
-                {donutData.map((d, i) => (
-                  <div key={`${d.name}-${i}`} className="flex items-center justify-between gap-2 text-[11px]">
-                    <span className="flex items-center gap-1.5 text-slate-600 truncate"><span className="h-2 w-2 rounded-full shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />{d.name}</span>
-                    <span className="font-bold text-slate-800 shrink-0">{d.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            ) : (
+              <div className="py-6 text-center text-[11px] text-slate-400">Belum ada lead dengan prioritas diisi.</div>
+            )}
           </Card>
         </div>
 
