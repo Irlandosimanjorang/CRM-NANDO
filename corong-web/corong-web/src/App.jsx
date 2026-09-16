@@ -5,9 +5,7 @@ import * as db from "./lib/db";
 import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPos } from "./lib/uiPersist";
 import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
 import Auth from "./Auth";
-import EngineHeaderMini from "./components/EngineHeaderMini";
 import PreviewLock from "./components/PreviewLock";
-import { todayISO } from "./lib/helpers";
 import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // Dashboard/Leads/Settings tetep IMPORT STATIS - hampir semua user langsung
 // buka salah satu dari ini begitu login, jadi lazy-load-nya cuma nambah
@@ -599,26 +597,6 @@ export default function App() {
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
 
-  // Statistik ringkas buat EngineHeaderMini - logika sama kayak stats di
-  // Dashboard.jsx (activeKeys/won dari stages), dihitung ulang di sini biar
-  // header (global, tampil di semua tab) gak perlu depend ke Dashboard.
-  // BUG FIX: sebelumnya ini useMemo() - tapi baris ini ada SETELAH beberapa
-  // early return (!isConfigured/!authReady/!session/mfa.checking) di atas.
-  // Hook gak boleh dipanggil kondisional - begitu user login (lolos semua
-  // early return itu), jumlah hook yang kepanggil jadi beda dari render
-  // sebelumnya (pas masih di halaman login), bikin React crash ("Rendered
-  // more hooks than during the previous render") persis pas transisi ke
-  // Dashboard. Diganti jadi variabel biasa (bukan hook) - aman dipanggil
-  // kondisional, cuma kehilangan memoization (gak masalah, komputasinya ringan).
-  const headerStatsWon = stageList.filter((x) => x.type === "won").map((x) => x.key);
-  const headerStatsActiveKeys = stageList.filter((x, i) => x.type === "normal" && i !== 0).map((x) => x.key);
-  const headerStats = {
-    total: leads.length,
-    active: leads.filter((c) => headerStatsActiveKeys.includes(c.stage_key)).length,
-    followup: leads.filter((c) => c.next_action && c.next_action.trim()).length,
-    deals: leads.filter((c) => headerStatsWon.includes(c.stage_key)).length,
-    visitsToday: leads.filter((c) => c.visit_date === todayISO()).length,
-  };
 
   const effectiveTab = tab;
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
@@ -847,8 +825,6 @@ export default function App() {
                 2026, permintaan Nando) - tinggal nama tab aktif doang. */}
             <div className="text-[15px] font-semibold text-slate-800">{NAV.find((n) => n.key === effectiveTab)?.label}</div>
           </div>
-
-          {effectiveTab === "dashboard" && <EngineHeaderMini stats={headerStats} />}
 
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/75 px-3.5 py-2 text-[10px] text-slate-400 shadow-sm">
