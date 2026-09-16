@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { NextoRobotHead } from "../Auth";
+import TeamLeaderboard from "../components/TeamLeaderboard";
 import * as db from "../lib/db";
 import { todayISO } from "../lib/helpers";
 
@@ -458,6 +459,8 @@ export default function Dashboard({
           </div>
         </Card>
       </div>
+
+      <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} />
 
       <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-orange-50/50 px-5 py-4 flex items-center gap-3">
         <Target size={18} className="text-orange-500 shrink-0"/>
