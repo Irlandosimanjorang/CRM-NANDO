@@ -1105,12 +1105,23 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
     ? { label: "Standard", cls: "bg-sky-100 text-sky-700" }
     : { label: "Free", cls: "bg-slate-100 text-slate-500" };
 
+  // BUG FIX (16 Sep 2026, ketauan pas trigger-nya dipindah ke footer
+  // sidebar): sebelumnya SELALU buka ke BAWAH tombol (rect.bottom + 10).
+  // Aman selama trigger-nya di header/topbar (deket atas layar), tapi begitu
+  // trigger-nya di paling BAWAH sidebar, kartu ke-dorong ke luar viewport
+  // (invisible) - yang keliatan cuma overlay gelapnya doang. Sekarang cek
+  // dulu ruang di bawah cukup apa nggak, kalau enggak buka ke ATAS tombol.
+  const CARD_EST_HEIGHT = 280;
   const toggleOpen = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
       const rawLeft = align === "left" ? rect.left : rect.right - CARD_WIDTH;
       const clampedLeft = Math.max(12, Math.min(rawLeft, window.innerWidth - CARD_WIDTH - 12));
-      setPos({ top: rect.bottom + 10, left: clampedLeft });
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow < CARD_EST_HEIGHT
+        ? Math.max(12, rect.top - CARD_EST_HEIGHT - 10)
+        : rect.bottom + 10;
+      setPos({ top, left: clampedLeft });
     }
     setOpen((v) => !v);
   };
