@@ -624,7 +624,7 @@ export default function App() {
   const navItems = settings?.is_platform_admin ? [...NAV, ADMIN_NAV_ITEM] : NAV;
 
   return (
-    <div className="nexto-app min-h-screen bg-[#f7f8fc] text-slate-900 flex overflow-x-hidden">
+    <div className="nexto-app min-h-screen text-slate-900 flex overflow-x-hidden">
       <style>{`
         .nexto-app {
           --nexto-ink: #0b1020;
@@ -632,6 +632,22 @@ export default function App() {
           --nexto-line: rgba(148,163,184,.18);
           --nexto-orange: #f97316;
           --nexto-purple: #6d5dfc;
+          background: #f7f8fc;
+        }
+        /* Panel "melayang" (16 Sep 2026, permintaan Nando, niru referensi
+           Cortex) - sidebar & panel konten gak nempel mentok ke tepi layar
+           lagi di desktop, ada jarak yang nampilin backdrop gelap + glow
+           oranye/violet Nexto di celahnya. Cuma di desktop (md+) - mobile
+           dibiarin apa adanya (sidebar disembunyiin, bottom-nav udah
+           "melayang" dari sononya). */
+        @media (min-width: 768px) {
+          .nexto-app {
+            background:
+              radial-gradient(circle at 12% 0%, rgba(109,93,252,.16), transparent 38%),
+              radial-gradient(circle at 88% 100%, rgba(249,115,22,.12), transparent 42%),
+              #0b0f1a;
+          }
+        }
           --nexto-blue: #3b82f6;
           --nexto-sidebar: #0b1220;
           --nexto-panel: rgba(255,255,255,.82);
@@ -723,8 +739,10 @@ export default function App() {
         </div>
       )}
 
-      {/* DESKTOP SIDEBAR */}
-      <aside className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-0 left-0 h-screen z-30 text-white border-r border-white/[0.06]">
+      {/* DESKTOP SIDEBAR - panel melayang (16 Sep 2026), rounded penuh +
+          inset dari tepi layar, ganti border-r doang jadi border keliling
+          biar konsisten sama bentuk panel yang gak nempel ke sisi manapun. */}
+      <aside className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-[28px] overflow-hidden border border-white/[0.07] shadow-[0_30px_70px_-35px_rgba(0,0,0,.7)]">
         <div className="px-4 pt-5 pb-4">
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3.5 shadow-[0_14px_35px_-25px_rgba(0,0,0,.8)]">
             <div className="flex items-center gap-2.5">
@@ -811,7 +829,13 @@ export default function App() {
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow md:ml-[228px]">
+      {/* Panel konten juga jadi "melayang" di desktop (16 Sep 2026) - margin
+          252px kiri (228px lebar sidebar + 12px gap awal + 12px gap kedua),
+          plus jarak atas/kanan/bawah biar backdrop gelap+glow keliatan
+          keliling. bg-[#f7f8fc] eksplisit di sini (bukan cuma warisan dari
+          .nexto-app) soalnya sekarang .nexto-app-nya sendiri gelap di
+          desktop - div ini yang jadi "kertas putih"-nya. */}
+      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow bg-[#f7f8fc] md:ml-[252px] md:mr-3 md:my-3 md:rounded-[28px] md:overflow-hidden md:shadow-[0_30px_70px_-35px_rgba(0,0,0,.5)]">
         <div className="nexto-grid pointer-events-none absolute inset-x-0 top-0 h-72 opacity-70" />
 
         {/* MOBILE TOPBAR */}
