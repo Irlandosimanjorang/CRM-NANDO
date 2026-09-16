@@ -8,7 +8,7 @@ import DeleteAccountModal from "../components/DeleteAccountModal";
 import PreviewLock from "../components/PreviewLock";
 import SupportChatWidget from "../components/SupportChatWidget";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
-import { PLAN_LEVEL, TIER_LABEL } from "../lib/plans";
+import { PLAN_LEVEL, TIER_LABEL, MAYAR_PAYMENT_LINK } from "../lib/plans";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
@@ -565,15 +565,34 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : (
           <>
-            <p className="text-xs text-slate-500 mb-3">
-              Paket: <b>{isEnterprise ? "Enterprise" : (TIER_LABEL[settings.plan] || "Free")}</b>
-              {isEnterprise && <> · {members.length}/{org?.member_limit || 1} anggota</>}
-              {(() => {
-                const expiresAt = isEnterprise ? org?.plan_expires_at : settings.plan_expires_at;
-                if (!expiresAt) return null;
-                const tanggal = new Date(expiresAt).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", year: "numeric" });
-                return <> · Berlaku sampai <b>{tanggal}</b></>;
-              })()}
+            <p className="text-xs text-slate-500 mb-3 flex flex-wrap items-center gap-x-1 gap-y-1.5">
+              <span>
+                Paket: <b>{isEnterprise ? "Enterprise" : (TIER_LABEL[settings.plan] || "Free")}</b>
+                {isEnterprise && <> · {members.length}/{org?.member_limit || 1} anggota</>}
+                {(() => {
+                  const expiresAt = isEnterprise ? org?.plan_expires_at : settings.plan_expires_at;
+                  if (!expiresAt) return null;
+                  const tanggal = new Date(expiresAt).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", year: "numeric" });
+                  return <> · Berlaku sampai <b>{tanggal}</b></>;
+                })()}
+              </span>
+              {/* Tombol upgrade (16 Sep 2026, permintaan Nando: "kenapa gak
+                  ada tombol upgrade... setidaknya ada di tab setting") -
+                  sebelumnya SATU-SATUNYA jalan upgrade cuma banner di
+                  Dashboard yang ke-gate `myLevel < 1`, jadi begitu user udah
+                  Standard/Professional, gak ada tombol upgrade sama sekali
+                  di manapun. Sekarang selalu ada di sini selama belum
+                  Enterprise (tier paling atas). */}
+              {!isEnterprise && (
+                <a
+                  href={MAYAR_PAYMENT_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-full px-2.5 py-1 transition-colors"
+                >
+                  {myLevel < 1 ? "Upgrade ke Standard" : myLevel < 2 ? "Upgrade ke Professional" : "Upgrade ke Enterprise"} →
+                </a>
+              )}
             </p>
             <div className="space-y-1.5 mb-3">
               {members.map((m) => (
