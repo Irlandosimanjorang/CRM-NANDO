@@ -394,10 +394,7 @@ function MiniKpi({
       type="button"
       onClick={onClick}
       className={`
-        shrink-0
-        min-w-[76px]
-        sm:min-w-0
-        flex-1
+        w-full
         h-[32px]
         px-2
         rounded-md
@@ -1345,7 +1342,7 @@ export default function Leads({
           COMPACT KPI ROW
       ===================================================== */}
 
-      <div className="flex gap-1 overflow-x-auto pb-0.5 mb-1 scrollbar-thin">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 mb-1">
 
         <MiniKpi
           icon={Users}
