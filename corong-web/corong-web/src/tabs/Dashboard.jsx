@@ -142,7 +142,7 @@ export default function Dashboard({
   // rekomendasi AI beneran), makanya bisa beda sama email/tab Advisor yang
   // sama-sama baca advisor_runs. Sekarang beneran narik data yang sama.
   const [advisorRun, setAdvisorRun] = useState(null);
-  const [recsOpen, setRecsOpen] = useState(true);
+  const [recsOpen, setRecsOpen] = useState(false);
   useEffect(() => {
     db.getTodayAdvisorRun().then(setAdvisorRun).catch(() => setAdvisorRun(null));
   }, []);
