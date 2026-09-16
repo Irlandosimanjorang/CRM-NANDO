@@ -199,42 +199,14 @@ export default function Dashboard({
       .filter(d => d.value > 0);
   }, [leads, stats.wonKeys]);
 
-  // "Kualitas Memori Nexto" (16 Sep 2026, versi skor komposit - permintaan
-  // Nando: "beneran berapa persen status memorinya, ada parameter") - satu
-  // angka % ringkasan, dihitung rata-rata dari 3 parameter lead AKTIF:
-  // 1. Cakupan   - berapa % udah punya minimal 1 progress note sama sekali
-  // 2. Kedalaman - berapa % udah "kaya" riwayatnya (3+ catatan)
-  // 3. Kesegaran - berapa % masih fresh (last_contact <14 hari)
-  // Skor 100% = semua lead aktif punya riwayat, riwayatnya dalam, DAN masih
-  // update - baru bisa dibilang "memori Nexto lagi sehat".
-  const memoryQuality = useMemo(() => {
-    const active = leads.filter(l => !stats.wonKeys.includes(l.stage_key));
-    const totalNotes = leads.reduce((sum, l) => sum + (l.progressLog || l.progress_notes || []).length, 0);
-    const n = active.length;
-    if (!n) return { totalNotes, avgPerActive: "0.0", healthPct: 0, params: [] };
-
-    const noteCount = (l) => (l.progressLog || l.progress_notes || []).length;
-    const isStale = (l) => {
-      if (!l.last_contact) return true;
-      const days = Math.floor((Date.now() - new Date(`${l.last_contact}T00:00:00`).getTime()) / 86400000);
-      return days >= 14;
-    };
-    const coveragePct = Math.round((active.filter(l => noteCount(l) > 0).length / n) * 100);
-    const depthPct = Math.round((active.filter(l => noteCount(l) >= 3).length / n) * 100);
-    const freshPct = Math.round((active.filter(l => !isStale(l)).length / n) * 100);
-    const healthPct = Math.round((coveragePct + depthPct + freshPct) / 3);
-
-    return {
-      totalNotes,
-      avgPerActive: (totalNotes / n).toFixed(1),
-      healthPct,
-      params: [
-        { label: "Cakupan (punya riwayat)", pct: coveragePct },
-        { label: "Kedalaman (3+ catatan)", pct: depthPct },
-        { label: "Kesegaran (update <14 hari)", pct: freshPct },
-      ],
-    };
-  }, [leads, stats.wonKeys]);
+  // "Kualitas Memori Nexto" (16 Sep 2026, REVISI FINAL - permintaan Nando:
+  // "itu bukan cuma angka, tapi Nexto bisa menilai sendiri") - BUKAN rumus
+  // matematis di frontend lagi. Skornya sekarang beneran DINILAI AI
+  // (assessMemoryHealth di daily-digest.ts, jalan otomatis tiap pagi bareng
+  // Daily Digest - lihat stats.memory_score/memory_label di advisor_runs).
+  // Ditampilin apa adanya, tanpa breakdown parameter di bawahnya.
+  const memoryScore = advisorRun?.stats?.memory_score;
+  const memoryLabel = advisorRun?.stats?.memory_label;
 
   // "Key Accounts" - lead prioritas tinggi yang belum menang, dilabelin
   // "Aktif" kalau ada next_action/visit hari ini, selain itu "Lead".
@@ -391,34 +363,25 @@ export default function Dashboard({
               <div className="py-6 text-center text-[11px] text-slate-400">Belum ada progress notes tercatat.</div>
             )}
 
-            {/* "Kualitas Memori Nexto" - skor komposit % (16 Sep 2026,
-                permintaan Nando: "beneran berapa persen status memorinya,
-                ada parameter") - 1 angka besar + rincian 3 parameter yang
-                nyusunnya, biar jelas dari mana asal angkanya. */}
+            {/* "Kualitas Memori Nexto" - REVISI FINAL (16 Sep 2026, permintaan
+                Nando: "itu bukan cuma angka, tapi Nexto bisa menilai
+                sendiri") - skornya beneran dinilai AI (assessMemoryHealth di
+                daily-digest.ts), ditampilin apa adanya tanpa breakdown
+                parameter/penjelasan di bawahnya. */}
             <div className="mt-4 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Skor Kualitas Memori</div>
-                <span className={cn(
-                  "text-[20px] font-black leading-none",
-                  memoryQuality.healthPct >= 70 ? "text-emerald-600" : memoryQuality.healthPct >= 40 ? "text-amber-600" : "text-rose-600"
-                )}>{memoryQuality.healthPct}%</span>
-              </div>
-              <div className="space-y-2.5">
-                {memoryQuality.params.map((p) => (
-                  <div key={p.label}>
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-                      <span>{p.label}</span>
-                      <span className="font-semibold text-slate-700">{p.pct}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div className={cn("h-full rounded-full", p.pct >= 70 ? "bg-emerald-500" : p.pct >= 40 ? "bg-amber-500" : "bg-rose-500")} style={{ width: `${p.pct}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-                <span>{memoryQuality.totalNotes} total catatan diinget</span>
-                <span>{memoryQuality.avgPerActive} catatan / lead aktif</span>
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Skor Kualitas Memori (AI)</div>
+                {typeof memoryScore === "number" ? (
+                  <span className="flex items-baseline gap-1.5">
+                    <span className={cn(
+                      "text-[20px] font-black leading-none",
+                      memoryScore >= 70 ? "text-emerald-600" : memoryScore >= 40 ? "text-amber-600" : "text-rose-600"
+                    )}>{memoryScore}%</span>
+                    {memoryLabel && <span className="text-[10px] font-semibold text-slate-400">{memoryLabel}</span>}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-slate-400">Belum dinilai</span>
+                )}
               </div>
             </div>
           </Card>
