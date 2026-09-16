@@ -283,7 +283,10 @@ export default function Dashboard({
       {/* Layout 3 kolom niru struktur referensi "Cortex" (Analytics / CRM
           Sidebar / Upcoming Tasks) - datanya Nexto asli, warnanya ngikutin
           brand Nexto (oranye utama, violet cuma buat penanda AI). */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_1fr_1fr] gap-4">
+      {/* Rasio kolom dilebarin di kolom 1 (Analytics/chart) - Key Accounts &
+          Upcoming Tasks dipersempit (16 Sep 2026, permintaan Nando) biar
+          chart tren punya ruang lebih lega. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1.8fr_1fr_0.9fr] gap-4">
         {/* Kolom 1: Analytics - area chart tren + donut distribusi pipeline */}
         <div className="space-y-4">
           <Card className="p-5">
