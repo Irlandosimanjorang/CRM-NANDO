@@ -162,6 +162,14 @@ export default function Dashboard({
     db.getTodayAdvisorRun().then(setAdvisorRun).catch(() => setAdvisorRun(null));
   }, []);
 
+  // Skor Kualitas Memori - fetch TERPISAH dari advisorRun (16 Sep 2026,
+  // permintaan Nando: mesin AI sendiri, cron sendiri, gak nebeng jadwal AI
+  // Advisor - lihat edge function memory-health-check).
+  const [memoryHealth, setMemoryHealth] = useState(null);
+  useEffect(() => {
+    db.getMemoryHealth().then(setMemoryHealth).catch(() => setMemoryHealth(null));
+  }, []);
+
   // 5 rekomendasi hari ini (nama perusahaan + aksi) dari advisor_runs -
   // fallback ke tebakan lama kalau belum ada run hari ini (misal weekend).
   const aiRecs = useMemo(() => {
@@ -199,14 +207,12 @@ export default function Dashboard({
       .filter(d => d.value > 0);
   }, [leads, stats.wonKeys]);
 
-  // "Kualitas Memori Nexto" (16 Sep 2026, REVISI FINAL - permintaan Nando:
-  // "itu bukan cuma angka, tapi Nexto bisa menilai sendiri") - BUKAN rumus
-  // matematis di frontend lagi. Skornya sekarang beneran DINILAI AI
-  // (assessMemoryHealth di daily-digest.ts, jalan otomatis tiap pagi bareng
-  // Daily Digest - lihat stats.memory_score/memory_label di advisor_runs).
-  // Ditampilin apa adanya, tanpa breakdown parameter di bawahnya.
-  const memoryScore = advisorRun?.stats?.memory_score;
-  const memoryLabel = advisorRun?.stats?.memory_label;
+  // "Kualitas Memori Nexto" - REVISI FINAL (16 Sep 2026): skornya beneran
+  // dinilai AI (bukan rumus), DAN dijalanin sebagai mesin sendiri (edge
+  // function + cron memory-health-check TERPISAH dari daily-digest) - baca
+  // dari memoryHealth (state di atas), BUKAN dari advisorRun lagi.
+  const memoryScore = memoryHealth?.score;
+  const memoryLabel = memoryHealth?.label;
 
   // "Key Accounts" - lead prioritas tinggi yang belum menang, dilabelin
   // "Aktif" kalau ada next_action/visit hari ini, selain itu "Lead".

@@ -1009,6 +1009,18 @@ export async function getTodayAdvisorRun() {
   return data || null;
 }
 
+// "Skor Kualitas Memori" (16 Sep 2026) - SENGAJA dipisah dari advisor_runs/
+// daily-digest (permintaan Nando: mesin AI sendiri, cron sendiri, gak
+// nebeng jadwal AI Advisor). Dihitung org-wide oleh edge function
+// memory-health-check (cron sendiri, lihat jobname nexto-memory-health-check),
+// disimpen 1 baris per org di org_memory_health.
+export async function getMemoryHealth() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("org_memory_health").select("*").eq("org_id", orgId).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
 // "Pipeline Review" - laporan kesehatan pipeline yang di-generate OTOMATIS
 // 2x/bulan lewat cron (edge function pipeline-review), bukan on-demand.
 // Cuma nampilin yang PALING BARU di Dashboard.
