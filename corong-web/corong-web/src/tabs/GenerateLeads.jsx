@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp, Info, X } from "lucide-react";
+import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp, Info, X, ChevronDown } from "lucide-react";
 import * as db from "../lib/db";
 import { getGenerateLeadsExample } from "../lib/industryTemplates";
 
@@ -71,13 +71,35 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisMonth: 0, quotaMax: 4, nextAvailableAt: null });
   const [importingId, setImportingId] = useState(null);
   const pollRef = useRef(null);
+  // Riwayat hasil sekarang dikelompokin per tanggal generate & DEFAULT
+  // KETUTUP (dropdown/accordion) - biar pas pertama buka tab gak langsung
+  // ketumpuk puluhan kartu dari generate-generate lama, tinggal klik
+  // tanggalnya buat buka batch itu. Nyimpen run_key mana aja yang lagi
+  // dibuka (kosong = semua ketutup).
+  const [openBatches, setOpenBatches] = useState(() => new Set());
+  const toggleBatch = (key) => {
+    setOpenBatches((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   const defaultStageKey = stages?.[0]?.key || "";
 
-  const load = () => {
+  const load = (openLatest = false) => {
     setLoadingResults(true);
     Promise.all([db.getGeneratedLeads(), db.getLeadGenCooldown()])
-      .then(([r, cd]) => { setResults(r); setCooldown(cd); })
+      .then(([r, cd]) => {
+        setResults(r);
+        setCooldown(cd);
+        // Abis generate baru selesai, langsung buka dropdown batch
+        // terbarunya (results udah diurutin run_started_at DESC dari
+        // backend) - biar user gak harus klik manual buat liat hasilnya.
+        if (openLatest && r[0]?.run_id) {
+          setOpenBatches((prev) => new Set(prev).add(r[0].run_id));
+        }
+      })
       .catch(() => {})
       .finally(() => setLoadingResults(false));
   };
@@ -108,7 +130,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         const successMsg = `✅ Ketemu ${job.result_count ?? 0} calon lead baru, cek daftar di bawah.`;
         setMsg(successMsg);
         onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
-        load();
+        load(true);
         return;
       }
       if (job.status === "failed") {
@@ -164,7 +186,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       const successMsg = `✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`;
       setMsg(successMsg);
       onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
-      load();
+      load(true);
     } catch (e) {
       stopPolling();
       setMsg("Gagal: " + e.message);
@@ -291,90 +313,106 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         ) : results.length === 0 ? (
           <div className="text-sm text-slate-400 rounded-[28px] p-8 text-center border border-white/5" style={{ background: "#05060b" }}>Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
         ) : (
-          <div className="rounded-[32px] p-4 sm:p-6 space-y-4" style={{ background: "#05060b", backgroundImage: "radial-gradient(60% 40% at 20% 0%, rgba(99,102,241,0.10), transparent 70%)" }}>
+          <div className="rounded-[32px] p-4 sm:p-6 space-y-3" style={{ background: "#05060b", backgroundImage: "radial-gradient(60% 40% at 20% 0%, rgba(99,102,241,0.10), transparent 70%)" }}>
             {(() => {
-              // Kelompokin hasil per-batch generate (run_id) - backend udah
-              // ngurutin run_started_at DESC lalu score DESC, di sini kita
-              // cuma nentuin kapan nampilin header pemisah batch baru.
-              const runCounts = {};
+              // Kelompokin hasil per-batch generate (run_id) jadi dropdown
+              // per tanggal - backend udah ngurutin run_started_at DESC lalu
+              // score DESC, di sini tinggal dipecah jadi array batch.
+              const batches = [];
+              const batchByKey = {};
               for (const r of results) {
-                const k = r.run_id || "legacy";
-                runCounts[k] = (runCounts[k] || 0) + 1;
+                const key = r.run_id || "legacy";
+                if (!batchByKey[key]) {
+                  const headerLabel = r.run_started_at
+                    ? new Date(r.run_started_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                    : "Generate sebelumnya";
+                  batchByKey[key] = { key, headerLabel, items: [] };
+                  batches.push(batchByKey[key]);
+                }
+                batchByKey[key].items.push(r);
               }
-              let lastRunKey = null;
-              return results.map((r) => {
-                const imported = r.status === "imported";
-                const t = tierStyle(r.score ?? 50);
-                const runKey = r.run_id || "legacy";
-                const showHeader = runKey !== lastRunKey;
-                lastRunKey = runKey;
-                const headerLabel = r.run_started_at
-                  ? new Date(r.run_started_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                  : "Generate sebelumnya";
+
+              return batches.map((batch, bi) => {
+                const isOpen = openBatches.has(batch.key);
+                const importedCount = batch.items.filter((r) => r.status === "imported").length;
                 return (
-                  <div key={r.id}>
-                    {showHeader && (
-                      <div className={`flex items-center gap-2 pb-2 ${lastRunKey === null ? "" : "pt-2"}`}>
-                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">{headerLabel}</span>
-                        <span className="text-[11px] text-slate-500">· {runCounts[runKey]} hasil, diurut score tertinggi</span>
-                        <div className="flex-1 h-px bg-white/10" />
-                      </div>
-                    )}
+                  <div key={batch.key} className="rounded-3xl overflow-hidden border border-white/10" style={{ background: "rgba(255,255,255,0.02)" }}>
                     <button
-                      onClick={() => importLead(r)}
-                      disabled={imported || importingId === r.id}
-                      className="relative w-full text-left rounded-3xl p-4 transition-all duration-200"
-                      style={{
-                        background: imported
-                          ? "linear-gradient(160deg, rgba(16,185,129,0.10), rgba(5,6,11,0.9))"
-                          : "linear-gradient(160deg, rgba(255,255,255,0.055), rgba(5,6,11,0.96))",
-                        border: `1.5px solid ${imported ? "rgba(52,211,153,0.45)" : t.border}`,
-                        boxShadow: imported
-                          ? "none"
-                          : `0 0 0 1px rgba(255,255,255,0.03) inset, 0 10px 34px -10px ${t.glow}, 0 0 44px -14px ${t.glow}`,
-                        cursor: imported ? "default" : "pointer",
-                      }}
+                      onClick={() => toggleBatch(batch.key)}
+                      className="w-full flex items-center gap-2.5 px-4 py-3.5 text-left hover:bg-white/[0.03] transition-colors"
                     >
-                      <div className="flex items-start gap-3.5">
-                        <ScoreBadge score={r.score ?? 50} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="font-bold text-sm truncate text-white">{r.name}</div>
-                              {r.category && <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-white/5 text-slate-300 border border-white/10 rounded-full px-2 py-0.5">{r.category}</span>}
-                            </div>
-                            <div className="shrink-0">
-                              {imported ? (
-                                <span className="text-xs font-medium text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-3 py-1.5 flex items-center gap-1"><Check size={13} /> Sudah di Leads</span>
-                              ) : importingId === r.id ? (
-                                <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><Loader2 size={13} className="animate-spin" /> Menambah…</span>
-                              ) : (
-                                <span className="text-xs font-medium text-orange-400 flex items-center gap-1">Tambah ke Leads <ArrowRight size={13} /></span>
+                      <ChevronDown size={15} className={`shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                      <span className="text-[12.5px] font-bold text-slate-200">{batch.headerLabel}</span>
+                      <span className="text-[11px] text-slate-500">· {batch.items.length} hasil{importedCount > 0 ? `, ${importedCount} udah di-import` : ""}</span>
+                      {bi === 0 && <span className="ml-1 text-[9px] font-bold uppercase tracking-wide text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5">Terbaru</span>}
+                    </button>
+                    {isOpen && (
+                      <div className="px-4 pb-4 space-y-4 pt-1">
+                        {batch.items.map((r) => {
+                          const imported = r.status === "imported";
+                          const t = tierStyle(r.score ?? 50);
+                          return (
+                            <div key={r.id}>
+                              <button
+                                onClick={() => importLead(r)}
+                                disabled={imported || importingId === r.id}
+                                className="relative w-full text-left rounded-3xl p-4 transition-all duration-200"
+                                style={{
+                                  background: imported
+                                    ? "linear-gradient(160deg, rgba(16,185,129,0.10), rgba(5,6,11,0.9))"
+                                    : "linear-gradient(160deg, rgba(255,255,255,0.055), rgba(5,6,11,0.96))",
+                                  border: `1.5px solid ${imported ? "rgba(52,211,153,0.45)" : t.border}`,
+                                  boxShadow: imported
+                                    ? "none"
+                                    : `0 0 0 1px rgba(255,255,255,0.03) inset, 0 10px 34px -10px ${t.glow}, 0 0 44px -14px ${t.glow}`,
+                                  cursor: imported ? "default" : "pointer",
+                                }}
+                              >
+                                <div className="flex items-start gap-3.5">
+                                  <ScoreBadge score={r.score ?? 50} />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <div className="font-bold text-sm truncate text-white">{r.name}</div>
+                                        {r.category && <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide bg-white/5 text-slate-300 border border-white/10 rounded-full px-2 py-0.5">{r.category}</span>}
+                                      </div>
+                                      <div className="shrink-0">
+                                        {imported ? (
+                                          <span className="text-xs font-medium text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-3 py-1.5 flex items-center gap-1"><Check size={13} /> Sudah di Leads</span>
+                                        ) : importingId === r.id ? (
+                                          <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><Loader2 size={13} className="animate-spin" /> Menambah…</span>
+                                        ) : (
+                                          <span className="text-xs font-medium text-orange-400 flex items-center gap-1">Tambah ke Leads <ArrowRight size={13} /></span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5">
+                                      <Field icon={Globe} value={r.website} />
+                                      <Field icon={MapPin} value={r.city} />
+                                      <Field icon={User} value={r.key_person ? `${r.key_person}${r.key_person_title ? " · " + r.key_person_title : ""}` : ""} />
+                                      <Field icon={Package} value={r.product} />
+                                      <Field icon={Phone} value={r.phone} />
+                                      <Field icon={Mail} value={r.email} />
+                                    </div>
+                                    {r.growth_signal && <div className="text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1 mt-2 flex items-center gap-1 w-fit"><TrendingUp size={11} /> {r.growth_signal}</div>}
+                                    {(r.score_industry_match || r.score_contact_quality || r.score_buying_signal) && (
+                                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[10px] text-slate-500">
+                                        {r.score_industry_match != null && <span>Industri <b className="text-slate-300">{r.score_industry_match}</b></span>}
+                                        {r.score_contact_quality != null && <span>Kontak <b className="text-slate-300">{r.score_contact_quality}</b></span>}
+                                        {r.score_buying_signal != null && <span>Sinyal beli <b className="text-slate-300">{r.score_buying_signal}</b></span>}
+                                      </div>
+                                    )}
+                                    {r.source_note && <div className="text-[11px] text-slate-500 mt-1.5 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
+                                  </div>
+                                </div>
+                              </button>
+                              {!imported && (
+                                <div className="h-3 mx-8 -mt-1 rounded-full blur-md opacity-30" style={{ background: t.ring }} />
                               )}
                             </div>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5">
-                            <Field icon={Globe} value={r.website} />
-                            <Field icon={MapPin} value={r.city} />
-                            <Field icon={User} value={r.key_person ? `${r.key_person}${r.key_person_title ? " · " + r.key_person_title : ""}` : ""} />
-                            <Field icon={Package} value={r.product} />
-                            <Field icon={Phone} value={r.phone} />
-                            <Field icon={Mail} value={r.email} />
-                          </div>
-                          {r.growth_signal && <div className="text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1 mt-2 flex items-center gap-1 w-fit"><TrendingUp size={11} /> {r.growth_signal}</div>}
-                          {(r.score_industry_match || r.score_contact_quality || r.score_buying_signal) && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[10px] text-slate-500">
-                              {r.score_industry_match != null && <span>Industri <b className="text-slate-300">{r.score_industry_match}</b></span>}
-                              {r.score_contact_quality != null && <span>Kontak <b className="text-slate-300">{r.score_contact_quality}</b></span>}
-                              {r.score_buying_signal != null && <span>Sinyal beli <b className="text-slate-300">{r.score_buying_signal}</b></span>}
-                            </div>
-                          )}
-                          {r.source_note && <div className="text-[11px] text-slate-500 mt-1.5 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
-                        </div>
+                          );
+                        })}
                       </div>
-                    </button>
-                    {!imported && (
-                      <div className="h-3 mx-8 -mt-1 rounded-full blur-md opacity-30" style={{ background: t.ring }} />
                     )}
                   </div>
                 );
