@@ -52,28 +52,6 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
       <div className="flex items-center gap-2 mb-1"><Lightbulb size={20} className="text-orange-500" /><h1 className="text-2xl font-bold tracking-tight">AI Advisor</h1></div>
       <p className="text-sm text-slate-500 mb-4">Rekomendasi lead paling potensial, dikirim otomatis tiap jam 8 pagi ke email Anda. Histori 7 hari terakhir bisa dilihat di sini.</p>
 
-      {/* Overview (16 Sep 2026, permintaan Nando) - list ringkas nama
-          perusahaan + aksi utama dari SEMUA rekomendasi hari ini, biar bisa
-          discan cepet sebelum baca kartu detail di bawah satu-satu. */}
-      {recs.length > 0 && (
-        <div className="bg-white border border-slate-100 rounded-[24px] p-4 mb-4">
-          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-2.5">Overview rekomendasi</div>
-          <div className="space-y-2">
-            {recs.map((r, i) => {
-              const c = leads.find((x) => x.id === r.id);
-              return (
-                <div key={i} className="flex items-start gap-2.5 text-sm">
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />
-                  <div className="min-w-0">
-                    <span className="font-semibold text-slate-800">{c?.name || "Lead"}</span>
-                    <span className="text-slate-400"> — {r.action}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-slate-400 py-10 justify-center"><Loader2 size={16} className="animate-spin" /> Memuat histori…</div>
