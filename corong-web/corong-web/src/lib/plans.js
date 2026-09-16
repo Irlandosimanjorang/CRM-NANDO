@@ -21,4 +21,10 @@ export const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
 // tempat, walau ada fitur yang sebenernya cuma butuh Standard - bikin user
 // disuruh upgrade ke tier yang lebih mahal dari yang seharusnya).
 export const LEVEL_LABEL = { 1: "Standard", 2: "Professional" };
-export const LEVEL_PRICE = { 1: "Rp79rb/bulan", 2: "Rp269rb/bulan" };
+// BUG FIX (17 Sep 2026, ketauan pas audit): harga di sini basi (Rp79rb/
+// Rp269rb - harga LAMA sebelum kenaikan 16 Sep 2026), user yang kena
+// PreviewLock dijanjiin harga lebih murah dari yang beneran di-charge pas
+// klik upgrade. Disamain ke harga NORMAL final (PRICING_NORMAL di Auth.jsx)
+// - sengaja BUKAN harga early bird, biar gak ada resiko basi lagi begitu
+// periode early bird berakhir (harga normal ini emang gak berubah-ubah).
+export const LEVEL_PRICE = { 1: "Rp99rb/bulan", 2: "Rp299rb/bulan" };
