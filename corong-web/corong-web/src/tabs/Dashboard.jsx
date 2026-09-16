@@ -280,70 +280,72 @@ export default function Dashboard({
         <Kpi icon={Trophy} value={stats.won} label="Deal Won" trend={`${stats.winRate}% win rate`} iconClass="bg-amber-50 text-amber-600" />
       </div>
 
-      {/* Chart tren dipisah jadi baris FULL-WIDTH tersendiri (16 Sep 2026,
-          permintaan Nando - ngatur rasio kolom doang gak kerasa bedanya)
-          biar bener-bener lega, gak dibatesin lebar kolom manapun. */}
-      <Card className="p-5">
-        <SectionTitle title="Tren Leads & Deal" />
-        <div className="h-56 -mx-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trend} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
-              <defs>
-                <linearGradient id="nextoLeadsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f97316" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="nextoDealsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6d5dfc" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#6d5dfc" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="3 3" />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }} labelStyle={{ fontWeight: 700, color: "#0f172a" }} />
-              <Area type="monotone" dataKey="leads" name="Leads Baru" stroke="#f97316" strokeWidth={2} fill="url(#nextoLeadsGrad)" />
-              <Area type="monotone" dataKey="deals" name="Deal Menang" stroke="#6d5dfc" strokeWidth={2} fill="url(#nextoDealsGrad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex items-center gap-4 mt-1">
-          <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500"><span className="h-2 w-2 rounded-full bg-orange-500" />Leads Baru</span>
-          <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500"><span className="h-2 w-2 rounded-full bg-violet-500" />Deal Menang</span>
-        </div>
-      </Card>
-
-      {/* Layout 3 kolom niru struktur referensi "Cortex" (Prioritas Lead /
-          CRM Sidebar / Upcoming Tasks) - datanya Nexto asli, warnanya
-          ngikutin brand Nexto (oranye utama, violet cuma buat penanda AI). */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Kolom 1: donut distribusi prioritas lead */}
-        <Card className="p-5">
-          <SectionTitle title="Prioritas Lead" action="Lihat" onClick={() => onGo?.("leads")} />
-          {priorityData.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <div className="h-28 w-28 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={priorityData} dataKey="value" nameKey="name" innerRadius={34} outerRadius={54} paddingAngle={3} strokeWidth={0}>
-                      {priorityData.map((d) => <Cell key={d.key} fill={d.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-1.5 flex-1 min-w-0">
-                {priorityData.map((d) => (
-                  <div key={d.key} className="flex items-center justify-between gap-2 text-[11px]">
-                    <span className="flex items-center gap-1.5 text-slate-600 truncate"><span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />{d.name}</span>
-                    <span className="font-bold text-slate-800 shrink-0">{d.value}</span>
-                  </div>
-                ))}
-              </div>
+      {/* Layout 3 kolom niru struktur referensi "Cortex" (Analytics / CRM
+          Sidebar / Upcoming Tasks) - datanya Nexto asli, warnanya ngikutin
+          brand Nexto (oranye utama, violet cuma buat penanda AI). */}
+      {/* Rasio kolom dilebarin di kolom 1 (Analytics/chart) - Key Accounts &
+          Upcoming Tasks dipersempit (16 Sep 2026, permintaan Nando) biar
+          chart tren punya ruang lebih lega. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[3.6fr_1fr_0.9fr] gap-4">
+        {/* Kolom 1: Analytics - area chart tren + donut distribusi pipeline */}
+        <div className="space-y-4">
+          <Card className="p-5">
+            <SectionTitle title="Tren Leads & Deal" />
+            <div className="h-40 -mx-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trend} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="nextoLeadsGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f97316" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="nextoDealsGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6d5dfc" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#6d5dfc" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }} labelStyle={{ fontWeight: 700, color: "#0f172a" }} />
+                  <Area type="monotone" dataKey="leads" name="Leads Baru" stroke="#f97316" strokeWidth={2} fill="url(#nextoLeadsGrad)" />
+                  <Area type="monotone" dataKey="deals" name="Deal Menang" stroke="#6d5dfc" strokeWidth={2} fill="url(#nextoDealsGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          ) : (
-            <div className="py-6 text-center text-[11px] text-slate-400">Belum ada lead dengan prioritas diisi.</div>
-          )}
-        </Card>
+            <div className="flex items-center gap-4 mt-1">
+              <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500"><span className="h-2 w-2 rounded-full bg-orange-500" />Leads Baru</span>
+              <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500"><span className="h-2 w-2 rounded-full bg-violet-500" />Deal Menang</span>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <SectionTitle title="Prioritas Lead" action="Lihat" onClick={() => onGo?.("leads")} />
+            {priorityData.length > 0 ? (
+              <div className="flex items-center gap-4">
+                <div className="h-28 w-28 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={priorityData} dataKey="value" nameKey="name" innerRadius={34} outerRadius={54} paddingAngle={3} strokeWidth={0}>
+                        {priorityData.map((d) => <Cell key={d.key} fill={d.color} />)}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  {priorityData.map((d) => (
+                    <div key={d.key} className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="flex items-center gap-1.5 text-slate-600 truncate"><span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />{d.name}</span>
+                      <span className="font-bold text-slate-800 shrink-0">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 text-center text-[11px] text-slate-400">Belum ada lead dengan prioritas diisi.</div>
+            )}
+          </Card>
+        </div>
 
         {/* Kolom 2: "CRM Sidebar" - key accounts + pipeline stages */}
         <div className="space-y-4">
