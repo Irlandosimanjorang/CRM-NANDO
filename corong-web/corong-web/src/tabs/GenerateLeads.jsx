@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp, Info, X } from "lucide-react";
 import * as db from "../lib/db";
 import { getGenerateLeadsExample } from "../lib/industryTemplates";
@@ -70,6 +70,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   const [loadingResults, setLoadingResults] = useState(true);
   const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisMonth: 0, quotaMax: 4, nextAvailableAt: null });
   const [importingId, setImportingId] = useState(null);
+  const pollRef = useRef(null);
 
   const defaultStageKey = stages?.[0]?.key || "";
 
@@ -82,19 +83,90 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   };
   useEffect(() => { load(); }, []);
 
+  // JOB TRACKING (16 Sep 2026, laporan Nando: klik Generate, pindah tab
+  // browser, balik lagi keliatan "reset" kayak belum pernah nge-generate) -
+  // Chrome (dan browser lain) bisa nge-reload/discard tab yang lama gak
+  // aktif di background buat ngirit memori - itu ngilangin SEMUA state React
+  // lokal (termasuk `busy`), padahal proses generate di SERVER tetep jalan
+  // terus gak kepengaruh. Sekarang status "lagi nyari" dicek dari database
+  // (tabel lead_gen_jobs, sumber kebenaran di server) tiap kali komponen ini
+  // ke-mount, BUKAN cuma dari state lokal - jadi walau tab sempet ke-reload
+  // total, begitu balik ke tab Generate Leads, app otomatis nunjukin "masih
+  // nyari..." lagi (bukan form kosong) dan beres sendiri pas hasilnya kelar.
+  const STALE_JOB_MS = 160 * 1000; // dikit di atas limit eksekusi 150 detik
+  const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+
+  const pollJob = () => {
+    stopPolling();
+    pollRef.current = setInterval(async () => {
+      let job;
+      try { job = await db.getActiveLeadGenJob(); } catch (_) { return; }
+      if (!job) { stopPolling(); setBusy(false); return; }
+      if (job.status === "done") {
+        stopPolling();
+        setBusy(false);
+        const successMsg = `✅ Ketemu ${job.result_count ?? 0} calon lead baru, cek daftar di bawah.`;
+        setMsg(successMsg);
+        onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
+        load();
+        return;
+      }
+      if (job.status === "failed") {
+        stopPolling();
+        setBusy(false);
+        setMsg("Gagal: " + (job.error_message || "terjadi kesalahan."));
+        onNotify?.(`Generate Leads gagal: ${job.error_message || "terjadi kesalahan."}`, "error");
+        load();
+        return;
+      }
+      const ageMs = Date.now() - new Date(job.created_at).getTime();
+      if (ageMs > STALE_JOB_MS) {
+        // Kelamaan "running" tanpa update - kemungkinan besar function-nya
+        // kena bunuh platform sebelum sempet nyatet hasil akhirnya. Jangan
+        // polling selamanya, anggap gagal biar user bisa coba lagi.
+        stopPolling();
+        setBusy(false);
+        setMsg("Gagal: proses kelamaan tanpa hasil, kemungkinan kena kendala di server. Coba generate lagi ya.");
+        load();
+        return;
+      }
+      setBusy(true);
+    }, 4000);
+  };
+
+  const checkResumableJob = async () => {
+    let job;
+    try { job = await db.getActiveLeadGenJob(); } catch (_) { return; }
+    if (job && job.status === "running") {
+      const ageMs = Date.now() - new Date(job.created_at).getTime();
+      if (ageMs <= STALE_JOB_MS) {
+        setBusy(true);
+        pollJob();
+      }
+    }
+  };
+  useEffect(() => {
+    checkResumableJob();
+    return () => stopPolling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const generate = async () => {
     if (!productSold.trim() || !keyword.trim() || !targetRole.trim()) {
       setMsg("Gagal: kolom barang yang dijual, kata kunci, dan jabatan wajib diisi (provinsi/kota opsional).");
       return;
     }
     setBusy(true); setMsg("");
+    pollJob(); // jaga-jaga kalau tab ini sendiri sempet reload sebelum request-nya kelar
     try {
       const res = await db.generateLeads({ keyword, province, targetRole, productSold, companyScale, targetType });
+      stopPolling();
       const successMsg = `✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`;
       setMsg(successMsg);
       onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
       load();
     } catch (e) {
+      stopPolling();
       setMsg("Gagal: " + e.message);
       onNotify?.(`Generate Leads gagal: ${e.message}`, "error");
     } finally {

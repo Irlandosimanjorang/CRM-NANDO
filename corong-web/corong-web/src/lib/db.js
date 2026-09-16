@@ -301,6 +301,24 @@ export async function generateLeads({ keyword, province, targetRole, productSold
   return data;
 }
 
+// JOB TRACKING (16 Sep 2026) - dipake buat "kembalikan status pencarian yang
+// masih jalan" kalau tab browser di-reload/di-discard pas nunggu generate
+// (lihat catatan TIMEOUT FIX #2 & JOB TRACKING di generate-leads/index.ts).
+// Cukup ambil job TERBARU per-org - kalau statusnya masih "running", frontend
+// tau harus nunjukin loading & polling, BUKAN form kosong kayak sebelumnya.
+export async function getActiveLeadGenJob() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase
+    .from("lead_gen_jobs")
+    .select("*")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
 export async function getGeneratedLeads() {
   // Ambil SEMUA riwayat (bukan cuma yang pending) - biar tetep keliatan
   // walau udah diimport, gak ilang dari daftar.
