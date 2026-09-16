@@ -173,8 +173,7 @@ export default function Dashboard({
       {/* Hero */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-600">Sales Workspace</div>
-          <h1 className="mt-1 text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">Good morning, {displayName}</h1>
+          <h1 className="text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">Good morning, {displayName}</h1>
           <p className="mt-1 text-[13px] text-slate-500">Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
         </div>
         <button onClick={() => onGo?.("leads")} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-[12px] font-bold text-white shadow-[0_12px_25px_-12px_rgba(15,23,42,.7)] hover:bg-slate-800">

@@ -736,36 +736,28 @@ export default function App() {
           inset dari tepi layar, ganti border-r doang jadi border keliling
           biar konsisten sama bentuk panel yang gak nempel ke sisi manapun. */}
       <aside className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-[28px] overflow-hidden border border-white/[0.07] shadow-[0_30px_70px_-35px_rgba(0,0,0,.7)]">
+        {/* Header sidebar (16 Sep 2026): profil + badge plan DIPINDAH ke
+            bawah (pola app pada umumnya - Slack/Notion dst naro profil di
+            footer sidebar, bukan header). Header sekarang logo doang. */}
         <div className="px-4 pt-5 pb-4">
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3.5 shadow-[0_14px_35px_-25px_rgba(0,0,0,.8)]">
             <div className="flex items-center gap-2.5">
               <NextoRobotHead size={30} />
               <NextoDarkWordmark width={70} />
-              <ProfileAvatar
-                settings={settings}
-                session={session}
-                org={org}
-                onChanged={reload}
-                size={34}
-                align="left"
-                className="ml-auto"
-              />
             </div>
-            <div className="pl-[38px] mt-2 flex items-center gap-1.5 flex-wrap min-w-0">
-              {settings?.is_platform_admin ? (
-                <IndustryDemoSwitcher org={org} onSwitched={reload} />
-              ) : (
-                org?.industry && (
-                  <span className="inline-block text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full">
-                    {getIndustryTemplate(org.industry).label}
-                  </span>
-                )
-              )}
-              <span className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-wide text-slate-500">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 nexto-status-dot" />
-                {myLevel >= 2 ? "PRO" : myLevel === 1 ? "STANDARD" : "FREE"}
-              </span>
-            </div>
+            {(settings?.is_platform_admin || org?.industry) && (
+              <div className="pl-[38px] mt-2 flex items-center gap-1.5 flex-wrap min-w-0">
+                {settings?.is_platform_admin ? (
+                  <IndustryDemoSwitcher org={org} onSwitched={reload} />
+                ) : (
+                  org?.industry && (
+                    <span className="inline-block text-[9px] font-semibold text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 truncate max-w-full">
+                      {getIndustryTemplate(org.industry).label}
+                    </span>
+                  )
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -808,17 +800,25 @@ export default function App() {
           })}
         </nav>
 
-        <div className="px-4 pb-4">
-          <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/[0.05] bg-white/[0.025] px-3 py-2 text-[10px] text-slate-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 nexto-status-dot" />
-            <span>Semua perubahan tersimpan</span>
+        {/* Profil + tombol Keluar dipindah ke footer sidebar (16 Sep 2026,
+            permintaan Nando) - pola app pada umumnya (Slack/Notion dst).
+            Klik avatar buka kartu profil (ProfileAvatar udah py sendiri),
+            tombol Keluar ditaro nempel di baris yang sama. */}
+        <div className="px-3 pb-3 pt-2 border-t border-white/[0.06]">
+          <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2.5 py-2.5">
+            <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={36} align="left" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[12px] font-semibold text-white">{settings.community_display_name || "Akun Anda"}</div>
+              <div className="truncate text-[9.5px] text-slate-500">{session?.user?.email || ""}</div>
+            </div>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              title="Keluar"
+              className="shrink-0 p-2 rounded-xl text-slate-500 hover:bg-white/[0.06] hover:text-white transition-colors"
+            >
+              <LogOut size={15} />
+            </button>
           </div>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="w-full px-3.5 py-2.5 rounded-[14px] bg-white/[0.035] border border-white/[0.06] text-[12px] text-slate-400 hover:bg-white/[0.07] hover:text-white flex items-center gap-2.5 transition-colors"
-          >
-            <LogOut size={14} /> Keluar
-          </button>
         </div>
       </aside>
 
