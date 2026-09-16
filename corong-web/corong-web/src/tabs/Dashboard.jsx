@@ -24,10 +24,16 @@ function Card({ children, className = "" }) {
 }
 
 function SectionTitle({ title, action, onClick }) {
+  // BUG FIX (audit 16 Sep 2026): di kolom sempit (misal kartu "Distribusi
+  // Pipeline" di grid 3 kolom), judul DAN tombol aksi sama-sama kepotong
+  // jadi 2 baris terus numpuk tumpang tindih. Sekarang tombol aksi dipaksa
+  // 1 baris (whitespace-nowrap + shrink-0) dan barisnya boleh wrap - kalau
+  // beneran sempit, tombol jatuh ke baris baru di bawah judul, bukan
+  // numpuk berantakan.
   return (
-    <div className="flex items-center justify-between gap-3 mb-4">
+    <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
       <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-slate-900">{title}</h2>
-      {action && <button onClick={onClick} className="text-[11px] font-semibold text-orange-600 hover:text-orange-800 flex items-center gap-1">{action}<ArrowRight size={13}/></button>}
+      {action && <button onClick={onClick} className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-orange-600 hover:text-orange-800 flex items-center gap-1">{action}<ArrowRight size={13}/></button>}
     </div>
   );
 }
@@ -289,7 +295,7 @@ export default function Dashboard({
           </Card>
 
           <Card className="p-5">
-            <SectionTitle title="Distribusi Pipeline" action="Lihat Pipeline" onClick={() => onGo?.("leads")} />
+            <SectionTitle title="Distribusi Pipeline" action="Lihat" onClick={() => onGo?.("leads")} />
             <div className="flex items-center gap-4">
               <div className="h-28 w-28 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
