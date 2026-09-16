@@ -20,6 +20,7 @@ import {
   Flame,
   Trophy,
   UserX,
+  Lock,
 } from "lucide-react";
 
 import * as db from "../lib/db";
@@ -1608,15 +1609,24 @@ export default function Leads({
 
           <button
             onClick={() => {
+              // GATE (audit 16 Sep 2026): "Deteksi Duplikat" diiklanin fitur
+              // Standard di landing page, tapi sebelumnya gak ada pengecekan
+              // plan SAMA SEKALI di sini - user Free bisa pake bebas. Beda
+              // dari Smart Import (yang emang udah sengaja dikasih coba 1x
+              // gratis di backend), fitur ini murni perhitungan di
+              // browser (gak manggil AI/backend apapun), jadi gate-nya
+              // cukup di sini doang.
+              if (myLevel < 1) {
+                alert("Deteksi Duplikat itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan ya.");
+                return;
+              }
               setShowDup(true);
               saveOpenModal("dupcheck", {});
             }}
             className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
           >
 
-            <Copy
-              size={12}
-            />
+            {myLevel < 1 ? <Lock size={12} /> : <Copy size={12} />}
 
             Cek Duplikat
 

@@ -23,7 +23,14 @@ export default function PreviewLock({ locked, minLevel = 2, children }) {
         onClick={() => alert(`Ini fitur ${tierLabel} bro - upgrade dulu (${tierPrice}) buat bisa pake fiturnya.`)}
         className="absolute inset-0 top-11 z-20 cursor-pointer"
       />
-      {children}
+      {/* GATE FIX (audit 16 Sep 2026): overlay di atas cuma nangkep KLIK
+          MOUSE - konten asli di `children` sebelumnya tetep hidup & bisa
+          di-Tab+Enter pake keyboard, nembus overlay ini sepenuhnya (ketauan
+          di tombol Generate Leads). `inert` (atribut HTML native, didukung
+          browser modern) matiin SELURUH interaktivitas subtree ini - gak
+          bisa di-fokus/di-Tab/diklik/dipencet Enter sama sekali, bukan cuma
+          "kelihatan kekunci" doang lewat CSS. */}
+      <div inert="">{children}</div>
     </div>
   );
 }
