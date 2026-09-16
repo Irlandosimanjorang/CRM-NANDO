@@ -286,7 +286,7 @@ export default function Dashboard({
       {/* Rasio kolom dilebarin di kolom 1 (Analytics/chart) - Key Accounts &
           Upcoming Tasks dipersempit (16 Sep 2026, permintaan Nando) biar
           chart tren punya ruang lebih lega. */}
-      <div className="grid grid-cols-1 xl:grid-cols-[3.6fr_1fr_0.9fr] gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[5fr_1fr_0.9fr] gap-4">
         {/* Kolom 1: Analytics - area chart tren + donut distribusi pipeline */}
         <div className="space-y-4">
           <Card className="p-5">
