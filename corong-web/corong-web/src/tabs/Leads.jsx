@@ -244,7 +244,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
     <div
       onClick={() => onEdit(c)}
       className="rounded-2xl bg-white cursor-pointer overflow-hidden transition-all hover:shadow-[0_10px_30px_-16px_rgba(15,23,42,0.3)]"
-      style={{ border: `1.5px solid ${urgency.stripe}` }}
+      style={{ border: "1.5px solid #f97316" }}
     >
       <div className="p-4 sm:p-5">
         {/* HEADER */}
