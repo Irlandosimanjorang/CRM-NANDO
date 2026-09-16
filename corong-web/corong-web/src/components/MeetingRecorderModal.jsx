@@ -71,10 +71,24 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [stage]);
 
-  // Safety net - kalau modal ke-unmount (misal parent maksa nutup) sementara
-  // wake lock masih nyala, jangan sampe nyangkut biarin layar HP gak pernah
-  // mati lagi selamanya.
-  useEffect(() => releaseWakeLock, []);
+  // BUG FIX (audit 16 Sep 2026): safety net ini SEBELUMNYA cuma nge-release
+  // wake lock doang pas modal ke-unmount - timer (setInterval) sama stream
+  // mic-nya SENDIRI gak ikut kebersihin. Kalau modal ke-unmount pas lagi
+  // recording (misal parent maksa nutup / navigasi lain), timer-nya jalan
+  // terus SELAMANYA (gak ada lagi tombol buat stop, instance komponennya
+  // udah ilang) dan lampu mic HP nyala terus padahal gak ada yang ngerekam
+  // apa-apa lagi. Sekarang cleanup ini beresin SEMUANYA: timer, wake lock,
+  // DAN stream mic-nya (kalau lagi aktif).
+  useEffect(() => {
+    return () => {
+      clearInterval(timerRef.current);
+      releaseWakeLock();
+      const mr = mediaRecorderRef.current;
+      if (mr && mr.state !== "inactive") {
+        try { mr.stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      }
+    };
+  }, []);
 
   const matches = !lead && q.trim() ? (leads || []).filter((l) => l.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
 
@@ -211,14 +225,21 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
 
-  // Pas lagi recording, modal WAJIB "stay" di layar - klik area gelap di
-  // belakang gak boleh nutup (biar gak ke-tap gak sengaja bikin rekaman
-  // ilang). Satu-satunya jalan keluar pas recording adalah tombol X
-  // (cancelRecording, di bawah).
+  // Pas lagi recording ATAU processing, modal WAJIB "stay" di layar - klik
+  // area gelap di belakang gak boleh nutup. Recording: biar gak ke-tap gak
+  // sengaja bikin rekaman ilang. Processing (BUG FIX audit 16 Sep 2026,
+  // sebelumnya CUMA recording yang dilindungin ini): rekaman yang lagi
+  // di-upload/ditranskrip bisa ke-discard kalau backdrop-nya diklik pas
+  // lagi proses - hasil yang udah setengah jadi ilang percuma padahal
+  // hampir kelar. Satu-satunya jalan keluar pas dua stage ini adalah
+  // tombol X (cancelRecording pas recording; onClose biasa gak
+  // ngebatalin proses yang lagi jalan di background, tapi minimal gak
+  // ke-trigger gak sengaja lewat klik area gelap).
   const isRecordingLive = stage === "recording";
+  const isBusyStage = stage === "recording" || stage === "processing";
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={isRecordingLive ? undefined : onClose}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={isBusyStage ? undefined : onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg flex items-center gap-2"><FileAudio size={18} className="text-orange-500" /> Rekam Meeting</h2>

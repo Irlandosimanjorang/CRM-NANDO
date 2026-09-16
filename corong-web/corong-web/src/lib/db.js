@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient";
 import { getIndustryTemplate } from "./industryTemplates";
+import { todayISO } from "./helpers";
 
 // Bersihin kolom telepon/WA: cuma boleh angka + karakter pemisah wajar (+, -, spasi,
 // koma, slash, kurung). Nama/label kayak "Admin 1:" otomatis kebuang, sisa nomornya
@@ -821,13 +822,23 @@ export async function checkIn({ lead_id, lead_name, latitude, longitude, distanc
   if (error) throw error;
   // Check-in juga otomatis nyatet progress + update last_contact, biar konsisten
   // sama alur progress note yang udah ada.
-  const today = new Date().toISOString().slice(0, 10);
+  //
+  // BUG FIX (audit 16 Sep 2026): sebelumnya tanggal dicatet pake
+  // new Date().toISOString().slice(0,10) - itu tanggal UTC, bukan WIB. Buat
+  // check-in yang kejadian jam 00:00-06:59 WIB, tanggalnya kecatet MUNDUR
+  // 1 hari (masih dianggap "kemarin" versi UTC). todayISO() dari helpers.js
+  // beneran pake tanggal lokal. Update last_contact juga sebelumnya gak
+  // dicek error-nya - kalau gagal, check-in tetep dianggap sukses padahal
+  // last_contact-nya (dasar perhitungan "X hari sejak kontak" & pembersihan
+  // data 90+ hari) gak ke-update.
+  const today = todayISO();
   const jarak = distance_meters != null ? `${Math.round(distance_meters)}m dari titik lokasi` : "";
   await supabase.from("progress_notes").insert({
     user_id: uid, org_id: orgId, lead_id, note_date: today,
     text: `Check-in GPS terverifikasi${jarak ? " (" + jarak + ")" : ""}${photo_url ? " + foto bukti" : ""}.`,
   });
-  await supabase.from("leads").update({ last_contact: today }).eq("id", lead_id);
+  const { error: lastContactErr } = await supabase.from("leads").update({ last_contact: today }).eq("id", lead_id);
+  if (lastContactErr) console.error("Check-in tersimpan, tapi gagal update last_contact:", lastContactErr);
 
   // Notif in-app ke owner/manager - FIRE AND FORGET. Ini fitur tambahan
   // (bukan inti check-in), jadi kalau gagal (network dst) JANGAN sampai
@@ -907,14 +918,23 @@ export async function markAllNotificationsRead() {
 export async function addProgress(lead_id, text) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
-  const date = new Date().toISOString().slice(0, 10);
+  // BUG FIX (audit 16 Sep 2026): sama kayak checkIn() - date UTC diganti
+  // todayISO() (lokal), dan update last_contact sekarang dicek error-nya.
+  const date = todayISO();
   const { data, error } = await supabase.from("progress_notes").insert({ user_id: uid, org_id: orgId, lead_id, note_date: date, text }).select().single();
   if (error) throw error;
-  await supabase.from("leads").update({ last_contact: date }).eq("id", lead_id);
+  const { error: lastContactErr } = await supabase.from("leads").update({ last_contact: date }).eq("id", lead_id);
+  if (lastContactErr) console.error("Progress note tersimpan, tapi gagal update last_contact:", lastContactErr);
   return { id: data.id, date, text };
 }
 export async function deleteProgress(id) {
-  await supabase.from("progress_notes").delete().eq("id", id);
+  // BUG FIX (audit 16 Sep 2026): sebelumnya error di sini dibuang diam-diam -
+  // caller (ProgressPopup.jsx, LeadModal.jsx) langsung nge-hapus note-nya
+  // dari tampilan tanpa nunggu ini beneran sukses, jadi kalau delete-nya
+  // gagal (RLS, dst), note keliatan kehapus padahal masih ada di database -
+  // muncul lagi begitu halaman di-reload, bikin bingung.
+  const { error } = await supabase.from("progress_notes").delete().eq("id", id);
+  if (error) throw error;
 }
 export async function updateProgress(id, text) {
   const { error } = await supabase.from("progress_notes").update({ text }).eq("id", id);
@@ -997,12 +1017,25 @@ export async function upsertCompetitor(comp) {
   let compId = comp.id;
   if (compId) { const { error } = await supabase.from("competitors").update(row).eq("id", compId); if (error) throw error; }
   else { const { data, error } = await supabase.from("competitors").insert(row).select("id").single(); if (error) throw error; compId = data.id; }
-  await supabase.from("competitor_usages").delete().eq("competitor_id", compId);
+
+  // BUG FIX (audit 16 Sep 2026): sebelumnya DELETE semua usage lama DULU
+  // baru INSERT yang baru - kalau insert-nya gagal di tengah (network blip,
+  // dst), data usage yang lama udah KEHAPUS PERMANEN, gak ada cara balikin.
+  // Sekarang urutannya dibalik: INSERT dulu (data lama tetep aman kalau
+  // langkah ini gagal), baru DELETE baris LAMA doang (id di luar yang baru
+  // aja diinsert) - insert gagal = gak ada satupun data yang kehapus.
   const usages = (comp.usages || []).filter((u) => u.company || u.product || u.price || u.quantity);
+  let newIds = [];
   if (usages.length) {
     const rows = usages.map((u) => ({ user_id: uid, org_id: orgId, competitor_id: compId, company: u.company || "", product: u.product || "", price: u.price || "", quantity: u.quantity || "" }));
-    const { error } = await supabase.from("competitor_usages").insert(rows); if (error) throw error;
+    const { data: inserted, error } = await supabase.from("competitor_usages").insert(rows).select("id");
+    if (error) throw error;
+    newIds = (inserted || []).map((r) => r.id);
   }
+  let delQuery = supabase.from("competitor_usages").delete().eq("competitor_id", compId);
+  if (newIds.length) delQuery = delQuery.not("id", "in", `(${newIds.join(",")})`);
+  const { error: delErr } = await delQuery;
+  if (delErr) console.error("Gagal beresin baris usage lama (data yang baru tetep aman kesimpen):", delErr);
   return compId;
 }
 export async function deleteCompetitor(id) {
