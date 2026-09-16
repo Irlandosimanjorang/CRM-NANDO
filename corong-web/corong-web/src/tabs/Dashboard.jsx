@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import {
   Users, MessageCircle, MapPin, Trophy, ArrowRight, Plus,
   CheckCircle2, Clock3, Target,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { NextoRobotHead } from "../Auth";
+import * as db from "../lib/db";
 
 const cn = (...v) => v.filter(Boolean).join(" ");
 
@@ -134,9 +135,27 @@ export default function Dashboard({
     return months;
   }, [leads, dealTransactions]);
 
-  const aiLead = useMemo(() => {
-    return leads.find(l => !stats.wonKeys.includes(l.stage_key) && l.next_action) || leads.find(l => !stats.wonKeys.includes(l.stage_key));
-  }, [leads, stats.wonKeys]);
+  // BUG FIX (16 Sep 2026, ketauan pas audit): db.getTodayAdvisorRun() itu
+  // fungsi yang MEMANG dibikin buat kartu "Next best action" ini (lihat
+  // komentarnya di db.js), tapi gak pernah dipanggil di mana pun - kartu ini
+  // sebelumnya cuma nebak lead pertama yang punya next_action (bukan
+  // rekomendasi AI beneran), makanya bisa beda sama email/tab Advisor yang
+  // sama-sama baca advisor_runs. Sekarang beneran narik data yang sama.
+  const [advisorRun, setAdvisorRun] = useState(null);
+  useEffect(() => {
+    db.getTodayAdvisorRun().then(setAdvisorRun).catch(() => setAdvisorRun(null));
+  }, []);
+
+  // 5 rekomendasi hari ini (nama perusahaan + aksi) dari advisor_runs -
+  // fallback ke tebakan lama kalau belum ada run hari ini (misal weekend).
+  const aiRecs = useMemo(() => {
+    const recs = advisorRun?.recs;
+    if (Array.isArray(recs) && recs.length > 0) {
+      return recs.slice(0, 5).map((r) => ({ name: leads.find(l => l.id === r.id)?.name || "Lead", action: r.action }));
+    }
+    const fallback = leads.find(l => !stats.wonKeys.includes(l.stage_key) && l.next_action) || leads.find(l => !stats.wonKeys.includes(l.stage_key));
+    return fallback ? [{ name: fallback.name, action: fallback.next_action || "Follow up lead ini" }] : [];
+  }, [advisorRun, leads, stats.wonKeys]);
 
   const pipelineCounts = pipeline.map(s => leads.filter(l => l.stage_key === s.key).length);
   const maxPipeline = Math.max(1, ...pipelineCounts);
@@ -189,16 +208,29 @@ export default function Dashboard({
           ditentuin Tailwind pas generate CSS (bukan urutan di className),
           jadi kartunya kemarin keliatan putih padahal harusnya gelap. */}
       <Card className="!bg-slate-950 overflow-hidden text-white !border-slate-800">
-        <div className="p-5 bg-[radial-gradient(circle_at_85%_10%,rgba(109,93,252,.42),transparent_35%)] flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <NextoRobotHead size={44} />
-            <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-300">NEXTO AI</div>
-              <h2 className="mt-1 text-[16px] font-black tracking-tight">Next best action</h2>
-              <p className="mt-1 text-[11px] leading-5 text-slate-400">{aiLead ? `Prioritaskan follow-up ${aiLead.name}.` : "Tambahkan lead baru agar AI bisa menemukan prioritas."}</p>
+        <div className="p-5 bg-[radial-gradient(circle_at_85%_10%,rgba(109,93,252,.42),transparent_35%)]">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <NextoRobotHead size={44} />
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-300">NEXTO AI</div>
+                <h2 className="mt-1 text-[16px] font-black tracking-tight">Rekomendasi Hari Ini</h2>
+                <p className="mt-1 text-[11px] leading-5 text-slate-400">{aiRecs.length > 1 ? `${aiRecs.length} lead paling potensial buat difollow-up hari ini.` : "Tambahkan lead baru agar AI bisa menemukan prioritas."}</p>
+              </div>
             </div>
+            <button onClick={() => onGo?.("advisor")} className="shrink-0 rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka AI Advisor <ArrowRight size={14} /></button>
           </div>
-          <button onClick={() => onGo?.("advisor")} className="shrink-0 rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka AI Advisor <ArrowRight size={14} /></button>
+
+          {aiRecs.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-white/10 grid sm:grid-cols-2 gap-x-6 gap-y-2">
+              {aiRecs.map((r, i) => (
+                <div key={i} className="flex items-start gap-2 text-[11px] leading-5 min-w-0">
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-violet-400 shrink-0" />
+                  <div className="min-w-0"><span className="font-semibold text-white">{r.name}</span><span className="text-slate-400"> — {r.action}</span></div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Card>
 
