@@ -303,6 +303,23 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
     };
   }, []);
 
+  // BUG FIX (audit 17 Sep 2026): "Batal" di LocationConfirmModal sebelumnya
+  // cuma nutup modal (setLocationConfirm(null)) - kalau scan GPS masih
+  // jalan (scanning: true), watchPosition + timeout dari askSavePin TETEP
+  // nyala di background (geoReqIdRef gak pernah di-bump, jadi callback-nya
+  // masih ngerasa "masih valid"), nguras GPS/baterai terus sampe dia
+  // self-terminate lewat finish() atau timeout 20 detik - dan kalau user
+  // langsung mulai scan BARU sebelum itu, watch LAMA jadi gak kereferensi
+  // sama sekali (di-overwrite scanWatchIdRef), gak akan pernah ke-clear
+  // kecuali component-nya unmount total. Sekarang cancel JUGA nge-stop
+  // watch/timeout yang lagi jalan & mbatalin request lama via geoReqIdRef.
+  const cancelLocationConfirm = () => {
+    geoReqIdRef.current++;
+    if (scanWatchIdRef.current !== null) { navigator.geolocation.clearWatch(scanWatchIdRef.current); scanWatchIdRef.current = null; }
+    if (scanTimeoutRef.current !== null) { clearTimeout(scanTimeoutRef.current); scanTimeoutRef.current = null; }
+    setLocationConfirm(null);
+  };
+
   const askCheckIn = (lead, distance) => {
     if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
     if (!gpsReady) { alert(`Sinyal GPS belum cukup presisi (butuh ≤${GOOD_ACCURACY_M}m). Tunggu bentar atau pindah ke tempat terbuka.`); return; }
@@ -467,7 +484,7 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
       {locationConfirm && (
         <LocationConfirmModal
           confirmData={locationConfirm}
-          onCancel={() => setLocationConfirm(null)}
+          onCancel={cancelLocationConfirm}
           onConfirm={() => {
             const { mode, lead, distance, coords, accuracy } = locationConfirm;
             setLocationConfirm(null);

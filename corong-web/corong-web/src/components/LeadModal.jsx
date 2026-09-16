@@ -511,7 +511,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
         <div className="flex items-center gap-2 mt-5">
           <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan</button>
           <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
-          {lead.id && <button onClick={del} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
+          {lead.id && <button onClick={del} disabled={busy} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-60 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
         </div>
       </div>
     </div>

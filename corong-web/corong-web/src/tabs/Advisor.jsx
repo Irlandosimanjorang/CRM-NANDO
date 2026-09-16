@@ -5,9 +5,14 @@ import { stageMeta, chipStyle, daysSince } from "../lib/helpers";
 
 const uMeta = { high: { label: "High", hex: "#e11d48" }, medium: { label: "Medium", hex: "#d97706" }, low: { label: "Low", hex: "#64748b" } };
 
+// BUG FIX (audit 17 Sep 2026): run_date dummy ini sebelumnya pake
+// toISOString() (UTC) - sama kelas bug yang udah dibenerin di "today"/
+// dayLabel() di bawah, tapi kelewat di sini. Buat user WIB jam 00:00-06:59,
+// chip "Hari ini" gak bakal ke-highlight buat data demo ini.
+const todayWIB = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0") + "-" + String(new Date().getDate()).padStart(2, "0");
 const DUMMY_HISTORY = [
   {
-    run_date: new Date().toISOString().slice(0, 10),
+    run_date: todayWIB,
     ran_at: "08:00",
     recs: [
       { id: "dummy-1", urgency: "high", assessment: "Lead ini udah 5 hari gak dikontak, padahal masih di tahap presentasi.", action: "Follow up hasil presentasi minggu lalu", steps: ["Telpon PIC-nya", "Tanya feedback soal harga penawaran"], talking_point: "Pak Budi, gimana pertimbangannya soal penawaran kemarin?" },
@@ -37,9 +42,26 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
   // BUG FIX (audit 16 Sep 2026): sebelumnya gak ada try/catch sama sekali -
   // kalau upsertLead gagal (network/validasi), tombol "Jadikan next action"
   // keliatan gak ngapa-ngapain, user gak tau aksinya gagal kesimpen.
+  //
+  // BUG FIX (audit 17 Sep 2026): kalau tab ini lagi mode demo (dummy=true,
+  // dikunci karena plan belum cukup), leads yang ditampilin FAKE
+  // (DUMMY_LEADS di App.jsx, id "dummy-1" dst) - tapi tombol ini sebelumnya
+  // tetep manggil db.upsertLead beneran ke database asli user, bisa bikin
+  // row "PT Sinar Abadi Distribusi" palsu nyangkut di leads asli mereka.
+  // Sekarang di-block total di mode demo, kasih alert upsell aja.
   const applyAction = async (lead, action) => {
+    if (dummy) { alert("Ini masih data contoh - upgrade paket dulu buat mulai pakai AI Advisor beneran ya."); return; }
     try { await db.upsertLead({ ...lead, next_action: action }); onApplied(); }
     catch (e) { alert("Gagal jadikan next action: " + e.message); }
+  };
+
+  // BUG FIX (audit 17 Sep 2026): sama kayak applyAction - klik "Buka" di
+  // mode demo sebelumnya manggil onOpen(c) beneran (buka LeadModal asli,
+  // yang tombol Simpan/Hapus-nya nulis ke database beneran pake lead id
+  // palsu "dummy-1"). Sekarang di-block, kasih alert upsell juga.
+  const handleOpen = (lead) => {
+    if (dummy) { alert("Ini masih data contoh - upgrade paket dulu buat mulai pakai AI Advisor beneran ya."); return; }
+    onOpen(lead);
   };
 
   // BUG FIX (audit 16 Sep 2026): "today"/"kemarin" sebelumnya dihitung pakai
@@ -103,7 +125,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <button onClick={() => applyAction(c, r.action)} className="text-xs bg-orange-600 hover:bg-orange-700 text-white rounded-lg px-3 py-1.5 font-medium flex items-center gap-1"><CheckCircle2 size={13} /> Jadikan next action</button>
-                        <button onClick={() => onOpen(c)} className="text-xs border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-50">Buka</button>
+                        <button onClick={() => handleOpen(c)} className="text-xs border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-50">Buka</button>
                       </div>
                     </div>
                     <p className="text-sm text-slate-600 mt-2">{r.assessment}</p>
