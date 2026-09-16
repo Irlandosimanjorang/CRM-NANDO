@@ -34,14 +34,25 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
   };
   useEffect(() => { load(); }, [dummy]);
 
-  const applyAction = async (lead, action) => { await db.upsertLead({ ...lead, next_action: action }); onApplied(); };
+  // BUG FIX (audit 16 Sep 2026): sebelumnya gak ada try/catch sama sekali -
+  // kalau upsertLead gagal (network/validasi), tombol "Jadikan next action"
+  // keliatan gak ngapa-ngapain, user gak tau aksinya gagal kesimpen.
+  const applyAction = async (lead, action) => {
+    try { await db.upsertLead({ ...lead, next_action: action }); onApplied(); }
+    catch (e) { alert("Gagal jadikan next action: " + e.message); }
+  };
 
-  const today = new Date().toISOString().slice(0, 10);
+  // BUG FIX (audit 16 Sep 2026): "today"/"kemarin" sebelumnya dihitung pakai
+  // toISOString() (UTC) - buat user WIB (UTC+7), jam 00:00-06:59 lokal bisa
+  // keliatan masih "kemarin" di UTC, jadi label "Hari ini"/"Kemarin" bisa
+  // ketuker persis di jam-jam itu.
+  const today = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0") + "-" + String(new Date().getDate()).padStart(2, "0");
   const dayLabel = (d) => {
     if (d === today) return "Hari ini";
-    const yd = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const ydDate = new Date(); ydDate.setDate(ydDate.getDate() - 1);
+    const yd = ydDate.getFullYear() + "-" + String(ydDate.getMonth() + 1).padStart(2, "0") + "-" + String(ydDate.getDate()).padStart(2, "0");
     if (d === yd) return "Kemarin";
-    return new Date(d).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
+    return new Date(`${d}T00:00:00`).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
   };
 
   const current = history.find((h) => h.run_date === selected);

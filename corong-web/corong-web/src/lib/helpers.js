@@ -21,7 +21,20 @@ export const todayISO = () => {
 };
 export const fmtDate = (iso) => { if (!iso) return "—"; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }); };
 export const fmtRp = (n) => (n ? "Rp " + Number(n).toLocaleString("id-ID") : "Rp 0");
-export const daysSince = (iso) => { if (!iso) return null; const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000); return isNaN(d) ? null : d; };
+// BUG FIX (audit 16 Sep 2026): kalau `iso` cuma tanggal doang ("YYYY-MM-DD",
+// kayak last_contact/note_date), `new Date(iso)` diparse sebagai UTC
+// MIDNIGHT, bukan lokal midnight - buat user WIB (UTC+7) ini bisa bikin
+// hasil daysSince meleset 1 hari deket pergantian tanggal (dampaknya:
+// warna urgency di kartu Leads bisa salah hijau/kuning/merah tergantung
+// jam berapa dibuka). Tanggal-doang sekarang dipaksa diparse sebagai lokal
+// (tempel "T00:00:00" eksplisit); timestamp lengkap yang udah bawa info
+// jam+offset dibiarin apa adanya.
+export const daysSince = (iso) => {
+  if (!iso) return null;
+  const hasTime = typeof iso === "string" && iso.includes("T");
+  const d = Math.floor((Date.now() - new Date(hasTime ? iso : `${iso}T00:00:00`).getTime()) / 86400000);
+  return isNaN(d) ? null : d;
+};
 
 export const stageMeta = (stages, key) => stages.find((s) => s.key === key) || (stages[0] || { label: "—", hex: "#94a3b8" });
 export const chipStyle = (hex) => ({ color: hex, borderColor: hex, backgroundColor: hex + "14" });

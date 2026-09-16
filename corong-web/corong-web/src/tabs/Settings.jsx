@@ -601,7 +601,13 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                           {m.role === "manager" ? "Jadikan Sales Rep" : "Jadikan Manager"}
                         </button>
                       )}
-                      <button onClick={() => removeMember(m.id, ROLE_LABEL[m.role])} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
+                      {/* BUG FIX (audit 16 Sep 2026): sebelumnya ngirim
+                          ROLE_LABEL[m.role] ("Sales Rep"/"Manager") ke
+                          argumen `name` - dialog konfirmasi nampilin jabatan,
+                          bukan nama orangnya ("Keluarin Sales Rep dari
+                          tim?"), gampang salah keluarin orang kalau ada
+                          lebih dari satu dengan role sama. */}
+                      <button onClick={() => removeMember(m.id, m.display_name || `Anggota ${m.user_id.slice(0, 8)}`)} className="text-slate-300 hover:text-rose-500"><Trash2 size={13} /></button>
                     </div>
                   )}
                 </div>

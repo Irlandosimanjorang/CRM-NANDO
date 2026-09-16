@@ -1899,6 +1899,7 @@ export default function Leads({
           onSent={
             onChanged
           }
+          myLevel={myLevel}
         />
 
       )}

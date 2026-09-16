@@ -6,6 +6,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { NextoRobotHead } from "../Auth";
 import * as db from "../lib/db";
+import { todayISO } from "../lib/helpers";
 
 const cn = (...v) => v.filter(Boolean).join(" ");
 
@@ -115,8 +116,13 @@ export default function Dashboard({
   // BUG FIX (audit 16 Sep 2026): sebelumnya gak nyaring tanggal - kunjungan
   // yang udah LEWAT bisa ikut nongol di sini dan kelabelin "Terjadwal" di
   // kartu Upcoming Tasks, padahal harusnya cuma yang hari ini/ke depan.
+  // BUG FIX (audit 16 Sep 2026): "hari ini" sebelumnya dihitung pakai
+  // `new Date().toISOString()` (UTC) - buat user WIB (UTC+7), jam 00:00-06:59
+  // lokal itu masih "kemarin" di UTC, jadi kunjungan yang udah lewat bisa
+  // balik nongol di sini. Diganti ke todayISO() (helpers.js) yang emang
+  // udah bener pakai tanggal LOKAL.
   const upcoming = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = todayISO();
     return leads
       .filter(l => l.visit_date && l.visit_date >= todayStr)
       .sort((a, b) => String(a.visit_date).localeCompare(String(b.visit_date)))
@@ -240,12 +246,21 @@ export default function Dashboard({
     return combined.slice(0, 6);
   }, [todayTasks, upcoming]);
 
+  // Greeting ngikutin jam beneran (16 Sep 2026, permintaan Nando -
+  // sebelumnya hardcode "Good morning" terus walau udah siang/malam), pola
+  // sama kayak buildGreetingText() di daily-digest.ts (email). Plus tanggal
+  // kecil di bawah heading kayak versi sebelumnya.
+  const hourNow = new Date().getHours();
+  const greeting = hourNow < 11 ? "Good morning" : hourNow < 18 ? "Good afternoon" : "Good evening";
+  const todayLabel = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
   return (
     <div className="space-y-5">
       {/* Hero */}
       <div>
-        <h1 className="text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">Good morning, {displayName}</h1>
+        <h1 className="text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">{greeting}, {displayName}</h1>
         <p className="mt-1 text-[13px] text-slate-500">Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
+        <p className="mt-1 text-[11px] text-slate-400">{todayLabel}</p>
       </div>
 
       {/* Rekomendasi AI (Next best action) - dipindah ke paling atas (16 Sep

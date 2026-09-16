@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Sparkles, MessageCircle, Mail, Copy, Loader2, Send } from "lucide-react";
+import { X, Sparkles, MessageCircle, Mail, Copy, Loader2, Send, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import { waLink } from "../lib/helpers";
 
@@ -17,7 +17,15 @@ import { waLink } from "../lib/helpers";
 // dari tombol "Handle Now" di kartu rekomendasi Dashboard (initialChannel
 // diisi biar langsung auto-generate begitu dibuka), ATAU di-restore otomatis
 // abis reload total (rect null, lihat Leads.jsx/Dashboard.jsx).
-export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChannel, onChannelChange }) {
+// SECURITY/GATE FIX (audit 16 Sep 2026): "Draft Follow-up" diiklanin fitur
+// Professional di landing page, tapi popup ini SEBELUMNYA gak ada
+// pengecekan plan sama sekali di frontend - siapapun (termasuk Free/
+// Standard) bisa manggil AI generate draft tanpa upsell/lock apapun (gate
+// beneran ada di backend draft-followup edge function, tapi UI-nya diem-
+// diem gak ngasih tau kenapa gagal). Sekarang ditambahin `myLevel` prop +
+// gate di UI, konsisten sama pola isProfessional di LeadModal.jsx.
+export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChannel, onChannelChange, myLevel }) {
+  const isProfessional = myLevel >= 2;
   const [channel, setChannel] = useState(null); // "whatsapp" | "email" | null
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +38,7 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
   const [wasCached, setWasCached] = useState(false);
 
   const runDraft = async (ch) => {
+    if (!isProfessional) { setChannel(ch); setError("Draft Follow-up (AI) itu fitur khusus paket Professional ke atas."); return; }
     // Cek dulu SEBELUM manggil AI - kalau lead gak punya email tapi user
     // pencet "Email", jangan buang-buang panggilan AI buat draft yang gak
     // akan bisa dikirim ke mana-mana.
@@ -114,17 +123,22 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
         </div>
 
         <div className="p-4 overflow-y-auto" style={{ maxHeight: 400 }}>
+          {!isProfessional && (
+            <p className="text-[10px] text-violet-700 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-1.5 mb-2.5 flex items-center gap-1.5">
+              <Lock size={11} className="shrink-0" /> Draft Follow-up (AI) itu fitur Professional ke atas. Upgrade dulu di tab Pengaturan ya.
+            </p>
+          )}
           {wasCached && (
             <p className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5 mb-2.5">
               Draft yang udah pernah dibuat sebelumnya (gak generate ulang).
             </p>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => runDraft("whatsapp")} disabled={busy} className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5">
-              {busy && channel === "whatsapp" ? <Loader2 size={13} className="animate-spin" /> : <MessageCircle size={13} />} WhatsApp
+            <button onClick={() => runDraft("whatsapp")} disabled={busy || !isProfessional} title={!isProfessional ? "Khusus paket Professional ke atas" : undefined} className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5">
+              {busy && channel === "whatsapp" ? <Loader2 size={13} className="animate-spin" /> : !isProfessional ? <Lock size={13} /> : <MessageCircle size={13} />} WhatsApp
             </button>
-            <button onClick={() => runDraft("email")} disabled={busy} className="text-xs bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5">
-              {busy && channel === "email" ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />} Email
+            <button onClick={() => runDraft("email")} disabled={busy || !isProfessional} title={!isProfessional ? "Khusus paket Professional ke atas" : undefined} className="text-xs bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5">
+              {busy && channel === "email" ? <Loader2 size={13} className="animate-spin" /> : !isProfessional ? <Lock size={13} /> : <Mail size={13} />} Email
             </button>
           </div>
 

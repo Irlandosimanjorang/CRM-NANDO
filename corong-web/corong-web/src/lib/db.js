@@ -1233,12 +1233,18 @@ export async function getSuggestedCategories() {
   return data.suggestions || [];
 }
 
+// BUG FIX (audit 16 Sep 2026): dua-duanya sebelumnya gak ngecek `error` dari
+// Supabase - kalau salah satu update gagal (RLS/network/transient error),
+// caller (DataCleanupModal) tetep nganggep sukses (nutup modal, update state
+// lokal seolah semua keupdate) padahal row-nya di database gak berubah.
 export async function bulkUpdateCategory(updates) {
   for (const u of updates) {
-    await supabase.from("leads").update({ category: u.suggested }).eq("id", u.id);
+    const { error } = await supabase.from("leads").update({ category: u.suggested }).eq("id", u.id);
+    if (error) throw error;
   }
 }
 
 export async function bulkMarkLost(leadIds, lostStageKey) {
-  await supabase.from("leads").update({ stage_key: lostStageKey }).in("id", leadIds);
+  const { error } = await supabase.from("leads").update({ stage_key: lostStageKey }).in("id", leadIds);
+  if (error) throw error;
 }
