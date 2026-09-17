@@ -8,7 +8,7 @@
 // seluruh situs - preferensi disimpen di localStorage key yang sama
 // ("nexto_landing_lang"), jadi kalau orang udah pilih EN di landing page
 // utama, buka /grok-bot juga langsung EN.
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft, ArrowRight, KeyRound, Link2, MessageSquareText, Check,
   ListChecks, FileSearch, PlusCircle, ArrowRightLeft, NotebookPen,
@@ -77,6 +77,26 @@ function GrokBotMcpContent({ lang, setLang }) {
   const PROMPTS = usePrompts(tr);
   const STEPS = useSteps(tr);
   const SECURITY_POINTS = useSecurityPoints(tr);
+
+  // Analitik sendiri (17 Sep 2026) - sama pola kayak Auth.jsx, pake session_id
+  // localStorage yang SAMA (nexto_visit_sid) biar visitor yang pindah dari
+  // landing utama ke halaman ini keitung 1 sesi yang sama, bukan dianggep
+  // visitor baru.
+  useEffect(() => {
+    try {
+      let sessionId = sessionStorage.getItem("nexto_visit_sid");
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        sessionStorage.setItem("nexto_visit_sid", sessionId);
+      }
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      fetch("https://cewggulyfshnbebcpyui.supabase.co/functions/v1/track-visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_path: "/grok-bot", session_id: sessionId, referrer: document.referrer || null, device: isMobile ? "mobile" : "desktop" }),
+      }).catch(() => {});
+    } catch (_) {}
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#05070c] text-white">

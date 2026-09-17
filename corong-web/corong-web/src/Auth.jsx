@@ -2411,6 +2411,26 @@ export default function Auth() {
   // terpisah di bawah - ProductDemoReel, NextoAISalesEngine, dst).
   const tr = (id, en) => (lang === "en" ? en : id);
 
+  // Analitik sendiri (17 Sep 2026, permintaan Nando) - catet 1x kunjungan
+  // landing page ini ke track-visit, fire-and-forget (gagal diem-diem, gak
+  // boleh ganggu pengalaman visitor). session_id acak disimpen sessionStorage
+  // (bukan localStorage) biar cuma keitung 1x per tab/kunjungan, bukan tiap
+  // kali komponen re-render, dan otomatis "reset" kalau visitor buka tab baru.
+  useEffect(() => {
+    try {
+      let sessionId = sessionStorage.getItem("nexto_visit_sid");
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        sessionStorage.setItem("nexto_visit_sid", sessionId);
+      }
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      fetch("https://cewggulyfshnbebcpyui.supabase.co/functions/v1/track-visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_path: "/", session_id: sessionId, referrer: document.referrer || null, device: isMobile ? "mobile" : "desktop" }),
+      }).catch(() => {});
+    } catch (_) {}
+  }, []);
 
   // Section Keamanan - "spotlight cycle" ala Hostinger: satu kartu gantian
   // melebar+nyala tiap beberapa detik sendiri (auto-cycle), tapi hover/klik

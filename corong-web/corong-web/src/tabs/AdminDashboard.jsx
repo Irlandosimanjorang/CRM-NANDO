@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2, Users } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2, Users, Globe } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -676,6 +676,82 @@ function UsersOverviewPanel({ data, features }) {
   );
 }
 
+// Panel card "TRAFFIC" - analitik sendiri buat nexto.site (17 Sep 2026,
+// permintaan Nando: "history visitor + tambahin dikit yang lain") - baca
+// dari page_visits (diisi track-visit, dipanggil landing page & /grok-bot).
+function TrafficPanel({ data }) {
+  if (!data) return <div className="text-[11px] text-slate-500 font-mono">Belum ada data.</div>;
+  const { visits_today, unique_today, visits_7d, trend, top_pages, top_referrers, device } = data;
+  const totalDevice = (device?.mobile || 0) + (device?.desktop || 0);
+  const mobilePct = totalDevice > 0 ? Math.round((device.mobile / totalDevice) * 100) : 0;
+  return (
+    <div className="grid gap-3 min-w-0">
+      <div className="grid grid-cols-3 gap-2">
+        <StatTile label="KUNJUNGAN HARI INI" value={visits_today} />
+        <StatTile label="VISITOR UNIK HARI INI" value={unique_today} accent="#34d399" />
+        <StatTile label="TOTAL 7 HARI" value={visits_7d} accent="#38bdf8" />
+      </div>
+      {trend && trend.length > 1 ? (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-2.5">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-1">Tren kunjungan - 7 hari</div>
+          <TrendSparkline data={trend.map((d) => ({ ...d, day: d.day.slice(5) }))} dataKey="visits" color="#a3e635" />
+        </div>
+      ) : (
+        <div className="text-[10px] text-slate-600 font-mono">belum cukup data buat grafik tren - nunggu beberapa hari kunjungan lagi.</div>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Halaman paling sering dibuka (7 hari)</div>
+          {(!top_pages || top_pages.length === 0) ? (
+            <div className="text-[11px] text-slate-600">belum ada data</div>
+          ) : (
+            <div className="grid gap-1.5">
+              {top_pages.map((p) => (
+                <div key={p.page} className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300 font-mono truncate">{p.page}</span>
+                  <span className="text-slate-500 font-mono font-bold shrink-0 ml-2">{p.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Sumber kunjungan (referrer, 7 hari)</div>
+          {(!top_referrers || top_referrers.length === 0) ? (
+            <div className="text-[11px] text-slate-600">belum ada referrer tercatat (kebanyakan direct/gak ada referrer)</div>
+          ) : (
+            <div className="grid gap-1.5">
+              {top_referrers.map((r) => (
+                <div key={r.host} className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300 font-mono truncate">{r.host}</span>
+                  <span className="text-slate-500 font-mono font-bold shrink-0 ml-2">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+        <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Device (7 hari)</div>
+        {totalDevice === 0 ? (
+          <div className="text-[11px] text-slate-600">belum ada data</div>
+        ) : (
+          <>
+            <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
+              <div className="h-full bg-sky-400" style={{ width: `${mobilePct}%` }} />
+              <div className="h-full bg-violet-400" style={{ width: `${100 - mobilePct}%` }} />
+            </div>
+            <div className="flex items-center justify-between mt-1.5 text-[10.5px] font-mono">
+              <span className="text-sky-300">Mobile {mobilePct}% ({device.mobile})</span>
+              <span className="text-violet-300">Desktop {100 - mobilePct}% ({device.desktop})</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Grid kartu "org chart" - ganti Peta Orbit (10 Sep 2026 -> 17 Sep 2026,
 // permintaan Nando liat referensi Sureflow Agentic OS: deretan kartu
 // spesialis sejajar, bukan node ngorbit lingkaran). Nando eksplisit milih
@@ -1053,6 +1129,26 @@ export default function AdminDashboard() {
       statLabel: "TOTAL USER",
       statValue: status?.users_overview?.total ?? 0,
       content: <UsersOverviewPanel data={status?.users_overview} features={status?.ai_limits?.features} />,
+    },
+    {
+      // TRAFFIC (17 Sep 2026, permintaan Nando) - analitik pengunjung
+      // nexto.site sendiri (page_visits), nemenin Vercel Analytics yang
+      // dashboard-nya kerasa lambat/ribet. Card informasi, bukan AI agent.
+      key: "traffic",
+      title: "TRAFFIC",
+      subtitle: "Analitik Pengunjung",
+      icon: Globe,
+      accentColor: "#a3e635",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(163,230,53,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "data otomatis dari kunjungan",
+      wide: true,
+      blurb: `${status?.traffic?.visits_today ?? 0} kunjungan hari ini, ${status?.traffic?.unique_today ?? 0} visitor unik.`,
+      statLabel: "KUNJUNGAN HARI INI",
+      statValue: status?.traffic?.visits_today ?? 0,
+      content: <TrafficPanel data={status?.traffic} />,
     },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
