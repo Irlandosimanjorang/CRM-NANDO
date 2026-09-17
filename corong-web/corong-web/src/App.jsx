@@ -82,7 +82,7 @@ const NAV = [
 // settings.is_platform_admin true (dicek pas render, bukan hardcode di sini).
 // Ini murni buat kerapian UI - keamanan ASLI-nya di server (ADMIN_EMAIL),
 // jadi meskipun somehow ke-tembus tampil, data-nya tetep ke-block backend.
-const ADMIN_NAV_ITEM = { key: "adminops", label: "Dashboard Karyawan AI", short: "AI Ops", icon: Bot };
+const ADMIN_NAV_ITEM = { key: "adminops", label: "Command Center", short: "AI Ops", icon: Bot };
 
 // ---- COST/BUG FIX (5 Sep 2026) ----
 // SEMUA tab sekarang selalu di-mount (gak pernah di-unmount pas pindah tab),
