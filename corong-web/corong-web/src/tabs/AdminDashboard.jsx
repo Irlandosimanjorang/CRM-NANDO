@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2 } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2, Users } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 
@@ -555,6 +555,100 @@ function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
   );
 }
 
+function StatTile({ label, value, accent }) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] px-2.5 py-2">
+      <div className="text-[9px] font-mono uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="text-[17px] font-bold font-mono mt-0.5" style={{ color: accent || "#e2e8f0" }}>{value}</div>
+    </div>
+  );
+}
+
+const USERS_STICKY_BG = "#0c1018";
+const USER_PLAN_SECTIONS = [
+  { key: "free", label: "Free", accent: "#64748b" },
+  { key: "standard", label: "Standard", accent: "#38bdf8" },
+  { key: "professional", label: "Professional", accent: "#f97316" },
+  { key: "enterprise", label: "Enterprise", accent: "#a78bfa" },
+];
+
+function fmtShortDate(iso) {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "2-digit" });
+}
+
+// Panel card "DATA" - direktori SEMUA user platform (17 Sep 2026, permintaan
+// Nando). Dipisah dropdown per plan TERMASUK Free (beda dari
+// AiAccountsUsagePanel yang emang sengaja skip Free karena gak ada fitur AI
+// yang applicable buat mereka - di sini tujuannya liat SIAPA AJA user-nya,
+// bukan cuma yang bayar).
+function UsersOverviewPanel({ data }) {
+  const [openKey, setOpenKey] = useState(null);
+  if (!data) return <div className="text-[11px] text-slate-500 font-mono">Belum ada data.</div>;
+  const { total, by_plan, new_7d, list } = data;
+  const sections = USER_PLAN_SECTIONS.map((sec) => ({
+    ...sec,
+    users: (list || []).filter((u) => u.plan === sec.key),
+  })).filter((sec) => sec.users.length > 0);
+
+  return (
+    <div className="grid gap-3 min-w-0">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <StatTile label="TOTAL USER" value={total} />
+        <StatTile label="BARU 7 HARI" value={new_7d} accent="#34d399" />
+        <StatTile label="FREE" value={by_plan.free ?? 0} accent="#64748b" />
+        <StatTile label="STANDARD" value={by_plan.standard ?? 0} accent="#38bdf8" />
+        <StatTile label="PRO + ENTERPRISE" value={(by_plan.professional ?? 0) + (by_plan.enterprise ?? 0)} accent="#f97316" />
+      </div>
+      <div className="grid gap-2">
+        {sections.map((sec) => {
+          const isOpen = openKey === sec.key;
+          return (
+            <div key={sec.key} className="min-w-0 rounded-xl border border-white/[0.06] overflow-hidden">
+              <button
+                onClick={() => setOpenKey(isOpen ? null : sec.key)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white/[0.015] hover:bg-white/[0.03] transition-colors"
+              >
+                <span className="text-[10px] font-mono uppercase tracking-wide" style={{ color: sec.accent }}>
+                  {sec.label} <span className="text-slate-600">· {sec.users.length} user</span>
+                </span>
+                <ChevronDown size={13} className={`text-slate-500 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isOpen && (
+                <div className="min-w-0 overflow-x-auto max-h-[320px] overflow-y-auto border-t border-white/[0.06]">
+                  <table className="w-full text-left border-collapse min-w-[640px]">
+                    <thead className="sticky top-0 z-20">
+                      <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+                        <th className="sticky left-0 z-10 pb-1.5 pt-2 pr-2 pl-2 font-medium" style={{ background: USERS_STICKY_BG }}>Akun</th>
+                        <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Org · Role</th>
+                        <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Daftar</th>
+                        <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Terakhir Login</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sec.users.map((u) => (
+                        <tr key={u.user_id} className="border-t border-white/[0.05]">
+                          <td className="sticky left-0 z-10 py-1.5 pr-2 pl-2" style={{ background: USERS_STICKY_BG }}>
+                            <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{u.display_name || u.email || u.user_id.slice(0, 8)}</div>
+                            <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{u.email}</div>
+                          </td>
+                          <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono truncate max-w-[160px] whitespace-nowrap">{u.org_name || "-"}{u.role ? ` · ${u.role}` : ""}</td>
+                          <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{fmtShortDate(u.created_at)}</td>
+                          <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{timeAgo(u.last_sign_in_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // Grid kartu "org chart" - ganti Peta Orbit (10 Sep 2026 -> 17 Sep 2026,
 // permintaan Nando liat referensi Sureflow Agentic OS: deretan kartu
 // spesialis sejajar, bukan node ngorbit lingkaran). Nando eksplisit milih
@@ -911,6 +1005,27 @@ export default function AdminDashboard() {
           ) : "belum pernah jalan - klik Panggil buat tes pertama"}
         </div>
       ),
+    },
+    {
+      // DATA (17 Sep 2026, permintaan Nando) - card terpisah buat liat SEMUA
+      // user platform (total, breakdown per plan, tabel lengkap) - bukan AI
+      // agent kayak yang lain, murni direktori data, tapi ditaro di Command
+      // Center yang sama biar 1 pintu masuk buat semua hal admin.
+      key: "data",
+      title: "DATA",
+      subtitle: "Direktori User",
+      icon: Users,
+      accentColor: "#a3e635",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(163,230,53,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "data langsung dari akun",
+      wide: true,
+      blurb: `${status?.users_overview?.total ?? 0} user terdaftar, ${status?.users_overview?.new_7d ?? 0} baru 7 hari terakhir.`,
+      statLabel: "TOTAL USER",
+      statValue: status?.users_overview?.total ?? 0,
+      content: <UsersOverviewPanel data={status?.users_overview} />,
     },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
