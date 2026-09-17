@@ -594,7 +594,10 @@ function UsersOverviewPanel({ data, features }) {
     // gabung sama data pemakaian yang sama kayak card ATOM, biar gak perlu
     // pindah card buat cek limit fitur AI tiap user.
     usageColumns: meteredFeatures.filter((f) => (PLAN_TIER_RANK[f.tier] || 0) <= PLAN_TIER_RANK[sec.key]),
-  })).filter((sec) => sec.users.length > 0);
+  }));
+  // Semua 4 section SELALU muncul (17 Sep 2026, permintaan Nando) - biarin
+  // kepajang "0 user" kalau emang kosong, jangan disembunyiin, biar gampang
+  // liat plan mana yang masih sepi.
 
   return (
     <div className="grid gap-3 min-w-0">
@@ -620,7 +623,9 @@ function UsersOverviewPanel({ data, features }) {
                 </span>
                 <ChevronDown size={13} className={`text-slate-500 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
               </button>
-              {isOpen && (
+              {isOpen && sec.users.length === 0 ? (
+                <div className="border-t border-white/[0.06] px-3 py-3 text-[11px] text-slate-500 font-mono">Belum ada user di plan {sec.label} ini.</div>
+              ) : isOpen && (
                 <div className="min-w-0 overflow-x-auto max-h-[320px] overflow-y-auto border-t border-white/[0.06]">
                   <table className="w-full text-left border-collapse min-w-[640px]">
                     <thead className="sticky top-0 z-20">
