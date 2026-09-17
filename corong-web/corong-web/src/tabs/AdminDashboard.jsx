@@ -403,7 +403,7 @@ function AiFeatureCatalog({ features }) {
 // section Enterprise otomatis nampilin fitur Professional JUGA (kumulatif),
 // bukan cuma fitur Enterprise-only, karena Enterprise emang dapet semua
 // fitur Professional plus tambahannya sendiri.
-const PLAN_TIER_RANK = { standard: 1, professional: 2, enterprise: 3 };
+const PLAN_TIER_RANK = { free: 0, standard: 1, professional: 2, enterprise: 3 };
 const PLAN_SECTIONS = [
   { key: "standard", label: "Standard" },
   { key: "professional", label: "Professional" },
@@ -582,23 +582,29 @@ function fmtShortDate(iso) {
 // AiAccountsUsagePanel yang emang sengaja skip Free karena gak ada fitur AI
 // yang applicable buat mereka - di sini tujuannya liat SIAPA AJA user-nya,
 // bukan cuma yang bayar).
-function UsersOverviewPanel({ data }) {
+function UsersOverviewPanel({ data, features }) {
   const [openKey, setOpenKey] = useState(null);
   if (!data) return <div className="text-[11px] text-slate-500 font-mono">Belum ada data.</div>;
   const { total, by_plan, new_7d, list } = data;
+  const meteredFeatures = (features || []).filter((f) => f.metered);
   const sections = USER_PLAN_SECTIONS.map((sec) => ({
     ...sec,
     users: (list || []).filter((u) => u.plan === sec.key),
+    // Kolom usage AI kumulatif per tier (17 Sep 2026, permintaan Nando) -
+    // gabung sama data pemakaian yang sama kayak card ATOM, biar gak perlu
+    // pindah card buat cek limit fitur AI tiap user.
+    usageColumns: meteredFeatures.filter((f) => (PLAN_TIER_RANK[f.tier] || 0) <= PLAN_TIER_RANK[sec.key]),
   })).filter((sec) => sec.users.length > 0);
 
   return (
     <div className="grid gap-3 min-w-0">
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
         <StatTile label="TOTAL USER" value={total} />
         <StatTile label="BARU 7 HARI" value={new_7d} accent="#34d399" />
         <StatTile label="FREE" value={by_plan.free ?? 0} accent="#64748b" />
         <StatTile label="STANDARD" value={by_plan.standard ?? 0} accent="#38bdf8" />
-        <StatTile label="PRO + ENTERPRISE" value={(by_plan.professional ?? 0) + (by_plan.enterprise ?? 0)} accent="#f97316" />
+        <StatTile label="PROFESSIONAL" value={by_plan.professional ?? 0} accent="#f97316" />
+        <StatTile label="ENTERPRISE" value={by_plan.enterprise ?? 0} accent="#a78bfa" />
       </div>
       <div className="grid gap-2">
         {sections.map((sec) => {
@@ -623,6 +629,9 @@ function UsersOverviewPanel({ data }) {
                         <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Org · Role</th>
                         <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Daftar</th>
                         <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Terakhir Login</th>
+                        {sec.usageColumns.map((f) => (
+                          <th key={f.key} className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>{f.label}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -635,6 +644,19 @@ function UsersOverviewPanel({ data }) {
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono truncate max-w-[160px] whitespace-nowrap">{u.org_name || "-"}{u.role ? ` · ${u.role}` : ""}</td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{fmtShortDate(u.created_at)}</td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{timeAgo(u.last_sign_in_at)}</td>
+                          {sec.usageColumns.map((f) => {
+                            const usage = u.usage?.[f.key];
+                            if (!usage || !usage.applicable) {
+                              return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-600">-</span></td>;
+                            }
+                            return (
+                              <td key={f.key} className="py-1.5 pr-2">
+                                <span className={`font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${USAGE_STATUS_STYLE[usage.status]}`}>
+                                  {usage.used}{usage.limit !== null ? `/${usage.limit}` : ""}
+                                </span>
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>
@@ -1025,7 +1047,7 @@ export default function AdminDashboard() {
       blurb: `${status?.users_overview?.total ?? 0} user terdaftar, ${status?.users_overview?.new_7d ?? 0} baru 7 hari terakhir.`,
       statLabel: "TOTAL USER",
       statValue: status?.users_overview?.total ?? 0,
-      content: <UsersOverviewPanel data={status?.users_overview} />,
+      content: <UsersOverviewPanel data={status?.users_overview} features={status?.ai_limits?.features} />,
     },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
