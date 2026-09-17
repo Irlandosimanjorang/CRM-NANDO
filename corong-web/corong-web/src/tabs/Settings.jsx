@@ -582,8 +582,17 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                   Dashboard yang ke-gate `myLevel < 1`, jadi begitu user udah
                   Standard/Professional, gak ada tombol upgrade sama sekali
                   di manapun. Sekarang selalu ada di sini selama belum
-                  Enterprise (tier paling atas). */}
-              {!isEnterprise && (
+                  Enterprise (tier paling atas).
+                  BUG FIX (17 Sep 2026, ketauan Nando manual): kartu ini ada
+                  DI DALAM PreviewLock, jadi buat user Free (`locked` true)
+                  tombol ini ikut jadi inert (gak bisa diklik) DAN dobel sama
+                  tombol Upgrade yang sekarang udah ada di banner "Mode
+                  lihat-lihat" milik PreviewLock sendiri - keliatan tumpang
+                  tindih. Disembunyiin kalau `locked`, biar cuma 1 tombol
+                  upgrade yang keliatan (punya PreviewLock) buat user Free;
+                  buat Standard/Professional (gak locked) tombol ini tetep
+                  satu-satunya & tetep dipertahanin. */}
+              {!isEnterprise && !locked && (
                 <a
                   href={MAYAR_PAYMENT_LINK}
                   target="_blank"

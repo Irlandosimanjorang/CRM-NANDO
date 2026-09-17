@@ -851,8 +851,15 @@ export default function App() {
               nongol truss walau udah jadi pelanggan bayar, kesannya maksa).
               Upgrade CTA buat Standard/Professional dipindah ke tab
               Pengaturan aja - orang yang emang mau upgrade pasti nyari ke
-              situ, gak perlu dipaksa liat tiap buka app. */}
-          {!loading && myLevel < 1 && (
+              situ, gak perlu dipaksa liat tiap buka app.
+              BUG FIX (17 Sep 2026, ketauan Nando manual): kondisi di atas gak
+              pernah SUNGGUHAN nyembunyiin banner ini pas lagi di tab
+              Pengaturan - jadi banner "Upgrade Professional" ini numpuk di
+              atas banner "Mode lihat-lihat" punya PreviewLock (yang nawarin
+              "Upgrade ke Standard") - dua CTA beda tier, kesannya berantakan/
+              tumpang tindih. Sekarang di-skip eksplisit pas effectiveTab ===
+              "settings", karena tab itu udah punya CTA upgrade sendiri. */}
+          {!loading && myLevel < 1 && effectiveTab !== "settings" && (
             <div className="mb-5 overflow-hidden rounded-[20px] border border-orange-200/70 bg-gradient-to-r from-orange-50 via-white to-orange-50/60 shadow-[0_12px_35px_-25px_rgba(249,115,22,.45)]">
               <div className="flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-5">
                 <div className="flex items-start gap-3">
