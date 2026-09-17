@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Sparkles, MessageCircle, Mail, Copy, Loader2, Send, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import { waLink } from "../lib/helpers";
@@ -107,7 +108,11 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
     ? Math.min(Math.max(rect.bottom + 8, 12), window.innerHeight - POPUP_H)
     : Math.max(12, (window.innerHeight - POPUP_H) / 2);
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // posisi `left`/`top` di sini dihitung dari window.innerWidth/innerHeight
+  // (viewport BENERAN), jadi kalau dirender inline (kekurung ancestor), hasil
+  // hitungannya bisa gak sesuai sama posisi visual yang sebenernya kerender.
+  return createPortal(
     <>
       <div className="fixed inset-0 z-40 bg-slate-900/20" onClick={onClose} />
       <div
@@ -174,6 +179,7 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

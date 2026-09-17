@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
@@ -74,7 +75,9 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
       onSaved();
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><Trophy size={18} className="text-emerald-500" /> Tambah Deal</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
@@ -123,7 +126,8 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
         </div>
         <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan deal</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Tutup</button></div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Sparkles, Loader2, CheckCircle2, AlertTriangle, Tag, Clock, Phone } from "lucide-react";
 import * as db from "../lib/db";
 import { daysSince } from "../lib/helpers";
@@ -99,7 +100,9 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
   // --- Kontak kurang lengkap ---
   const incompleteLeads = useMemo(() => active.filter((l) => !l.city || !l.phone), [active]);
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={handleClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
@@ -181,6 +184,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

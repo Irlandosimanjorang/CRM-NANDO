@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Trash2, RotateCcw, AlertTriangle, Loader2, Inbox } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtDate } from "../lib/helpers";
@@ -45,7 +46,9 @@ export default function RecycleBinModal({ onClose, onChanged }) {
     finally { setPurgingAll(false); }
   };
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-lg my-8 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-3">
@@ -97,6 +100,7 @@ export default function RecycleBinModal({ onClose, onChanged }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

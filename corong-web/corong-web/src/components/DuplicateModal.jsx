@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Copy, Merge, CheckCircle2, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
 import { nameSimilarity, fmtDate } from "../lib/helpers";
@@ -55,7 +56,9 @@ export default function DuplicateModal({ leads, onClose, onChanged }) {
     finally { setBusyId(null); }
   };
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1"><h2 className="font-bold text-lg flex items-center gap-2"><Copy size={18} className="text-orange-500" /> Cek Duplikat</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
@@ -95,6 +98,7 @@ export default function DuplicateModal({ leads, onClose, onChanged }) {
 
         <div className="mt-4"><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 w-full">Tutup</button></div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

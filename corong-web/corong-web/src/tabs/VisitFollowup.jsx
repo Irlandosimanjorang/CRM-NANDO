@@ -37,7 +37,9 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
   // gagal (jaringan/rate-limit), tunjukin frasa umum, JANGAN lat/lng.
   const locationLabel = address || "lokasi GPS Anda saat ini";
   const accLabel = accuracy != null ? `±${Math.round(accuracy)}m` : null;
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={scanning ? undefined : onCancel}>
       <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
@@ -78,7 +80,8 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -194,7 +197,9 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
     finally { setBusy(false); }
   };
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
@@ -224,7 +229,8 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
           {busy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} {busy ? busyLabel : "Konfirmasi Check-in"}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -669,7 +675,9 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
     try { await db.upsertLead({ ...sel, visit_date: date, visit_meet: meet, visit_agenda: agenda }); onSaved(); }
     catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><CalendarCheck size={18} className="text-orange-500" /> Tambah Visit</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
@@ -728,7 +736,8 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
         </div>
         <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan visit</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button></div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Save, Trash2, Plus, Building2 } from "lucide-react";
 import * as db from "../lib/db";
 
@@ -26,7 +27,9 @@ export default function CompetitorModal({ comp, onClose, onSaved }) {
     catch (e) { alert("Gagal hapus: " + e.message); setBusy(false); }
   };
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg">{comp.id ? "Edit Kompetitor" : "Tambah Kompetitor"}</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
@@ -57,6 +60,7 @@ export default function CompetitorModal({ comp, onClose, onSaved }) {
           {comp.id && <button onClick={del} disabled={busy} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-60 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtDate, stageMeta, chipStyle } from "../lib/helpers";
@@ -343,7 +344,9 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   // ini dibuka lain kali.
   const handleClose = () => { clearLeadDraft(); onClose(); };
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={handleClose}>
       <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl my-8 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header gradient sesuai warna tahap pipeline lead ini - avatar bubble
@@ -569,6 +572,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           {lead.id && <button onClick={del} disabled={busy} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-60 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

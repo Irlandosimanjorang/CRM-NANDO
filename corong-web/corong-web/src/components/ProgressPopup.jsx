@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, ClipboardList, Loader2, Send, Pencil, Trash2, Check } from "lucide-react";
 import * as db from "../lib/db";
 
@@ -61,7 +62,9 @@ export default function ProgressPopup({ lead, onClose, onChanged, autoFocus }) {
     }
   };
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
       <div
         className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-sm flex flex-col overflow-hidden"
@@ -126,6 +129,7 @@ export default function ProgressPopup({ lead, onClose, onChanged, autoFocus }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

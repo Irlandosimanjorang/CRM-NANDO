@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { X, MessageCircle } from "lucide-react";
 
 // === LEGAL PAGES (5 Sep 2026, direvisi 5 Sep 2026) ===
@@ -180,7 +181,9 @@ function PrivacyContent() {
 export default function LegalModal({ type, onClose, supportWaNumber }) {
   const isTos = type === "tos";
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
+  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
+  return createPortal(
     <div className="fixed inset-0 z-[1100] flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 py-8 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-2xl rounded-[28px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 flex items-center justify-between rounded-t-[28px] border-b border-slate-100 bg-white/95 px-6 py-4 backdrop-blur">
@@ -206,6 +209,7 @@ export default function LegalModal({ type, onClose, supportWaNumber }) {
           </a>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

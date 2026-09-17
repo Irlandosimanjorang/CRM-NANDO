@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, MessageCircle, Trash2, Loader2, Send, ThumbsUp, Share2, Image as ImageIcon } from "lucide-react";
 import * as db from "../lib/db";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
@@ -94,7 +95,12 @@ function ComposerModal({ displayName, avatarUrl, onClose, onPosted }) {
     finally { setBusy(false); }
   };
 
-  return (
+  // BUG FIX (17 Sep 2026, laporan Nando): dirender lewat createPortal
+  // langsung ke document.body - sebelumnya inline di dalam tree tab Nex,
+  // jadi posisi "fixed" ini bisa kekurung ancestor (nempel/kepotong ke tepi
+  // atas viewport, gak presisi ke tengah layar beneran). Pola sama kayak
+  // ManualColumnMapModal, diterapin ke SEMUA modal fullscreen di app ini.
+  return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
@@ -142,7 +148,8 @@ function ComposerModal({ displayName, avatarUrl, onClose, onPosted }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
