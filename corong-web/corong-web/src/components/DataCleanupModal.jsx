@@ -1,10 +1,36 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { X, Sparkles, Loader2, CheckCircle2, AlertTriangle, Tag, Clock, Phone } from "lucide-react";
 import * as db from "../lib/db";
 import { daysSince } from "../lib/helpers";
 
+// BUG FIX (17 Sep 2026, permintaan Nando: lindungin semua fitur dari
+// tab-discard) - Settings.jsx udah inget MODAL INI lagi kebuka (kind
+// "datacleanup" di uiPersist.js), tapi hasil scan AI (catSuggestions) yang
+// user tunggu prosesnya, plus centangan checkbox-nya, sebelumnya ilang total
+// kalau tab-nya di-discard - user harus scan ulang dari nol. LocalStorage key
+// SENDIRI (bukan numpang kind "datacleanup" yang udah dipake Settings.jsx
+// buat nge-track visibility, biar gak saling timpa - uiPersist cuma punya 1
+// slot buat semua modal).
+const CLEANUP_DRAFT_KEY = "nexto_data_cleanup_draft";
+const CLEANUP_DRAFT_MAX_AGE = 24 * 60 * 60 * 1000; // 24 jam
+
+function loadCleanupDraft() {
+  try {
+    const raw = localStorage.getItem(CLEANUP_DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (Date.now() - d.savedAt > CLEANUP_DRAFT_MAX_AGE) { localStorage.removeItem(CLEANUP_DRAFT_KEY); return null; }
+    return d;
+  } catch { return null; }
+}
+function clearCleanupDraft() {
+  try { localStorage.removeItem(CLEANUP_DRAFT_KEY); } catch {}
+}
+
 export default function DataCleanupModal({ leads, stages, onClose, onChanged }) {
-  const [tab, setTab] = useState("kategori");
+  const [draft] = useState(() => loadCleanupDraft());
+  const [tab, setTab] = useState(() => draft?.tab || "kategori");
+  const handleClose = () => { clearCleanupDraft(); onClose(); };
 
   const lostStage = stages.find((s) => s.type === "lost");
   const wonKeys = stages.filter((s) => s.type === "won").map((s) => s.key);
@@ -12,9 +38,9 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
   const active = useMemo(() => leads.filter((l) => !wonKeys.includes(l.stage_key) && !lostKeys.includes(l.stage_key)), [leads]);
 
   // --- Kategori ---
-  const [catSuggestions, setCatSuggestions] = useState(null);
+  const [catSuggestions, setCatSuggestions] = useState(() => draft?.catSuggestions ?? null);
   const [catLoading, setCatLoading] = useState(false);
-  const [catChecked, setCatChecked] = useState({});
+  const [catChecked, setCatChecked] = useState(() => draft?.catChecked || {});
   const [catBusy, setCatBusy] = useState(false);
 
   const scanCategories = async () => {
@@ -43,8 +69,19 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
     const ds = daysSince(l.last_contact);
     return ds === null || ds >= 90;
   }), [active]);
-  const [staleChecked, setStaleChecked] = useState({});
+  const [staleChecked, setStaleChecked] = useState(() => draft?.staleChecked || {});
   const [staleBusy, setStaleBusy] = useState(false);
+
+  // Auto-simpen draft (hasil scan AI + centangan) tiap ada perubahan - biar
+  // kalau tab-nya di-discard pas lagi review hasil scan, gak perlu scan ulang.
+  useEffect(() => {
+    if (catSuggestions === null && Object.keys(staleChecked || {}).length === 0 && tab === "kategori") return;
+    try {
+      localStorage.setItem(CLEANUP_DRAFT_KEY, JSON.stringify({ tab, catSuggestions, catChecked, staleChecked, savedAt: Date.now() }));
+    } catch (_) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, catSuggestions, catChecked, staleChecked]);
+
   const applyStale = async () => {
     if (!lostStage) { alert("Ga ada tahap bertipe 'Lost' di pengaturan pipeline Anda."); return; }
     const ids = staleLeads.filter((l) => staleChecked[l.id]).map((l) => l.id);
@@ -52,6 +89,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
     setStaleBusy(true);
     try {
       await db.bulkMarkLost(ids, lostStage.key);
+      clearCleanupDraft();
       onChanged();
       onClose();
     } catch (e) { alert("Gagal apply: " + e.message); }
@@ -62,11 +100,11 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
   const incompleteLeads = useMemo(() => active.filter((l) => !l.city || !l.phone), [active]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={handleClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-bold text-lg flex items-center gap-2"><Sparkles size={18} className="text-orange-500" /> Rapihin Data</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+          <button onClick={handleClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
         </div>
         <p className="text-sm text-slate-500 mb-4">Semua perubahan tetap butuh persetujuan Anda — ga ada yang dieksekusi otomatis.</p>
 

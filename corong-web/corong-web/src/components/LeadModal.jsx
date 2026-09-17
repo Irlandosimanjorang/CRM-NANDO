@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtDate, stageMeta, chipStyle } from "../lib/helpers";
@@ -6,6 +6,35 @@ import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCo
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
+
+// BUG FIX (17 Sep 2026, permintaan Nando: lindungin semua fitur dari
+// tab-discard, sama kayak fix Rekam Meeting) - LeadModal ini modal paling
+// sering dipake di seluruh app (edit lead lengkap + outcome memory + draft
+// email), tapi editan yang lagi diketik SAMA SEKALI gak ke-restore kalau
+// tab-nya di-discard browser/OS - beda dari "leadinline" (kind di
+// Leads.jsx) yang cuma inget LEAD MANA yang lagi dibuka, bukan ISI EDITAN-
+// nya. Pake localStorage key SENDIRI (bukan numpang sistem saveOpenModal/
+// getOpenModal shared di uiPersist.js) - itu cuma punya 1 slot buat SEMUA
+// modal, kalau dipake bareng bakal saling timpa sama entry "leadinline"
+// yang udah ada. Pola persis sama kayak DRAFT_KEY di AddDealModal (Deal.jsx).
+const LEAD_DRAFT_KEY = "nexto_lead_edit_draft";
+const LEAD_DRAFT_MAX_AGE = 24 * 60 * 60 * 1000; // 24 jam
+
+function loadLeadDraft(leadId) {
+  try {
+    const raw = localStorage.getItem(LEAD_DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (Date.now() - d.savedAt > LEAD_DRAFT_MAX_AGE) { localStorage.removeItem(LEAD_DRAFT_KEY); return null; }
+    // Draft cuma valid buat LEAD YANG SAMA - jangan sampe editan lead A
+    // ketiban/nyampur ke lead B yang beda pas dibuka gantian.
+    if (d.leadId !== leadId) return null;
+    return d;
+  } catch { return null; }
+}
+function clearLeadDraft() {
+  try { localStorage.removeItem(LEAD_DRAFT_KEY); } catch {}
+}
 
 // Chip kecil buat nampilin level Customer State (Interest/Intent/Risk) dengan
 // warna - "invert" dipake buat Risk, soalnya "high risk" itu JELEK (merah),
@@ -87,7 +116,9 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Gak ada budget", "G
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
 export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise }) {
-  const [f, setF] = useState({ ...lead });
+  const leadDraftId = lead.id || "new";
+  const [draft] = useState(() => loadLeadDraft(leadDraftId));
+  const [f, setF] = useState({ ...lead, ...(draft?.f || {}) });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
   const [editingId, setEditingId] = useState(null);
@@ -100,10 +131,10 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   // ---- OUTCOME MEMORY - pas Tahap diganti ke tipe Menang/Kalah (dan
   // sebelumnya belum closed), munculin form kecil nanya kenapa. Ini yang
   // ngisi "Memory Engine" di alur Context->Decision->Action->Memory->Loop. ----
-  const [showOutcome, setShowOutcome] = useState(false);
-  const [outcomeResult, setOutcomeResult] = useState(null); // "won" | "lost"
-  const [outcomeCategory, setOutcomeCategory] = useState("");
-  const [outcomeReason, setOutcomeReason] = useState("");
+  const [showOutcome, setShowOutcome] = useState(() => draft?.showOutcome || false);
+  const [outcomeResult, setOutcomeResult] = useState(() => draft?.outcomeResult || null); // "won" | "lost"
+  const [outcomeCategory, setOutcomeCategory] = useState(() => draft?.outcomeCategory || "");
+  const [outcomeReason, setOutcomeReason] = useState(() => draft?.outcomeReason || "");
   const [outcomeGuessing, setOutcomeGuessing] = useState(false);
 
   const onStageChange = (newKey) => {
@@ -151,12 +182,30 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const sm = stageMeta(stages, f.stage_key || stages[0]?.key);
 
   // ---- KIRIM EMAIL ----
-  const [showEmail, setShowEmail] = useState(false);
-  const [emailTpl, setEmailTpl] = useState("");
-  const [emailSubject, setEmailSubject] = useState("");
-  const [emailBody, setEmailBody] = useState("");
+  const [showEmail, setShowEmail] = useState(() => draft?.showEmail || false);
+  const [emailTpl, setEmailTpl] = useState(() => draft?.emailTpl || "");
+  const [emailSubject, setEmailSubject] = useState(() => draft?.emailSubject || "");
+  const [emailBody, setEmailBody] = useState(() => draft?.emailBody || "");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState("");
+
+  // Auto-simpen draft tiap ada perubahan field/outcome/email - biar kalau
+  // tab-nya di-discard browser/OS pas lagi ngedit, balik lagi ke Nexto
+  // editannya masih ada (bukan balik ke versi tersimpan server doang).
+  // Dibandingin ke `lead` asli - kalau f PERSIS sama kayak data server (belum
+  // ada perubahan apapun) draft-nya gak usah disimpen, biar gak nyimpen
+  // "draft kosong" tiap kali modal dibuka doang tanpa ngapa-ngapain.
+  useEffect(() => {
+    const isUnchanged = JSON.stringify(f) === JSON.stringify({ ...lead }) && !showOutcome && !showEmail;
+    if (isUnchanged) return;
+    try {
+      localStorage.setItem(LEAD_DRAFT_KEY, JSON.stringify({
+        leadId: leadDraftId, f, showOutcome, outcomeResult, outcomeCategory, outcomeReason,
+        showEmail, emailTpl, emailSubject, emailBody, savedAt: Date.now(),
+      }));
+    } catch (_) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f, showOutcome, outcomeResult, outcomeCategory, outcomeReason, showEmail, emailTpl, emailSubject, emailBody]);
 
   const pickTemplate = (key) => {
     setEmailTpl(key);
@@ -248,6 +297,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
       if (showOutcome && outcomeResult && lead.id) {
         await db.saveOutcome(lead.id, { result: outcomeResult, reason_category: outcomeCategory, reason: outcomeReason, ai_generated: false });
       }
+      clearLeadDraft();
       onSaved();
     }
     catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
@@ -269,7 +319,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     }
     if (!window.confirm("Hapus lead ini?")) return;
     setBusy(true);
-    try { await db.deleteLead(lead.id); onSaved(); }
+    try { await db.deleteLead(lead.id); clearLeadDraft(); onSaved(); }
     catch (e) { alert("Gagal hapus: " + e.message); setBusy(false); }
   };
 
@@ -288,13 +338,18 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     setEditingId(null); setEditText("");
   };
 
+  // Ditutup manual (X / Batal / klik backdrop) - hapus draft yang kesimpen
+  // juga, biar gak nongol lagi editan yang udah sengaja ditinggalin pas lead
+  // ini dibuka lain kali.
+  const handleClose = () => { clearLeadDraft(); onClose(); };
+
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={handleClose}>
       <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl my-8 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header gradient sesuai warna tahap pipeline lead ini - avatar bubble
             "bocor" ke luar band, senada sama gaya kartu profil & popup lain. */}
         <div className="relative h-20 shrink-0" style={{ background: `linear-gradient(135deg, ${sm.hex}, ${sm.hex}cc 55%, ${sm.hex}99)` }}>
-          <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"><X size={16} /></button>
+          <button onClick={handleClose} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"><X size={16} /></button>
           <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-2xl overflow-hidden bg-white ring-4 ring-white shadow-md flex items-center justify-center font-bold text-xl" style={{ color: sm.hex }}>
             {(f.name || "?").charAt(0).toUpperCase()}
           </div>
@@ -510,7 +565,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
         </div>
         <div className="flex items-center gap-2 mt-5">
           <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan</button>
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
+          <button onClick={handleClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
           {lead.id && <button onClick={del} disabled={busy} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-60 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
         </div>
       </div>

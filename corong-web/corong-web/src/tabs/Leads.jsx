@@ -42,6 +42,28 @@ import AiDraftPopup from "../components/AiDraftPopup";
 import ProgressPopup from "../components/ProgressPopup";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
+// BUG FIX (17 Sep 2026, permintaan Nando: lindungin semua fitur dari
+// tab-discard) - `manualMapRequest` nyimpen SELURUH spreadsheet yang baru
+// di-parse (rawRows) + hasil tebakan AI/rule-based - kalau tab-nya di-discard
+// pas user lagi ngecek/betulin petaan kolom, sebelumnya harus upload ULANG
+// file-nya dari awal (parsing + tebakan AI ke-ulang semua). rawRows di sini
+// murni data (array of array nilai sel), bukan File/Blob, jadi AMAN
+// diserialisasi ke JSON apa adanya - beda dari kasus recording audio yang
+// bufernya beneran gak bisa "dibekuin". Key SENDIRI (bukan numpang uiPersist
+// yang cuma 1 slot) karena Leads.jsx udah pakai itu buat modal lain
+// (leadinline/importSummary/dupcheck/progress).
+const MANUAL_MAP_KEY = "nexto_manual_map_request";
+const MANUAL_MAP_MAX_AGE = 24 * 60 * 60 * 1000; // 24 jam
+function loadManualMapRequest() {
+  try {
+    const raw = localStorage.getItem(MANUAL_MAP_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (Date.now() - d.savedAt > MANUAL_MAP_MAX_AGE) { localStorage.removeItem(MANUAL_MAP_KEY); return null; }
+    return d.request || null;
+  } catch { return null; }
+}
+
 import {
   getFieldLabel,
   getCategories,
@@ -556,7 +578,16 @@ export default function Leads({
   // biar user sendiri yang milih kolom mana isinya apa lewat
   // ManualColumnMapModal, bukan main tebak-tebakan mulu.
   const [manualMapRequest, setManualMapRequest] =
-    useState(null);
+    useState(() => loadManualMapRequest());
+
+  // Auto-simpen/hapus draft petaan kolom tiap kali statenya berubah - lihat
+  // komentar MANUAL_MAP_KEY di atas.
+  useEffect(() => {
+    try {
+      if (manualMapRequest) localStorage.setItem(MANUAL_MAP_KEY, JSON.stringify({ request: manualMapRequest, savedAt: Date.now() }));
+      else localStorage.removeItem(MANUAL_MAP_KEY);
+    } catch (_) {}
+  }, [manualMapRequest]);
 
   const [draftPopup, setDraftPopup] =
     useState(null);

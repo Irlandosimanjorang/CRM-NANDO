@@ -57,7 +57,14 @@ function ProfileCard({ myName, myAvatarUrl, myJobTitle, postCount, totalLikes })
 }
 
 function ComposerModal({ displayName, avatarUrl, onClose, onPosted }) {
-  const [text, setText] = useState("");
+  // BUG FIX (17 Sep 2026, permintaan Nando: lindungin semua fitur dari
+  // tab-discard) - kind "nexpost" (uiPersist) udah dipake buat inget modal
+  // ini lagi kebuka, tapi datanya cuma `{}` kosong - teks yang lagi diketik
+  // ilang kalau tab-nya di-discard. Sekarang teksnya ikut disimpen di `data`
+  // slot yang SAMA (aman, gak ada modal lain yang numpang kind "nexpost" ini).
+  // Foto yang dipilih (File object) TETEP gak bisa direstore - itu emang
+  // batasan asli browser, bukan bug.
+  const [text, setText] = useState(() => getOpenModal("nexpost")?.text || "");
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -102,7 +109,7 @@ function ComposerModal({ displayName, avatarUrl, onClose, onPosted }) {
 
         <textarea
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); saveOpenModal("nexpost", { text: e.target.value }); }}
           rows={4}
           placeholder="Tanya strategi, cari supplier/buyer, share info..."
           className="w-full px-3 py-2.5 text-sm border-0 focus:outline-none resize-none placeholder:text-slate-400"

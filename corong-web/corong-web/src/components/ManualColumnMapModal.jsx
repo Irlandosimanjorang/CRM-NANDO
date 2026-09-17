@@ -1,6 +1,28 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Table2, AlertTriangle, Sparkles } from "lucide-react";
+
+// BUG FIX (17 Sep 2026, permintaan Nando) - koreksi manual user (assign kolom,
+// nama field custom, baris awal data) sebelumnya cuma di state React, ilang
+// kalau tab-nya di-discard - Leads.jsx sendiri udah nyimpen `request` (file
+// yang di-parse), jadi modal ini kebuka lagi, tapi user harus ngulang semua
+// koreksinya dari nol. Divalidasi ke `sheetName` biar gak ke-restore ke
+// sheet/file yang beda kalau kebetulan ada draft basi dari import lain.
+const MANUAL_MAP_DRAFT_KEY = "nexto_manual_map_draft";
+const MANUAL_MAP_DRAFT_MAX_AGE = 24 * 60 * 60 * 1000; // 24 jam
+function loadManualMapDraft(sheetName) {
+  try {
+    const raw = localStorage.getItem(MANUAL_MAP_DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (Date.now() - d.savedAt > MANUAL_MAP_DRAFT_MAX_AGE) { localStorage.removeItem(MANUAL_MAP_DRAFT_KEY); return null; }
+    if (d.sheetName !== sheetName) return null;
+    return d;
+  } catch { return null; }
+}
+function clearManualMapDraft() {
+  try { localStorage.removeItem(MANUAL_MAP_DRAFT_KEY); } catch {}
+}
 
 // Layar konfirmasi petaan kolom - SEKARANG SELALU muncul tiap kali import
 // (dulu cuma muncul kalau deteksi otomatis gagal total). Rule-based/AI di
@@ -45,15 +67,24 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
     () => rawRows.slice(0, 20).reduce((max, r) => Math.max(max, r.length), 0),
     [rawRows]
   );
+  const [mapDraft] = useState(() => loadManualMapDraft(sheetName));
   const [assign, setAssign] = useState(() => {
+    if (mapDraft?.assign && mapDraft.assign.length === numCols) return mapDraft.assign;
     const arr = Array(numCols).fill("");
     Object.entries(initialMapping).forEach(([field, idx]) => {
       if (idx !== null && idx !== undefined && idx >= 0 && idx < numCols) arr[idx] = field;
     });
     return arr;
   });
-  const [dataStartRow, setDataStartRow] = useState(initialDataStartRow);
-  const [customLabels, setCustomLabels] = useState({}); // colIdx -> label yang diketik user
+  const [dataStartRow, setDataStartRow] = useState(() => mapDraft?.dataStartRow ?? initialDataStartRow);
+  const [customLabels, setCustomLabels] = useState(() => mapDraft?.customLabels || {}); // colIdx -> label yang diketik user
+
+  // Auto-simpen koreksi manual tiap berubah - lihat komentar MANUAL_MAP_DRAFT_KEY.
+  useEffect(() => {
+    try {
+      localStorage.setItem(MANUAL_MAP_DRAFT_KEY, JSON.stringify({ sheetName, assign, dataStartRow, customLabels, savedAt: Date.now() }));
+    } catch (_) {}
+  }, [sheetName, assign, dataStartRow, customLabels]);
 
   const autoGuessed = initialMapping && initialMapping.name !== undefined && initialMapping.name !== null;
 
@@ -101,8 +132,11 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
       return;
     }
 
+    clearManualMapDraft();
     onConfirm(mapping, dataStartRow, customEntries);
   };
+
+  const handleCancel = () => { clearManualMapDraft(); onCancel(); };
 
   // Di-render lewat portal langsung ke document.body - BUKAN inline di dalam
   // tree Leads.jsx. Kalau dirender inline, ancestor tab Leads (yang punya
@@ -111,11 +145,11 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
   // "nempel ke kiri"/kepotong (lihat catatan serupa di App.jsx buat kartu
   // profil ProfileAvatar - pola yang sama dipake di sini).
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onCancel}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={handleCancel}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl min-w-0 my-8 p-5" style={{ maxWidth: "min(56rem, calc(100vw - 2rem))" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-bold text-lg flex items-center gap-2"><Table2 size={18} className="text-orange-500" /> Cek & Sesuaikan Kolom Import</h2>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+          <button onClick={handleCancel} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
         </div>
         <p className="text-sm text-slate-500 mb-1">
           {autoGuessed ? (
@@ -191,7 +225,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
         )}
 
         <div className="flex gap-2 mt-4">
-          <button onClick={onCancel} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 flex-1">Batal</button>
+          <button onClick={handleCancel} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 flex-1">Batal</button>
           <button
             onClick={handleConfirm}
             disabled={!hasName}
