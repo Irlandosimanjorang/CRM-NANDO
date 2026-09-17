@@ -501,205 +501,75 @@ function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
   );
 }
 
-// Peta orbit "second brain" - hub AI di tengah dengan tiap karyawan AI
-// mengorbit di sekelilingnya. Sudut per node dihitung OTOMATIS dari jumlah
-// karyawan (360 / total), BUKAN hardcode per nama (9 Sep 2026 - sebelumnya
-// tiap kali nambah karyawan baru harus itung ulang derajat manual satu-satu,
-// gak scalable buat rencana nambah lebih banyak lagi ke depan). Karyawan
-// mana pun boleh punya `subSignals` (array {key,label,ok,desc,detail}) buat
-// ditampilin sebagai cincin titik-titik kecil di sekeliling node-nya sendiri
-// (dulu cuma ATOM yang di-hardcode dapet perlakuan ini) - biar keliatan dia
-// "punya tim sendiri" di dalam, kayak cluster departemen di video referensi.
-// Posisi dihitung pake trigonometri dalam persen 0-100 biar responsif tanpa
-// ukur pixel manual - lihat polarPoint().
-const ORBIT_START_ANGLE = 216; // biar node pertama (biasanya ATOM) di posisi yang sama kayak sebelumnya
-// Radius dikecilin dari versi awal (37/13/47) - versi lama ketauan pas dites
-// beneran: node paling bawah (misal NOVA) fisiknya (ikon + label teks di
-// bawahnya) bisa nembus keluar kotak orbit sendiri dan numpuk sama footer
-// di bawahnya, soalnya translate(-50%,-50%) itu nge-tengahin SELURUH tumpukan
-// ikon+label di titik matematis, bukan cuma ikonnya - jadi separuh tinggi
-// label ikut "makan" jatah margin ke tepi kotak. Radius yang lebih kecil
-// nyisain margin lebih di semua sisi (atas/bawah/kiri/kanan) buat nampung itu.
-const ORBIT_MAIN_RADIUS = 32;
-const ORBIT_SUB_RADIUS = 10;
-const ORBIT_BOUNDARY_RADIUS = 40;
-
-function polarPoint(cx, cy, r, angleDeg) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+// Grid kartu "org chart" - ganti Peta Orbit (10 Sep 2026 -> 17 Sep 2026,
+// permintaan Nando liat referensi Sureflow Agentic OS: deretan kartu
+// spesialis sejajar, bukan node ngorbit lingkaran). Nando eksplisit milih
+// TANPA node "orchestrator" di atas - 7 karyawan AI tetep sejajar/setara,
+// cuma tampilannya jadi kartu grid (gampang di-scan semua sekaligus), bukan
+// lingkaran orbit. Klik kartu = buka modal detail yang sama persis kayak
+// sebelumnya (EmployeeDetailModal), gak ada perilaku yang berubah.
+function statusPillStyle(ok) {
+  return ok
+    ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/25"
+    : "bg-amber-500/10 text-amber-300 border-amber-500/30";
 }
 
-function OrbitCommandMap({ employees, selectedKey, onSelectEmployee, onSelectSignal, overallOk, overallGauge }) {
-  const cx = 50, cy = 50;
-  const angleStep = 360 / Math.max(employees.length, 1);
-  const nodes = employees.map((e, i) => ({ ...e, pos: polarPoint(cx, cy, ORBIT_MAIN_RADIUS, ORBIT_START_ANGLE + angleStep * i) }));
-  const nodesWithSubRing = nodes.filter((n) => n.subSignals && n.subSignals.length > 0);
-  // Node yang GAK punya subSignals asli (cuma ATOM yang punya) - tetep dikasih
-  // cincin muter, tapi bentuknya SENGAJA beda (1 lengkungan energi nyapu
-  // berputar, bukan titik-titik) biar gak keliatan kayak ngaku-ngaku punya
-  // sub-sinyal beneran padahal cuma dekorasi.
-  const nodesWithoutSubRing = nodes.filter((n) => !n.subSignals || n.subSignals.length === 0);
-  // Klik node muncul efek "ripple" (cincin ngembang lalu ilang) sesaat -
-  // feedback visual instan tanpa nunggu panel detail di bawah ke-render.
-  const [rippleId, setRippleId] = useState(null);
-  const selectNode = (key) => {
-    onSelectEmployee(key);
-    setRippleId(`${key}-${Date.now()}`);
-  };
-
-  // Ukuran kotak orbit diukur LANGSUNG dari sisa ruang yang beneran ada di
-  // parent-nya (ResizeObserver), bukan ditebak pake vh/aspect-ratio CSS -
-  // percobaan sebelumnya pake satuan vh gak nyambung ke tinggi ASLI yang
-  // udah kepake header+ringkasan di atas, jadi orbitnya sering lebih gede
-  // dari sisa ruang dan numpuk ke elemen lain. Diukur beneran = gak akan
-  // pernah salah ukuran lagi, di layar berapa pun.
-  const wrapRef = useRef(null);
-  const [boxSize, setBoxSize] = useState(560);
-  useEffect(() => {
-    const parent = wrapRef.current?.parentElement;
-    if (!parent) return;
-    const measure = () => {
-      // Command Center = orbit doang sekarang, gak ada lagi yang berebut
-      // tinggi - cap dinaikin ke 760 biar orbitnya beneran kerasa "penuh
-      // layar", tetep diukur ResizeObserver beneran (bukan ditebak) jadi
-      // otomatis ngecil di layar kecil tanpa pernah nyodok tepi.
-      const size = Math.max(300, Math.min(760, parent.clientWidth, parent.clientHeight));
-      setBoxSize(size);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(parent);
-    return () => ro.disconnect();
-  }, []);
-
+function AgentGridMap({ employees, selectedKey, onSelectEmployee }) {
   return (
-    <div ref={wrapRef} className="relative select-none shrink-0" style={{ width: boxSize, height: boxSize }}>
+    <div className="w-full max-w-6xl">
       <style>{`
-        @keyframes orbit-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes orbit-ring-spin-slow { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
-        @keyframes orbit-dash-flow { to { stroke-dashoffset: -12; } }
-        @keyframes orbit-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-        @keyframes orbit-ripple { from { transform: scale(0.6); opacity: .5; } to { transform: scale(2.1); opacity: 0; } }
-        @keyframes orbit-pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-        @media (prefers-reduced-motion: reduce) { .orbit-motion, .orbit-motion * { animation: none !important; } }
+        @keyframes card-pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+        @media (prefers-reduced-motion: reduce) { .agent-card-motion { animation: none !important; } }
       `}</style>
-
-      {/* Inti orbit - satu pendar lembut doang, gak ada border/ring lagi (yang
-          sebelumnya kelihatan kayak lingkaran kosong gak jelas gunanya). Cuma
-          nuansa cahaya di tengah biar node-node kerasa mengelilingi sesuatu. */}
       <div
-        className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl pointer-events-none"
-        style={{ width: 140, height: 140, background: overallOk ? "rgba(52,211,153,0.09)" : "rgba(245,158,11,0.09)" }}
-      />
-
-      <svg viewBox="0 0 100 100" className="orbit-motion absolute inset-0 h-full w-full overflow-visible">
-        <g style={{ transformOrigin: "50px 50px", animation: "orbit-ring-spin-slow 140s linear infinite" }}>
-          <circle cx={cx} cy={cy} r={ORBIT_BOUNDARY_RADIUS} fill="none" stroke="rgba(148,163,184,0.12)" strokeWidth="0.25" strokeDasharray="1 2.4" />
-        </g>
-
-        {/* Mesh jaringan - tiap node nyambung ke tetangganya, garis TENANG di
-            keadaan diam (satu warna netral, gak animasi) - baru nyala warna
-            + jalan pas salah satu ujungnya lagi dipilih. Ini yang "narasi"-nya:
-            energi cuma ngalir ke node yang lagi diliat, bukan semua sekaligus. */}
-        {nodes.map((n, i) => {
-          const next = nodes[(i + 1) % nodes.length];
-          if (nodes.length < 2) return null;
-          const isActive = selectedKey === n.key || selectedKey === next.key;
+        className="grid gap-3.5"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}
+      >
+        {employees.map((e) => {
+          const Icon = e.icon;
+          const isSelected = selectedKey === e.key;
           return (
-            <g key={`mesh-${n.key}`}>
-              <line x1={n.pos.x} y1={n.pos.y} x2={next.pos.x} y2={next.pos.y} stroke="rgba(148,163,184,0.16)" strokeWidth="0.3" />
-              {isActive && (
-                <line
-                  x1={n.pos.x} y1={n.pos.y} x2={next.pos.x} y2={next.pos.y}
-                  stroke={n.accentColor} strokeWidth="0.5" strokeDasharray="0.4 3.2" strokeLinecap="round"
-                  style={{ animation: "orbit-dash-flow 1.2s linear infinite" }}
-                />
-              )}
-            </g>
-          );
-        })}
-
-        {/* Cincin sub-sinyal ATOM - titik TENANG kalau aman (steady, gak
-            animasi - dashboard yang baik gak nyala-nyala kalau gak ada apa2),
-            baru berkedip pelan kalau ada temuan yang perlu diliat. */}
-        {nodesWithSubRing.map((n) => (
-          <g key={`sub-${n.key}`}>
-            <circle cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke="rgba(148,163,184,0.15)" strokeWidth="0.25" />
-            {n.subSignals.map((sig, i) => {
-              const pos = polarPoint(n.pos.x, n.pos.y, ORBIT_SUB_RADIUS, (360 / Math.max(n.subSignals.length, 1)) * i);
-              return (
-                <circle
-                  key={sig.key || i}
-                  cx={pos.x} cy={pos.y} r={0.85}
-                  fill={sig.ok ? "#34d399" : "#f59e0b"}
-                  style={{ cursor: "pointer", animation: sig.ok ? "none" : "orbit-pulse-dot 1.8s ease-in-out infinite" }}
-                  className="transition-opacity hover:opacity-70"
-                  onClick={() => onSelectSignal(sig)}
-                >
-                  <title>{sig.label}</title>
-                </circle>
-              );
-            })}
-          </g>
-        ))}
-
-        {/* Node lain - satu tanda kecil yang pelan-pelan ngorbit di tepi
-            ring-nya sendiri (bukan lengkungan nyala gede) - cukup buat kesan
-            "hidup", gak berebut perhatian sama node-nya sendiri. */}
-        {nodesWithoutSubRing.map((n, idx) => (
-          <g key={`deco-${n.key}`}>
-            <circle cx={n.pos.x} cy={n.pos.y} r={ORBIT_SUB_RADIUS} fill="none" stroke="rgba(148,163,184,0.15)" strokeWidth="0.25" />
-            <g style={{ transformOrigin: `${n.pos.x}px ${n.pos.y}px`, animation: `orbit-ring-spin ${26 + idx * 4}s linear infinite` }}>
-              <circle cx={n.pos.x} cy={n.pos.y - ORBIT_SUB_RADIUS} r={0.7} fill={n.accentColor} opacity="0.8" />
-            </g>
-          </g>
-        ))}
-      </svg>
-
-      {/* Node karyawan utama */}
-      {nodes.map((n, i) => {
-        const Icon = n.icon;
-        const isSelected = selectedKey === n.key;
-        const showRipple = rippleId?.startsWith(`${n.key}-`);
-        return (
-          <button
-            key={n.key}
-            onClick={() => selectNode(n.key)}
-            className="group absolute z-20 flex flex-col items-center gap-1.5"
-            style={{ left: `${n.pos.x}%`, top: `${n.pos.y}%`, transform: "translate(-50%,-50%)" }}
-          >
-            <span
-              className="orbit-motion relative flex items-center justify-center rounded-full border transition-all duration-300 group-hover:scale-105"
+            <button
+              key={e.key}
+              onClick={() => onSelectEmployee(e.key)}
+              className={`group relative flex flex-col gap-3 rounded-[20px] border p-4 text-left transition-all duration-200 ${
+                isSelected ? "bg-white/[0.05]" : "bg-white/[0.02] hover:bg-white/[0.035]"
+              }`}
               style={{
-                width: "clamp(46px, 8vw, 68px)",
-                height: "clamp(46px, 8vw, 68px)",
-                borderColor: isSelected ? n.accentColor : `${n.accentColor}80`,
-                background: `radial-gradient(circle at 30% 25%, ${n.accentColor}${isSelected ? "30" : "1c"}, rgba(8,11,17,0.96) 72%)`,
-                boxShadow: isSelected ? `0 0 26px -4px ${n.accentColor}` : `0 0 16px -6px ${n.accentColor}`,
-                animation: `orbit-float ${4.2 + i * 0.4}s ease-in-out infinite`,
-                animationDelay: `${i * 0.35}s`,
+                borderColor: isSelected ? e.accentColor : "rgba(255,255,255,0.07)",
+                boxShadow: isSelected ? `0 0 30px -14px ${e.accentColor}` : "none",
               }}
             >
-              {showRipple && (
+              <div className="flex items-start justify-between gap-2">
                 <span
-                  key={rippleId}
-                  onAnimationEnd={() => setRippleId(null)}
-                  className="pointer-events-none absolute inset-0 rounded-full border-2"
-                  style={{ borderColor: n.accentColor, animation: "orbit-ripple .6s ease-out" }}
-                />
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border"
+                  style={{ borderColor: `${e.accentColor}55`, background: `${e.accentColor}1a` }}
+                >
+                  <Icon size={16} style={{ color: e.accentColor }} />
+                </span>
+                <span className={`flex items-center gap-1.5 shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wide ${statusPillStyle(e.ok)}`}>
+                  <span
+                    className="agent-card-motion h-1.5 w-1.5 rounded-full"
+                    style={{ background: e.ok ? "#34d399" : "#f59e0b", animation: e.ok ? "none" : "card-pulse-dot 1.8s ease-in-out infinite" }}
+                  />
+                  {e.ok ? "Aktif" : "Perhatian"}
+                </span>
+              </div>
+              <div>
+                <div className="font-mono text-[13px] font-bold uppercase tracking-wider text-slate-100 group-hover:text-white transition-colors">{e.title}</div>
+                <div className="text-[10.5px] text-slate-500 mt-0.5">{e.subtitle}</div>
+              </div>
+              {e.blurb && <div className="text-[11px] text-slate-400 leading-relaxed">{e.blurb}</div>}
+              {e.statLabel && (
+                <div className="mt-auto pt-2.5 border-t border-white/[0.06] flex items-center justify-between">
+                  <span className="text-[9px] font-mono uppercase tracking-wide text-slate-600">{e.statLabel}</span>
+                  <span className="text-[11px] font-mono font-bold text-slate-200">{e.statValue}</span>
+                </div>
               )}
-              <Icon size={18} style={{ color: n.accentColor, filter: `drop-shadow(0 0 4px ${n.accentColor}aa)` }} />
-              <span
-                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-[#05070c]"
-                style={{ background: n.ok ? "#34d399" : "#f59e0b", animation: n.ok ? "none" : "orbit-pulse-dot 1.8s ease-in-out infinite" }}
-              />
-            </span>
-            <span className={`font-mono text-[10px] font-bold uppercase tracking-wider transition-colors ${isSelected ? "text-white" : "text-slate-300 group-hover:text-white"}`}>
-              {n.title}
-            </span>
-          </button>
-        );
-      })}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -814,6 +684,9 @@ export default function AdminDashboard() {
       triggerKey: "health-check",
       subSignals: atomChecks,
       wide: true,
+      blurb: security ? (securityHealthy ? "Nihil temuan pada pengecekan terakhir." : `${security.issue_count} temuan butuh perhatian.`) : "Belum pernah dicek.",
+      statLabel: "SINYAL AMAN",
+      statValue: `${atomChecks.filter((c) => c.ok).length}/${atomChecks.length || "-"}`,
       content: (
         <>
           <div className="text-[11px] text-slate-400 font-mono">
@@ -848,6 +721,9 @@ export default function AdminDashboard() {
       trend: digestTrend.length > 1 ? digestTrend : null,
       trendKey: "count",
       triggerKey: "daily-digest",
+      blurb: "Kirim rekomendasi lead paling potensial tiap pagi.",
+      statLabel: "DIGEST HARI INI",
+      statValue: status?.sales_advisor?.runs_today ?? 0,
       content: (
         <div className="text-[11px] text-slate-400 font-mono">
           <span className="text-slate-200 font-bold">{status?.sales_advisor?.runs_today ?? 0}</span> user dapet digest hari ini
@@ -865,6 +741,9 @@ export default function AdminDashboard() {
       gaugeValue: status?.assistant?.last_activity ? 100 : 40,
       noTrigger: true,
       noTriggerNote: "jalan pas ada chat",
+      blurb: `Aktivitas terakhir ${timeAgo(status?.assistant?.last_activity)}.`,
+      statLabel: "PESAN HARI INI",
+      statValue: status?.assistant?.messages_today ?? 0,
       content: (
         <div className="text-[11px] text-slate-400 font-mono">
           aktivitas terakhir <span className="text-slate-200">{timeAgo(status?.assistant?.last_activity)}</span> · <span className="text-slate-200 font-bold">{status?.assistant?.messages_today ?? 0}</span> pesan hari ini
@@ -882,6 +761,9 @@ export default function AdminDashboard() {
       gaugeValue: memoPending > 0 ? 55 : 100,
       noTrigger: true,
       noTriggerNote: "otomatis via trigger",
+      blurb: "Nyimpen memori semantik dari tiap catatan progress.",
+      statLabel: "PENDING EMBED",
+      statValue: memoPending,
       content: (
         <div className="text-[11px] text-slate-400 font-mono">
           <span className="text-slate-200 font-bold">{memoPending}</span> catatan 24 jam terakhir belum ke-embed
@@ -898,6 +780,9 @@ export default function AdminDashboard() {
       ok: (status?.content_studio?.pending_count ?? 0) === 0,
       gaugeValue: (status?.content_studio?.pending_count ?? 0) === 0 ? 100 : Math.max(30, 100 - (status.content_studio.pending_count) * 20),
       triggerKey: "content-drafter",
+      blurb: "Nyiapin draft konten marketing buat direview.",
+      statLabel: "DRAFT PENDING",
+      statValue: status?.content_studio?.pending_count ?? 0,
       content: (
         <>
           <div className="text-[11px] text-slate-400 font-mono">
@@ -922,6 +807,9 @@ export default function AdminDashboard() {
       gaugeValue: (status?.support?.escalated_today ?? 0) === 0 ? 100 : Math.max(40, 100 - (status.support.escalated_today) * 15),
       noTrigger: true,
       noTriggerNote: "jalan pas ada visitor",
+      blurb: "Jawab pertanyaan visitor di widget chat landing page.",
+      statLabel: "PERTANYAAN HARI INI",
+      statValue: status?.support?.messages_today ?? 0,
       content: (
         <div className="text-[11px] text-slate-400 font-mono">
           <span className="text-slate-200 font-bold">{status?.support?.messages_today ?? 0}</span> pertanyaan hari ini ·{" "}
@@ -947,6 +835,9 @@ export default function AdminDashboard() {
       ok: (status?.garbage_sweep?.needs_review?.length ?? 0) === 0,
       gaugeValue: (status?.garbage_sweep?.needs_review?.length ?? 0) === 0 ? 100 : Math.max(40, 100 - (status.garbage_sweep.needs_review.length) * 20),
       triggerKey: "weekly-garbage-sweep",
+      blurb: `Terakhir jalan ${timeAgo(status?.garbage_sweep?.ran_at)}.`,
+      statLabel: "BUTUH DICEK",
+      statValue: status?.garbage_sweep?.needs_review?.length ?? 0,
       content: (
         <div className="text-[11px] text-slate-400 font-mono">
           {status?.garbage_sweep ? (
@@ -970,13 +861,13 @@ export default function AdminDashboard() {
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
 
-  // Command Center = orbit doang, gak ada lagi apa-apa di sekelilingnya
-  // (permintaan Nando eksplisit: "hapus semua kecuali orbit, full screen").
-  // Semua yang dulu ada di header (judul, ringkasan platform, toolbar) bisa
-  // diliat lewat klik node yang relevan - gak ada info yang beneran hilang,
-  // cuma dipindah dari "selalu kepajang" jadi "diliat pas dibutuhin".
+  // Command Center = grid kartu karyawan AI, semua sejajar/setara (17 Sep
+  // 2026 - ganti dari Peta Orbit, permintaan Nando liat referensi Sureflow
+  // Agentic OS; dipilih TANPA node "orchestrator" di atas). Klik kartu buka
+  // modal detail yang sama persis kayak sebelumnya - gak ada perilaku yang
+  // berubah, cuma tampilan sekelilingnya.
   return (
-    <div className="relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden bg-[#05070c] p-8 md:p-12">
+    <div className="relative flex h-full min-h-0 flex-col items-center justify-center overflow-auto bg-[#05070c] p-6 md:p-12">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35]"
         style={{
@@ -986,13 +877,10 @@ export default function AdminDashboard() {
           WebkitMaskImage: "radial-gradient(circle at 50% 50%, rgba(0,0,0,.9), transparent 75%)",
         }}
       />
-      <OrbitCommandMap
+      <AgentGridMap
         employees={employees}
         selectedKey={selectedEmployeeKey}
         onSelectEmployee={(key) => { setSelectedEmployeeKey(key); setDetailOpen(true); }}
-        onSelectSignal={setSelectedCheck}
-        overallOk={allSystemsGo}
-        overallGauge={securityGauge}
       />
       {detailOpen && selectedEmployee && (
         <EmployeeDetailModal
