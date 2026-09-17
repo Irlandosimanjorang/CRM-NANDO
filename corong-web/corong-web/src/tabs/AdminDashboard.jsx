@@ -411,6 +411,11 @@ const PLAN_SECTIONS = [
 ];
 
 function AiAccountsUsagePanel({ features, accounts }) {
+  // Section per plan sekarang DROPDOWN (17 Sep 2026, permintaan Nando) -
+  // ketutup semua by default biar gak makan tempat, tinggal klik header buat
+  // buka satu-satu. Cuma 1 section yang "diinget" kebuka di satu waktu gak
+  // perlu - biarin independen, biasanya cuma ngecek 1-2 plan sekaligus.
+  const [openKey, setOpenKey] = useState(null);
   const meteredFeatures = features.filter((f) => f.metered);
   if (!accounts || accounts.length === 0) {
     return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun tim (organization_members kosong).</div>;
@@ -432,59 +437,76 @@ function AiAccountsUsagePanel({ features, accounts }) {
   }
 
   return (
-    <div className="grid gap-4">
-      {sections.map((sec) => (
-        <div key={sec.key}>
-          <div className="text-[10px] font-mono uppercase tracking-wide text-slate-500 mb-1.5">
-            {sec.label} <span className="text-slate-700">· {sec.accounts.length} akun</span>
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
-            <table className="w-full text-left border-collapse min-w-[560px]">
-              <thead>
-                <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
-                  <th className="sticky left-0 z-10 pb-1.5 pt-2 pr-2 pl-2 font-medium" style={{ background: STICKY_BG }}>Akun</th>
-                  {sec.columns.map((f) => (
-                    <th key={f.key} className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap">{f.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sec.accounts.map((a) => {
-                  // Nama tetep prioritas utama, tapi email SELALU keliatan kecil
-                  // di bawahnya (permintaan Nando) - biar gampang cocokin akun
-                  // mana yang dimaksud tanpa nebak dari nama doang. Kalau emang
-                  // belum ada display_name, baris atas kepaksa pake email juga -
-                  // di situ baris bawah ganti isinya jadi org·role, biar gak
-                  // dobel nampilin email yang sama persis 2x.
-                  const primaryName = a.display_name || a.email || a.user_id.slice(0, 8);
-                  const secondaryLine = a.display_name ? (a.email || `${a.org_name} · ${a.role}`) : `${a.org_name} · ${a.role}`;
-                  return (
-                    <tr key={a.user_id} className="border-t border-white/[0.05]">
-                      <td className="sticky left-0 z-10 py-1.5 pr-2 pl-2" style={{ background: STICKY_BG }}>
-                        <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{primaryName}</div>
-                        <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{secondaryLine}</div>
-                      </td>
-                      {sec.columns.map((f) => {
-                        const u = a.usage?.[f.key];
-                        if (!u || !u.applicable) {
-                          return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-600">-</span></td>;
-                        }
-                        return (
-                          <td key={f.key} className="py-1.5 pr-2">
-                            <span className={`font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${USAGE_STATUS_STYLE[u.status]}`}>
-                              {u.used}{u.limit !== null ? `/${u.limit}` : ""}
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+    // min-w-0 WAJIB di sini (17 Sep 2026, bug fix) - tanpa ini, div
+    // overflow-x-auto di dalem gak akan pernah bisa scroll kalau parent-nya
+    // (AiLimitsPanel) pake `grid`: item grid defaultnya gak boleh nyusut di
+    // bawah lebar konten aslinya, jadi tabelnya malah DORONG modalnya lebih
+    // lebar daripada bikin scrollbar sendiri di dalem. min-w-0 ngizinin
+    // elemen ini nyusut, baru overflow-x-auto di tabel beneran aktif.
+    <div className="grid gap-3 min-w-0">
+      {sections.map((sec) => {
+        const isOpen = openKey === sec.key;
+        return (
+        <div key={sec.key} className="min-w-0 rounded-xl border border-white/[0.06] overflow-hidden">
+          <button
+            onClick={() => setOpenKey(isOpen ? null : sec.key)}
+            className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white/[0.015] hover:bg-white/[0.03] transition-colors"
+          >
+            <span className="text-[10px] font-mono uppercase tracking-wide text-slate-400">
+              {sec.label} <span className="text-slate-600">· {sec.accounts.length} akun</span>
+            </span>
+            <ChevronDown size={13} className={`text-slate-500 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+          </button>
+          {isOpen && (
+            <div className="min-w-0 overflow-x-auto border-t border-white/[0.06]">
+              <table className="w-full text-left border-collapse min-w-[560px]">
+                <thead>
+                  <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+                    <th className="sticky left-0 z-10 pb-1.5 pt-2 pr-2 pl-2 font-medium" style={{ background: STICKY_BG }}>Akun</th>
+                    {sec.columns.map((f) => (
+                      <th key={f.key} className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap">{f.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sec.accounts.map((a) => {
+                    // Nama tetep prioritas utama, tapi email SELALU keliatan kecil
+                    // di bawahnya (permintaan Nando) - biar gampang cocokin akun
+                    // mana yang dimaksud tanpa nebak dari nama doang. Kalau emang
+                    // belum ada display_name, baris atas kepaksa pake email juga -
+                    // di situ baris bawah ganti isinya jadi org·role, biar gak
+                    // dobel nampilin email yang sama persis 2x.
+                    const primaryName = a.display_name || a.email || a.user_id.slice(0, 8);
+                    const secondaryLine = a.display_name ? (a.email || `${a.org_name} · ${a.role}`) : `${a.org_name} · ${a.role}`;
+                    return (
+                      <tr key={a.user_id} className="border-t border-white/[0.05]">
+                        <td className="sticky left-0 z-10 py-1.5 pr-2 pl-2" style={{ background: STICKY_BG }}>
+                          <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{primaryName}</div>
+                          <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{secondaryLine}</div>
+                        </td>
+                        {sec.columns.map((f) => {
+                          const u = a.usage?.[f.key];
+                          if (!u || !u.applicable) {
+                            return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-600">-</span></td>;
+                          }
+                          return (
+                            <td key={f.key} className="py-1.5 pr-2">
+                              <span className={`font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${USAGE_STATUS_STYLE[u.status]}`}>
+                                {u.used}{u.limit !== null ? `/${u.limit}` : ""}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -499,7 +521,7 @@ function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
   const { features, accounts, trend } = aiLimits;
   const hasTrend = trend && trend.length > 1;
   return (
-    <div className="mt-4 pt-4 border-t border-white/[0.08] grid gap-3">
+    <div className="mt-4 pt-4 border-t border-white/[0.08] grid gap-3 min-w-0">
       <div className="flex items-center gap-2.5">
         <span className="relative inline-flex h-2 w-2">
           <span className={`absolute inline-flex h-full w-full rounded-full ${severity === "ok" ? "bg-emerald-400" : severity === "critical" ? "bg-rose-400" : "bg-amber-400"} opacity-70 animate-ping`} />
@@ -732,9 +754,9 @@ export default function AdminDashboard() {
           {/* 2 tabel bersebelahan (side-by-side) di layar lebar, numpuk balik ke
               1 kolom otomatis di HP - Sinyal Termonitor di kiri, Limit Fitur
               AI di kanan, dipisah garis vertikal tipis. */}
-          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start min-w-0">
             <ChecksDetailPanel checks={security?.checks_detail} aiSummary={security?.summary} />
-            <div className="lg:border-l lg:border-white/[0.08] lg:pl-4">
+            <div className="min-w-0 lg:border-l lg:border-white/[0.08] lg:pl-4">
               <AiLimitsPanel aiLimits={status?.ai_limits} flaggedCount={aiFlaggedCount} severity={aiSeverity} />
             </div>
           </div>
