@@ -233,6 +233,12 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   const [myPos, setMyPos] = useState(null);
   const [geoError, setGeoError] = useState(false);
   const [checkingIn, setCheckingIn] = useState(null);
+  // Sengaja gak direstore dari localStorage (beda dari `recording` di
+  // VisitView, 17 Sep 2026) - TodayVisitsCard ini ke-render BARENGAN sama
+  // VisitView (dia child-nya), jadi kalau dua-duanya restore dari kunci
+  // localStorage yang sama, modal-nya bisa kebuka 2x. Cukup satu jalan
+  // restore aja (lewat `recording`), MeetingRecorderModal sendiri yang
+  // nentuin lead mana yang direstore dari data yang kesimpen.
   const [recordingLead, setRecordingLead] = useState(null);
   const [pendingCheckin, setPendingCheckin] = useState(null);
   const [checkedInToday, setCheckedInToday] = useState(new Set());
@@ -793,12 +799,17 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
   // Tambah Deal yang udah punya draft field) - tapi minimal MODAL-nya otomatis
   // kebuka lagi abis app di-reload paksa, gak keliatan "ilang" gitu aja.
   const [add, setAdd] = useState(() => !!getOpenModal("visit"));
-  // Catatan: "Rekam Meeting" SENGAJA gak direstore - rekaman audio yang lagi
-  // jalan gak mungkin "dilanjutin" abis tab-nya di-reload (buffer audio-nya
-  // ilang beneran, bukan soal nyimpen state doang), jadi maksa buka modal-nya
-  // lagi cuma bakal nunjukin form kosong yang keliatan kayak seolah rekaman
-  // lama masih ada padahal enggak - lebih aman biarin orangnya klik ulang manual.
-  const [recording, setRecording] = useState(false);
+  // BUG FIX (17 Sep 2026, laporan Nando): dulu komentarnya bilang "Rekam
+  // Meeting" SENGAJA gak direstore - itu bener buat tahap REKAM (buffer
+  // audio-nya beneran ilang kalau tab di-discard, gak ada yang bisa
+  // dilanjutin). TAPI begitu rekaman udah SELESAI ditranskrip (tahap review -
+  // notes/next action/transcript, semuanya teks doang), gak ada alesan
+  // teknis buat gak direstore - dan itu justru yang paling parah kalau ilang
+  // (user udah nunggu proses transkrip, rugi kalau harus rekam ulang cuma
+  // gara-gara pindah tab browser sebentar). MeetingRecorderModal sendiri yang
+  // nyimpen hasil review ke localStorage begitu transkrip kelar - di sini
+  // cuma perlu buka ulang modal-nya kalau ketauan ada hasil yang kesimpen.
+  const [recording, setRecording] = useState(() => !!getOpenModal("meetingreview"));
   const [view, setView] = useState("table");
   const [month, setMonth] = useState(new Date());
   const visits = useMemo(() => leads.filter((c) => c.visit_date).sort((a, b) => (a.visit_date < b.visit_date ? -1 : 1)), [leads]);
@@ -877,7 +888,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
         </>
       )}
       {add && <AddVisitModal leads={leads} onClose={() => { setAdd(false); clearOpenModal("visit"); }} onSaved={() => { setAdd(false); clearOpenModal("visit"); onChanged(); }} myLevel={myLevel} />}
-      {recording && <MeetingRecorderModal leads={leads} onClose={() => setRecording(false)} onSaved={onChanged} />}
+      {recording && <MeetingRecorderModal leads={leads} onClose={() => { setRecording(false); clearOpenModal("meetingreview"); }} onSaved={onChanged} />}
     </div>
   );
 }

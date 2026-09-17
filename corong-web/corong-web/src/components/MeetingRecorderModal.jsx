@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Mic, Square, X, Save, Loader2, Search, FileAudio } from "lucide-react";
 import * as db from "../lib/db";
+import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
 function fmtTimer(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -15,13 +16,24 @@ function fmtTimer(sec) {
 const MAX_RECORDING_SECONDS = 30 * 60;
 
 export default function MeetingRecorderModal({ lead: initialLead, leads, onClose, onSaved }) {
-  const [lead, setLead] = useState(initialLead || null);
+  // BUG FIX (17 Sep 2026, laporan Nando): hasil transkrip yang UDAH SELESAI
+  // (tahap review) sebelumnya cuma hidup di state React - ilang total kalau
+  // tab-nya di-discard browser/OS (pindah tab lain sebentar, balik lagi).
+  // Bikin user rugi nunggu proses transkrip 2x kalau kejadian gini. Beda dari
+  // tahap recording (buffer audio beneran gak bisa "dilanjutin"), hasil review
+  // murni teks (notes/next action/transcript) - gampang disimpen & di-restore
+  // lewat localStorage yang sama, sama pola kayak modal lain (lihat
+  // uiPersist.js). Dibaca lewat useState (bukan konstanta level module) biar
+  // ke-refresh tiap kali modal ini di-mount ulang, bukan kesangkut ke draft
+  // basi dari mount PERTAMA doang di sesi ini.
+  const [restoreDraft] = useState(() => getOpenModal("meetingreview"));
+  const [lead, setLead] = useState(() => initialLead || (restoreDraft ? { id: restoreDraft.leadId, name: restoreDraft.leadName } : null));
   const [q, setQ] = useState("");
   const [seconds, setSeconds] = useState(0);
-  const [stage, setStage] = useState("idle"); // idle | recording | processing | review | error
-  const [notes, setNotes] = useState("");
-  const [nextAction, setNextAction] = useState("");
-  const [transcript, setTranscript] = useState("");
+  const [stage, setStage] = useState(() => (restoreDraft ? "review" : "idle")); // idle | recording | processing | review | error
+  const [notes, setNotes] = useState(() => restoreDraft?.notes || "");
+  const [nextAction, setNextAction] = useState(() => restoreDraft?.nextAction || "");
+  const [transcript, setTranscript] = useState(() => restoreDraft?.transcript || "");
   const [showTranscript, setShowTranscript] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState("");
@@ -170,10 +182,14 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
         const path = await db.uploadMeetingAudio(lead.id, blob);
         setProcessingStep("transcribing");
         const result = await db.transcribeMeeting(path, lead.name);
-        setNotes(result.notes || "");
-        setNextAction(result.next_action || "");
-        setTranscript(result.transcript || "");
+        const restoredNotes = result.notes || "";
+        const restoredNextAction = result.next_action || "";
+        const restoredTranscript = result.transcript || "";
+        setNotes(restoredNotes);
+        setNextAction(restoredNextAction);
+        setTranscript(restoredTranscript);
         setStage("review");
+        saveOpenModal("meetingreview", { leadId: lead.id, leadName: lead.name, notes: restoredNotes, nextAction: restoredNextAction, transcript: restoredTranscript });
       } catch (e) {
         setErrMsg(e.message || "Gagal proses rekaman.");
         setStage("error");
@@ -220,9 +236,18 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     try {
       await db.addProgress(lead.id, notes.trim());
       if (nextAction.trim()) await db.updateLeadNextAction(lead.id, nextAction.trim());
+      clearOpenModal("meetingreview");
       onSaved();
       onClose();
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
+  };
+
+  // Keep localStorage kesinkron tiap edit di tahap review (bukan cuma pas
+  // pertama kali transkrip kelar) - kalau user sempet ngedit catatan dulu
+  // baru ketutup gara-gara tab discard, editannya IKUT ke-restore, bukan
+  // balik ke hasil transkrip mentah yang belum diedit.
+  const updateReviewDraft = (patch) => {
+    saveOpenModal("meetingreview", { leadId: lead.id, leadName: lead.name, notes, nextAction, transcript, ...patch });
   };
 
   // Pas lagi recording ATAU processing, modal WAJIB "stay" di layar - klik
@@ -237,13 +262,17 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
   // ke-trigger gak sengaja lewat klik area gelap).
   const isRecordingLive = stage === "recording";
   const isBusyStage = stage === "recording" || stage === "processing";
+  // Ditutup manual (bukan lewat Simpan) pas stage idle/review/error - hapus
+  // draft yang kesimpen juga, biar gak nongol lagi sisa hasil transkrip yang
+  // udah sengaja ditinggalin, sama pola kayak modal lain pas ditutup manual.
+  const handleClose = () => { clearOpenModal("meetingreview"); onClose(); };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={isBusyStage ? undefined : onClose}>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={isBusyStage ? undefined : handleClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg flex items-center gap-2"><FileAudio size={18} className="text-orange-500" /> Rekam Meeting</h2>
-          <button onClick={isRecordingLive ? cancelRecording : onClose} className="text-slate-400 hover:text-slate-700" aria-label={isRecordingLive ? "Batalin rekaman" : "Tutup"}><X size={20} /></button>
+          <button onClick={isRecordingLive ? cancelRecording : handleClose} className="text-slate-400 hover:text-slate-700" aria-label={isRecordingLive ? "Batalin rekaman" : "Tutup"}><X size={20} /></button>
         </div>
 
         {!lead ? (
@@ -328,11 +357,11 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
             {stage === "review" && (
               <div>
                 <span className="text-xs font-medium text-slate-500">Catatan meeting (bisa diedit sebelum disimpan)</span>
-                <textarea className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" rows={7} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <textarea className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" rows={7} value={notes} onChange={(e) => { setNotes(e.target.value); updateReviewDraft({ notes: e.target.value }); }} />
 
                 <label className="block mt-3">
                   <span className="text-xs font-medium text-slate-500">Next action (otomatis kedeteksi AI, bisa diedit/dikosongin)</span>
-                  <input className="w-full mt-1 px-3 py-2 text-sm border border-orange-300 bg-orange-50/60 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="Kosong (AI ga nemu next step yang jelas)" />
+                  <input className="w-full mt-1 px-3 py-2 text-sm border border-orange-300 bg-orange-50/60 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={nextAction} onChange={(e) => { setNextAction(e.target.value); updateReviewDraft({ nextAction: e.target.value }); }} placeholder="Kosong (AI ga nemu next step yang jelas)" />
                 </label>
 
                 <button onClick={() => setShowTranscript((v) => !v)} className="text-xs text-slate-400 hover:text-slate-600 mt-2">
