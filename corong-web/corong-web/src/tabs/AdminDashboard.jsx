@@ -394,6 +394,22 @@ function AiFeatureCatalog({ features }) {
 // Rincian pemakaian per AKUN (bukan cuma agregat) - permintaan Nando: "bener2
 // setiap akun di list", biar ketauan SEBELUM ada yang kepake lebih dari jatah
 // (kebocoran), gak cuma pas udah kejadian.
+//
+// DIPISAH PER PLAN (17 Sep 2026, permintaan Nando) - sebelumnya 1 tabel flat
+// nampilin SEMUA fitur AI buat SEMUA akun sekaligus (kebanyakan kolom "-"
+// buat akun Standard karena fitur Professional gak applicable buat mereka).
+// Sekarang dipecah jadi 3 section (Standard/Professional/Enterprise), tiap
+// section CUMA nampilin kolom fitur yang applicable buat tier itu - dan
+// section Enterprise otomatis nampilin fitur Professional JUGA (kumulatif),
+// bukan cuma fitur Enterprise-only, karena Enterprise emang dapet semua
+// fitur Professional plus tambahannya sendiri.
+const PLAN_TIER_RANK = { standard: 1, professional: 2, enterprise: 3 };
+const PLAN_SECTIONS = [
+  { key: "standard", label: "Standard" },
+  { key: "professional", label: "Professional" },
+  { key: "enterprise", label: "Enterprise" },
+];
+
 function AiAccountsUsagePanel({ features, accounts }) {
   const meteredFeatures = features.filter((f) => f.metered);
   if (!accounts || accounts.length === 0) {
@@ -404,55 +420,71 @@ function AiAccountsUsagePanel({ features, accounts }) {
   // makin lebar), nama akunnya ikut ketutup pas scroll ke kanan buat liat
   // kolom fitur yang jauh - jadi gak kebaca lagi akun siapa yang dilihat.
   const STICKY_BG = "#0c1018"; // approksimasi warna komposit card (bg-white/[0.02] di atas #05070c)
+
+  const sections = PLAN_SECTIONS.map((sec) => ({
+    ...sec,
+    accounts: accounts.filter((a) => a.plan === sec.key),
+    columns: meteredFeatures.filter((f) => (PLAN_TIER_RANK[f.tier] || 0) <= PLAN_TIER_RANK[sec.key]),
+  })).filter((sec) => sec.accounts.length > 0);
+
+  if (sections.length === 0) {
+    return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun berbayar (semua akun tim masih Free).</div>;
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse min-w-[640px]">
-        <thead>
-          <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
-            <th className="sticky left-0 z-10 pb-1.5 pr-2 pl-0 font-medium" style={{ background: STICKY_BG }}>Akun</th>
-            <th className="pb-1.5 pr-2 font-medium">Plan</th>
-            {meteredFeatures.map((f) => (
-              <th key={f.key} className="pb-1.5 pr-2 font-medium whitespace-nowrap">{f.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {accounts.map((a) => {
-            // Nama tetep prioritas utama, tapi email SELALU keliatan kecil
-            // di bawahnya (permintaan Nando) - biar gampang cocokin akun
-            // mana yang dimaksud tanpa nebak dari nama doang. Kalau emang
-            // belum ada display_name, baris atas kepaksa pake email juga -
-            // di situ baris bawah ganti isinya jadi org·role, biar gak
-            // dobel nampilin email yang sama persis 2x.
-            const primaryName = a.display_name || a.email || a.user_id.slice(0, 8);
-            const secondaryLine = a.display_name ? (a.email || `${a.org_name} · ${a.role}`) : `${a.org_name} · ${a.role}`;
-            return (
-            <tr key={a.user_id} className="border-t border-white/[0.05]">
-              <td className="sticky left-0 z-10 py-1.5 pr-2 pl-0" style={{ background: STICKY_BG }}>
-                <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{primaryName}</div>
-                <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{secondaryLine}</div>
-              </td>
-              <td className="py-1.5 pr-2">
-                <span className="text-[9.5px] uppercase font-mono text-slate-400">{a.plan}</span>
-              </td>
-              {meteredFeatures.map((f) => {
-                const u = a.usage?.[f.key];
-                if (!u || !u.applicable) {
-                  return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-600">-</span></td>;
-                }
-                return (
-                  <td key={f.key} className="py-1.5 pr-2">
-                    <span className={`font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${USAGE_STATUS_STYLE[u.status]}`}>
-                      {u.used}{u.limit !== null ? `/${u.limit}` : ""}
-                    </span>
-                  </td>
-                );
-              })}
-            </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="grid gap-4">
+      {sections.map((sec) => (
+        <div key={sec.key}>
+          <div className="text-[10px] font-mono uppercase tracking-wide text-slate-500 mb-1.5">
+            {sec.label} <span className="text-slate-700">· {sec.accounts.length} akun</span>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
+            <table className="w-full text-left border-collapse min-w-[560px]">
+              <thead>
+                <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+                  <th className="sticky left-0 z-10 pb-1.5 pt-2 pr-2 pl-2 font-medium" style={{ background: STICKY_BG }}>Akun</th>
+                  {sec.columns.map((f) => (
+                    <th key={f.key} className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap">{f.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sec.accounts.map((a) => {
+                  // Nama tetep prioritas utama, tapi email SELALU keliatan kecil
+                  // di bawahnya (permintaan Nando) - biar gampang cocokin akun
+                  // mana yang dimaksud tanpa nebak dari nama doang. Kalau emang
+                  // belum ada display_name, baris atas kepaksa pake email juga -
+                  // di situ baris bawah ganti isinya jadi org·role, biar gak
+                  // dobel nampilin email yang sama persis 2x.
+                  const primaryName = a.display_name || a.email || a.user_id.slice(0, 8);
+                  const secondaryLine = a.display_name ? (a.email || `${a.org_name} · ${a.role}`) : `${a.org_name} · ${a.role}`;
+                  return (
+                    <tr key={a.user_id} className="border-t border-white/[0.05]">
+                      <td className="sticky left-0 z-10 py-1.5 pr-2 pl-2" style={{ background: STICKY_BG }}>
+                        <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{primaryName}</div>
+                        <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{secondaryLine}</div>
+                      </td>
+                      {sec.columns.map((f) => {
+                        const u = a.usage?.[f.key];
+                        if (!u || !u.applicable) {
+                          return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-600">-</span></td>;
+                        }
+                        return (
+                          <td key={f.key} className="py-1.5 pr-2">
+                            <span className={`font-mono text-[10.5px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${USAGE_STATUS_STYLE[u.status]}`}>
+                              {u.used}{u.limit !== null ? `/${u.limit}` : ""}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
