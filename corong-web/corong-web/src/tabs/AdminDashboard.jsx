@@ -585,7 +585,7 @@ function fmtShortDate(iso) {
 function UsersOverviewPanel({ data, features }) {
   const [openKey, setOpenKey] = useState(null);
   if (!data) return <div className="text-[11px] text-slate-500 font-mono">Belum ada data.</div>;
-  const { total, by_plan, new_7d, list } = data;
+  const { total, by_plan, new_7d, total_leads, list } = data;
   const meteredFeatures = (features || []).filter((f) => f.metered);
   const sections = USER_PLAN_SECTIONS.map((sec) => ({
     ...sec,
@@ -601,9 +601,10 @@ function UsersOverviewPanel({ data, features }) {
 
   return (
     <div className="grid gap-3 min-w-0">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
         <StatTile label="TOTAL USER" value={total} />
         <StatTile label="BARU 7 HARI" value={new_7d} accent="#34d399" />
+        <StatTile label="TOTAL BARIS LEADS" value={total_leads ?? 0} accent="#a3e635" />
         <StatTile label="FREE" value={by_plan.free ?? 0} accent="#64748b" />
         <StatTile label="STANDARD" value={by_plan.standard ?? 0} accent="#38bdf8" />
         <StatTile label="PROFESSIONAL" value={by_plan.professional ?? 0} accent="#f97316" />
@@ -632,6 +633,8 @@ function UsersOverviewPanel({ data, features }) {
                       <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
                         <th className="sticky left-0 z-10 pb-1.5 pt-2 pr-2 pl-2 font-medium" style={{ background: USERS_STICKY_BG }}>Akun</th>
                         <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Org · Role</th>
+                        <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>WhatsApp</th>
+                        <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Leads</th>
                         <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Daftar</th>
                         <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Terakhir Login</th>
                         {sec.usageColumns.map((f) => (
@@ -647,6 +650,8 @@ function UsersOverviewPanel({ data, features }) {
                             <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{u.email}</div>
                           </td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono truncate max-w-[160px] whitespace-nowrap">{u.org_name || "-"}{u.role ? ` · ${u.role}` : ""}</td>
+                          <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{u.whatsapp || <span className="text-slate-600">-</span>}</td>
+                          <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{u.leads_count ?? 0}</td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{fmtShortDate(u.created_at)}</td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{timeAgo(u.last_sign_in_at)}</td>
                           {sec.usageColumns.map((f) => {
