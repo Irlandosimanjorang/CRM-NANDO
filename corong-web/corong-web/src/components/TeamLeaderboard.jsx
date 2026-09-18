@@ -34,6 +34,18 @@ const RANK_STYLE = [
 ];
 const DEFAULT_STYLE = { avatarBg: "bg-slate-200", badgeBg: "bg-slate-300" };
 
+// Data DUMMY (18 Sep 2026, permintaan Nando) - org yang masih solo (belum
+// ada anggota tim) sebelumnya gak bisa liat gimana tampilan Performa Tim +
+// Komisi Tim bakal keliatan kalau timnya udah rame. Sama prinsipnya kayak
+// dummy data di Advisor.jsx - MURNI buat preview visual, gak nyentuh
+// database beneran, dan semua interaksi tulis (atur rate komisi, klik buka
+// lead) di-block dengan pesan jelas ini contoh.
+const DUMMY_ROWS = [
+  { key: "dummy-1", uid: "dummy-1", name: "Budi Santoso", leadCount: 12, dealCount: 3, visitCount: 8, winRate: 60, revenue: 45000000, commissionRate: 5, commissionAmount: 2250000, leadItems: [], dealItems: [], visitItems: [] },
+  { key: "dummy-2", uid: "dummy-2", name: "Siti Amelia", leadCount: 9, dealCount: 2, visitCount: 5, winRate: 40, revenue: 28000000, commissionRate: 5, commissionAmount: 1400000, leadItems: [], dealItems: [], visitItems: [] },
+  { key: "dummy-3", uid: "dummy-3", name: "Rangga Pratama", leadCount: 6, dealCount: 1, visitCount: 3, winRate: 33, revenue: 15000000, commissionRate: 3, commissionAmount: 450000, leadItems: [], dealItems: [], visitItems: [] },
+];
+
 function initials(name, uid) {
   if (name) {
     const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -113,7 +125,15 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
     }
   }, [canManage]);
 
-  const startEditRate = (uid, current) => { setEditingRate(uid); setRateInput(current != null ? String(current) : ""); };
+  // Org masih solo (belum ada anggota tim) - tampilin data contoh (lihat
+  // DUMMY_ROWS di atas) daripada nyembunyiin section ini total kayak
+  // sebelumnya. Semua interaksi tulis di-block di startEditRate/openLeadById.
+  const isDemo = !members || members.length <= 1;
+
+  const startEditRate = (uid, current) => {
+    if (isDemo) { alert("Ini masih data contoh - undang anggota tim dulu buat mulai atur komisi beneran."); return; }
+    setEditingRate(uid); setRateInput(current != null ? String(current) : "");
+  };
   const saveRate = async (uid) => {
     const pct = Math.min(100, Math.max(0, Number(rateInput) || 0));
     setRateBusy(true);
@@ -125,7 +145,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
     finally { setRateBusy(false); }
   };
 
-  if (!members || members.length <= 1) return null;
+  if (!isDemo && members.length <= 1) return null;
 
   // Sama persis kayak PerformanceInsight & daily-digest: won/lost ditentuin
   // dari stage TEMPAT LEAD ITU SEKARANG BERADA, bukan field outcome.
@@ -133,11 +153,12 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
   const lostKeys = (stages || []).filter((s) => s.type === "lost").map((s) => s.key);
 
   const openLeadById = (leadId) => {
+    if (isDemo) { alert("Ini masih data contoh - undang anggota tim dulu buat mulai pakai fitur ini beneran."); return; }
     const lead = (leads || []).find((l) => l.id === leadId);
     if (lead) { onOpenLead?.(lead); setPreview(null); }
   };
 
-  const rows = members
+  const rows = isDemo ? DUMMY_ROWS : members
     .map((m) => {
       const mine = (leads || []).filter((l) => l.assigned_to === m.user_id && !l.deleted_at);
       const won = mine.filter((l) => wonKeys.includes(l.stage_key));
@@ -174,6 +195,11 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      {isDemo && (
+        <div className="mb-4 rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-2.5 text-[11.5px] text-violet-700">
+          👀 <b>Contoh tampilan</b> - ini data dummy biar Anda liat gimana bentuknya. Undang anggota tim (menu Pengaturan) buat mulai liat data asli.
+        </div>
+      )}
       <div className="mb-5 flex items-center gap-2.5">
         <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
           <Trophy size={17} />
