@@ -78,6 +78,23 @@ function GrokBotMcpContent({ lang, setLang }) {
   const STEPS = useSteps(tr);
   const SECURITY_POINTS = useSecurityPoints(tr);
 
+  // SEO (18 Sep 2026) - sebelumnya halaman ini gak ganti title/meta
+  // description sama sekali, jadi ke-index Google pake title/description
+  // landing page utama (index.html statis, ke-share ke SEMUA route karena
+  // SPA). Sekarang di-set manual pas halaman ini kebuka, biar hasil
+  // pencarian buat "/grok-bot" punya identitas sendiri, bukan duplikat.
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = "Nexto x Grok Bot - Integrasi MCP buat AI Agent";
+    const descTag = document.querySelector('meta[name="description"]');
+    const prevDesc = descTag?.getAttribute("content") || null;
+    descTag?.setAttribute("content", "Sambungin Grok Bot (xAI) langsung ke CRM Nexto lewat protokol MCP - baca lead, pindahin stage pipeline, dan catat progress atas nama akun Anda, tanpa pernah pegang password Anda.");
+    return () => {
+      document.title = prevTitle;
+      if (prevDesc !== null) descTag?.setAttribute("content", prevDesc);
+    };
+  }, []);
+
   // Analitik sendiri (17 Sep 2026, upgrade 18 Sep) - pake id localStorage yang
   // SAMA (nexto_visitor_id) kayak Auth.jsx biar visitor yang pindah dari
   // landing utama ke halaman ini keitung visitor yang sama, dan nempel lintas
