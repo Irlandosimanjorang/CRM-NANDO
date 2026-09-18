@@ -6,7 +6,44 @@ import { fmtDate, stageMeta, chipStyle } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
+const inpRow = "flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
+
+// Field yang bisa nampung beberapa nilai (email, key person) - disimpen di
+// kolom yang SAMA (masih 1 kolom text di DB), dipisah koma persis kayak pola
+// yang udah ada di Telepon/WA - jadi gak butuh migrasi tabel. Tombol "+"
+// nambahin input baru, "x" buang satu (18 Sep 2026, permintaan Nando: mau
+// bisa nambahin lebih dari 1 email/key person per lead, berlaku semua plan).
+function MultiField({ label, value, onChange, placeholder }) {
+  const parts = (value || "").split(",").map((s) => s.trim());
+  const items = parts.some((s) => s !== "") ? parts : [""];
+  const setAt = (idx, v) => {
+    const next = [...items];
+    next[idx] = v;
+    onChange(next.join(", "));
+  };
+  const removeAt = (idx) => onChange(items.filter((_, i) => i !== idx).join(", "));
+  const add = () => onChange([...items, ""].join(", "));
+  return (
+    <Field label={label}>
+      <div className="mt-1 flex flex-col gap-1.5">
+        {items.map((v, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <input className={inpRow} value={v} placeholder={placeholder} onChange={(e) => setAt(i, e.target.value)} />
+            {items.length > 1 && (
+              <button type="button" onClick={() => removeAt(i)} className="shrink-0 text-slate-400 hover:text-rose-500 p-1">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        ))}
+        <button type="button" onClick={add} className="self-start flex items-center gap-1 text-[11px] font-medium text-orange-600 hover:text-orange-700">
+          <Plus size={12} /> Tambah
+        </button>
+      </div>
+    </Field>
+  );
+}
 
 // BUG FIX (17 Sep 2026, permintaan Nando: lindungin semua fitur dari
 // tab-discard, sama kayak fix Rekam Meeting) - LeadModal ini modal paling
@@ -457,10 +494,13 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             </div>
           )}
           <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
-          <div className="grid grid-cols-2 gap-3"><Field label="Email"><input className={inp} value={f.email || ""} onChange={(e) => set("email", e.target.value)} /></Field><Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field></div>
+          <div className="grid grid-cols-2 gap-3">
+            <MultiField label="Email" value={f.email} onChange={(v) => set("email", v)} placeholder="nama@email.com" />
+            <Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field>
+          </div>
           {(!hidden("key_person") || !hidden("key_person_title")) && (
             <div className="grid grid-cols-2 gap-3">
-              {!hidden("key_person") && <Field label={lbl("key_person", "Key person")}><input className={inp} value={f.key_person || ""} onChange={(e) => set("key_person", e.target.value)} /></Field>}
+              {!hidden("key_person") && <MultiField label={lbl("key_person", "Key person")} value={f.key_person} onChange={(v) => set("key_person", v)} />}
               {!hidden("key_person_title") && <Field label={lbl("key_person_title", "Jabatan")}><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field>}
             </div>
           )}
