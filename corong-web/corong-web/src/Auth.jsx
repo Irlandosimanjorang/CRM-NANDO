@@ -494,6 +494,7 @@ const ENTERPRISE_FEATURES = [
   { id: "Role-based visibility (Owner/Manager/Sales Rep)", en: "Role-based visibility (Owner/Manager/Sales Rep)" },
   { id: "Assign & filter leads per anggota tim", en: "Assign & filter leads per team member" },
   { id: "Laporan Performa Tim (leaderboard revenue & win rate)", en: "Team Performance Report (revenue & win-rate leaderboard)" },
+  { id: "Sistem Komisi Tim (atur % per anggota, otomatis dihitung)", en: "Team Commission System (set % per member, calculated automatically)" },
   { id: "Undang anggota tim via kode invite", en: "Invite team members via invite code" },
   { id: "Bot Telegram kirim email otonom", en: "Telegram bot sends emails autonomously" },
   { id: "Approval-gate: hapus lead & export data butuh persetujuan owner/manager", en: "Approval gate: deleting leads & exporting data needs owner/manager sign-off" },
