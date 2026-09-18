@@ -78,16 +78,16 @@ function GrokBotMcpContent({ lang, setLang }) {
   const STEPS = useSteps(tr);
   const SECURITY_POINTS = useSecurityPoints(tr);
 
-  // Analitik sendiri (17 Sep 2026) - sama pola kayak Auth.jsx, pake session_id
-  // localStorage yang SAMA (nexto_visit_sid) biar visitor yang pindah dari
-  // landing utama ke halaman ini keitung 1 sesi yang sama, bukan dianggep
-  // visitor baru.
+  // Analitik sendiri (17 Sep 2026, upgrade 18 Sep) - pake id localStorage yang
+  // SAMA (nexto_visitor_id) kayak Auth.jsx biar visitor yang pindah dari
+  // landing utama ke halaman ini keitung visitor yang sama, dan nempel lintas
+  // hari buat itung visitor baru vs balik lagi.
   useEffect(() => {
     try {
-      let sessionId = sessionStorage.getItem("nexto_visit_sid");
+      let sessionId = localStorage.getItem("nexto_visitor_id");
       if (!sessionId) {
         sessionId = crypto.randomUUID();
-        sessionStorage.setItem("nexto_visit_sid", sessionId);
+        localStorage.setItem("nexto_visitor_id", sessionId);
       }
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       fetch("https://cewggulyfshnbebcpyui.supabase.co/functions/v1/track-visit", {

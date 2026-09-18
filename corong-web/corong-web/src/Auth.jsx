@@ -2414,15 +2414,20 @@ export default function Auth() {
 
   // Analitik sendiri (17 Sep 2026, permintaan Nando) - catet 1x kunjungan
   // landing page ini ke track-visit, fire-and-forget (gagal diem-diem, gak
-  // boleh ganggu pengalaman visitor). session_id acak disimpen sessionStorage
-  // (bukan localStorage) biar cuma keitung 1x per tab/kunjungan, bukan tiap
-  // kali komponen re-render, dan otomatis "reset" kalau visitor buka tab baru.
+  // boleh ganggu pengalaman visitor).
+  //
+  // BUG FIX/UPGRADE (18 Sep 2026, permintaan Nando: mau bisa bedain visitor
+  // baru vs balik lagi) - id-nya SEKARANG di localStorage (bukan
+  // sessionStorage lagi) biar id yang SAMA nempel di browser itu lintas hari/
+  // lintas tab, bukan reset tiap buka tab baru - baru dari situ admin-status
+  // bisa mbedain "session_id ini udah pernah nongol SEBELUM hari ini apa
+  // belum" buat itung visitor baru vs returning.
   useEffect(() => {
     try {
-      let sessionId = sessionStorage.getItem("nexto_visit_sid");
+      let sessionId = localStorage.getItem("nexto_visitor_id");
       if (!sessionId) {
         sessionId = crypto.randomUUID();
-        sessionStorage.setItem("nexto_visit_sid", sessionId);
+        localStorage.setItem("nexto_visitor_id", sessionId);
       }
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       fetch("https://cewggulyfshnbebcpyui.supabase.co/functions/v1/track-visit", {

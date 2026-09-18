@@ -681,9 +681,14 @@ function UsersOverviewPanel({ data, features }) {
 // dari page_visits (diisi track-visit, dipanggil landing page & /grok-bot).
 function TrafficPanel({ data }) {
   if (!data) return <div className="text-[11px] text-slate-500 font-mono">Belum ada data.</div>;
-  const { visits_today, unique_today, visits_7d, trend, top_pages, top_referrers, device } = data;
+  const { visits_today, unique_today, visits_7d, trend, top_pages, top_referrers, device, hourly, page_flow, new_vs_returning_today, top_countries, top_cities } = data;
   const totalDevice = (device?.mobile || 0) + (device?.desktop || 0);
   const mobilePct = totalDevice > 0 ? Math.round((device.mobile / totalDevice) * 100) : 0;
+  const totalFlow = (page_flow?.single || 0) + (page_flow?.multi || 0);
+  const multiPct = totalFlow > 0 ? Math.round((page_flow.multi / totalFlow) * 100) : 0;
+  const totalNewRet = (new_vs_returning_today?.new || 0) + (new_vs_returning_today?.returning || 0);
+  const returningPct = totalNewRet > 0 ? Math.round((new_vs_returning_today.returning / totalNewRet) * 100) : 0;
+  const maxHourly = hourly && hourly.length ? Math.max(...hourly.map((h) => h.count), 1) : 1;
   return (
     <div className="grid gap-3 min-w-0">
       <div className="grid grid-cols-3 gap-2">
@@ -731,22 +736,106 @@ function TrafficPanel({ data }) {
           )}
         </div>
       </div>
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-        <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Device (7 hari)</div>
-        {totalDevice === 0 ? (
-          <div className="text-[11px] text-slate-600">belum ada data</div>
-        ) : (
-          <>
-            <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
-              <div className="h-full bg-sky-400" style={{ width: `${mobilePct}%` }} />
-              <div className="h-full bg-violet-400" style={{ width: `${100 - mobilePct}%` }} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Device (7 hari)</div>
+          {totalDevice === 0 ? (
+            <div className="text-[11px] text-slate-600">belum ada data</div>
+          ) : (
+            <>
+              <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
+                <div className="h-full bg-sky-400" style={{ width: `${mobilePct}%` }} />
+                <div className="h-full bg-violet-400" style={{ width: `${100 - mobilePct}%` }} />
+              </div>
+              <div className="flex items-center justify-between mt-1.5 text-[10.5px] font-mono">
+                <span className="text-sky-300">Mobile {mobilePct}% ({device.mobile})</span>
+                <span className="text-violet-300">Desktop {100 - mobilePct}% ({device.desktop})</span>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Alur halaman per sesi (7 hari)</div>
+          {totalFlow === 0 ? (
+            <div className="text-[11px] text-slate-600">belum ada data</div>
+          ) : (
+            <>
+              <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
+                <div className="h-full bg-amber-400" style={{ width: `${100 - multiPct}%` }} />
+                <div className="h-full bg-emerald-400" style={{ width: `${multiPct}%` }} />
+              </div>
+              <div className="flex items-center justify-between mt-1.5 text-[10.5px] font-mono">
+                <span className="text-amber-300">1 halaman {100 - multiPct}% ({page_flow.single})</span>
+                <span className="text-emerald-300">Lanjut halaman lain {multiPct}% ({page_flow.multi})</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Visitor baru vs balik lagi (hari ini)</div>
+          {totalNewRet === 0 ? (
+            <div className="text-[11px] text-slate-600">belum ada data</div>
+          ) : (
+            <>
+              <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
+                <div className="h-full bg-fuchsia-400" style={{ width: `${100 - returningPct}%` }} />
+                <div className="h-full bg-cyan-400" style={{ width: `${returningPct}%` }} />
+              </div>
+              <div className="flex items-center justify-between mt-1.5 text-[10.5px] font-mono">
+                <span className="text-fuchsia-300">Baru {100 - returningPct}% ({new_vs_returning_today.new})</span>
+                <span className="text-cyan-300">Balik lagi {returningPct}% ({new_vs_returning_today.returning})</span>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Jam-jam rame (WIB, 7 hari)</div>
+          {!hourly || hourly.every((h) => h.count === 0) ? (
+            <div className="text-[11px] text-slate-600">belum ada data</div>
+          ) : (
+            <div className="flex items-end gap-[2px] h-14">
+              {hourly.map((h) => (
+                <div key={h.hour} className="flex-1 flex flex-col items-center justify-end h-full" title={`Jam ${h.hour}:00 WIB - ${h.count} kunjungan`}>
+                  <div className="w-full rounded-sm bg-lime-400/70" style={{ height: `${Math.max((h.count / maxHourly) * 100, h.count > 0 ? 6 : 1)}%` }} />
+                </div>
+              ))}
             </div>
-            <div className="flex items-center justify-between mt-1.5 text-[10.5px] font-mono">
-              <span className="text-sky-300">Mobile {mobilePct}% ({device.mobile})</span>
-              <span className="text-violet-300">Desktop {100 - mobilePct}% ({device.desktop})</span>
+          )}
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Negara pengunjung (7 hari)</div>
+          {(!top_countries || top_countries.length === 0) ? (
+            <div className="text-[11px] text-slate-600">belum ada data lokasi</div>
+          ) : (
+            <div className="grid gap-1.5">
+              {top_countries.map((c) => (
+                <div key={c.country} className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300 font-mono truncate">{c.country}</span>
+                  <span className="text-slate-500 font-mono font-bold shrink-0 ml-2">{c.count}</span>
+                </div>
+              ))}
             </div>
-          </>
-        )}
+          )}
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Kota pengunjung (7 hari)</div>
+          {(!top_cities || top_cities.length === 0) ? (
+            <div className="text-[11px] text-slate-600">belum ada data lokasi</div>
+          ) : (
+            <div className="grid gap-1.5">
+              {top_cities.map((c) => (
+                <div key={c.city} className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300 font-mono truncate">{c.city}</span>
+                  <span className="text-slate-500 font-mono font-bold shrink-0 ml-2">{c.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
