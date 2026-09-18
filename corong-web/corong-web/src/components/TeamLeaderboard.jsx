@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Trophy, Crown, X, ChevronRight } from "lucide-react";
+import { Trophy, Crown, X, ChevronRight, Percent, Pencil, Check, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 
@@ -90,15 +90,40 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
   );
 }
 
-export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpenLead }) {
+export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpenLead, canManage }) {
   const [members, setMembers] = useState(null);
   const [checkins, setCheckins] = useState([]);
   const [preview, setPreview] = useState(null); // { title, items }
+  // Sistem komisi (18 Sep 2026, permintaan Nando) - map user_id -> rate %,
+  // cuma di-fetch/ditampilin kalau canManage (owner/manager) - sales_rep gak
+  // perlu liat rate komisi anggota lain di sini (RLS juga udah negakin ini
+  // di server, ini cuma nyocokin biar gak fetch data yang gak dipake).
+  const [commissions, setCommissions] = useState({});
+  const [editingRate, setEditingRate] = useState(null); // user_id yang lagi diedit
+  const [rateInput, setRateInput] = useState("");
+  const [rateBusy, setRateBusy] = useState(false);
 
   useEffect(() => {
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
     db.getCheckins().then(setCheckins).catch(() => setCheckins([]));
-  }, []);
+    if (canManage) {
+      db.getMemberCommissions()
+        .then((rows) => setCommissions(Object.fromEntries(rows.map((r) => [r.user_id, Number(r.commission_rate_pct)]))))
+        .catch(() => setCommissions({}));
+    }
+  }, [canManage]);
+
+  const startEditRate = (uid, current) => { setEditingRate(uid); setRateInput(current != null ? String(current) : ""); };
+  const saveRate = async (uid) => {
+    const pct = Math.min(100, Math.max(0, Number(rateInput) || 0));
+    setRateBusy(true);
+    try {
+      await db.setMemberCommissionRate(uid, pct);
+      setCommissions((prev) => ({ ...prev, [uid]: pct }));
+      setEditingRate(null);
+    } catch (e) { alert("Gagal simpan rate komisi: " + e.message); }
+    finally { setRateBusy(false); }
+  };
 
   if (!members || members.length <= 1) return null;
 
@@ -123,6 +148,8 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
       const myDeals = (dealTransactions || []).filter((t) => t.user_id === m.user_id);
       const revenue = myDeals.reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
       const myCheckins = checkins.filter((c) => c.user_id === m.user_id);
+      const commissionRate = commissions[m.user_id] ?? 0;
+      const commissionAmount = revenue * (commissionRate / 100);
 
       return {
         key: m.user_id,
@@ -133,6 +160,8 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
         visitCount: myCheckins.length,
         winRate,
         revenue,
+        commissionRate,
+        commissionAmount,
         leadItems: mine.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: l.category || l.city || "" })),
         dealItems: myDeals.map((t) => ({ id: t.id, leadId: t.lead_id, primary: t.lead_name || "Deal", secondary: [fmtRp(t.deal_value), t.deal_date].filter(Boolean).join(" · ") })),
         visitItems: myCheckins.map((c) => ({ id: c.id, leadId: c.lead_id, primary: c.lead_name || "Kunjungan", secondary: c.checked_in_at ? new Date(c.checked_in_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "" })),
@@ -206,6 +235,68 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
           );
         })}
       </div>
+
+      {/* Sistem Komisi (18 Sep 2026, permintaan Nando) - cuma keliatan buat
+          owner/manager (canManage). Rate % per anggota, komisi dihitung dari
+          total revenue all-time (sama basis waktu kayak leaderboard di atas)
+          dikali rate. Ini LAPORAN doang - status pembayaran komisinya tetep
+          ditangani manual di luar Nexto (transfer bank dll), sesuai keputusan
+          Nando biar gak over-engineer fitur yang belum tentu kepake detail.
+          Rate 0% (default) berarti belum diatur - komisinya Rp0 sampe owner/
+          manager set rate-nya. */}
+      {canManage && (
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <div className="mb-3 flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+              <Percent size={16} />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-slate-800">Komisi Tim</div>
+              <div className="text-[10.5px] text-slate-400">% dari total revenue closing (all-time) - atur rate tiap anggota</div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {rows.map((r) => (
+              <div key={r.key} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3.5 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[12.5px] font-semibold text-slate-700">{r.name}</div>
+                  <div className="text-[10.5px] text-slate-400">Revenue {fmtRp(r.revenue)}</div>
+                </div>
+                {editingRate === r.uid ? (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      autoFocus
+                      value={rateInput}
+                      onChange={(e) => setRateInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && saveRate(r.uid)}
+                      className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-[12.5px] focus:outline-none focus:border-orange-500"
+                    />
+                    <span className="text-[12px] text-slate-400">%</span>
+                    <button onClick={() => saveRate(r.uid)} disabled={rateBusy} className="rounded-lg bg-emerald-600 p-1.5 text-white hover:bg-emerald-700 disabled:opacity-50">
+                      {rateBusy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => startEditRate(r.uid, r.commissionRate)} className="flex shrink-0 items-center gap-3 text-right hover:opacity-70">
+                    <div>
+                      <div className="text-[13px] font-bold text-slate-800">{fmtRp(r.commissionAmount)}</div>
+                      <div className="text-[10.5px] text-slate-400">{r.commissionRate}% rate</div>
+                    </div>
+                    <Pencil size={13} className="text-slate-300" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center justify-between rounded-2xl bg-emerald-50 px-3.5 py-2.5">
+            <span className="text-[12.5px] font-semibold text-emerald-800">Total komisi tim</span>
+            <span className="text-[13px] font-bold text-emerald-800">{fmtRp(rows.reduce((sum, r) => sum + r.commissionAmount, 0))}</span>
+          </div>
+        </div>
+      )}
 
       {preview && (
         <StatPreviewModal

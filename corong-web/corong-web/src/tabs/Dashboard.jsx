@@ -65,6 +65,7 @@ export default function Dashboard({
   onGo,
   onOpenLead,
   isEnterprise = false,
+  canManage = false,
 }) {
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
 
@@ -467,7 +468,7 @@ export default function Dashboard({
           non-Enterprise yang KEBETULAN pernah punya >1 anggota (misal abis
           di-downgrade dari Enterprise) tetep keliatan leaderboard-nya.
           Sekarang eksplisit di-gate isEnterprise juga di sini. */}
-      {isEnterprise && <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} />}
+      {isEnterprise && <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />}
 
       <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-orange-50/50 px-5 py-4 flex items-center gap-3">
         <Target size={18} className="text-orange-500 shrink-0"/>

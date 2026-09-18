@@ -73,6 +73,25 @@ export async function getOrgMembers() {
   return data || [];
 }
 
+// Sistem komisi (Enterprise, 18 Sep 2026, permintaan Nando) - rate komisi
+// per anggota (% dari nilai deal). RLS di tabel member_commissions sendiri
+// yang negakin siapa boleh liat/ubah apa (owner/manager liat semua rate di
+// org-nya, sales_rep cuma liat rate DIRINYA SENDIRI, cuma owner/manager
+// yang boleh ubah) - gak perlu edge function, langsung lewat client biasa.
+export async function getMemberCommissions() {
+  const { data, error } = await supabase.from("member_commissions").select("user_id, commission_rate_pct");
+  if (error) throw error;
+  return data || [];
+}
+export async function setMemberCommissionRate(userId, ratePct) {
+  const orgId = await getMyOrgId();
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase
+    .from("member_commissions")
+    .upsert({ org_id: orgId, user_id: userId, commission_rate_pct: ratePct, updated_by: uid, updated_at: new Date().toISOString() }, { onConflict: "org_id,user_id" });
+  if (error) throw error;
+}
+
 export async function createInviteCode(role = "sales_rep") {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
