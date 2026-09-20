@@ -260,10 +260,21 @@ export default function Dashboard({
   return (
     <div className="space-y-5">
       {/* Hero */}
-      <div>
-        <h1 className="text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">{greeting}, {displayName}</h1>
-        <p className="mt-1 text-[13px] text-slate-500">Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
-        <p className="mt-1 text-[11px] text-slate-400">{todayLabel}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">{greeting}, {displayName}</h1>
+          <p className="mt-1 text-[13px] text-slate-500">Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
+          <p className="mt-1 text-[11px] text-slate-400">{todayLabel}</p>
+        </div>
+        {/* Label tulisan tangan (18 Sep 2026, permintaan Nando) - dipindah
+            dari header ke sini, di sebelah kanan sapaan "Good ..., Nama"
+            (sebelumnya di tengah topbar). Cuma tagline dekoratif. */}
+        <div
+          className="hidden lg:block shrink-0 mt-1 -rotate-3 select-none pointer-events-none text-[26px] leading-none text-blue-600/80"
+          style={{ fontFamily: "'Caveat', cursive" }}
+        >
+          Always Know What's Next !!
+        </div>
       </div>
 
       {/* Rekomendasi AI (Next best action) - dipindah ke paling atas (16 Sep
