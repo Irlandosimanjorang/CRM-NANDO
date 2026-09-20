@@ -253,6 +253,12 @@ export default function PublicDemo() {
   useEffect(() => {
     document.title = "Nexto - Demo Interaktif";
     try {
+      // SKIP TRACKING BUAT NANDO SENDIRI (18 Sep 2026) - liat Auth.jsx buat
+      // penjelasan lengkap, pola/key localStorage-nya sama persis.
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("admin") === "1") localStorage.setItem("nexto_skip_tracking", "1");
+      if (localStorage.getItem("nexto_skip_tracking") === "1") return;
+
       let sessionId = localStorage.getItem("nexto_visitor_id");
       if (!sessionId) {
         sessionId = crypto.randomUUID();
