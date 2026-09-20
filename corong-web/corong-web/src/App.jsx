@@ -489,6 +489,29 @@ export default function App() {
     db.getOrgMembers().then(setOrgMembers).catch(() => setOrgMembers([]));
   }, [canManage]);
 
+  // Tur interaktif fitur (18 Sep 2026, permintaan Nando: "tur ke semua tab
+  // sesuai plan, kalau upgrade dapet tur baru buat tab yang baru kebuka
+  // aja"). onboarding_level_seen nyimpen level TERTINGGI yang udah pernah
+  // dikasih tur (null = belum pernah). SAMA KAYAK isEnterprise di atas -
+  // hook ini HARUS di sini, sebelum early return manapun (lihat komentar
+  // panjang di atas soal bug blank putih 10 Sep 2026) - myLevel dihitung
+  // ULANG secara lokal (bukan pakai const myLevel di bawah situ, yang
+  // sengaja ditaro setelah early return buat kebutuhan lain).
+  const tourMyLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
+  const onboardingCheckedRef = useRef(false);
+  const [tourSteps, setTourSteps] = useState(null);
+  useEffect(() => {
+    if (loading || onboardingCheckedRef.current || !session) return;
+    if (settings?.onboarding_level_seen === undefined) return;
+    onboardingCheckedRef.current = true;
+    const steps = buildTourSteps({ myLevel: tourMyLevel, isEnterprise, previousLevel: settings.onboarding_level_seen });
+    if (steps.length > 0) setTourSteps(steps);
+  }, [loading, settings, session, tourMyLevel, isEnterprise]);
+  const finishTour = async () => {
+    setTourSteps(null);
+    try { await db.markOnboardingLevelSeen(tourMyLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
+  };
+
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
   if (!session) return <Auth />;
@@ -561,27 +584,6 @@ export default function App() {
   // Professional + fitur tim tambahan yang di-gate terpisah di Settings.jsx.
   const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
   const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
-
-  // Tur interaktif fitur (18 Sep 2026, permintaan Nando: "tur ke semua tab
-  // sesuai plan, kalau upgrade dapet tur baru buat tab yang baru kebuka
-  // aja"). onboarding_level_seen nyimpen level TERTINGGI yang udah pernah
-  // dikasih tur (null = belum pernah). Tur jalan kalau ada step baru yang
-  // levelnya di atas onboarding_level_seen - itu otomatis nyakup baik user
-  // baru (previousLevel null -> full tour) maupun user abis upgrade
-  // (previousLevel keisi -> cuma tab yang baru kebuka).
-  const onboardingCheckedRef = useRef(false);
-  const [tourSteps, setTourSteps] = useState(null);
-  useEffect(() => {
-    if (loading || onboardingCheckedRef.current || !session) return;
-    if (settings?.onboarding_level_seen === undefined) return;
-    onboardingCheckedRef.current = true;
-    const steps = buildTourSteps({ myLevel, isEnterprise, previousLevel: settings.onboarding_level_seen });
-    if (steps.length > 0) setTourSteps(steps);
-  }, [loading, settings, session, myLevel, isEnterprise]);
-  const finishTour = async () => {
-    setTourSteps(null);
-    try { await db.markOnboardingLevelSeen(myLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
-  };
 
   // Tier yang dipilih user pas klik tombol pricing di landing page SEBELUM
   // daftar (lihat chooseTierAndSignup di Auth.jsx) - dipake buat personalisasi
