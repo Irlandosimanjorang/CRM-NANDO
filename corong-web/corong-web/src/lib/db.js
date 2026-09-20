@@ -595,6 +595,15 @@ export async function getSettings() {
   return data || {};
 }
 
+// Panduan fitur pas pertama kali buka app (18 Sep 2026, permintaan Nando) -
+// ditandain SEKALI per akun (bukan localStorage) biar gak nongol lagi kalau
+// user ganti device/browser.
+export async function markOnboardingSeen() {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("settings").upsert({ user_id: uid, has_seen_onboarding: true, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
 // ---- LEADS ----
 // BUG FIX (9 Sep 2026): sebelumnya .range(0, 9999) - kalau org-nya kelak
 // punya lebih dari 10rb lead, sisanya kepotong DIAM-DIAM (bukan error, cuma

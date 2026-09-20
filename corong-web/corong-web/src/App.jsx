@@ -6,6 +6,7 @@ import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPo
 import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
 import Auth from "./Auth";
 import PreviewLock from "./components/PreviewLock";
+import OnboardingGuideModal from "./components/OnboardingGuideModal";
 import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // Dashboard/Leads/Settings tetep IMPORT STATIS - hampir semua user langsung
 // buka salah satu dari ini begitu login, jadi lazy-load-nya cuma nambah
@@ -342,6 +343,25 @@ export default function App() {
       setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+
+  // Panduan fitur pertama kali (18 Sep 2026, permintaan Nando) - nongol
+  // SEKALI aja per akun (ditandain di DB, bukan localStorage, biar gak
+  // muncul lagi kalau user ganti device). onboardingCheckedRef jaga-jaga
+  // biar gak keperiksa ulang tiap kali reload() jalan lagi (misal abis
+  // pindah tab) - cukup diputusin sekali begitu settings pertama kali
+  // beneran ke-load (settings awal {} sebelum itu, has_seen_onboarding-nya
+  // undefined, sengaja BEDA dari false biar gak salah nembak duluan).
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const onboardingCheckedRef = useRef(false);
+  useEffect(() => {
+    if (loading || onboardingCheckedRef.current || !session) return;
+    if (settings?.has_seen_onboarding === false) setShowOnboarding(true);
+    if (settings?.has_seen_onboarding !== undefined) onboardingCheckedRef.current = true;
+  }, [loading, settings, session]);
+  const closeOnboarding = async () => {
+    setShowOnboarding(false);
+    try { await db.markOnboardingSeen(); } catch (e) { console.error("Gagal nyimpen status onboarding:", e); }
   };
 
   const [pickingIndustry, setPickingIndustry] = useState(false);
@@ -1006,6 +1026,15 @@ export default function App() {
       </div>
 
       {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
+      {showOnboarding && (
+        <OnboardingGuideModal
+          myLevel={myLevel}
+          isEnterprise={isEnterprise}
+          displayName={settings?.community_display_name || settings?.name || settings?.full_name || ""}
+          onClose={closeOnboarding}
+          onGoSettings={() => { setTab("settings"); closeOnboarding(); }}
+        />
+      )}
     </div>
   );
 }

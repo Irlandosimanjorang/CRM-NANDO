@@ -459,7 +459,7 @@ const SECURITY_OFFSETS = [0, 34, 14, 42, 22];
 // SEBELUM ngecek ada pending confirmation atau nggak), udah dibenerin biar
 // konfirmasi pending_actions tetep jalan buat Standard walau Bot Telegram-nya
 // sendiri Professional+. Jadi fiturnya balik ke Standard, bukan pindah tier.
-const STANDARD_FEATURES = [
+export const STANDARD_FEATURES = [
   { id: "Kelola Leads — kartu per perusahaan", en: "Manage Leads — card per company" },
   { id: "Integrasi MCP ke Grok Bot", en: "Grok Bot MCP Integration" },
   { id: "Smart Import", en: "Smart Import" },
@@ -474,7 +474,7 @@ const STANDARD_FEATURES = [
   { id: "Advisor harian", en: "Daily Advisor" },
 ];
 
-const PROFESSIONAL_FEATURES = [
+export const PROFESSIONAL_FEATURES = [
   { id: "Semua fitur Standard", en: "Everything in Standard" },
   { id: "Bot Telegram (edit CRM, progress harian, jadwal visit)", en: "Telegram Bot (edit CRM, daily progress, visit scheduling)" },
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
@@ -487,7 +487,7 @@ const PROFESSIONAL_FEATURES = [
   { id: "Data Kompetitor", en: "Competitor Data" },
 ];
 
-const ENTERPRISE_FEATURES = [
+export const ENTERPRISE_FEATURES = [
   { id: "Semua fitur Professional", en: "Everything in Professional" },
   { id: "GPS Check-in (tracking kunjungan tim real-time)", en: "GPS Check-in (real-time team visit tracking)" },
   { id: "4 anggota tim dalam satu organisasi", en: "4 team members in one organization" },
