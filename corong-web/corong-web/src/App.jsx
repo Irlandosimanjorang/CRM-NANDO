@@ -822,7 +822,7 @@ export default function App() {
         </header>
 
         {/* DESKTOP TOPBAR */}
-        <header className="hidden md:flex sticky top-0 z-20 h-[64px] items-center justify-between border-b border-slate-200/60 bg-white/78 px-6 lg:px-8 backdrop-blur-2xl">
+        <header className="hidden md:flex relative sticky top-0 z-20 h-[64px] items-center justify-between border-b border-slate-200/60 bg-white/78 px-6 lg:px-8 backdrop-blur-2xl">
           <div className="flex items-center gap-3">
             {/* Dibalikin persis kayak sebelumnya (16 Sep 2026, permintaan
                 Nando) - sempet dihapus terus header-nya keliatan sepi/kosong. */}
@@ -834,6 +834,19 @@ export default function App() {
                 <span className="text-slate-700">{NAV.find((n) => n.key === effectiveTab)?.label}</span>
               </div>
             </div>
+          </div>
+
+          {/* Label tulisan tangan (18 Sep 2026, permintaan Nando) - cuma
+              tagline dekoratif, gak nyampur sama layout flex kiri/kanan
+              header (dua-duanya udah dipas justify-between), jadi
+              di-absolute-in di tengah biar gak geser apa pun yang udah ada.
+              Disembunyiin di layar sempit (xl ke bawah) karena ruang tengah
+              header gampang numpuk sama breadcrumb/pill di lebar segitu. */}
+          <div
+            className="hidden xl:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-3 select-none pointer-events-none text-[26px] leading-none text-blue-600/80"
+            style={{ fontFamily: "'Caveat', cursive" }}
+          >
+            Always know what is next
           </div>
 
           <div className="flex items-center gap-2">
