@@ -6,7 +6,8 @@ import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPo
 import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
 import Auth from "./Auth";
 import PreviewLock from "./components/PreviewLock";
-import OnboardingGuideModal from "./components/OnboardingGuideModal";
+import AppTour from "./components/AppTour";
+import { buildTourSteps } from "./lib/tourSteps";
 import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // Dashboard/Leads/Settings tetep IMPORT STATIS - hampir semua user langsung
 // buka salah satu dari ini begitu login, jadi lazy-load-nya cuma nambah
@@ -345,25 +346,6 @@ export default function App() {
     finally { setLoading(false); }
   };
 
-  // Panduan fitur pertama kali (18 Sep 2026, permintaan Nando) - nongol
-  // SEKALI aja per akun (ditandain di DB, bukan localStorage, biar gak
-  // muncul lagi kalau user ganti device). onboardingCheckedRef jaga-jaga
-  // biar gak keperiksa ulang tiap kali reload() jalan lagi (misal abis
-  // pindah tab) - cukup diputusin sekali begitu settings pertama kali
-  // beneran ke-load (settings awal {} sebelum itu, has_seen_onboarding-nya
-  // undefined, sengaja BEDA dari false biar gak salah nembak duluan).
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const onboardingCheckedRef = useRef(false);
-  useEffect(() => {
-    if (loading || onboardingCheckedRef.current || !session) return;
-    if (settings?.has_seen_onboarding === false) setShowOnboarding(true);
-    if (settings?.has_seen_onboarding !== undefined) onboardingCheckedRef.current = true;
-  }, [loading, settings, session]);
-  const closeOnboarding = async () => {
-    setShowOnboarding(false);
-    try { await db.markOnboardingSeen(); } catch (e) { console.error("Gagal nyimpen status onboarding:", e); }
-  };
-
   const [pickingIndustry, setPickingIndustry] = useState(false);
   const handlePickIndustry = async (industryKey) => {
     setPickingIndustry(true);
@@ -580,6 +562,27 @@ export default function App() {
   const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
   const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
 
+  // Tur interaktif fitur (18 Sep 2026, permintaan Nando: "tur ke semua tab
+  // sesuai plan, kalau upgrade dapet tur baru buat tab yang baru kebuka
+  // aja"). onboarding_level_seen nyimpen level TERTINGGI yang udah pernah
+  // dikasih tur (null = belum pernah). Tur jalan kalau ada step baru yang
+  // levelnya di atas onboarding_level_seen - itu otomatis nyakup baik user
+  // baru (previousLevel null -> full tour) maupun user abis upgrade
+  // (previousLevel keisi -> cuma tab yang baru kebuka).
+  const onboardingCheckedRef = useRef(false);
+  const [tourSteps, setTourSteps] = useState(null);
+  useEffect(() => {
+    if (loading || onboardingCheckedRef.current || !session) return;
+    if (settings?.onboarding_level_seen === undefined) return;
+    onboardingCheckedRef.current = true;
+    const steps = buildTourSteps({ myLevel, isEnterprise, previousLevel: settings.onboarding_level_seen });
+    if (steps.length > 0) setTourSteps(steps);
+  }, [loading, settings, session, myLevel, isEnterprise]);
+  const finishTour = async () => {
+    setTourSteps(null);
+    try { await db.markOnboardingLevelSeen(myLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
+  };
+
   // Tier yang dipilih user pas klik tombol pricing di landing page SEBELUM
   // daftar (lihat chooseTierAndSignup di Auth.jsx) - dipake buat personalisasi
   // banner upgrade di bawah, biar gak generic "Upgrade Professional" doang
@@ -782,6 +785,7 @@ export default function App() {
             return (
               <button
                 key={n.key}
+                data-tour-nav={n.key}
                 onClick={() => {
                   // Command Center itu "fullscreen takeover" - minta browser
                   // masuk mode fullscreen beneran (nutupin tab/address bar),
@@ -1007,6 +1011,7 @@ export default function App() {
               return (
                 <button
                   key={n.key}
+                  data-tour-nav={n.key}
                   onClick={() => {
                     if (n.key === "adminops" && document.documentElement.requestFullscreen) {
                       document.documentElement.requestFullscreen().catch(() => {});
@@ -1026,14 +1031,8 @@ export default function App() {
       </div>
 
       {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
-      {showOnboarding && (
-        <OnboardingGuideModal
-          myLevel={myLevel}
-          isEnterprise={isEnterprise}
-          displayName={settings?.community_display_name || settings?.name || settings?.full_name || ""}
-          onClose={closeOnboarding}
-          onGoSettings={() => { setTab("settings"); closeOnboarding(); }}
-        />
+      {tourSteps && (
+        <AppTour steps={tourSteps} onNavigate={(key) => setTab(key)} onFinish={finishTour} />
       )}
     </div>
   );

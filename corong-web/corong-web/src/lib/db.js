@@ -595,12 +595,15 @@ export async function getSettings() {
   return data || {};
 }
 
-// Panduan fitur pas pertama kali buka app (18 Sep 2026, permintaan Nando) -
-// ditandain SEKALI per akun (bukan localStorage) biar gak nongol lagi kalau
-// user ganti device/browser.
-export async function markOnboardingSeen() {
+// Tur fitur interaktif (18 Sep 2026, permintaan Nando) - onboarding_level_seen
+// nyimpen LEVEL PLAN TERTINGGI yang tur-nya udah pernah ditonton (bukan
+// sekadar boolean) - jadi kalau user upgrade plan nanti, App.jsx bisa
+// mbandingin level baru vs ini buat mutusin perlu nongolin tur SUSULAN
+// khusus tab yang baru kebuka doang, bukan ngulang tur dari awal. null =
+// belum pernah liat tur sama sekali (akun baru).
+export async function markOnboardingLevelSeen(level) {
   const uid = (await supabase.auth.getUser()).data.user.id;
-  const { error } = await supabase.from("settings").upsert({ user_id: uid, has_seen_onboarding: true, updated_at: new Date().toISOString() });
+  const { error } = await supabase.from("settings").upsert({ user_id: uid, onboarding_level_seen: level, updated_at: new Date().toISOString() });
   if (error) throw error;
 }
 
