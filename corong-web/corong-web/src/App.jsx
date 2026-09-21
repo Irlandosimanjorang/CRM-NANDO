@@ -513,34 +513,38 @@ export default function App() {
     try { await db.markOnboardingLevelSeen(tourMyLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
   };
 
-  // Catat Cepat (21 Sep 2026, permintaan Nando) - dibuka dari PWA shortcut
-  // (long-press icon Nexto di HP -> ?quickvoice=1, lihat manifest.json).
+  // Catat Cepat (21 Sep 2026, permintaan Nando) - histori pendekatan yang
+  // udah dicoba & GAGAL sebelum yang sekarang:
+  // 1. Manifest "shortcuts" (long-press icon HP kayak Android) - Safari iOS
+  //    GAK DUKUNG SAMA SEKALI, gak ada workaround dari sisi web (dikonfirmasi
+  //    lewat riset, bukan cuma dugaan).
+  // 2. Icon KEDUA terpisah (Add to Home Screen ke /?quickvoice=1) - teknis
+  //    jalan, tapi ribet buat user (install manual, App Store address bar,
+  //    dst) dan Nando tetep gak berhasil pas dicoba.
+  // 3. Tombol mengambang di dalam app - jalan, tapi Nando pengennya BUKAN
+  //    "harus tap tombol", maunya OTOMATIS muncul pas buka app.
+  // SEKARANG (final): deteksi app-nya lagi jalan sebagai HOME SCREEN APP
+  // (mode standalone - ini yang kejadian tiap kali dibuka dari icon yang
+  // di-"Add to Home Screen", BEDA dari dibuka lewat tab browser biasa) -
+  // kalau iya, modal recorder OTOMATIS muncul tiap kali app dibuka, gak
+  // perlu ?quickvoice=1 atau icon kedua apa-apa lagi. User tetep bisa nutup
+  // modalnya (tombol X / klik luar) buat lanjut ke dashboard seperti biasa.
+  // Query param ?quickvoice=1 TETEP didukung sebagai fallback manual (kalau
+  // suatu saat perlu link langsung), tapi bukan jalur utama lagi.
+  //
   // SAMA KAYAK hook tur di atas - HARUS di sini, sebelum early return
   // manapun, walau baru kepake buat user yang session-nya udah valid.
-  //
-  // BUG FIX (21 Sep 2026, laporan Nando: icon "Catat Cepat" hasil Add to
-  // Home Screen di iPhone malah buka dashboard biasa) - SEBELUMNYA di sini
-  // ada window.history.replaceState() yang LANGSUNG buang "?quickvoice=1"
-  // dari address bar begitu halaman kebuka. Niatnya cuma biar refresh manual
-  // gak numpuk buka modal berkali-kali, TAPI efek sampingnya: begitu user
-  // buka Safari ke URL ini terus mau nge-Share > Add to Home Screen, Safari
-  // ngambil URL SAAT ITU dari address bar - yang udah kepalang bersih tanpa
-  // query-nya (JS-nya udah keburu strip duluan sebelum user sempet nge-tap
-  // Share). Icon yang ke-save jadi nunjuk ke "/" polos, bukan "/?quickvoice=1"
-  // - makanya kalau di-tap ya cuma buka dashboard biasa, gak pernah masuk
-  // recorder. Dihapus total - gak ada downside berarti (tiap shortcut/icon
-  // di-tap = full page reload baru, refresh manual state ini bukan skenario
-  // yang sering kejadian, dan kalau kejadian pun modal kebuka ulang bukan
-  // masalah, itu justru diinginkan).
   const quickVoiceCheckedRef = useRef(false);
   const [quickVoiceOpen, setQuickVoiceOpen] = useState(false);
   useEffect(() => {
     if (loading || quickVoiceCheckedRef.current || !session) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("quickvoice") !== "1") return;
     quickVoiceCheckedRef.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const isStandaloneHomeScreenApp = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+    const viaQuickvoiceLink = params.get("quickvoice") === "1";
+    if (!isStandaloneHomeScreenApp && !viaQuickvoiceLink) return;
     if (tourMyLevel >= 2) setQuickVoiceOpen(true);
-    else alert("Catat Cepat (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
+    else if (viaQuickvoiceLink) alert("Catat Cepat (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
   }, [loading, session, tourMyLevel]);
 
   if (!isConfigured) return <ConfigScreen />;
