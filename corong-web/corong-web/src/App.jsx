@@ -46,7 +46,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, Bell,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -1064,6 +1064,24 @@ export default function App() {
       </div>
 
       {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
+
+      {/* Tombol mengambang Catat Cepat (21 Sep 2026, permintaan Nando) -
+          alternatif dari shortcut icon HP (gak bisa diandelin di iPhone,
+          Safari sama sekali gak dukung "app shortcuts" buat web app - lihat
+          diskusi di atas). Ini versi yang PASTI jalan di semua device: satu
+          tombol yang nempel di semua tab, gak perlu install/Add to Home
+          Screen apa-apa. Ditaro di ATAS bottom nav mobile (yang fixed bottom-3)
+          biar gak numpuk. */}
+      {!editLead && !tourSteps && !quickVoiceOpen && myLevel >= 2 && (
+        <button
+          onClick={() => setQuickVoiceOpen(true)}
+          className="fixed z-40 bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center shadow-[0_12px_32px_-8px_rgba(234,88,12,.6)]"
+          aria-label="Catat Cepat"
+          title="Catat Cepat - voice note ke progress"
+        >
+          <Mic size={22} />
+        </button>
+      )}
       {tourSteps && (
         <AppTour steps={tourSteps} onNavigate={(key) => setTab(key)} onFinish={finishTour} />
       )}
