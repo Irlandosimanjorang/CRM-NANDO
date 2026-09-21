@@ -517,6 +517,21 @@ export default function App() {
   // (long-press icon Nexto di HP -> ?quickvoice=1, lihat manifest.json).
   // SAMA KAYAK hook tur di atas - HARUS di sini, sebelum early return
   // manapun, walau baru kepake buat user yang session-nya udah valid.
+  //
+  // BUG FIX (21 Sep 2026, laporan Nando: icon "Catat Cepat" hasil Add to
+  // Home Screen di iPhone malah buka dashboard biasa) - SEBELUMNYA di sini
+  // ada window.history.replaceState() yang LANGSUNG buang "?quickvoice=1"
+  // dari address bar begitu halaman kebuka. Niatnya cuma biar refresh manual
+  // gak numpuk buka modal berkali-kali, TAPI efek sampingnya: begitu user
+  // buka Safari ke URL ini terus mau nge-Share > Add to Home Screen, Safari
+  // ngambil URL SAAT ITU dari address bar - yang udah kepalang bersih tanpa
+  // query-nya (JS-nya udah keburu strip duluan sebelum user sempet nge-tap
+  // Share). Icon yang ke-save jadi nunjuk ke "/" polos, bukan "/?quickvoice=1"
+  // - makanya kalau di-tap ya cuma buka dashboard biasa, gak pernah masuk
+  // recorder. Dihapus total - gak ada downside berarti (tiap shortcut/icon
+  // di-tap = full page reload baru, refresh manual state ini bukan skenario
+  // yang sering kejadian, dan kalau kejadian pun modal kebuka ulang bukan
+  // masalah, itu justru diinginkan).
   const quickVoiceCheckedRef = useRef(false);
   const [quickVoiceOpen, setQuickVoiceOpen] = useState(false);
   useEffect(() => {
@@ -524,7 +539,6 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("quickvoice") !== "1") return;
     quickVoiceCheckedRef.current = true;
-    window.history.replaceState({}, "", window.location.pathname);
     if (tourMyLevel >= 2) setQuickVoiceOpen(true);
     else alert("Catat Cepat (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
   }, [loading, session, tourMyLevel]);
