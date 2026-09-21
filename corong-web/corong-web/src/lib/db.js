@@ -998,6 +998,25 @@ export async function transcribeMeeting(storagePath, leadName) {
   return data; // { transcript, notes }
 }
 
+// ---- CATAT CEPAT (voice note dari shortcut icon HP, 21 Sep 2026) - beda
+// dari Rekam Meeting: gak perlu pilih lead dulu, AI yang nebak dari isi
+// omongan. Reuse bucket storage "meeting-audio" yang sama (convention path
+// {user_id}/... udah dicek ownership-nya di edge function transcribe-meeting,
+// dipake ulang persis di quick-progress-note).
+export async function uploadQuickVoiceNote(blob) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const path = `${uid}/quicknote-${Date.now()}.webm`;
+  const { error } = await supabase.storage.from("meeting-audio").upload(path, blob, { contentType: blob.type || "audio/webm" });
+  if (error) throw error;
+  return path;
+}
+
+export async function transcribeQuickVoiceNote(storagePath) {
+  const { data, error } = await supabase.functions.invoke("quick-progress-note", { body: { storagePath } });
+  if (error) throw error;
+  return data; // { transcript, progress_note, lead_id, lead_name, confidence }
+}
+
 // ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----
 export async function getDealTransactions() {
   const { data, error } = await supabase.from("deal_transactions").select("*").order("deal_date", { ascending: false });

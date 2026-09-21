@@ -7,6 +7,7 @@ import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
 import Auth from "./Auth";
 import PreviewLock from "./components/PreviewLock";
 import AppTour from "./components/AppTour";
+import QuickVoiceNoteModal from "./components/QuickVoiceNoteModal";
 import { buildTourSteps } from "./lib/tourSteps";
 import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // Dashboard/Leads/Settings tetep IMPORT STATIS - hampir semua user langsung
@@ -511,6 +512,22 @@ export default function App() {
     setTourSteps(null);
     try { await db.markOnboardingLevelSeen(tourMyLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
   };
+
+  // Catat Cepat (21 Sep 2026, permintaan Nando) - dibuka dari PWA shortcut
+  // (long-press icon Nexto di HP -> ?quickvoice=1, lihat manifest.json).
+  // SAMA KAYAK hook tur di atas - HARUS di sini, sebelum early return
+  // manapun, walau baru kepake buat user yang session-nya udah valid.
+  const quickVoiceCheckedRef = useRef(false);
+  const [quickVoiceOpen, setQuickVoiceOpen] = useState(false);
+  useEffect(() => {
+    if (loading || quickVoiceCheckedRef.current || !session) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("quickvoice") !== "1") return;
+    quickVoiceCheckedRef.current = true;
+    window.history.replaceState({}, "", window.location.pathname);
+    if (tourMyLevel >= 2) setQuickVoiceOpen(true);
+    else alert("Catat Cepat (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
+  }, [loading, session, tourMyLevel]);
 
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
@@ -1035,6 +1052,9 @@ export default function App() {
       {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
       {tourSteps && (
         <AppTour steps={tourSteps} onNavigate={(key) => setTab(key)} onFinish={finishTour} />
+      )}
+      {quickVoiceOpen && (
+        <QuickVoiceNoteModal leads={leads} onClose={() => setQuickVoiceOpen(false)} onSaved={() => { setQuickVoiceOpen(false); reload(); }} />
       )}
     </div>
   );

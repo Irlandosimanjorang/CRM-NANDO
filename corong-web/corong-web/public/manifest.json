@@ -25,5 +25,14 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Catat Cepat",
+      "short_name": "Catat Cepat",
+      "description": "Rekam voice note, AI otomatis masuk ke progress lead yang relevan",
+      "url": "/?quickvoice=1",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
   ]
 }
