@@ -477,6 +477,7 @@ export const STANDARD_FEATURES = [
 export const PROFESSIONAL_FEATURES = [
   { id: "Semua fitur Standard", en: "Everything in Standard" },
   { id: "Bot Telegram (edit CRM, progress harian, jadwal visit)", en: "Telegram Bot (edit CRM, daily progress, visit scheduling)" },
+  { id: "Catat Cepat - voice note ke progress via shortcut icon HP", en: "Quick Capture - voice note to progress via phone icon shortcut" },
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
   { id: "Generate Leads", en: "Generate Leads" },
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },
