@@ -476,7 +476,7 @@ export const STANDARD_FEATURES = [
 
 export const PROFESSIONAL_FEATURES = [
   { id: "Semua fitur Standard", en: "Everything in Standard" },
-  { id: "Kuota NEX Pro lebih gede - 200x/bulan", en: "Bigger NEX Pro quota - 200x/month" },
+  { id: "Kuota NEX Pro lebih gede - 150x/bulan", en: "Bigger NEX Pro quota - 150x/month" },
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
   { id: "Generate Leads", en: "Generate Leads" },
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },

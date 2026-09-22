@@ -736,7 +736,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         ) : (
           <>
             <p className="text-xs text-slate-500 flex items-center gap-1.5">
-              <Mic size={13} className="text-orange-500 shrink-0" /> Tinggal tap tombol mic mengambang di pojok kanan bawah - atau otomatis muncul kalau Nexto di-install ke home screen HP. Kuota {myLevel >= 2 ? "200x/bulan (Professional)" : "25x/bulan (Standard)"}.
+              <Mic size={13} className="text-orange-500 shrink-0" /> Tinggal tap tombol mic mengambang di pojok kanan bawah - atau otomatis muncul kalau Nexto di-install ke home screen HP. Kuota {myLevel >= 2 ? "150x/bulan (Professional)" : "25x/bulan (Standard)"}.
             </p>
             {myLevel < 2 && (
               <p className="text-xs text-slate-400 mt-1.5">Jadwal visit tetap kecatet di CRM, tapi sinkron otomatis ke Google Calendar itu fitur Professional ke atas.</p>
