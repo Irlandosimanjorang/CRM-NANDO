@@ -1069,14 +1069,16 @@ export default function App() {
 
       {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
 
-      {/* Tombol mengambang Catat Cepat (21 Sep 2026, permintaan Nando) -
+      {/* Tombol mengambang NEXto (21-22 Sep 2026, permintaan Nando) -
           alternatif dari shortcut icon HP (gak bisa diandelin di iPhone,
           Safari sama sekali gak dukung "app shortcuts" buat web app - lihat
-          diskusi di atas). Ini versi yang PASTI jalan di semua device: satu
-          tombol yang nempel di semua tab, gak perlu install/Add to Home
-          Screen apa-apa. Ditaro di ATAS bottom nav mobile (yang fixed bottom-3)
-          biar gak numpuk. */}
-      {!editLead && !tourSteps && !quickVoiceOpen && myLevel >= 2 && (
+          diskusi di atas). Ini versi yang PASTI jalan di semua device, gak
+          perlu install/Add to Home Screen apa-apa. SENGAJA cuma nongol di
+          tab Dashboard (bukan di semua tab kayak sebelumnya, permintaan
+          Nando 22 Sep 2026) - biar gak numpuk sama konten/tombol tab lain.
+          Ditaro di ATAS bottom nav mobile (yang fixed bottom-3) biar gak
+          numpuk sama itu juga. */}
+      {!editLead && !tourSteps && !quickVoiceOpen && myLevel >= 2 && effectiveTab === "dashboard" && (
         <div className="fixed z-40 bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14">
           {/* Ring sonar halus - echo dari animasi idle di dalem modal
               NEXto sendiri, biar tombolnya kerasa "hidup" (bukan icon
