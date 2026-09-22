@@ -189,6 +189,15 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
     try {
       if (action === "update_lead") {
         if (!lead) throw new Error("Pilih lead-nya dulu.");
+        // BUG FIX (22 Sep 2026, laporan Nando: visit batal gak ke-update ke
+        // Google Calendar) - nge-null-in visit_date lewat upsertLead BIASA
+        // gak pernah ngehapus event lama di Calendar (upsertLead cuma manggil
+        // sync-calendar-bulk yang CUMA bisa create/update, gak ada delete).
+        // db.cancelVisit() yang beneran hapus event-nya dulu, BARU field
+        // visit di DB dikosongin - dipanggil terpisah SEBELUM upsertLead,
+        // dan tetep di-null-in juga di `merged` (idempotent) biar upsertLead
+        // gak numpangin balik nilai visit lama dari `existing` yang basi.
+        if (cancelVisit) await db.cancelVisit(lead.id);
         const existing = (leads || []).find((l) => l.id === lead.id) || {};
         const merged = { ...existing, id: lead.id };
         for (const [k, v] of Object.entries(updates)) if (v !== "" && v != null) merged[k] = v;

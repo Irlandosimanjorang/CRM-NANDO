@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock, Sparkles, Check } from "lucide-react";
+import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock, Sparkles, Check, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
 import MeetingRecorderModal from "../components/MeetingRecorderModal";
@@ -675,6 +675,18 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
     try { await db.upsertLead({ ...sel, visit_date: date, visit_meet: meet, visit_agenda: agenda }); onSaved(); }
     catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
+  // Tombol "Hapus Visit" (22 Sep 2026, permintaan Nando) - beda dari cuma
+  // ngosongin field di modal ini terus klik Simpan: db.cancelVisit() juga
+  // HAPUS BENERAN event-nya dari Google Calendar (kalau kesambung), gak
+  // cuma ngosongin field di DB doang (itu bug lama, lihat komentar di
+  // cancelVisit di db.js). Cuma muncul kalau sel emang punya visit_date
+  // ke-set (bukan lagi bikin visit baru dari nol).
+  const cancelThisVisit = async () => {
+    if (!sel || !window.confirm(`Batalin jadwal visit ke "${sel.name}"? Event di Google Calendar (kalau ada) ikut kehapus.`)) return;
+    setBusy(true);
+    try { await db.cancelVisit(sel.id); onSaved(); }
+    catch (e) { alert("Gagal batalin visit: " + e.message); setBusy(false); }
+  };
   // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
   // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
   return createPortal(
@@ -734,7 +746,15 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
             </div>
           </div>
         </div>
-        <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan visit</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button></div>
+        <div className="flex items-center justify-between gap-2 mt-5">
+          <div className="flex gap-2">
+            <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan visit</button>
+            <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
+          </div>
+          {sel?.visit_date && (
+            <button onClick={cancelThisVisit} disabled={busy} className="text-sm px-4 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-60 font-medium flex items-center gap-1.5"><Trash2 size={15} /> Hapus Visit</button>
+          )}
+        </div>
       </div>
     </div>,
     document.body

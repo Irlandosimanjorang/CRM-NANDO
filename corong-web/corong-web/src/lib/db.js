@@ -721,6 +721,22 @@ export async function updateLeadNextAction(id, next_action) {
   if (error) throw error;
 }
 
+// Batalin jadwal visit - HAPUS BENERAN event-nya dari Google Calendar dulu
+// (edge function cancel-visit), baru kosongin field visit_date/visit_agenda/
+// visit_meet. JANGAN kosongin field-nya langsung dari client (update biasa) -
+// itu bikin event lama nyangkut selamanya di Calendar user (bug yang
+// ditemuin 22 Sep 2026, lihat komentar panjang di cancel-visit/index.ts).
+export async function cancelVisit(leadId) {
+  const { data, error } = await supabase.functions.invoke("cancel-visit", { body: { lead_id: leadId } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal batalin visit");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // Reassign lead ke anggota tim lain - dipake owner/manager di tab Leads buat
 // mindahin lead yang keupload sales_rep A ke sales_rep B, karena RLS
 // (leads_role_access) bikin sales_rep cuma bisa liat lead yang assigned_to
