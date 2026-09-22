@@ -544,7 +544,7 @@ export default function App() {
     const viaQuickvoiceLink = params.get("quickvoice") === "1";
     if (!isStandaloneHomeScreenApp && !viaQuickvoiceLink) return;
     if (tourMyLevel >= 2) setQuickVoiceOpen(true);
-    else if (viaQuickvoiceLink) alert("Catat Cepat (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
+    else if (viaQuickvoiceLink) alert("NEXto (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
   }, [loading, session, tourMyLevel]);
 
   if (!isConfigured) return <ConfigScreen />;
@@ -1080,8 +1080,8 @@ export default function App() {
         <button
           onClick={() => setQuickVoiceOpen(true)}
           className="fixed z-40 bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center shadow-[0_12px_32px_-8px_rgba(234,88,12,.6)]"
-          aria-label="Catat Cepat"
-          title="Catat Cepat - voice note ke progress"
+          aria-label="NEXto"
+          title="NEXto - voice note ke progress"
         >
           <Mic size={22} />
         </button>

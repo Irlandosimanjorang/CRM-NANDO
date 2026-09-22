@@ -248,8 +248,9 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-60" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
               </span>
-              <h2 className="font-bold text-[15px] tracking-tight text-white flex items-center gap-1.5">
-                <Zap size={15} className="text-orange-400" /> Catat Cepat
+              <h2 className="font-black text-[16px] tracking-tight text-white flex items-center gap-1.5">
+                <Zap size={15} className="text-orange-400" />
+                NEX<span className="bg-gradient-to-r from-orange-400 to-violet-400 bg-clip-text text-transparent">to</span>
               </h2>
             </div>
             <button onClick={stage === "recording" ? cancelRecording : onClose} className="text-slate-500 hover:text-white transition-colors" aria-label="Tutup"><X size={18} /></button>
