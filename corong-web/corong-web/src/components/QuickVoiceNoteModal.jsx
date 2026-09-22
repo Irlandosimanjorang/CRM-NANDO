@@ -272,9 +272,9 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
           {stage === "idle" && (
             <div className="text-center py-9">
               <div className="relative mx-auto w-28 h-28 flex items-center justify-center">
-                <span className="absolute inset-0 rounded-full border border-orange-500/20" />
-                <span className="absolute inset-2 rounded-full border border-orange-500/10 animate-pulse" style={{ animationDuration: "2.4s" }} />
-                <button onClick={startRecording} className="relative z-10 w-[72px] h-[72px] rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center shadow-[0_0_40px_-8px_rgba(249,115,22,.75)] hover:shadow-[0_0_55px_-6px_rgba(249,115,22,.9)] transition-shadow">
+                <span className="absolute inset-0 rounded-full border border-violet-400/20" />
+                <span className="absolute inset-2 rounded-full border border-orange-500/15 animate-pulse" style={{ animationDuration: "2.4s" }} />
+                <button onClick={startRecording} className="relative z-10 w-[72px] h-[72px] rounded-full bg-gradient-to-br from-orange-500 via-orange-600 to-violet-600 text-white flex items-center justify-center shadow-[0_0_40px_-8px_rgba(167,139,250,.6)] hover:shadow-[0_0_55px_-6px_rgba(167,139,250,.75)] transition-shadow">
                   <Mic size={26} />
                 </button>
               </div>
@@ -290,7 +290,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                 {Array.from({ length: 9 }).map((_, i) => (
                   <span
                     key={i}
-                    className="w-[3px] rounded-full bg-gradient-to-t from-orange-500 to-orange-300 animate-pulse"
+                    className={`w-[3px] rounded-full animate-pulse bg-gradient-to-t ${i % 3 === 0 ? "from-violet-500 to-violet-300" : "from-orange-500 to-orange-300"}`}
                     style={{ height: `${10 + (i % 4) * 7}px`, animationDelay: `${i * 90}ms`, animationDuration: "900ms" }}
                   />
                 ))}
