@@ -174,15 +174,6 @@ export default function App() {
           if (target) return target;
         }
       }
-      // Sama kasusnya sama kode /link Telegram (lihat Settings.jsx) - kalau
-      // masih ada kode yang belum expired (<10 menit), landing langsung ke
-      // tab Pengaturan biar keliatan, bukan ketutupan di Dashboard.
-      const tgRaw = localStorage.getItem("nexto-telegram-link-code");
-      if (tgRaw) {
-        const tgParsed = JSON.parse(tgRaw);
-        const tgStillValid = Date.now() - (tgParsed?.savedAt || 0) < 10 * 60 * 1000;
-        if (tgStillValid && tgParsed?.code) return "settings";
-      }
     } catch {}
     return "dashboard";
   });
@@ -495,25 +486,25 @@ export default function App() {
   // aja"). onboarding_level_seen nyimpen level TERTINGGI yang udah pernah
   // dikasih tur (null = belum pernah). SAMA KAYAK isEnterprise di atas -
   // hook ini HARUS di sini, sebelum early return manapun (lihat komentar
-  // panjang di atas soal bug blank putih 10 Sep 2026) - myLevel dihitung
-  // ULANG secara lokal (bukan pakai const myLevel di bawah situ, yang
-  // sengaja ditaro setelah early return buat kebutuhan lain).
-  const tourMyLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
+  // panjang di atas soal bug blank putih 10 Sep 2026) - myLevel makanya
+  // dihitung DI SINI (dipake ulang di bawah situ setelah early return,
+  // gak perlu dihitung dua kali - audit 22 Sep 2026).
+  const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
   const onboardingCheckedRef = useRef(false);
   const [tourSteps, setTourSteps] = useState(null);
   useEffect(() => {
     if (loading || onboardingCheckedRef.current || !session) return;
     if (settings?.onboarding_level_seen === undefined) return;
     onboardingCheckedRef.current = true;
-    const steps = buildTourSteps({ myLevel: tourMyLevel, isEnterprise, previousLevel: settings.onboarding_level_seen });
+    const steps = buildTourSteps({ myLevel, isEnterprise, previousLevel: settings.onboarding_level_seen });
     if (steps.length > 0) setTourSteps(steps);
-  }, [loading, settings, session, tourMyLevel, isEnterprise]);
+  }, [loading, settings, session, myLevel, isEnterprise]);
   const finishTour = async () => {
     setTourSteps(null);
-    try { await db.markOnboardingLevelSeen(tourMyLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
+    try { await db.markOnboardingLevelSeen(myLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
   };
 
-  // Catat Cepat (21 Sep 2026, permintaan Nando) - histori pendekatan yang
+  // NEXto (21 Sep 2026, permintaan Nando) - histori pendekatan yang
   // udah dicoba & GAGAL sebelum yang sekarang:
   // 1. Manifest "shortcuts" (long-press icon HP kayak Android) - Safari iOS
   //    GAK DUKUNG SAMA SEKALI, gak ada workaround dari sisi web (dikonfirmasi
@@ -543,9 +534,9 @@ export default function App() {
     const isStandaloneHomeScreenApp = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
     const viaQuickvoiceLink = params.get("quickvoice") === "1";
     if (!isStandaloneHomeScreenApp && !viaQuickvoiceLink) return;
-    if (tourMyLevel >= 2) setQuickVoiceOpen(true);
+    if (myLevel >= 2) setQuickVoiceOpen(true);
     else if (viaQuickvoiceLink) alert("NEXto (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
-  }, [loading, session, tourMyLevel]);
+  }, [loading, session, myLevel]);
 
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
@@ -617,7 +608,9 @@ export default function App() {
   // (tier tertinggi individual) - "standard" adalah tier BARU di antara
   // Free dan Professional. Enterprise (org.plan) otomatis dapet level
   // Professional + fitur tim tambahan yang di-gate terpisah di Settings.jsx.
-  const myLevel = org?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settings.plan] ?? 0);
+  // (audit 22 Sep 2026: dihitung di atas sebagai myLevel, sebelum early
+  // return - lihat komentar di deklarasinya - dipake ulang di sini,
+  // gak perlu dihitung dua kali.)
   const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
 
   // Tier yang dipilih user pas klik tombol pricing di landing page SEBELUM

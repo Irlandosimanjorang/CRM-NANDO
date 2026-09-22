@@ -1,4 +1,4 @@
-// Catat Cepat (21-22 Sep 2026, permintaan Nando: "biar gua full ubah dari
+// NEXto (21-22 Sep 2026, permintaan Nando: "biar gua full ubah dari
 // Telegram bot ke recorder ini aja") - dibuka otomatis tiap app dibuka dari
 // home screen (standalone) atau lewat tombol mengambang di App.jsx. Beda
 // dari MeetingRecorderModal: user GAK milih lead/aksi dulu - tinggal pencet
