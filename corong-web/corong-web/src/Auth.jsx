@@ -520,27 +520,41 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAEu6vGXceQD1CTOl";
 const EARLY_BIRD_DEADLINE = new Date("2026-10-15T23:59:59+07:00");
 const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 
-// === HARGA BARU (16 Sep 2026, hasil kalkulasi modal AI real) ===
-// PRICING_NORMAL: Standard 79->99, Professional 269->299, Enterprise
-// 1,3jt->1,356jt (per-orang 325rb->339rb). Early bird: Standard 69,
-// Professional 259, Enterprise 1,196jt (per-orang 299rb). Bukan hasil rumus
-// diskon 15% otomatis - tiap angka nominal final hasil keputusan Nando
-// langsung berdasar margin vs modal AI real per plan (lihat audit biaya
-// 15-16 Sep 2026: modal Standard ~Rp36rb, Professional ~Rp264rb, Enterprise
-// ~Rp266rb/orang worst-case).
-// PENTING: nominal ini WAJIB disamain manual di Mayar dashboard (produk
-// langganan), DAN AMOUNT_TO_TIER/AMOUNT_TO_MONTHS di mayar-webhook.ts WAJIB
-// ditambahin nominal baru ini (nominal lama TETEP dipertahanin, jangan
-// dihapus - subscriber lama masih ke-charge nominal lama tiap perpanjangan).
+// === HARGA NORMAL (revisi 22 Sep 2026 - lihat komentar lengkap di
+// PRICING_EARLY_BIRD di bawah buat penjelasan & peringatan margin) ===
+// Standard 89rb, Professional 249rb, Enterprise per-orang 279rb (org 4
+// orang = 1.116jt). Histori lama: 79->99rb / 269->299rb / 325rb->339rb
+// per-orang (16 Sep 2026).
 const PRICING_NORMAL = {
-  standard: { monthlyPrice: "Rp99rb", quarterlyTotal: "Rp297rb" },
-  professional: { monthlyPrice: "Rp299rb", quarterlyTotal: "Rp897rb" },
-  enterprise: { monthlyPrice: "Rp1,356jt", quarterlyTotal: "Rp4,068jt", perPerson: "Rp339rb" },
+  standard: { monthlyPrice: "Rp89rb", quarterlyTotal: "Rp267rb" },
+  professional: { monthlyPrice: "Rp249rb", quarterlyTotal: "Rp747rb" },
+  enterprise: { monthlyPrice: "Rp1,116jt", quarterlyTotal: "Rp3,348jt", perPerson: "Rp279rb" },
 };
+// === HARGA DIREVISI TOTAL (22 Sep 2026, permintaan Nando, versi FINAL -
+// gantiin revisi sebelumnya di hari yang sama yang batal dipake) ===
+// Normal: Standard 89rb, Professional 249rb, Enterprise per-orang 279rb
+// (org 4 orang = 1.116jt). Early bird: Standard 59rb, Professional 229rb,
+// Enterprise per-orang 249rb (org = 996rb). Quarterly = harga bulanan x3
+// (belum ada diskon EKSTRA khusus 3-bulan di luar early bird, sama kayak
+// pola sebelumnya).
+// PERINGATAN MARGIN (dihitung dari audit modal AI worst-case 22 Sep 2026 -
+// skenario SEMUA kuota AI kepake abis tiap bulan, bukan rata-rata):
+// - Standard: modal ~Rp47,7rb vs early bird Rp59rb -> margin ~19%,
+//   vs normal Rp89rb -> ~46%.
+// - Professional: modal ~Rp205rb vs early bird Rp229rb -> margin ~10%,
+//   vs normal Rp249rb -> ~18%.
+// - Enterprise (per-orang): modal ~Rp188rb vs early bird Rp249rb -> ~25%,
+//   vs normal Rp279rb -> ~33%.
+// Di pemakaian NYATA jauh lebih aman (rata-rata user gak pernah mepetin
+// semua limit sekaligus).
+// PENTING: nominal baru di bawah WAJIB disamain manual ke produk di Mayar
+// dashboard, DAN AMOUNT_TO_TIER/AMOUNT_TO_MONTHS di mayar-webhook.ts WAJIB
+// ditambahin nominal baru ini (sudah dilakukan bareng commit ini) - kalau
+// enggak, pembayaran gak ke-mapping ke tier manapun.
 const PRICING_EARLY_BIRD = {
-  standard: { monthlyPrice: "Rp69rb", monthlySavings: "Rp30rb", quarterlyTotal: "Rp207rb", quarterlySavings: "Rp90rb" },
-  professional: { monthlyPrice: "Rp259rb", monthlySavings: "Rp40rb", quarterlyTotal: "Rp777rb", quarterlySavings: "Rp120rb" },
-  enterprise: { monthlyPrice: "Rp1,196jt", monthlySavings: "Rp160rb", quarterlyTotal: "Rp3,588jt", quarterlySavings: "Rp480rb", perPerson: "Rp299rb" },
+  standard: { monthlyPrice: "Rp59rb", monthlySavings: "Rp30rb", quarterlyTotal: "Rp177rb", quarterlySavings: "Rp90rb" },
+  professional: { monthlyPrice: "Rp229rb", monthlySavings: "Rp20rb", quarterlyTotal: "Rp687rb", quarterlySavings: "Rp60rb" },
+  enterprise: { monthlyPrice: "Rp996rb", monthlySavings: "Rp120rb", quarterlyTotal: "Rp2,988jt", quarterlySavings: "Rp360rb", perPerson: "Rp249rb" },
 };
 const PRICING = isEarlyBird ? PRICING_EARLY_BIRD : PRICING_NORMAL;
 
