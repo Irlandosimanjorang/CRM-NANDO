@@ -723,7 +723,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           NEX <span className="bg-gradient-to-r from-orange-500 to-violet-500 bg-clip-text text-transparent">Pro</span>
         </h3>
         <p className="text-xs text-slate-500 mb-3">
-          Update lead pakai suara, langsung dari app - gak perlu app lain kayak Telegram lagi. Ngomong aja, AI yang urus sisanya: catat progress, jadwal visit (otomatis sinkron ke Google Calendar di bawah), tutup deal menang/kalah, tambah lead baru, sampai kirim email follow-up. Hasilnya tetap direview dulu sebelum disimpan.
+          Update lead pakai suara, langsung dari app - gak perlu app lain kayak Telegram lagi. Ngomong aja, AI yang urus sisanya: catat progress, jadwal visit{myLevel >= 2 ? " (otomatis sinkron ke Google Calendar di bawah)" : ""}, tutup deal menang/kalah, tambah lead baru, sampai kirim email follow-up. Hasilnya tetap direview dulu sebelum disimpan.
         </p>
         {myLevel < 1 ? (
           <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
@@ -734,9 +734,14 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
             </div>
           </div>
         ) : (
-          <p className="text-xs text-slate-500 flex items-center gap-1.5">
-            <Mic size={13} className="text-orange-500 shrink-0" /> Tinggal tap tombol mic mengambang di pojok kanan bawah - atau otomatis muncul kalau Nexto di-install ke home screen HP. Kuota {myLevel >= 2 ? "200x/bulan (Professional)" : "40x/bulan (Standard)"}.
-          </p>
+          <>
+            <p className="text-xs text-slate-500 flex items-center gap-1.5">
+              <Mic size={13} className="text-orange-500 shrink-0" /> Tinggal tap tombol mic mengambang di pojok kanan bawah - atau otomatis muncul kalau Nexto di-install ke home screen HP. Kuota {myLevel >= 2 ? "200x/bulan (Professional)" : "25x/bulan (Standard)"}.
+            </p>
+            {myLevel < 2 && (
+              <p className="text-xs text-slate-400 mt-1.5">Jadwal visit tetap kecatet di CRM, tapi sinkron otomatis ke Google Calendar itu fitur Professional ke atas.</p>
+            )}
+          </>
         )}
       </div>
 

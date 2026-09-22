@@ -471,7 +471,7 @@ export const STANDARD_FEATURES = [
   { id: "Visit & Follow-up", en: "Visit & Follow-up" },
   { id: "Meeting Prep", en: "Meeting Prep" },
   { id: "Advisor harian", en: "Daily Advisor" },
-  { id: "NEX Pro - update lead pakai voice note, 40x/bulan", en: "NEX Pro - update leads by voice note, 40x/month" },
+  { id: "NEX Pro - update lead pakai voice note, 25x/bulan", en: "NEX Pro - update leads by voice note, 25x/month" },
 ];
 
 export const PROFESSIONAL_FEATURES = [
