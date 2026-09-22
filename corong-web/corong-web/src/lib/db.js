@@ -998,11 +998,13 @@ export async function transcribeMeeting(storagePath, leadName) {
   return data; // { transcript, notes }
 }
 
-// ---- CATAT CEPAT (voice note dari shortcut icon HP, 21 Sep 2026) - beda
-// dari Rekam Meeting: gak perlu pilih lead dulu, AI yang nebak dari isi
-// omongan. Reuse bucket storage "meeting-audio" yang sama (convention path
-// {user_id}/... udah dicek ownership-nya di edge function transcribe-meeting,
-// dipake ulang persis di quick-progress-note).
+// ---- CATAT CEPAT (voice command dari tombol mengambang/auto-popup home
+// screen, 21-22 Sep 2026) - pengganti Bot Telegram: gak perlu pilih lead
+// dulu, AI yang nebak dari isi omongan DAN nentuin aksinya (update lead,
+// tutup menang/kalah, lead baru, hapus, kirim email) - lihat edge function
+// quick-progress-note buat detail lengkap. Reuse bucket storage
+// "meeting-audio" yang sama (convention path {user_id}/... udah dicek
+// ownership-nya di edge function transcribe-meeting, dipake ulang persis).
 export async function uploadQuickVoiceNote(blob) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const path = `${uid}/quicknote-${Date.now()}.webm`;
@@ -1014,7 +1016,15 @@ export async function uploadQuickVoiceNote(blob) {
 export async function transcribeQuickVoiceNote(storagePath) {
   const { data, error } = await supabase.functions.invoke("quick-progress-note", { body: { storagePath } });
   if (error) throw error;
-  return data; // { transcript, progress_note, lead_id, lead_name, confidence }
+  return data; // { transcript, action, progress_note, lead_id, lead_name, confidence, updates, cancel_visit, result, new_lead, quota }
+}
+
+// Cek sisa kuota bulanan TANPA motong slot - dipake modal nampilin status
+// "X/100 dipake bulan ini" SEBELUM mulai rekam.
+export async function getQuickVoiceQuota() {
+  const { data, error } = await supabase.functions.invoke("quick-progress-note", { body: { checkQuotaOnly: true } });
+  if (error) throw error;
+  return data; // { used, max }
 }
 
 // ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----

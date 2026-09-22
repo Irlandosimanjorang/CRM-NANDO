@@ -1090,7 +1090,7 @@ export default function App() {
         <AppTour steps={tourSteps} onNavigate={(key) => setTab(key)} onFinish={finishTour} />
       )}
       {quickVoiceOpen && (
-        <QuickVoiceNoteModal leads={leads} onClose={() => setQuickVoiceOpen(false)} onSaved={() => { setQuickVoiceOpen(false); reload(); }} />
+        <QuickVoiceNoteModal leads={leads} stages={stageList} settings={settings} onClose={() => setQuickVoiceOpen(false)} onSaved={() => { setQuickVoiceOpen(false); reload(); }} />
       )}
     </div>
   );
