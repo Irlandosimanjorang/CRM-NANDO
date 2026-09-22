@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Send, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Zap, Mic, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -12,48 +12,12 @@ import { PLAN_LEVEL, TIER_LABEL, MAYAR_PAYMENT_LINK } from "../lib/plans";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
-// Username bot Telegram Nexto (dari BotFather) - sebelum ini gak pernah
-// disebutin sama sekali di UI, orang cuma disuruh "cari bot kamu" tanpa
-// tau nama botnya apa. Ganti di sini kalau suatu saat bikin bot baru.
-const TELEGRAM_BOT_USERNAME = "MilestoBot";
-const TELEGRAM_BOT_LINK = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
-
-// BUG FIX (6 Sep 2026): kode /link Telegram cuma disimpen di state React
-// biasa - begitu tab Nexto ke-reload (kejadian nyata: orang klik link bot,
-// balik lagi ke tab Nexto, tab-nya kebuang dari memori HP terus di-reload
-// ulang sama browser/OS), kodenya ILANG walau kodenya SENDIRI masih valid
-// 10 menit di server (lihat generateTelegramCode di db.js). Sekarang
-// disimpen juga di localStorage biar bisa di-restore.
-const TG_CODE_KEY = "nexto-telegram-link-code";
-const TG_CODE_TTL_MS = 10 * 60 * 1000; // samain sama masa berlaku kode di server
-function saveTgCode(code) {
-  try { localStorage.setItem(TG_CODE_KEY, JSON.stringify({ code, savedAt: Date.now() })); } catch (_) {}
-}
-function clearTgCode() {
-  try { localStorage.removeItem(TG_CODE_KEY); } catch (_) {}
-}
-function getSavedTgCode() {
-  try {
-    const raw = localStorage.getItem(TG_CODE_KEY);
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    if (Date.now() - (parsed.savedAt || 0) > TG_CODE_TTL_MS) { localStorage.removeItem(TG_CODE_KEY); return ""; }
-    return parsed.code || "";
-  } catch (_) {
-    return "";
-  }
-}
-
 export default function Settings({ settings, stages, leads, onChanged, userEmail, locked }) {
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
-  const [tgLink, setTgLink] = useState(null);
-  const [tgCode, setTgCode] = useState(getSavedTgCode);
-  const [tgBusy, setTgBusy] = useState(false);
-  const [tgLoading, setTgLoading] = useState(true);
   const [gcalLink, setGcalLink] = useState(null);
   const [gcalBusy, setGcalBusy] = useState(false);
   const [gcalLoading, setGcalLoading] = useState(true);
@@ -207,7 +171,6 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   };
 
   useEffect(() => {
-    db.getTelegramLink().then((l) => { setTgLink(l); setTgLoading(false); if (l) clearTgCode(); }).catch(() => setTgLoading(false));
     db.getGoogleCalendarLink().then((l) => { setGcalLink(l); setGcalLoading(false); }).catch(() => setGcalLoading(false));
     loadOrg();
     loadMfaFactors();
@@ -328,20 +291,6 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   };
 
   const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales Rep" };
-
-  const genCode = async () => {
-    setTgBusy(true);
-    try { const code = await db.generateTelegramCode(); setTgCode(code); saveTgCode(code); }
-    catch (e) { alert("Gagal generate kode: " + e.message); }
-    finally { setTgBusy(false); }
-  };
-  const unlinkTg = async () => {
-    if (!window.confirm("Putuskan koneksi Telegram?")) return;
-    setTgBusy(true);
-    try { await db.unlinkTelegram(); setTgLink(null); setTgCode(""); clearTgCode(); }
-    catch (e) { alert("Gagal: " + e.message); }
-    finally { setTgBusy(false); }
-  };
 
   const connectGcal = async () => {
     setGcalBusy(true);
@@ -769,53 +718,28 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Send size={15} className="text-sky-500" /> Telegram Bot</h3>
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Zap size={15} className="text-orange-500" /> Catat Cepat</h3>
         <p className="text-xs text-slate-500 mb-3">
-          Sambungin akun Telegram Anda buat tambah lead, jadwalin visit, dan catat progress langsung dari chat. Nama bot-nya{" "}
-          <a href={TELEGRAM_BOT_LINK} target="_blank" rel="noreferrer" className="font-semibold text-sky-600 hover:underline">@{TELEGRAM_BOT_USERNAME}</a>.
+          Update lead pakai suara, langsung dari app - gak perlu app lain kayak Telegram lagi. Ngomong aja, AI yang urus sisanya: catat progress, jadwal visit (otomatis sinkron ke Google Calendar di bawah), tutup deal menang/kalah, tambah lead baru, sampai kirim email follow-up. Hasilnya tetap direview dulu sebelum disimpan.
         </p>
         {myLevel < 2 ? (
-          <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex items-start gap-3">
-            <span className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
+            <span className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
             <div className="text-sm">
-              <div className="font-medium text-sky-900">Telegram Bot itu fitur Professional</div>
-              <div className="text-xs text-sky-700 mt-0.5">Upgrade ke Professional buat bisa nyambungin & pake bot Telegram-nya.</div>
+              <div className="font-medium text-orange-900">Catat Cepat itu fitur Professional</div>
+              <div className="text-xs text-orange-700 mt-0.5">Upgrade ke Professional buat bisa pake Catat Cepat.</div>
             </div>
-          </div>
-        ) : tgLoading ? (
-          <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
-        ) : tgLink ? (
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="text-sm text-emerald-700 flex items-center gap-1.5"><CheckCircle2 size={15} /> Terhubung {tgLink.username ? `sebagai @${tgLink.username}` : ""}</div>
-            <button onClick={unlinkTg} disabled={tgBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">Putuskan koneksi</button>
-          </div>
-        ) : tgCode ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-            <p className="text-xs text-slate-600 mb-2">
-              1. Buka bot{" "}
-              <a href={TELEGRAM_BOT_LINK} target="_blank" rel="noreferrer" className="font-semibold text-sky-600 hover:underline">@{TELEGRAM_BOT_USERNAME}</a>
-              {" "}di Telegram (klik Start kalau belum pernah)
-            </p>
-            <p className="text-xs text-slate-600 mb-2">2. Kirim pesan ini ke bot-nya:</p>
-            <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
-              <span className="flex-1">/link {tgCode}</span>
-              <button onClick={() => navigator.clipboard.writeText(`/link ${tgCode}`)} className="text-slate-400 hover:text-slate-700"><Copy size={14} /></button>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">Kode berlaku 10 menit. Setelah bot bilang berhasil, refresh halaman ini.</p>
-            <a href={TELEGRAM_BOT_LINK} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs bg-sky-600 hover:bg-sky-700 text-white rounded-xl px-3 py-2 font-medium">
-              <Send size={13} /> Buka @{TELEGRAM_BOT_USERNAME}
-            </a>
           </div>
         ) : (
-          <button onClick={genCode} disabled={tgBusy} className="text-sm bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-            {tgBusy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} Hubungkan Telegram
-          </button>
+          <p className="text-xs text-slate-500 flex items-center gap-1.5">
+            <Mic size={13} className="text-orange-500 shrink-0" /> Tinggal tap tombol mic mengambang di pojok kanan bawah - atau otomatis muncul kalau Nexto di-install ke home screen HP.
+          </p>
         )}
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
-        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar Anda biar jadwal visit & follow-up dari bot Telegram otomatis masuk ke calendar.</p>
+        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar Anda biar jadwal visit & follow-up dari Catat Cepat otomatis masuk ke calendar.</p>
         {myLevel < 2 ? (
           <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>

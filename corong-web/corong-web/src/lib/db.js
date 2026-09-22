@@ -1209,25 +1209,6 @@ export async function mergeLeads(keepId, mergeId, fillFields) {
   if (delErr) throw delErr;
 }
 
-// ---- TELEGRAM LINK ----
-export async function generateTelegramCode() {
-  const uid = (await supabase.auth.getUser()).data.user.id;
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = new Date(Date.now() + 10 * 60000).toISOString();
-  const { error } = await supabase.from("link_codes").insert({ code, user_id: uid, expires_at: expires });
-  if (error) throw error;
-  return code;
-}
-export async function getTelegramLink() {
-  const { data } = await supabase.from("telegram_links").select("*").maybeSingle();
-  return data || null;
-}
-export async function unlinkTelegram() {
-  const uid = (await supabase.auth.getUser()).data.user.id;
-  const { error } = await supabase.from("telegram_links").delete().eq("user_id", uid);
-  if (error) throw error;
-}
-
 // ---- GOOGLE CALENDAR LINK ----
 const GOOGLE_CLIENT_ID = "351973989384-gss200qb94ofeg27dnig8uof3rufikqo.apps.googleusercontent.com";
 const GOOGLE_REDIRECT_URI = "https://cewggulyfshnbebcpyui.supabase.co/functions/v1/google-oauth-callback";
