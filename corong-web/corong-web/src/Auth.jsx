@@ -475,7 +475,7 @@ export const STANDARD_FEATURES = [
 
 export const PROFESSIONAL_FEATURES = [
   { id: "Semua fitur Standard", en: "Everything in Standard" },
-  { id: "NEXto - update lead pakai voice note (progress, jadwal visit, tutup deal, dll)", en: "NEXto - update leads by voice note (progress, visit scheduling, closing deals, etc.)" },
+  { id: "NEX Pro - update lead pakai voice note (progress, jadwal visit, tutup deal, dll)", en: "NEX Pro - update leads by voice note (progress, visit scheduling, closing deals, etc.)" },
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
   { id: "Generate Leads", en: "Generate Leads" },
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },
@@ -1934,10 +1934,10 @@ function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
 const DEMO_SCENES = [
   { key: "leads", label: "Kelola Leads", navKey: "leads" },
   { key: "deal", label: "Deal", navKey: "deal" },
-  { key: "telegram", label: "NEXto", navKey: "leads" },
+  { key: "telegram", label: "NEX Pro", navKey: "leads" },
   { key: "generate", label: "Generate Leads AI", navKey: "generateleads" },
   { key: "visit", label: "Visit & Follow-up", navKey: "visitfollowup" },
-  { key: "settings", label: "NEXto & Calendar", navKey: "settings" },
+  { key: "settings", label: "NEX Pro & Calendar", navKey: "settings" },
   { key: "advisor", label: "Advisor Harian", navKey: "dashboard" },
   { key: "pipeline", label: "Pipeline Review", navKey: "dashboard" },
 ];
@@ -2138,7 +2138,7 @@ function DemoScene({ sceneKey }) {
           <div className="mb-1.5 flex items-center gap-1.5">
             <Mic size={11} className="text-orange-400" />
             <span className="text-[9px] font-black uppercase tracking-wide text-slate-200">
-              NEX<span className="bg-gradient-to-r from-orange-400 to-violet-400 bg-clip-text text-transparent">to</span>
+              NEX <span className="bg-gradient-to-r from-orange-400 to-violet-400 bg-clip-text text-transparent">Pro</span>
             </span>
           </div>
           <p className="text-[10px] italic text-slate-400">"Asiaplast udah nego, harga Rp33.400/kg…"</p>
@@ -2265,7 +2265,7 @@ function DemoScene({ sceneKey }) {
   }
 
   if (sceneKey === "settings") {
-    // Mini versi dari tab Pengaturan beneran (Settings.jsx) - kartu NEXto
+    // Mini versi dari tab Pengaturan beneran (Settings.jsx) - kartu NEX Pro
     // (voice command, gak perlu connect apa-apa) & "Terhubung sebagai ..."
     // warna emerald buat Google Calendar, persis state udah tersambung di
     // app asli.
@@ -2274,7 +2274,7 @@ function DemoScene({ sceneKey }) {
         <div className="rounded-xl border border-slate-100 bg-white p-3">
           <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800">
             <Zap size={11} className="text-orange-500" />
-            NEX<span className="bg-gradient-to-r from-orange-500 to-violet-500 bg-clip-text text-transparent">to</span>
+            NEX <span className="bg-gradient-to-r from-orange-500 to-violet-500 bg-clip-text text-transparent">Pro</span>
           </div>
           <div className="mt-2 flex items-center gap-1 text-[9px] font-medium text-slate-500">
             <Mic size={10} className="shrink-0 text-orange-500" />

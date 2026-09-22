@@ -504,7 +504,7 @@ export default function App() {
     try { await db.markOnboardingLevelSeen(myLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
   };
 
-  // NEXto (21 Sep 2026, permintaan Nando) - histori pendekatan yang
+  // NEX Pro (21 Sep 2026, permintaan Nando) - histori pendekatan yang
   // udah dicoba & GAGAL sebelum yang sekarang:
   // 1. Manifest "shortcuts" (long-press icon HP kayak Android) - Safari iOS
   //    GAK DUKUNG SAMA SEKALI, gak ada workaround dari sisi web (dikonfirmasi
@@ -535,7 +535,7 @@ export default function App() {
     const viaQuickvoiceLink = params.get("quickvoice") === "1";
     if (!isStandaloneHomeScreenApp && !viaQuickvoiceLink) return;
     if (myLevel >= 2) setQuickVoiceOpen(true);
-    else if (viaQuickvoiceLink) alert("NEXto (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
+    else if (viaQuickvoiceLink) alert("NEX Pro (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
   }, [loading, session, myLevel]);
 
   if (!isConfigured) return <ConfigScreen />;
@@ -1062,7 +1062,7 @@ export default function App() {
 
       {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
 
-      {/* Tombol mengambang NEXto (21-22 Sep 2026, permintaan Nando) -
+      {/* Tombol mengambang NEX Pro (21-22 Sep 2026, permintaan Nando) -
           alternatif dari shortcut icon HP (gak bisa diandelin di iPhone,
           Safari sama sekali gak dukung "app shortcuts" buat web app - lihat
           diskusi di atas). Ini versi yang PASTI jalan di semua device, gak
@@ -1074,14 +1074,14 @@ export default function App() {
       {!editLead && !tourSteps && !quickVoiceOpen && myLevel >= 2 && effectiveTab === "dashboard" && (
         <div className="fixed z-40 bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14">
           {/* Ring sonar halus - echo dari animasi idle di dalem modal
-              NEXto sendiri, biar tombolnya kerasa "hidup" (bukan icon
+              NEX Pro sendiri, biar tombolnya kerasa "hidup" (bukan icon
               statis doang) dan nunjukin ini fitur AI, bukan tombol biasa. */}
           <span className="absolute inset-0 rounded-full bg-orange-500/40 animate-ping" style={{ animationDuration: "2.4s" }} />
           <button
             onClick={() => setQuickVoiceOpen(true)}
             className="relative w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 via-orange-600 to-violet-600 text-white flex items-center justify-center shadow-[0_12px_32px_-6px_rgba(234,88,12,.65)] hover:shadow-[0_14px_38px_-4px_rgba(167,139,250,.55)] transition-shadow"
-            aria-label="NEXto"
-            title="NEXto - voice note ke progress"
+            aria-label="NEX Pro"
+            title="NEX Pro - voice note ke progress"
           >
             <Mic size={22} />
           </button>

@@ -14,7 +14,7 @@
 // cek juga teks di sini biar gak keselisih.
 export const TOUR_STEPS = [
   { key: "dashboard", minLevel: 0, title: "Dashboard", desc: "Ringkasan performa & rekomendasi AI harian (Daily Digest), plus skor kualitas Memory - makin tinggi, makin nyambung rekomendasi AI-nya sama histori kamu." },
-  { key: "leads", minLevel: 0, title: "Leads", desc: "Kartu lead per perusahaan, drag antar tahap pipeline, catat progress harian. Ada juga AI Draft Follow-up (WhatsApp & Email), Deteksi Duplikat, dan (Professional) NEXto - update lead pakai voice note." },
+  { key: "leads", minLevel: 0, title: "Leads", desc: "Kartu lead per perusahaan, drag antar tahap pipeline, catat progress harian. Ada juga AI Draft Follow-up (WhatsApp & Email), Deteksi Duplikat, dan (Professional) NEX Pro - update lead pakai voice note." },
   { key: "komunitas", minLevel: 0, title: "Nex", desc: "Komunitas & tips dari sesama sales pengguna Nexto - share cerita closing & tanya-tanya bareng." },
   { key: "visitfollowup", minLevel: 1, title: "Visit & Follow-up", desc: "Jadwal kunjungan, Poin Diskusi (AI) sebelum ketemu customer, dan Rekam Meeting otomatis biar gak perlu nyatet manual pas ketemu klien." },
   { key: "settings", minLevel: 1, title: "Pengaturan", desc: "Profil, dan sinkron otomatis jadwal visit ke Google Calendar." },

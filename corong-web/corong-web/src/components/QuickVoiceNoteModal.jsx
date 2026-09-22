@@ -1,4 +1,4 @@
-// NEXto (21-22 Sep 2026, permintaan Nando: "biar gua full ubah dari
+// NEX Pro (21-22 Sep 2026, permintaan Nando: "biar gua full ubah dari
 // Telegram bot ke recorder ini aja") - dibuka otomatis tiap app dibuka dari
 // home screen (standalone) atau lewat tombol mengambang di App.jsx. Beda
 // dari MeetingRecorderModal: user GAK milih lead/aksi dulu - tinggal pencet
@@ -250,7 +250,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
               </span>
               <h2 className="font-black text-[16px] tracking-tight text-white flex items-center gap-1.5">
                 <Zap size={15} className="text-orange-400" />
-                NEX<span className="bg-gradient-to-r from-orange-400 to-violet-400 bg-clip-text text-transparent">to</span>
+                NEX <span className="bg-gradient-to-r from-orange-400 to-violet-400 bg-clip-text text-transparent">Pro</span>
               </h2>
             </div>
             <button onClick={stage === "recording" ? cancelRecording : onClose} className="text-slate-500 hover:text-white transition-colors" aria-label="Tutup"><X size={18} /></button>

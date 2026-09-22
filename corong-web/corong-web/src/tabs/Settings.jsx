@@ -720,7 +720,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
         <h3 className="font-black text-sm mb-1 flex items-center gap-1.5">
           <Zap size={15} className="text-orange-500" />
-          NEX<span className="bg-gradient-to-r from-orange-500 to-violet-500 bg-clip-text text-transparent">to</span>
+          NEX <span className="bg-gradient-to-r from-orange-500 to-violet-500 bg-clip-text text-transparent">Pro</span>
         </h3>
         <p className="text-xs text-slate-500 mb-3">
           Update lead pakai suara, langsung dari app - gak perlu app lain kayak Telegram lagi. Ngomong aja, AI yang urus sisanya: catat progress, jadwal visit (otomatis sinkron ke Google Calendar di bawah), tutup deal menang/kalah, tambah lead baru, sampai kirim email follow-up. Hasilnya tetap direview dulu sebelum disimpan.
@@ -729,8 +729,8 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
             <div className="text-sm">
-              <div className="font-medium text-orange-900">NEXto itu fitur Professional</div>
-              <div className="text-xs text-orange-700 mt-0.5">Upgrade ke Professional buat bisa pake NEXto.</div>
+              <div className="font-medium text-orange-900">NEX Pro itu fitur Professional</div>
+              <div className="text-xs text-orange-700 mt-0.5">Upgrade ke Professional buat bisa pake NEX Pro.</div>
             </div>
           </div>
         ) : (
@@ -742,7 +742,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
-        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar Anda biar jadwal visit & follow-up dari NEXto otomatis masuk ke calendar.</p>
+        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar Anda biar jadwal visit & follow-up dari NEX Pro otomatis masuk ke calendar.</p>
         {myLevel < 2 ? (
           <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
