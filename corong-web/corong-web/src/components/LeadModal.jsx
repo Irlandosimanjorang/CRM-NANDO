@@ -424,7 +424,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               {lead.customer_state.state_reason && (
                 <p className="mt-2 text-[11px] text-violet-700/80 italic">"{lead.customer_state.state_reason}"</p>
               )}
-              <p className="mt-2 text-[10px] text-slate-400">Dihitung otomatis dari progress notes - update tiap lead ini kena analisis AI Advisor.</p>
+              <p className="mt-2 text-[10px] text-slate-400">Dihitung otomatis dari progress notes - update tiap lead ini kena analisis NEX AI Advisor.</p>
             </div>
           )}
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
@@ -490,7 +490,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 {outcomeGuessing ? <Loader2 size={12} className="animate-spin" /> : !isProfessional ? <Lock size={12} /> : <Sparkles size={12} />}
                 {!isProfessional ? "Biarin AI nebak (Professional)" : "Biarin AI nebak dari progress notes"}
               </button>
-              <p className="text-[10px] text-slate-400">Kesimpen sebagai "Outcome Memory" - AI Advisor bakal belajar pola ini buat rekomendasi lead lain ke depannya.</p>
+              <p className="text-[10px] text-slate-400">Kesimpen sebagai "Outcome Memory" - NEX AI Advisor bakal belajar pola ini buat rekomendasi lead lain ke depannya.</p>
             </div>
           )}
           <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
@@ -537,7 +537,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <input type="date" className={inp} value={f.wait_until || ""} onChange={(e) => set("wait_until", e.target.value || null)} />
             </Field>
             {f.wait_until && (
-              <p className="text-[11px] text-orange-700">⏸️ AI Advisor & reminder bakal DIEM buat lead ini sampai tanggal di atas lewat - gak akan dianggep overdue walaupun lama gak dikontak.</p>
+              <p className="text-[11px] text-orange-700">⏸️ NEX AI Advisor & reminder bakal DIEM buat lead ini sampai tanggal di atas lewat - gak akan dianggep overdue walaupun lama gak dikontak.</p>
             )}
           </div>
 

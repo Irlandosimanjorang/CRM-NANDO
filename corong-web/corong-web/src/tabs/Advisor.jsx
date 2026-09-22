@@ -50,7 +50,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
   // row "PT Sinar Abadi Distribusi" palsu nyangkut di leads asli mereka.
   // Sekarang di-block total di mode demo, kasih alert upsell aja.
   const applyAction = async (lead, action) => {
-    if (dummy) { alert("Ini masih data contoh - upgrade paket dulu buat mulai pakai AI Advisor beneran ya."); return; }
+    if (dummy) { alert("Ini masih data contoh - upgrade paket dulu buat mulai pakai NEX AI Advisor beneran ya."); return; }
     try { await db.upsertLead({ ...lead, next_action: action }); onApplied(); }
     catch (e) { alert("Gagal jadikan next action: " + e.message); }
   };
@@ -60,7 +60,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
   // yang tombol Simpan/Hapus-nya nulis ke database beneran pake lead id
   // palsu "dummy-1"). Sekarang di-block, kasih alert upsell juga.
   const handleOpen = (lead) => {
-    if (dummy) { alert("Ini masih data contoh - upgrade paket dulu buat mulai pakai AI Advisor beneran ya."); return; }
+    if (dummy) { alert("Ini masih data contoh - upgrade paket dulu buat mulai pakai NEX AI Advisor beneran ya."); return; }
     onOpen(lead);
   };
 
@@ -82,7 +82,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-1"><Lightbulb size={20} className="text-orange-500" /><h1 className="text-2xl font-bold tracking-tight">AI Advisor</h1></div>
+      <div className="flex items-center gap-2 mb-1"><Lightbulb size={20} className="text-orange-500" /><h1 className="text-2xl font-bold tracking-tight">NEX AI Advisor</h1></div>
       <p className="text-sm text-slate-500 mb-4">Rekomendasi lead paling potensial, dikirim otomatis tiap jam 8 pagi ke email Anda. Histori 7 hari terakhir bisa dilihat di sini.</p>
 
 

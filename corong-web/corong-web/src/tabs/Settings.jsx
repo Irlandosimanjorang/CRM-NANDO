@@ -462,7 +462,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       );
       const advisorSheet = XLSX.utils.json_to_sheet(advisorRows);
       advisorSheet["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 10 }, { wch: 36 }, { wch: 50 }];
-      XLSX.utils.book_append_sheet(wb, advisorSheet, "Histori AI Advisor");
+      XLSX.utils.book_append_sheet(wb, advisorSheet, "Histori NEX AI Advisor");
 
       XLSX.writeFile(wb, `nexto-data-${new Date().toISOString().slice(0, 10)}.xlsx`);
     } catch (e) { alert("Gagal export Excel: " + e.message); }
@@ -959,7 +959,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">
         <h3 className="font-semibold text-sm mb-1">Backup data</h3>
-        <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori AI Advisor) jadi 1 file — simpen di komputer/HP Anda sesekali biar aman.</p>
+        <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori NEX AI Advisor) jadi 1 file — simpen di komputer/HP Anda sesekali biar aman.</p>
         <div className="flex flex-wrap gap-2">
           <button onClick={exportExcelClean} disabled={exportingExcel} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
             {exportingExcel ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exportingExcel ? "Menyiapkan…" : "Export Excel (rapi, buat dibaca)"}

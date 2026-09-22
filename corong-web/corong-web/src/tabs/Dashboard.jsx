@@ -290,13 +290,13 @@ export default function Dashboard({
             <div className="flex items-start gap-3 flex-1 min-w-0">
               <NextoRobotHead size={44} />
               <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-300">NEXTO AI</div>
+                <div className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-300">NEX AI</div>
                 <h2 className="mt-1 text-[16px] font-black tracking-tight">Rekomendasi Hari Ini</h2>
                 <p className="mt-1 text-[11px] leading-5 text-slate-400">{aiRecs.length > 1 ? `${aiRecs.length} lead paling potensial buat difollow-up hari ini.` : "Tambahkan lead baru agar AI bisa menemukan prioritas."}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => onGo?.("advisor")} className="rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka AI Advisor <ArrowRight size={14} /></button>
+              <button onClick={() => onGo?.("advisor")} className="rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka NEX AI Advisor <ArrowRight size={14} /></button>
               {aiRecs.length > 0 && (
                 <button
                   onClick={() => setRecsOpen((v) => !v)}

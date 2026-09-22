@@ -867,7 +867,7 @@ function NextoAISalesEngine({ robotVoice }) {
 
                   <div className="min-w-0">
                     <div className="text-[7px] uppercase tracking-widest text-orange-400">
-                      Nexto AI
+                      NEX AI
                     </div>
 
                     <div className="mt-1 text-[9px] leading-4 text-white">
@@ -1225,7 +1225,7 @@ function EngineCard({
               </span>
 
               <span className="text-[7px] uppercase tracking-[0.18em] text-slate-600">
-                Nexto AI
+                NEX AI
               </span>
             </div>
 
@@ -1541,7 +1541,7 @@ function AiEngineLoopSection({ robotVoice }) {
                 </div>
 
                 <div className="relative mt-4 text-[11px] font-bold uppercase tracking-[0.24em] text-white">
-                  NEXTO AI CORE
+                  NEX AI CORE
                 </div>
                 <div className="relative mt-1 text-[8px] uppercase tracking-[0.16em] text-slate-600">
                   Observe · Think · Act · Learn

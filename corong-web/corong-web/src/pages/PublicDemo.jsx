@@ -77,7 +77,7 @@ function DashboardTab() {
                 <Sparkles size={20} className="text-violet-300" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-violet-300">Nexto AI</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-violet-300">NEX AI</p>
                 <p className="text-lg font-bold">Rekomendasi Hari Ini</p>
               </div>
             </div>
@@ -95,7 +95,7 @@ function DashboardTab() {
               ))}
             </div>
           )}
-          <button onClick={() => demoAlert("Buka AI Advisor")} className="mt-4 bg-white text-slate-950 rounded-xl px-4 py-2 text-sm font-semibold">Buka AI Advisor</button>
+          <button onClick={() => demoAlert("Buka NEX AI Advisor")} className="mt-4 bg-white text-slate-950 rounded-xl px-4 py-2 text-sm font-semibold">Buka NEX AI Advisor</button>
         </div>
       </div>
 
