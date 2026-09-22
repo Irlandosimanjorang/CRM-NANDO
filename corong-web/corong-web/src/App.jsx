@@ -534,8 +534,8 @@ export default function App() {
     const isStandaloneHomeScreenApp = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
     const viaQuickvoiceLink = params.get("quickvoice") === "1";
     if (!isStandaloneHomeScreenApp && !viaQuickvoiceLink) return;
-    if (myLevel >= 2) setQuickVoiceOpen(true);
-    else if (viaQuickvoiceLink) alert("NEX Pro (voice) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto.");
+    if (myLevel >= 1) setQuickVoiceOpen(true);
+    else if (viaQuickvoiceLink) alert("NEX Pro (voice) itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan Nexto.");
   }, [loading, session, myLevel]);
 
   if (!isConfigured) return <ConfigScreen />;
@@ -1071,7 +1071,7 @@ export default function App() {
           Nando 22 Sep 2026) - biar gak numpuk sama konten/tombol tab lain.
           Ditaro di ATAS bottom nav mobile (yang fixed bottom-3) biar gak
           numpuk sama itu juga. */}
-      {!editLead && !tourSteps && !quickVoiceOpen && myLevel >= 2 && effectiveTab === "dashboard" && (
+      {!editLead && !tourSteps && !quickVoiceOpen && myLevel >= 1 && effectiveTab === "dashboard" && (
         <div className="fixed z-40 bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14">
           {/* Ring sonar halus - echo dari animasi idle di dalem modal
               NEX Pro sendiri, biar tombolnya kerasa "hidup" (bukan icon

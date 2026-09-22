@@ -471,11 +471,12 @@ export const STANDARD_FEATURES = [
   { id: "Visit & Follow-up", en: "Visit & Follow-up" },
   { id: "Meeting Prep", en: "Meeting Prep" },
   { id: "Advisor harian", en: "Daily Advisor" },
+  { id: "NEX Pro - update lead pakai voice note, 40x/bulan", en: "NEX Pro - update leads by voice note, 40x/month" },
 ];
 
 export const PROFESSIONAL_FEATURES = [
   { id: "Semua fitur Standard", en: "Everything in Standard" },
-  { id: "NEX Pro - update lead pakai voice note (progress, jadwal visit, tutup deal, dll)", en: "NEX Pro - update leads by voice note (progress, visit scheduling, closing deals, etc.)" },
+  { id: "Kuota NEX Pro lebih gede - 200x/bulan", en: "Bigger NEX Pro quota - 200x/month" },
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
   { id: "Generate Leads", en: "Generate Leads" },
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },

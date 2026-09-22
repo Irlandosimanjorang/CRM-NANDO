@@ -725,17 +725,17 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         <p className="text-xs text-slate-500 mb-3">
           Update lead pakai suara, langsung dari app - gak perlu app lain kayak Telegram lagi. Ngomong aja, AI yang urus sisanya: catat progress, jadwal visit (otomatis sinkron ke Google Calendar di bawah), tutup deal menang/kalah, tambah lead baru, sampai kirim email follow-up. Hasilnya tetap direview dulu sebelum disimpan.
         </p>
-        {myLevel < 2 ? (
+        {myLevel < 1 ? (
           <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
             <div className="text-sm">
-              <div className="font-medium text-orange-900">NEX Pro itu fitur Professional</div>
-              <div className="text-xs text-orange-700 mt-0.5">Upgrade ke Professional buat bisa pake NEX Pro.</div>
+              <div className="font-medium text-orange-900">NEX Pro itu fitur Standard ke atas</div>
+              <div className="text-xs text-orange-700 mt-0.5">Upgrade ke Standard buat bisa pake NEX Pro.</div>
             </div>
           </div>
         ) : (
           <p className="text-xs text-slate-500 flex items-center gap-1.5">
-            <Mic size={13} className="text-orange-500 shrink-0" /> Tinggal tap tombol mic mengambang di pojok kanan bawah - atau otomatis muncul kalau Nexto di-install ke home screen HP.
+            <Mic size={13} className="text-orange-500 shrink-0" /> Tinggal tap tombol mic mengambang di pojok kanan bawah - atau otomatis muncul kalau Nexto di-install ke home screen HP. Kuota {myLevel >= 2 ? "200x/bulan (Professional)" : "40x/bulan (Standard)"}.
           </p>
         )}
       </div>
