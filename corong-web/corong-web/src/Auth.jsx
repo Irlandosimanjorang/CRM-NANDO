@@ -38,7 +38,6 @@ import {
   Settings as SettingsIcon,
   Sun,
   Clock,
-  Send,
   RefreshCw,
 } from "lucide-react";
 
@@ -496,7 +495,6 @@ export const ENTERPRISE_FEATURES = [
   { id: "Laporan Performa Tim (leaderboard revenue & win rate)", en: "Team Performance Report (revenue & win-rate leaderboard)" },
   { id: "Sistem Komisi Tim (atur % per anggota, otomatis dihitung)", en: "Team Commission System (set % per member, calculated automatically)" },
   { id: "Undang anggota tim via kode invite", en: "Invite team members via invite code" },
-  { id: "Bot Telegram kirim email otonom", en: "Telegram bot sends emails autonomously" },
   { id: "Approval-gate: hapus lead & export data butuh persetujuan owner/manager", en: "Approval gate: deleting leads & exporting data needs owner/manager sign-off" },
   { id: "Prioritas support", en: "Priority support" },
 ];
@@ -1936,10 +1934,10 @@ function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
 const DEMO_SCENES = [
   { key: "leads", label: "Kelola Leads", navKey: "leads" },
   { key: "deal", label: "Deal", navKey: "deal" },
-  { key: "telegram", label: "Bot Telegram", navKey: "leads" },
+  { key: "telegram", label: "NEXto", navKey: "leads" },
   { key: "generate", label: "Generate Leads AI", navKey: "generateleads" },
   { key: "visit", label: "Visit & Follow-up", navKey: "visitfollowup" },
-  { key: "settings", label: "Sinkron Telegram & Calendar", navKey: "settings" },
+  { key: "settings", label: "NEXto & Calendar", navKey: "settings" },
   { key: "advisor", label: "Advisor Harian", navKey: "dashboard" },
   { key: "pipeline", label: "Pipeline Review", navKey: "dashboard" },
 ];
@@ -2136,12 +2134,17 @@ function DemoScene({ sceneKey }) {
   if (sceneKey === "telegram") {
     return (
       <div className="mx-auto flex h-full max-w-[280px] flex-col justify-end gap-2 pb-1">
-        <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-orange-600 px-3 py-2 text-[10px] font-medium text-white">
-          update PT Asiaplast ke Nego, harga nego Rp33.400/kg
+        <div className="rounded-2xl border border-white/[0.06] bg-[#141a26] px-3 py-2.5">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <Mic size={11} className="text-orange-400" />
+            <span className="text-[9px] font-black uppercase tracking-wide text-slate-200">
+              NEX<span className="bg-gradient-to-r from-orange-400 to-violet-400 bg-clip-text text-transparent">to</span>
+            </span>
+          </div>
+          <p className="text-[10px] italic text-slate-400">"Asiaplast udah nego, harga Rp33.400/kg…"</p>
         </div>
-        <div className="mr-auto flex max-w-[90%] items-start gap-2 rounded-2xl rounded-bl-sm bg-[#141a26] px-3 py-2 text-[10px] text-slate-200">
-          <Bot size={13} className="mt-0.5 shrink-0 text-emerald-400" />
-          <span>Sip, PT Asiaplast udah dipindah ke stage <b>Nego</b>. Next action gue set: follow-up 3 hari lagi.</span>
+        <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-r from-orange-600 to-orange-500 px-3 py-2 text-[10px] font-medium text-white">
+          PT Asiaplast → stage <b>Nego</b>. Progress kecatet, next action di-set follow-up 3 hari lagi.
         </div>
       </div>
     );
@@ -2262,22 +2265,20 @@ function DemoScene({ sceneKey }) {
   }
 
   if (sceneKey === "settings") {
-    // Mini versi dari tab Pengaturan beneran (Settings.jsx) - kartu
-    // "Terhubung sebagai ..." warna emerald buat Telegram Bot & Google
-    // Calendar, persis state udah tersambung di app asli.
+    // Mini versi dari tab Pengaturan beneran (Settings.jsx) - kartu NEXto
+    // (voice command, gak perlu connect apa-apa) & "Terhubung sebagai ..."
+    // warna emerald buat Google Calendar, persis state udah tersambung di
+    // app asli.
     return (
       <div className="h-full space-y-2 rounded-xl bg-[#fafbfc] p-3">
         <div className="rounded-xl border border-slate-100 bg-white p-3">
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-800">
-            <Send size={11} className="text-sky-500" />
-            Telegram Bot
+          <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800">
+            <Zap size={11} className="text-orange-500" />
+            NEX<span className="bg-gradient-to-r from-orange-500 to-violet-500 bg-clip-text text-transparent">to</span>
           </div>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <span className="flex min-w-0 items-center gap-1 truncate text-[9px] font-medium text-emerald-700">
-              <CheckCircle2 size={11} className="shrink-0" />
-              Terhubung sebagai @nando_sales
-            </span>
-            <span className="shrink-0 rounded-lg border border-rose-200 px-2 py-1 text-[7.5px] font-medium text-rose-500">Putuskan</span>
+          <div className="mt-2 flex items-center gap-1 text-[9px] font-medium text-slate-500">
+            <Mic size={10} className="shrink-0 text-orange-500" />
+            Update lead pakai suara, tinggal tap tombol mic
           </div>
         </div>
 
