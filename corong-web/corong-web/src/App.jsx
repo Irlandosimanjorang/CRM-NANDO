@@ -1077,14 +1077,20 @@ export default function App() {
           Screen apa-apa. Ditaro di ATAS bottom nav mobile (yang fixed bottom-3)
           biar gak numpuk. */}
       {!editLead && !tourSteps && !quickVoiceOpen && myLevel >= 2 && (
-        <button
-          onClick={() => setQuickVoiceOpen(true)}
-          className="fixed z-40 bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center shadow-[0_12px_32px_-8px_rgba(234,88,12,.6)]"
-          aria-label="NEXto"
-          title="NEXto - voice note ke progress"
-        >
-          <Mic size={22} />
-        </button>
+        <div className="fixed z-40 bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14">
+          {/* Ring sonar halus - echo dari animasi idle di dalem modal
+              NEXto sendiri, biar tombolnya kerasa "hidup" (bukan icon
+              statis doang) dan nunjukin ini fitur AI, bukan tombol biasa. */}
+          <span className="absolute inset-0 rounded-full bg-orange-500/40 animate-ping" style={{ animationDuration: "2.4s" }} />
+          <button
+            onClick={() => setQuickVoiceOpen(true)}
+            className="relative w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 via-orange-600 to-violet-600 text-white flex items-center justify-center shadow-[0_12px_32px_-6px_rgba(234,88,12,.65)] hover:shadow-[0_14px_38px_-4px_rgba(167,139,250,.55)] transition-shadow"
+            aria-label="NEXto"
+            title="NEXto - voice note ke progress"
+          >
+            <Mic size={22} />
+          </button>
+        </div>
       )}
       {tourSteps && (
         <AppTour steps={tourSteps} onNavigate={(key) => setTab(key)} onFinish={finishTour} />
