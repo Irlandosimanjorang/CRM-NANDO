@@ -625,7 +625,7 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
   // balik lagi) bikin React kehilangan SEMUA state - modal-nya emang udah
   // otomatis kebuka lagi (lihat getOpenModal("visit") di VisitView), TAPI
   // poin "Poin Diskusi (AI)" yang baru di-generate ilang jadi blank lagi,
-  // padahal itu udah makan kuota AI (15x/bulan) - user harus generate ulang
+  // padahal itu udah makan kuota AI (10x/bulan) - user harus generate ulang
   // & boros kuota buat hal yang sebenernya udah pernah didapetin. Sekarang
   // restore juga lead yang lagi dipilih + hasil poin AI-nya dari localStorage
   // (persis pola "inget kondisi terakhir" yang sama dipake modal lain).

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Zap, Mic, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Zap, Mic, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot, Smartphone, Share, MoreVertical } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -743,6 +743,33 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
             )}
           </>
         )}
+      </div>
+
+      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Smartphone size={15} className="text-orange-500" /> Install Nexto ke Home Screen HP</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          Jadiin Nexto kayak app beneran di HP - buka langsung dari home screen tanpa buka browser, dan NEX Pro (voice note) otomatis muncul tiap buka. Berlaku buat semua paket, gratis sekalipun.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+            <div className="text-xs font-semibold text-slate-700 mb-2">Di iPhone (Safari)</div>
+            <ol className="text-xs text-slate-500 space-y-1.5 list-decimal list-inside">
+              <li>Buka nexto.site pakai Safari</li>
+              <li className="flex items-start gap-1"><span>Tap ikon Share</span> <Share size={12} className="text-slate-400 shrink-0 mt-0.5" /> <span>di bar bawah</span></li>
+              <li>Pilih "Add to Home Screen"</li>
+              <li>Tap "Add" di pojok kanan atas</li>
+            </ol>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+            <div className="text-xs font-semibold text-slate-700 mb-2">Di Android (Chrome)</div>
+            <ol className="text-xs text-slate-500 space-y-1.5 list-decimal list-inside">
+              <li>Buka nexto.site pakai Chrome</li>
+              <li className="flex items-start gap-1"><span>Tap menu titik tiga</span> <MoreVertical size={12} className="text-slate-400 shrink-0 mt-0.5" /> <span>di pojok kanan atas</span></li>
+              <li>Pilih "Add to Home screen" / "Install app"</li>
+              <li>Tap "Add" / "Install"</li>
+            </ol>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[28px] p-4">

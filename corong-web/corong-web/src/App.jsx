@@ -922,13 +922,11 @@ export default function App() {
                   </div>
                   <div>
                     <div className="text-[12px] font-semibold text-slate-800">
-                      {intendedTierLabel ? `Anda pilih paket ${intendedTierLabel}` : myLevel === 1 ? "Anda sedang memakai Nexto Standard" : "Anda sedang memakai Nexto Free"}
+                      {intendedTierLabel ? `Anda pilih paket ${intendedTierLabel}` : "Anda sedang memakai Nexto Free"}
                     </div>
                     <div className="mt-0.5 text-[10px] leading-4 text-slate-500">
                       {intendedTierLabel
                         ? `Akunmu udah jadi - tinggal selesaiin pembayaran ${intendedTierLabel}. Pastikan pakai email yang sama persis (${session?.user?.email || "email akun ini"}) pas bayar di Mayar.`
-                        : myLevel === 1
-                        ? "Leads & Komunitas aktif. Upgrade ke Professional untuk membuka AI, Deal, Visit, Calendar, dan automation."
                         : "Dashboard, Leads, & Komunitas aktif. Upgrade untuk membuka AI, Deal, Visit, Calendar, dan automation."}
                     </div>
                   </div>
