@@ -77,6 +77,46 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const secondsRef = useRef(0);
+  const wakeLockRef = useRef(null);
+
+  // AUDIT FIX (24 Sep 2026, abis nemu bug sejenis di Rekam Meeting: rekaman
+  // 20 menit "error" pas transkrip padahal server-nya sukses - penyebabnya
+  // layar HP sempet mati pas nunggu upload+transkrip, mutusin koneksi fetch
+  // di sisi HP). Modal ini SEBELUMNYA gak punya Wake Lock SAMA SEKALI -
+  // recording-nya emang cuma maks 3 menit (lebih pendek dari Rekam Meeting),
+  // tapi resikonya tetep ada (screen timeout banyak HP defaultnya malah
+  // lebih pendek dari itu). Ditambahin proteksi yang sama: layar nyala
+  // terus dari mulai rekam sampe upload+transkrip beneran kelar.
+  const acquireWakeLock = async () => {
+    try {
+      if ("wakeLock" in navigator) wakeLockRef.current = await navigator.wakeLock.request("screen");
+    } catch (_) { /* gak didukung / ditolak - rekaman tetep jalan normal */ }
+  };
+  const releaseWakeLock = () => {
+    try { wakeLockRef.current?.release(); } catch (_) {}
+    wakeLockRef.current = null;
+  };
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && (stage === "recording" || stage === "processing") && !wakeLockRef.current) acquireWakeLock();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [stage]);
+
+  // Safety net kalau modal ke-unmount pas lagi recording/processing - beresin
+  // timer, wake lock, DAN stream mic-nya (pola sama kayak MeetingRecorderModal).
+  useEffect(() => {
+    return () => {
+      clearInterval(timerRef.current);
+      releaseWakeLock();
+      const mr = mediaRecorderRef.current;
+      if (mr && mr.state !== "inactive") {
+        try { mr.stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      }
+    };
+  }, []);
 
   useEffect(() => {
     db.getQuickVoiceQuota().then(setQuota).catch(() => setQuota(null));
@@ -108,6 +148,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorderRef.current = mr;
       mr.start();
+      acquireWakeLock();
       setStage("recording");
       setSeconds(0);
       secondsRef.current = 0;
@@ -128,7 +169,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
   const finishRecording = () => {
     clearInterval(timerRef.current);
     const mr = mediaRecorderRef.current;
-    if (!mr) return;
+    if (!mr) { releaseWakeLock(); return; }
     setProcessingStep("uploading");
     setStage("processing");
     mr.onstop = async () => {
@@ -157,6 +198,8 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
       } catch (e) {
         setErrMsg(e.message || "Gagal proses rekaman.");
         setStage("error");
+      } finally {
+        releaseWakeLock();
       }
     };
     mr.stop();
@@ -165,6 +208,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
   const stopRecording = () => {
     if (seconds < 2) {
       clearInterval(timerRef.current);
+      releaseWakeLock();
       const mr = mediaRecorderRef.current;
       if (mr) mr.stream.getTracks().forEach((t) => t.stop());
       setStage("idle");
@@ -176,6 +220,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
 
   const cancelRecording = () => {
     clearInterval(timerRef.current);
+    releaseWakeLock();
     const mr = mediaRecorderRef.current;
     if (mr) mr.stream.getTracks().forEach((t) => t.stop());
     chunksRef.current = [];

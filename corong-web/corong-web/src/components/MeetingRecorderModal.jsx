@@ -76,9 +76,14 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
   // cleanup-nya (beda dari efek unmount di bawah) - kalau ikut nge-release
   // di sini, tiap pindah stage (idle->recording) bakal langsung nge-cancel
   // wake lock yang baru aja diambil acquireWakeLock() di startRecording().
+  // FIX (24 Sep 2026): "processing" (upload+transkrip) ikut dicek juga di
+  // sini, bukan cuma "recording" - wake lock sekarang ditahan sampe proses
+  // itu kelar (lihat finishRecording), jadi kalau OS sempet ngelepasnya
+  // paksa pas tab disembunyiin, harus ke-reacquire begitu balik lagi biar
+  // gak sempet ke-drop di tengah upload rekaman panjang.
   useEffect(() => {
     const onVisibility = () => {
-      if (document.visibilityState === "visible" && stage === "recording" && !wakeLockRef.current) acquireWakeLock();
+      if (document.visibilityState === "visible" && (stage === "recording" || stage === "processing") && !wakeLockRef.current) acquireWakeLock();
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
@@ -170,9 +175,16 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
   // interval yang direkam pas startRecording, gak akan pernah stale).
   const finishRecording = () => {
     clearInterval(timerRef.current);
-    releaseWakeLock();
+    // BUG FIX (24 Sep 2026, laporan Nando: rekaman 20 menit error pas mau
+    // transkrip). Wake lock SEBELUMNYA dilepas di sini, sebelum upload+
+    // transkrip - buat rekaman panjang itu bisa makan 1-2 menit lebih, dan
+    // kalau layar HP sempet mati/kekunci di rentang itu, browser mobile
+    // suka mutusin koneksi fetch yang lagi jalan (walau di server function-
+    // nya sendiri KELAR normal - kecek dari log, balikin 200 OK). Sekarang
+    // wake lock ditahan terus sampe proses upload+transkrip beneran selesai
+    // (sukses ATAU gagal), baru dilepas di situ.
     const mr = mediaRecorderRef.current;
-    if (!mr) return;
+    if (!mr) { releaseWakeLock(); return; }
     setRecordedSeconds(secondsRef.current);
     setProcessingStep("uploading");
     setStage("processing");
@@ -194,6 +206,8 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       } catch (e) {
         setErrMsg(e.message || "Gagal proses rekaman.");
         setStage("error");
+      } finally {
+        releaseWakeLock();
       }
     };
     mr.stop();
