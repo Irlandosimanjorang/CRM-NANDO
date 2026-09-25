@@ -21,6 +21,9 @@ import {
   Trophy,
   UserX,
   Lock,
+  Link as LinkIcon,
+  Loader2,
+  X,
 } from "lucide-react";
 
 import * as db from "../lib/db";
@@ -566,6 +569,31 @@ export default function Leads({
 
   const [showDup, setShowDup] =
     useState(false);
+
+  // GENERATE LEAD DARI LINK (25 Sep 2026, permintaan Nando) - paste link
+  // website/Instagram/Google Maps calon customer, AI baca isinya & extract
+  // jadi draft lead. Hasil CUMA buka LeadModal ke-prefill (lewat setEdit),
+  // belum nulis ke DB - user tetep review/edit dulu kayak alur "Lead" biasa.
+  const [showLinkGen, setShowLinkGen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [linkErr, setLinkErr] = useState("");
+
+  const generateLeadFromLink = async () => {
+    if (!linkUrl.trim()) return;
+    setLinkBusy(true);
+    setLinkErr("");
+    try {
+      const result = await db.leadFromUrl(linkUrl.trim());
+      setEdit({ ...blank(), ...result });
+      setShowLinkGen(false);
+      setLinkUrl("");
+    } catch (e) {
+      setLinkErr(e.message || "Gagal generate lead dari link.");
+    } finally {
+      setLinkBusy(false);
+    }
+  };
 
   // Ringkasan hasil import terakhir - ditampilin di ImportSummaryModal
   // (gantiin alert polos "Import selesai: X lead" yang sebelumnya gak
@@ -1663,6 +1691,21 @@ export default function Leads({
 
           </button>
 
+          <button
+            onClick={() => {
+              if (myLevel < 1) {
+                alert("Generate Lead dari Link itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan ya.");
+                return;
+              }
+              setLinkErr("");
+              setShowLinkGen(true);
+            }}
+            className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
+          >
+            {myLevel < 1 ? <Lock size={12} /> : <LinkIcon size={12} />}
+            Generate dari Link
+          </button>
+
 
           <span className="text-xs text-slate-400 self-center ml-auto">
 
@@ -1987,6 +2030,41 @@ export default function Leads({
           }
         />
 
+      )}
+
+      {showLinkGen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pt-24 z-50"
+          onClick={() => { if (!linkBusy) setShowLinkGen(false); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-base flex items-center gap-2"><LinkIcon size={16} className="text-orange-500" /> Generate Lead dari Link</h3>
+              {!linkBusy && (
+                <button onClick={() => setShowLinkGen(false)} className="text-slate-400 hover:text-slate-700" aria-label="Tutup"><X size={18} /></button>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mb-3">Paste link website, profil Instagram bisnis, atau listing Google Maps calon customer - AI baca isinya & bikinin draft lead-nya buat direview.</p>
+            <input
+              autoFocus
+              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+              placeholder="https://instagram.com/nama_usaha"
+              value={linkUrl}
+              disabled={linkBusy}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !linkBusy) generateLeadFromLink(); }}
+            />
+            {linkErr && <p className="text-xs text-rose-600 mt-2">{linkErr}</p>}
+            <button
+              onClick={generateLeadFromLink}
+              disabled={linkBusy || !linkUrl.trim()}
+              className="w-full mt-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5"
+            >
+              {linkBusy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+              {linkBusy ? "Membaca halaman…" : "Generate Lead"}
+            </button>
+          </div>
+        </div>
       )}
 
       {importSummary && (

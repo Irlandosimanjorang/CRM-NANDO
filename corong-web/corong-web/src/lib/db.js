@@ -1014,6 +1014,22 @@ export async function transcribeMeeting(storagePath, leadName) {
   return data; // { transcript, notes }
 }
 
+// ---- GENERATE LEAD DARI LINK (25 Sep 2026, permintaan Nando) - paste link
+// website/Instagram/Google Maps calon customer, AI baca isinya & extract jadi
+// draft lead. Sama seperti fitur AI lain, ini CUMA ngembaliin draft-nya buat
+// direview - belum nulis ke DB, itu tetep lewat upsertLead biasa pas user
+// klik Simpan di LeadModal.
+export async function leadFromUrl(url) {
+  const { data, error } = await supabase.functions.invoke("lead-from-url", { body: { url } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal generate lead dari link");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data; // { name, key_person, key_person_title, phone, email, website, city, category, product, source_note }
+}
+
 // ---- CATAT CEPAT (voice command dari tombol mengambang/auto-popup home
 // screen, 21-22 Sep 2026) - pengganti Bot Telegram: gak perlu pilih lead
 // dulu, AI yang nebak dari isi omongan DAN nentuin aksinya (update lead,
