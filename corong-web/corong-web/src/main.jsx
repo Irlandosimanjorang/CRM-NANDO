@@ -4,7 +4,12 @@ import { Analytics } from "@vercel/analytics/react";
 import App from "./App.jsx";
 import GrokBotMcp from "./pages/GrokBotMcp.jsx";
 import PublicDemo from "./pages/PublicDemo.jsx";
+import { installClientErrorLog } from "./lib/clientErrorLog";
 import "./index.css";
+
+// Catat alert "Gagal ..." yang dialami user ke client_error_log biar health
+// check bisa ngabarin kalau ada error berulang (lihat lib/clientErrorLog.js).
+installClientErrorLog();
 
 // Gak pake router library (app ini emang cuma "halaman" App/Auth) - path
 // publik yang butuh render terpisah dicek manual di sini, gak sentuh
