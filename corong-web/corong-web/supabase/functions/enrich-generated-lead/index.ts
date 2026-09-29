@@ -42,7 +42,7 @@ function wibDayStartUTC(d = new Date()) {
 //   final-nya keluar.
 // - 429/529: belasan lead jalan paralel bisa kena rate limit/overload -
 //   retry dengan jeda acak biar gak barengan lagi.
-async function callClaudeWithContinuation(body) {
+async function callClaudeWithContinuation(body, signal) {
   const messages = [...body.messages];
   let dat = null;
   for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
@@ -52,6 +52,7 @@ async function callClaudeWithContinuation(body) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({ ...body, messages }),
+        signal,
       });
       if (resp.status !== 429 && resp.status !== 529) break;
       await sleep(4000 + Math.random() * 6000 * (r + 1));
@@ -64,8 +65,26 @@ async function callClaudeWithContinuation(body) {
   return (dat?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
 }
 
+// Kena bunuh platform di 150 detik = gak sempet nyatet status (nyangkut
+// "pending"). Dipotong sendiri lebih dulu biar statusnya jadi "failed" dan
+// user bisa klik "coba lagi".
+const ENRICH_DEADLINE_MS = 125 * 1000;
+const FORMER_RE = /\b(mantan|former|ex)\b|\bex-/i;
+
 async function enrich(admin, gl) {
-  const targetRole = gl.key_person_title || "HRD / HR Manager / Head of People / Purchasing (sesuai konteks produk)";
+  // Jabatan yang dicari user di form generate (bukan jabatan PIC yang
+  // kebetulan ketemu di tahap 1 - itu sering CEO/Direktur).
+  let requestedRole = "";
+  let { data: job } = gl.run_id
+    ? await admin.from("lead_gen_jobs").select("params").eq("run_id", gl.run_id).limit(1).maybeSingle()
+    : { data: null };
+  if (!job) {
+    // Enrichment dikirim SEBELUM job-nya sempet dicatet run_id-nya (masih
+    // "running") - ambil job terbaru org ini yang dibuat sebelum lead ini.
+    ({ data: job } = await admin.from("lead_gen_jobs").select("params").eq("org_id", gl.org_id).lte("created_at", gl.created_at || new Date().toISOString()).order("created_at", { ascending: false }).limit(1).maybeSingle());
+  }
+  requestedRole = String(job?.params?.targetRole || "").trim();
+  const targetRole = requestedRole || gl.key_person_title || "pengambil keputusan pembelian yang relevan sama produk";
   const prompt = `Tugas: lengkapi & VERIFIKASI data kontak SATU perusahaan di Indonesia buat kebutuhan sales B2B.
 
 Perusahaan: "${gl.name}"
@@ -79,7 +98,7 @@ Jabatan PIC yang dicari: ${targetRole}
 Langkah:
 1. Pastikan website resmi perusahaan ini lewat web search (domain resmi, bukan direktori/portal lowongan). Kalau website tercatat di atas ternyata salah, ganti.
 2. Buka (web_fetch) halaman website resmi yang relevan: Kontak/Contact Us, Karir/Careers, atau About. Ambil telepon dan email yang tercantum di situ.
-3. Cari PIC dengan jabatan target lewat web search (misal site:linkedin.com/in "${gl.name}" HR). Ambil HANYA kalau cuplikan menunjukkan orang itu MASIH kerja di perusahaan ini (bukan "ex-", "former", atau perusahaan lain).
+3. Cari PIC dengan JABATAN TARGET di atas (atau padanan dekatnya - misal buat HRD: HR Manager, Head of People, HR Business Partner, Talent Acquisition, CHRO) lewat web search (misal site:linkedin.com/in "${gl.name}" ${targetRole}). Ambil HANYA kalau cuplikan menunjukkan orang itu MASIH kerja di perusahaan ini (bukan "ex-", "former", "mantan", atau perusahaan lain). JANGAN ganti dengan CEO/Direktur/jabatan lain yang bukan target - kalau gak nemu PIC di jabatan target, kosongin key_person.
 
 PRIORITAS KONTAK:
 - phone: (1) nomor kontak bisnis PIC kalau DIPUBLIKASIKAN secara publik oleh PIC itu sendiri atau perusahaannya (misal di halaman tim/kontak), kalau gak ada (2) telepon kantor/perusahaan yang tercantum publik.
@@ -94,15 +113,25 @@ Balas HANYA JSON object tanpa markdown:
 pic_status: "confirmed" = PIC di key_person terbukti masih kerja di sini; "left" = PIC yang tercatat terbukti udah pindah dan gak nemu penggantinya; "not_found" = gak berhasil mastiin apa-apa.
 score_contact_quality 1-100 = seberapa lengkap & terverifikasi kontak hasil akhirnya.`;
 
-  const text = await callClaudeWithContinuation({
-    model: "claude-sonnet-5-5",
-    max_tokens: 2000,
-    messages: [{ role: "user", content: prompt }],
-    tools: [
-      { type: "web_search_20260318", name: "web_search", max_uses: 5, response_inclusion: "excluded" },
-      { type: "web_fetch_20260318", name: "web_fetch", max_uses: 4, max_content_tokens: 8000, response_inclusion: "excluded" },
-    ],
-  });
+  const abort = new AbortController();
+  const deadline = setTimeout(() => abort.abort(), ENRICH_DEADLINE_MS);
+  let text;
+  try {
+    text = await callClaudeWithContinuation({
+      model: "claude-sonnet-5-5",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+      tools: [
+        { type: "web_search_20260318", name: "web_search", max_uses: 5, response_inclusion: "excluded" },
+        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 4, max_content_tokens: 8000, response_inclusion: "excluded" },
+      ],
+    }, abort.signal);
+  } catch (e) {
+    if (abort.signal.aborted) throw new Error("Kelamaan buka website perusahaannya (lewat 2 menit)");
+    throw e;
+  } finally {
+    clearTimeout(deadline);
+  }
 
   let obj = null;
   const x = text.replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -117,8 +146,11 @@ score_contact_quality 1-100 = seberapa lengkap & terverifikasi kontak hasil akhi
   const picStatus = clean(obj.pic_status);
   // PIC lama cuma dihapus kalau TERBUKTI udah pindah ("left"); kalau AI
   // cuma gagal mastiin ("not_found"), data lama dipertahanin.
-  const keyPerson = pic || (picStatus === "left" ? "" : (gl.key_person || ""));
-  const keyPersonTitle = pic ? clean(obj.key_person_title) : (picStatus === "left" ? "" : (gl.key_person_title || ""));
+  let keyPerson = pic || (picStatus === "left" ? "" : (gl.key_person || ""));
+  let keyPersonTitle = pic ? clean(obj.key_person_title) : (picStatus === "left" ? "" : (gl.key_person_title || ""));
+  // Jaring pengaman: PIC yang jabatannya ketulis "mantan/former/ex" jelas
+  // udah gak di situ - buang, walau AI-nya kelolosan ngisi.
+  if (FORMER_RE.test(keyPersonTitle)) { keyPerson = ""; keyPersonTitle = ""; }
   const phoneLabel = clean(obj.phone_type) === "pic" ? "telp PIC" : "telp kantor";
   const emailLabel = { pic: "email PIC", hr: "email HR", careers: "email karir", general: "email umum", sales: "email sales" }[clean(obj.email_type)] || "email";
 
