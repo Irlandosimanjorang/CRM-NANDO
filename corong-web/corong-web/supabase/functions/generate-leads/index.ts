@@ -159,11 +159,14 @@ function isDuplicateName(candidateNorm, existingNormSet) {
   return false;
 }
 
-async function callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames, maxSearchUses, passLabel, signal }) {
+async function callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames, maxSearchUses, passLabel, signal }) {
   let userRequest = `Kata kunci pencarian: "${keyword}"${province ? ` di ${province}, Indonesia (bisa nama provinsi atau kota spesifik - kalau ini nama kota, FOKUSIN ke kota itu aja, jangan diperluas ke provinsi sekitarnya)` : ` - CARI DI SELURUH INDONESIA (gak dikasih batasan provinsi/kota spesifik, jadi jangan sempitin sendiri ke 1 daerah aja, coba variasiin kota/wilayah biar hasilnya nyebar).`}.`;
   userRequest += ` Kalau kata kunci di atas NYEBUT NAMA PERUSAHAAN SPESIFIK (misal "seperti Halodoc, Gojek"), perusahaan yang disebut itu JUGA WAJIB dimasukin sebagai lead (kecuali ada di daftar "udah ada di database" di bawah) - itu target, bukan cuma contoh. Sisanya diisi perusahaan lain yang profilnya mirip.`;
   if (productSold) {
     userRequest += ` User ini jualan/nawarin: "${productSold}". JANGAN cari sesama penjual/kompetitor produk itu - cari perusahaan/calon customer yang KEMUNGKINAN BUTUH BELI produk itu buat operasional/produksi mereka. Contoh logika: kalau user jual resin PVC, carilah pabrik yang MEMPRODUKSI barang berbahan PVC (pipa, kabel, dll) sebagai calon pembeli, bukan sesama penjual resin.`;
+  }
+  if (sellerCatalog) {
+    userRequest += ` KATALOG RESMI PERUSAHAAN USER (penjual): ${sellerCatalog} Pake ini buat nentuin calon pembeli yang tepat - utamain perusahaan yang cocok sama kolom "cocok untuk" di katalog. JANGAN cari sesama penjual produk-produk ini.${productSold ? " Kalau user nyebut produk spesifik di atas, fokus ke produk itu." : ""}`;
   }
   if (targetType === "individual") {
     userRequest += ` TARGET PEMBELI EKSPLISIT DARI USER: INDIVIDU/PERORANGAN (bukan perusahaan). WAJIB ikutin instruksi "kalau calon pembeli aslinya individu" di atas - JANGAN cari data pribadi orang satu-satu, WAJIB cari ORGANISASI PERANTARA (HRD perusahaan, komunitas/asosiasi, agen/broker, koperasi, dst) yang punya akses ke banyak calon individu sekaligus. Ini instruksi EKSPLISIT dari user, bukan tebakan kamu - jangan malah cari perusahaan sebagai calon pembeli langsung.`;
@@ -242,7 +245,7 @@ async function callAiForLeads({ industryTerms, keyword, province, targetRole, pr
   return parsed.filter((l) => l && l.name);
 }
 
-async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, province, targetRole, productSold, companyScale, targetType }) {
+async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType }) {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const startedAt = Date.now();
 
@@ -305,7 +308,7 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
       orgMemoryProfile = "";
     }
 
-    const pass1Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: [], maxSearchUses: FIRST_PASS_MAX_SEARCH, passLabel: "pass1" });
+    const pass1Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: [], maxSearchUses: FIRST_PASS_MAX_SEARCH, passLabel: "pass1" });
     let survivors = pass1Raw.filter((l) => !isDuplicateName(normalizeCompanyName(l.name), existingNormSet)).slice(0, MAX_LEADS);
     let dedupedCount = pass1Raw.length - survivors.length;
     let retried = false;
@@ -319,7 +322,7 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
       const abortController = new AbortController();
       const abortTimer = setTimeout(() => abortController.abort(), remainingSafeBudget);
       try {
-        const pass2Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: excludeForRetry, maxSearchUses: RETRY_PASS_MAX_SEARCH, passLabel: "pass2(retry)", signal: abortController.signal });
+        const pass2Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: excludeForRetry, maxSearchUses: RETRY_PASS_MAX_SEARCH, passLabel: "pass2(retry)", signal: abortController.signal });
         for (const l of pass2Raw) {
           if (survivors.length >= MAX_LEADS) break;
           const norm = normalizeCompanyName(l.name);
@@ -455,7 +458,18 @@ Deno.serve(async (req) => {
     }
     const jobId = jobRow.id;
 
-    await runGeneration({ jobId, orgId, userId, industryTerms, keyword, province, targetRole, productSold, companyScale, targetType });
+    // Katalog produk (30 Sep 2026, Enterprise) - biar AI tau persis produk
+    // yang dijual org ini & siapa calon pembelinya.
+    let sellerCatalog = "";
+    if (orgRow?.plan === "enterprise") {
+      const { data: catalog } = await admin.from("org_product_catalog").select("company_profile, products").eq("org_id", orgId).maybeSingle();
+      const products = (Array.isArray(catalog?.products) ? catalog.products : []).filter((p) => p?.name).slice(0, 8);
+      if (products.length) {
+        sellerCatalog = `${catalog.company_profile ? `Profil: ${catalog.company_profile}. ` : ""}Produk: ${products.map((p) => `${p.name}${p.fit_for ? ` (cocok untuk: ${p.fit_for})` : ""}`).join("; ")}.`;
+      }
+    }
+
+    await runGeneration({ jobId, orgId, userId, industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType });
 
     const { data: finalJob } = await admin.from("lead_gen_jobs").select("status, result_count, error_message, run_id").eq("id", jobId).maybeSingle();
     if (finalJob?.status === "failed") {
