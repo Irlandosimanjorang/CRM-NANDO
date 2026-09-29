@@ -42,6 +42,7 @@ const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 const HANDLER_HARD_LIMIT_MS = 150 * 1000;
 const RESPONSE_MARGIN_MS = 10 * 1000;
 const RETRY_TIME_BUDGET_MS = 90 * 1000;
+const MAX_PAUSE_CONTINUATIONS = 3;
 
 function wibMonthStartUTC(d = new Date()) {
   const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
@@ -72,9 +73,9 @@ Buat TIAP calon lead, cari (kalau ada, JANGAN karang):
 - name: nama perusahaan/organisasi perantara/calon customer (isi nama organisasi PERANTARA kalau targetnya individu, liat instruksi di atas)
 - key_person: nama PIC/pemilik/direktur/jabatan target (SERING gak ketemu di sumber publik - kosongin aja kalau emang gak nemu, JANGAN NGARANG NAMA ORANG)
 - key_person_title: jabatannya
-- website: url resmi
-- phone: nomor telepon publik
-- email: email publik (kalau ada di website mereka)
+- website: url resmi - HANYA isi kalau domain resminya muncul di hasil search yang kamu lihat, JANGAN isi dari ingatan/tebakan
+- phone: nomor telepon kantor/perusahaan yang tercantum publik (bukan HP pribadi orang)
+- email: email resmi yang TERTULIS PERSIS di sumber (website/listing) - JANGAN PERNAH nebak pola email kayak nama@domain
 - city: kota / alamat singkat
 - category: jenis industri/usaha
 - product: produk/kebutuhan spesifik yang relevan buat lead ini
@@ -156,6 +157,7 @@ function isDuplicateName(candidateNorm, existingNormSet) {
 
 async function callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames, maxSearchUses, passLabel, signal }) {
   let userRequest = `Kata kunci pencarian: "${keyword}"${province ? ` di ${province}, Indonesia (bisa nama provinsi atau kota spesifik - kalau ini nama kota, FOKUSIN ke kota itu aja, jangan diperluas ke provinsi sekitarnya)` : ` - CARI DI SELURUH INDONESIA (gak dikasih batasan provinsi/kota spesifik, jadi jangan sempitin sendiri ke 1 daerah aja, coba variasiin kota/wilayah biar hasilnya nyebar).`}.`;
+  userRequest += ` Kalau kata kunci di atas NYEBUT NAMA PERUSAHAAN SPESIFIK (misal "seperti Halodoc, Gojek"), perusahaan yang disebut itu JUGA WAJIB dimasukin sebagai lead (kecuali ada di daftar "udah ada di database" di bawah) - itu target, bukan cuma contoh. Sisanya diisi perusahaan lain yang profilnya mirip.`;
   if (productSold) {
     userRequest += ` User ini jualan/nawarin: "${productSold}". JANGAN cari sesama penjual/kompetitor produk itu - cari perusahaan/calon customer yang KEMUNGKINAN BUTUH BELI produk itu buat operasional/produksi mereka. Contoh logika: kalau user jual resin PVC, carilah pabrik yang MEMPRODUKSI barang berbahan PVC (pipa, kabel, dll) sebagai calon pembeli, bukan sesama penjual resin.`;
   }
@@ -193,29 +195,38 @@ async function callAiForLeads({ industryTerms, keyword, province, targetRole, pr
   }
 
   const callStartedAt = Date.now();
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({
-      model: "claude-sonnet-5-5",
-      max_tokens: 4500,
-      system: [
-        { type: "text", text: UNIVERSAL_INSTRUCTIONS, cache_control: { type: "ephemeral" } },
-        { type: "text", text: `Konteks industri (${industryTerms.label}): ${industryTerms.context}`, cache_control: { type: "ephemeral" } },
-      ],
-      messages: [{ role: "user", content: userRequest }],
-      tools: [{ type: "web_search_20260318", name: "web_search", max_uses: maxSearchUses, response_inclusion: "excluded" }],
-    }),
-    signal,
-  });
-  console.log(`[generate-leads] ${passLabel} selesai dalam ${Date.now() - callStartedAt}ms, status ${resp.status}`);
-  if (!resp.ok) {
-    const errText = await resp.text();
-    throw new Error(`AI gagal: ${resp.status} ${errText.slice(0, 200)}`);
+  // Server tool web_search bisa berhenti di tengah dengan stop_reason
+  // "pause_turn" (turn search yang panjang) - kalau gak dilanjutin, JSON
+  // final-nya gak pernah keluar dan hasilnya 0 lead tanpa error jelas.
+  const messages = [{ role: "user", content: userRequest }];
+  let dat = null;
+  for (let attempt = 0; attempt <= MAX_PAUSE_CONTINUATIONS; attempt++) {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-sonnet-5-5",
+        max_tokens: 4500,
+        system: [
+          { type: "text", text: UNIVERSAL_INSTRUCTIONS, cache_control: { type: "ephemeral" } },
+          { type: "text", text: `Konteks industri (${industryTerms.label}): ${industryTerms.context}`, cache_control: { type: "ephemeral" } },
+        ],
+        messages,
+        tools: [{ type: "web_search_20260318", name: "web_search", max_uses: maxSearchUses, response_inclusion: "excluded" }],
+      }),
+      signal,
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`AI gagal: ${resp.status} ${errText.slice(0, 200)}`);
+    }
+    dat = await resp.json();
+    console.log(`[generate-leads] ${passLabel} call#${attempt + 1} stop_reason=${dat.stop_reason} USAGE:`, JSON.stringify(dat.usage));
+    if (dat.stop_reason !== "pause_turn") break;
+    messages.push({ role: "assistant", content: dat.content });
   }
-  const dat = await resp.json();
-  console.log(`[generate-leads] ${passLabel} USAGE:`, JSON.stringify(dat.usage));
-  const textOut = (dat.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  console.log(`[generate-leads] ${passLabel} selesai dalam ${Date.now() - callStartedAt}ms`);
+  const textOut = (dat?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
   let parsed = [];
   try {
     let x = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();

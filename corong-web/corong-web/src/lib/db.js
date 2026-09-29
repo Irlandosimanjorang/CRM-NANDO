@@ -459,6 +459,20 @@ export async function summarizeLeadNeeds(leadId) {
   return data;
 }
 
+// AI buka website resmi 1 perusahaan hasil Generate Leads buat verifikasi
+// website + nyari telp kantor, email resmi (HR/karir/umum), dan PIC yang
+// masih aktif. Balikin baris generated_leads yang udah di-update.
+export async function enrichGeneratedLead(generatedLeadId) {
+  const { data, error } = await supabase.functions.invoke("enrich-generated-lead", { body: { generated_lead_id: generatedLeadId } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal melengkapi kontak");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 // Ringkasan kebutuhan yang udah pernah di-generate buat 1 lead (kalau ada) -
 // dipake buat langsung nampilin hasil lama pas LeadModal dibuka, tanpa perlu
 // klik generate ulang tiap kali buka.

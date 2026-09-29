@@ -219,6 +219,24 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
     }
   };
 
+  const [enrichingId, setEnrichingId] = useState(null);
+  const [enrichMsg, setEnrichMsg] = useState({});
+  const enrichLead = async (gl) => {
+    if (enrichingId) return;
+    setEnrichingId(gl.id);
+    setEnrichMsg((m) => ({ ...m, [gl.id]: "" }));
+    try {
+      const res = await db.enrichGeneratedLead(gl.id);
+      setResults((prev) => prev.map((r) => (r.id === gl.id ? { ...r, ...res.lead } : r)));
+      const found = [res.lead.phone && !gl.phone && "telepon", res.lead.email && !gl.email && "email", res.lead.key_person && res.lead.key_person !== gl.key_person && "PIC"].filter(Boolean);
+      setEnrichMsg((m) => ({ ...m, [gl.id]: found.length ? `Ketemu ${found.join(", ")} baru.` : "Gak ada kontak publik tambahan yang bisa diverifikasi." }));
+    } catch (e) {
+      setEnrichMsg((m) => ({ ...m, [gl.id]: "Gagal: " + e.message }));
+    } finally {
+      setEnrichingId(null);
+    }
+  };
+
   const nextDate = cooldown.nextAvailableAt ? new Date(cooldown.nextAvailableAt) : null;
   const daysLeft = nextDate ? Math.max(1, Math.ceil((nextDate - new Date()) / 86400000)) : 0;
 
@@ -246,6 +264,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
               <li><b>Otomatis skip yang udah ada</b> di daftar lead Anda, biar gak muncul dobel buang-buang kuota.</li>
               <li><b>Kalau hasilnya kesikit</b> (kebanyakan kena skip karena dobel), AI otomatis coba nyari lagi 1x dengan sudut pencarian yang beda.</li>
               <li><b>Tiap lead dikasih skor 3 komponen</b> (match industri, kelengkapan kontak, sinyal butuh beli) + skor keseluruhan, diurutin dari yang paling tinggi.</li>
+              <li><b>Kontak kurang lengkap?</b> Klik "Lengkapi kontak (AI)" di bawah kartu - AI buka website resmi perusahaannya buat verifikasi website, cari telepon kantor, email resmi (HR/karir/umum), dan cek PIC-nya masih kerja di situ atau udah pindah.</li>
               <li>AI dilarang keras <b>ngarang data</b> — kalau info kayak nama PIC gak ketemu di sumber publik, dikosongin aja, bukan ditebak.</li>
             </ul>
           </div>
@@ -413,6 +432,19 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                                   </div>
                                 </div>
                               </button>
+                              {!imported && (
+                                <div className="flex items-center gap-2 flex-wrap mt-2 px-2">
+                                  <button
+                                    onClick={() => enrichLead(r)}
+                                    disabled={!!enrichingId}
+                                    className="text-[11px] font-medium text-violet-300 hover:text-violet-200 disabled:opacity-50 flex items-center gap-1"
+                                  >
+                                    {enrichingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                    {enrichingId === r.id ? "Lagi buka website resminya (±30-60 detik)…" : "Lengkapi kontak (AI)"}
+                                  </button>
+                                  {enrichMsg[r.id] && <span className={`text-[11px] ${enrichMsg[r.id].startsWith("Gagal") ? "text-rose-400" : "text-slate-400"}`}>{enrichMsg[r.id]}</span>}
+                                </div>
+                              )}
                               {!imported && (
                                 <div className="h-3 mx-8 -mt-1 rounded-full blur-md opacity-30" style={{ background: t.ring }} />
                               )}
