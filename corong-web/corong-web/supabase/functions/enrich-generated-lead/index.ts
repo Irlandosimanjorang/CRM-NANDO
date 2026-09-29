@@ -71,9 +71,9 @@ async function callClaudeWithContinuation(body, signal) {
     if (dat.stop_reason !== "pause_turn") break;
     messages.push({ role: "assistant", content: dat.content });
   }
-  // Harga Sonnet 5.5 (per MTok): input $2, cache write 5m $2.5, cache read
-  // $0.2, output $10; web search $10/1000. Web fetch gratis (cuma token).
-  const costUsd = (usage.input * 2 + usage.cache_write * 2.5 + usage.cache_read * 0.2 + usage.output * 10) / 1e6 + usage.searches * 0.01;
+  // Harga Haiku 4.5 (per MTok): input $1, cache write 5m $1.25, cache read
+  // $0.1, output $5; web search $10/1000. Web fetch gratis (cuma token).
+  const costUsd = (usage.input * 1 + usage.cache_write * 1.25 + usage.cache_read * 0.1 + usage.output * 5) / 1e6 + usage.searches * 0.01;
   console.log("[enrich-generated-lead] USAGE", JSON.stringify({ ...usage, cost_usd: Math.round(costUsd * 10000) / 10000 }));
   return (dat?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
 }
@@ -110,7 +110,7 @@ Jabatan PIC yang dicari: ${targetRole}
 
 Langkah:
 1. Pastikan website resmi perusahaan ini lewat web search (domain resmi, bukan direktori/portal lowongan). Kalau website tercatat di atas ternyata salah, ganti.
-2. Buka (web_fetch) halaman website resmi yang relevan: Kontak/Contact Us, Karir/Careers, atau About. Ambil telepon dan email yang tercantum di situ.
+2. Buka (web_fetch) MAKSIMAL 2 halaman website resmi yang paling mungkin berisi kontak: prioritas halaman Kontak/Contact Us, lalu Karir/Careers. Ambil telepon dan email yang tercantum di situ. Jatah pencarian cuma 3x - gabungin kebutuhan (misal cari domain resmi + halaman kontak dalam 1 query).
 3. Cari PIC dengan JABATAN TARGET di atas (atau padanan dekatnya - misal buat HRD: HR Manager, Head of People, HR Business Partner, Talent Acquisition, CHRO) lewat web search (misal site:linkedin.com/in "${gl.name}" ${targetRole}). Ambil HANYA kalau cuplikan menunjukkan orang itu MASIH kerja di perusahaan ini (bukan "ex-", "former", "mantan", atau perusahaan lain). JANGAN ganti dengan CEO/Direktur/jabatan lain yang bukan target - kalau gak nemu PIC di jabatan target, kosongin key_person.
 
 PRIORITAS KONTAK:
@@ -131,12 +131,17 @@ score_contact_quality 1-100 = seberapa lengkap & terverifikasi kontak hasil akhi
   let text;
   try {
     text = await callClaudeWithContinuation({
-      model: "claude-sonnet-5-5",
+      // Target biaya ±$0,10/lead (29 Sep 2026, permintaan Nando). Diukur:
+      // Sonnet 5.5 + 5 search/4 fetch = ±$0,22; Sonnet 5.5 + 3 search/2
+      // fetch = ±$0,17 (mayoritas token dari hasil search). Tugas ini cuma
+      // ekstraksi kontak, jadi pakai Haiku 4.5 (setengah harga). Haiku 4.5
+      // gak dukung dynamic filtering, jadi pakai versi tool basic.
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
       tools: [
-        { type: "web_search_20260318", name: "web_search", max_uses: 5, response_inclusion: "excluded" },
-        { type: "web_fetch_20260318", name: "web_fetch", max_uses: 4, max_content_tokens: 8000, response_inclusion: "excluded" },
+        { type: "web_search_20250305", name: "web_search", max_uses: 3 },
+        { type: "web_fetch_20250910", name: "web_fetch", max_uses: 2, max_content_tokens: 3000 },
       ],
     }, abort.signal);
   } catch (e) {

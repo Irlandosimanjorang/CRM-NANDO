@@ -280,7 +280,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
             <Info size={14} />
           </button>
         </div>
-        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk Anda — bukan cuma perusahaan sejenis. Provinsi/kota opsional (kosongin buat cari se-Indonesia, atau isi nama kota buat hasil yang lebih lokal), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 14 lead per generate (kontaknya langsung dilengkapi otomatis), 4x sebulan.</p>
+        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk Anda — bukan cuma perusahaan sejenis. Provinsi/kota opsional (kosongin buat cari se-Indonesia, atau isi nama kota buat hasil yang lebih lokal), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 10 lead per generate (kontaknya langsung dilengkapi otomatis), 4x sebulan.</p>
 
         {showInfo && (
           <div className="mt-3 bg-orange-50/60 border border-orange-100 rounded-2xl p-4 relative">
@@ -360,7 +360,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                 ? (enrichProgress
                   ? `Lagi lengkapin kontak (${enrichProgress.done}/${enrichProgress.total})… bebas pindah tab, nanti ada notif`
                   : "Lagi nyari perusahaan (total ±3-4 menit)… bebas pindah tab, nanti ada notif")
-                : "Generate 14 Leads"}
+                : "Generate 10 Leads"}
             </button>
           </div>
         )}

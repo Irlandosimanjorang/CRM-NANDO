@@ -33,7 +33,9 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MAX_LEADS = 14;
+// 10 (dulu 14) - tiap lead sekarang dilengkapi kontaknya otomatis & itu
+// biaya per lead, jadi dibatesin (29 Sep 2026, permintaan Nando).
+const MAX_LEADS = 10;
 const RETRY_MIN_THRESHOLD = 6;
 const FIRST_PASS_MAX_SEARCH = 12;
 const RETRY_PASS_MAX_SEARCH = 6;
