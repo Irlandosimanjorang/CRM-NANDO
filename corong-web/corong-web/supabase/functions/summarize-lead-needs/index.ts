@@ -16,14 +16,17 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-function wibDayStartUTC(d = new Date()) {
+// Kuota 30x/BULAN (29 Sep 2026, dulu 10x/hari = maks 300x/bulan - kebesaran
+// buat fitur yang dipake per lead sesekali).
+const MONTHLY_LIMIT = 30;
+
+function wibMonthStartUTC(d = new Date()) {
   const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
-  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth(), day = wibNow.getUTCDate();
-  return new Date(Date.UTC(y, m, day, 0, 0, 0) - WIB_OFFSET_MS);
+  return new Date(Date.UTC(wibNow.getUTCFullYear(), wibNow.getUTCMonth(), 1, 0, 0, 0) - WIB_OFFSET_MS);
 }
 
-async function checkRateLimitPerUserDaily(admin, userId, functionName, maxCalls) {
-  const windowStart = wibDayStartUTC().toISOString();
+async function checkRateLimitPerUserMonthly(admin, userId, functionName, maxCalls) {
+  const windowStart = wibMonthStartUTC().toISOString();
   const { data, error } = await admin.rpc("reserve_edge_function_call", { p_user_id: userId, p_function_name: functionName, p_window_start: windowStart, p_max_calls: maxCalls });
   if (error) { console.error("[summarize-lead-needs] reserve_edge_function_call gagal:", error); return false; }
   return !!data;
@@ -78,9 +81,9 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const rateLimitOk = await checkRateLimitPerUserDaily(admin, userData.user.id, "summarize-lead-needs", 10);
+    const rateLimitOk = await checkRateLimitPerUserMonthly(admin, userData.user.id, "summarize-lead-needs", MONTHLY_LIMIT);
     if (!rateLimitOk) {
-      return new Response(JSON.stringify({ error: "Kuota Ringkasan Kebutuhan (AI) (10x/hari) udah kepake. Coba lagi besok." }), { status: 429, headers: cors });
+      return new Response(JSON.stringify({ error: `Kuota Ringkasan Kebutuhan (AI) (${MONTHLY_LIMIT}x/bulan) udah kepake. Coba lagi bulan depan.` }), { status: 429, headers: cors });
     }
 
     // Batesin ke 20 catatan terbaru biar prompt gak kegedean - kalau lead-nya
@@ -110,7 +113,7 @@ Tulis dalam Bahasa Indonesia yang natural.`;
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 900, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 900, thinking: { type: "between_tools" }, output_config: { effort: "medium" }, messages: [{ role: "user", content: prompt }] }),
     });
     if (!resp.ok) return new Response(JSON.stringify({ error: "AI gagal bikin ringkasan" }), { status: 500, headers: cors });
     const dat = await resp.json();
