@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Package, Plus, Trash2, Save, Loader2, CheckCircle2 } from "lucide-react";
+import { Package, Plus, Trash2, Save, Loader2, CheckCircle2, Upload } from "lucide-react";
 import * as db from "../lib/db";
 
 // Katalog produk/layanan perusahaan (30 Sep 2026, permintaan Nando dari
@@ -7,6 +7,7 @@ import * as db from "../lib/db";
 // rekomendasiin produk yang cocok sama kebutuhan prospek, bukan cuma nyimpulin
 // kebutuhannya doang. Owner/manager yang ngisi, sales cuma liat.
 const MAX_PRODUCTS = 20;
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const EMPTY = { name: "", description: "", fit_for: "", price: "" };
 
 export default function ProductCatalogCard({ canManage }) {
@@ -26,6 +27,34 @@ export default function ProductCatalogCard({ canManage }) {
   const setItem = (i, k, v) => setProducts((p) => p.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
   const addItem = () => setProducts((p) => (p.length >= MAX_PRODUCTS ? p : [...p, { ...EMPTY }]));
   const delItem = (i) => setProducts((p) => p.filter((_, j) => j !== i));
+
+  const [importing, setImporting] = useState(false);
+  const importFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) { setMsg("Gagal: file kegedean (maks 4MB)."); return; }
+    setImporting(true);
+    setMsg("");
+    try {
+      const res = await db.extractProductCatalog(file);
+      // Digabung ke isian yang udah ada (bukan ditimpa) - produk yang namanya
+      // udah ada di-skip, profil cuma diisi kalau masih kosong.
+      const existing = new Set(products.map((p) => p.name.trim().toLowerCase()));
+      const fresh = (res.products || []).filter((p) => !existing.has(p.name.trim().toLowerCase()));
+      const room = MAX_PRODUCTS - products.length;
+      setProducts((p) => [...p, ...fresh.slice(0, room)]);
+      if (!profile.trim() && res.company_profile) setProfile(res.company_profile);
+      const added = Math.min(fresh.length, room);
+      setMsg(added > 0
+        ? `${added} produk diambil dari dokumen${fresh.length > room ? ` (${fresh.length - room} kelewat, katalog maks ${MAX_PRODUCTS})` : ""}. Cek & edit dulu, lalu klik Simpan katalog.`
+        : "Gak ada produk baru yang ketemu di dokumen ini.");
+    } catch (err) {
+      setMsg("Gagal: " + err.message);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const save = async () => {
     const clean = products
@@ -59,6 +88,16 @@ export default function ProductCatalogCard({ canManage }) {
         <Loader2 size={16} className="animate-spin text-slate-400" />
       ) : (
         <>
+          {canManage && (
+            <div className="mb-4 flex items-center gap-3 flex-wrap bg-orange-50/60 border border-orange-100 rounded-2xl px-3 py-2.5">
+              <label className={`text-sm font-medium rounded-xl px-3 py-1.5 flex items-center gap-1.5 cursor-pointer ${importing ? "bg-orange-300 text-white pointer-events-none" : "bg-orange-600 hover:bg-orange-700 text-white"}`}>
+                {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {importing ? "AI lagi baca dokumen..." : "Upload PDF / Word"}
+                <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={importFile} disabled={importing} />
+              </label>
+              <span className="text-xs text-slate-500">Company profile, brosur, atau price list - AI isiin form di bawah otomatis. Maks 4MB.</span>
+            </div>
+          )}
           <label className="block text-xs font-medium text-slate-600 mb-1">Profil singkat perusahaan</label>
           <textarea
             className={inp + " min-h-[64px]"}
