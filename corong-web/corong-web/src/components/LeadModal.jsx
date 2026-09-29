@@ -175,6 +175,36 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const [outcomeReason, setOutcomeReason] = useState(() => draft?.outcomeReason || "");
   const [outcomeGuessing, setOutcomeGuessing] = useState(false);
 
+  // ---- RINGKASAN KEBUTUHAN (AI) - baca semua catatan progress/notulen lead
+  // ini, simpulin klien butuh produk/layanan apa + kenapa + sinyal
+  // budget/urgency (permintaan calon klien Enterprise: bukan cuma "langkah
+  // selanjutnya" kayak NEX Advisor, tapi kesimpulan kebutuhan konkret). Hasil
+  // lama (kalau ada) dimuat pas modal dibuka, biar gak perlu generate ulang
+  // tiap buka lead yang sama.
+  const [needsSummary, setNeedsSummary] = useState(null);
+  const [needsSummaryBusy, setNeedsSummaryBusy] = useState(false);
+  const [needsSummaryErr, setNeedsSummaryErr] = useState("");
+  useEffect(() => {
+    if (!lead.id) return;
+    let alive = true;
+    db.getLeadNeedsSummary(lead.id).then((d) => { if (alive) setNeedsSummary(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, [lead.id]);
+  const generateNeedsSummary = async () => {
+    if (!lead.id) return;
+    if (!isProfessional) { alert("Fitur \"Ringkasan Kebutuhan (AI)\" itu khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan."); return; }
+    setNeedsSummaryBusy(true);
+    setNeedsSummaryErr("");
+    try {
+      const res = await db.summarizeLeadNeeds(lead.id);
+      setNeedsSummary({ summary: res.summary, needs: res.needs, budget_signal: res.budget_signal, urgency: res.urgency, based_on_notes_count: res.based_on_notes_count });
+    } catch (e) {
+      setNeedsSummaryErr(e.message);
+    } finally {
+      setNeedsSummaryBusy(false);
+    }
+  };
+
   const onStageChange = (newKey) => {
     set("stage_key", newKey);
     const newStage = stages.find((s) => s.key === newKey);
@@ -425,6 +455,40 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 <p className="mt-2 text-[11px] text-violet-700/80 italic">"{lead.customer_state.state_reason}"</p>
               )}
               <p className="mt-2 text-[10px] text-slate-400">Dihitung otomatis dari progress notes - update tiap lead ini kena analisis NEX AI Advisor.</p>
+            </div>
+          )}
+          {lead.id && (
+            <div className="border border-emerald-200 bg-emerald-50/60 rounded-2xl p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                  <Sparkles size={13} /> Ringkasan Kebutuhan (AI)
+                </div>
+                <button
+                  onClick={generateNeedsSummary}
+                  disabled={needsSummaryBusy || !isProfessional}
+                  title={!isProfessional ? "Khusus paket Professional ke atas" : undefined}
+                  className="shrink-0 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 disabled:opacity-50 flex items-center gap-1"
+                >
+                  {needsSummaryBusy ? <Loader2 size={12} className="animate-spin" /> : !isProfessional ? <Lock size={12} /> : <Sparkles size={12} />}
+                  {needsSummary ? "Buat ulang" : "Simpulkan dari notulen"}
+                </button>
+              </div>
+              {needsSummaryErr && <p className="mt-2 text-xs text-rose-600">{needsSummaryErr}</p>}
+              {needsSummary ? (
+                <>
+                  <p className="mt-2 text-xs text-slate-700">{needsSummary.summary}</p>
+                  {needsSummary.needs?.length > 0 && (
+                    <ul className="mt-2 space-y-1 list-disc list-inside">
+                      {needsSummary.needs.map((n, i) => <li key={i} className="text-xs text-slate-700">{n}</li>)}
+                    </ul>
+                  )}
+                  <div className="mt-2 text-xs text-slate-600"><span className="text-slate-400">Sinyal budget:</span> {needsSummary.budget_signal}</div>
+                  <div className="mt-1 text-xs text-slate-600"><span className="text-slate-400">Urgency:</span> {needsSummary.urgency}</div>
+                  <p className="mt-2 text-[10px] text-slate-400">Disimpulkan dari {needsSummary.based_on_notes_count || 0} catatan progress - AI dilarang ngarang, kalau gak ada info di catatan bakal bilang terus terang.</p>
+                </>
+              ) : (
+                !needsSummaryErr && <p className="mt-2 text-[11px] text-slate-500">Belum ada ringkasan. Klik "Simpulkan dari notulen" buat baca semua catatan progress lead ini dan nyimpulin kebutuhan kliennya.</p>
+              )}
             </div>
           )}
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>

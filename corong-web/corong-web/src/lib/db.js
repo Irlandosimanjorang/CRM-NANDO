@@ -445,6 +445,29 @@ export async function draftFollowup(leadId, channel) {
   return data;
 }
 
+// AI baca SEMUA catatan progress/notulen 1 lead, nyimpulin klien butuh
+// produk/layanan apa + kenapa + sinyal budget/urgency - dipanggil ON-DEMAND
+// (tombol "Ringkasan Kebutuhan (AI)" di LeadModal), fitur Professional ke atas.
+export async function summarizeLeadNeeds(leadId) {
+  const { data, error } = await supabase.functions.invoke("summarize-lead-needs", { body: { lead_id: leadId } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal bikin ringkasan kebutuhan");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+// Ringkasan kebutuhan yang udah pernah di-generate buat 1 lead (kalau ada) -
+// dipake buat langsung nampilin hasil lama pas LeadModal dibuka, tanpa perlu
+// klik generate ulang tiap kali buka.
+export async function getLeadNeedsSummary(leadId) {
+  const { data, error } = await supabase.from("lead_needs_summaries").select("*").eq("lead_id", leadId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 // ---- HAPUS AKUN SENDIRI - self-service dari tab Pengaturan (sebelumnya gak
 // ada fitur ini sama sekali, satu-satunya cara hapus akun minta admin
 // jalanin SQL manual). Perilaku beda tergantung role - lihat komentar di
