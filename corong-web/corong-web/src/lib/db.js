@@ -135,6 +135,17 @@ export async function getMyRole() {
   return data?.role || null;
 }
 
+// Aggregat performa SELURUH org (bukan cuma lead milik user ini) - dipake
+// buat kasih sales_rep di plan Enterprise gambaran performa perusahaan
+// secara umum, tanpa perlu buka data lead individual sales lain (RPC
+// SECURITY DEFINER nentuin org_id dari auth.uid() sendiri, gak nerima
+// org_id dari client, jadi gak mungkin nyasar ke org lain).
+export async function getOrgDashboardStats() {
+  const { data, error } = await supabase.rpc("get_org_dashboard_stats");
+  if (error) throw error;
+  return data;
+}
+
 // ---- APPROVAL GATE (Enterprise) - sales_rep butuh persetujuan owner/manager
 // buat hapus lead atau export data, biar data tim gak bisa dibawa kabur atau
 // dihapus sepihak tanpa sepengetahuan owner. ----

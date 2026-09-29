@@ -69,6 +69,21 @@ export default function Dashboard({
 }) {
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
 
+  // Permintaan calon klien Enterprise: sales_rep gak boleh liat lead sales
+  // lain (udah dijaga RLS `leads_select_access` di DB), TAPI tetep pengen
+  // liat performa perusahaan secara umum. `leads`/`dealTransactions` yang
+  // di-props ke Dashboard ini udah kefilter RLS ke lead sales_rep sendiri
+  // doang, jadi angka company-wide-nya harus diambil lewat RPC terpisah
+  // (`get_org_dashboard_stats`, SECURITY DEFINER, nentuin org dari
+  // auth.uid() sendiri) - bukan dari props ini.
+  const [orgStats, setOrgStats] = useState(null);
+  useEffect(() => {
+    if (!isEnterprise || canManage) { setOrgStats(null); return; }
+    let alive = true;
+    db.getOrgDashboardStats().then(d => { if (alive) setOrgStats(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, [isEnterprise, canManage]);
+
   const stats = useMemo(() => {
     const wonKeys = stages.filter(s => s.type === "won").map(s => s.key);
     const lostKeys = stages.filter(s => s.type === "lost").map(s => s.key);
@@ -333,6 +348,37 @@ export default function Dashboard({
         <Kpi icon={Trophy} value={stats.won} label="Deal Won" trend={`${stats.winRate}% win rate`} iconClass="bg-amber-50 text-amber-600" />
       </div>
 
+      {/* Widget khusus sales_rep di plan Enterprise: rangkuman performa
+          SELURUH perusahaan (bukan cuma lead dia sendiri). Rincian per
+          orang tetep owner/manager doang yang boleh liat (lewat
+          TeamLeaderboard di bawah), di sini cuma angka agregat. */}
+      {isEnterprise && !canManage && orgStats && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+            <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-slate-900">Performa Perusahaan (Semua Tim)</h2>
+            <span className="text-[10px] font-medium text-slate-400">Rincian per sales cuma bisa dilihat manager</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <div className="text-[20px] leading-none font-black tracking-[-0.04em] text-slate-900">{orgStats.total}</div>
+              <div className="mt-1 text-[10px] font-medium text-slate-500">Total Leads Perusahaan</div>
+            </div>
+            <div>
+              <div className="text-[20px] leading-none font-black tracking-[-0.04em] text-slate-900">{orgStats.won}</div>
+              <div className="mt-1 text-[10px] font-medium text-slate-500">{orgStats.win_rate}% win rate</div>
+            </div>
+            <div>
+              <div className="text-[20px] leading-none font-black tracking-[-0.04em] text-slate-900">{orgStats.deals}</div>
+              <div className="mt-1 text-[10px] font-medium text-slate-500">Total Deal Closing</div>
+            </div>
+            <div>
+              <div className="text-[20px] leading-none font-black tracking-[-0.04em] text-slate-900">Rp{Number(orgStats.revenue || 0).toLocaleString("id-ID")}</div>
+              <div className="mt-1 text-[10px] font-medium text-slate-500">Total Revenue</div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Layout 3 kolom niru struktur referensi "Cortex" (Analytics / CRM
           Sidebar / Upcoming Tasks) - datanya Nexto asli, warnanya ngikutin
           brand Nexto (oranye utama, violet cuma buat penanda AI). */}
@@ -478,8 +524,16 @@ export default function Dashboard({
           apa - "Laporan Performa Tim" diiklanin fitur Enterprise, tapi org
           non-Enterprise yang KEBETULAN pernah punya >1 anggota (misal abis
           di-downgrade dari Enterprise) tetep keliatan leaderboard-nya.
-          Sekarang eksplisit di-gate isEnterprise juga di sini. */}
-      {isEnterprise && <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />}
+          Sekarang eksplisit di-gate isEnterprise juga di sini.
+          BUG FIX (29 Sep 2026): ditambah gate `canManage` juga - komponen
+          ini ngitung stats per anggota dari props `leads`/`dealTransactions`
+          yang buat sales_rep udah kefilter RLS ke lead dia sendiri doang,
+          jadi kalau sales_rep yang liat, SEMUA teammate lain keliatan
+          0 lead/0 deal/Rp0 (data nyasar, bukan kebocoran - RLS-nya bener -
+          tapi nampilinnya membingungkan). Rincian per orang emang cuma
+          buat manager; sales_rep dapet angka company-wide lewat widget
+          "Performa Perusahaan" di atas. */}
+      {isEnterprise && canManage && <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />}
 
       <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-orange-50/50 px-5 py-4 flex items-center gap-3">
         <Target size={18} className="text-orange-500 shrink-0"/>
