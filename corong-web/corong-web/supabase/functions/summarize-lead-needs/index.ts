@@ -91,8 +91,19 @@ Deno.serve(async (req) => {
     // dibanding progress terbaru.
     const notesForPrompt = notes.slice(-20).map((n) => `[${n.note_date}] ${(n.text || "").slice(0, 500)}`).join("\n");
 
-    const prompt = `Kamu asisten sales yang bantu nyimpulin catatan progress/notulen meeting ke sebuah lead di bisnis ${industryContext(orgRow?.industry)}.
+    // Katalog produk/layanan org (30 Sep 2026) - kalau diisi, AI juga
+    // rekomendasiin produk dari katalog ini yang cocok sama kebutuhan lead.
+    const { data: catalog } = memberRow
+      ? await supabase.from("org_product_catalog").select("company_profile, products").eq("org_id", memberRow.org_id).maybeSingle()
+      : { data: null };
+    const catalogProducts = (Array.isArray(catalog?.products) ? catalog.products : []).filter((p) => p?.name).slice(0, 20);
+    const hasCatalog = catalogProducts.length > 0;
+    const catalogText = hasCatalog
+      ? `\nProfil perusahaan KITA (penjual): ${catalog.company_profile || "-"}\nKatalog produk/layanan KITA:\n${catalogProducts.map((p, i) => `${i + 1}. ${p.name}${p.description ? ` - ${p.description}` : ""}${p.fit_for ? ` | Cocok untuk: ${p.fit_for}` : ""}${p.price ? ` | Harga: ${p.price}` : ""}`).join("\n")}\n`
+      : "";
 
+    const prompt = `Kamu asisten sales yang bantu nyimpulin catatan progress/notulen meeting ke sebuah lead di bisnis ${industryContext(orgRow?.industry)}.
+${catalogText}
 Data lead: nama "${lead.name}", produk/scope yang ditawarin "${lead.product || "belum ada info"}", kategori "${lead.category || "-"}".
 
 Berikut SELURUH catatan progress/notulen yang tercatat buat lead ini (urut dari lama ke baru):
@@ -102,18 +113,19 @@ Baca semua catatan di atas, lalu simpulkan:
 1. Kebutuhan konkret apa aja yang keliatan dari klien ini (produk/layanan/scope spesifik yang dia butuhin) - bukan cuma "butuh produk kita" doang, tapi detail spesifik yang kesebut/tersirat di catatan (misal: "butuh sistem CRM buat 5 sales", bukan cuma "butuh software").
 2. Kenapa dia butuh itu (alasan/masalah bisnis yang melatarbelakangi, kalau kesebut).
 3. Ada sinyal soal budget/anggaran gak (disebut nominal/range, atau "gak ada budget khusus", atau emang gak ada info sama sekali).
-4. Seberapa urgent (ada tenggat waktu/target tertentu yang kesebut, atau nggak).
+4. Seberapa urgent (ada tenggat waktu/target tertentu yang kesebut, atau nggak).${hasCatalog ? `
+5. Produk/layanan dari KATALOG KITA di atas yang paling cocok buat kebutuhan klien ini (maks 3, urut dari paling cocok), masing-masing dengan alasan singkat yang nyambungin ke kebutuhan spesifik di catatan. Nama produk WAJIB persis sama kayak di katalog - JANGAN rekomendasiin produk yang gak ada di katalog. Kalau gak ada yang cocok, kosongin array-nya.` : ""}
 
 ATURAN PENTING: JANGAN mengarang detail yang gak ada atau gak tersirat jelas di catatan. Kalau suatu poin gak ada informasinya sama sekali, bilang terus terang "gak ada info di catatan" - jangan ditebak-tebak atau dihalusin biar keliatan lengkap.
 
 Balas HANYA dengan JSON object, tanpa markdown, persis format ini:
-{"summary":"ringkasan kebutuhan klien dalam 2-4 kalimat, bahasa natural","needs":["poin kebutuhan spesifik 1","poin kebutuhan spesifik 2"],"budget_signal":"deskripsi singkat sinyal budget, atau 'Gak ada info di catatan'","urgency":"Tinggi/Sedang/Rendah/Gak jelas - beserta alasan singkat"}
+{"summary":"ringkasan kebutuhan klien dalam 2-4 kalimat, bahasa natural","needs":["poin kebutuhan spesifik 1","poin kebutuhan spesifik 2"],"budget_signal":"deskripsi singkat sinyal budget, atau 'Gak ada info di catatan'","urgency":"Tinggi/Sedang/Rendah/Gak jelas - beserta alasan singkat"${hasCatalog ? `,"product_recommendations":[{"product":"nama persis dari katalog","reason":"alasan singkat 1 kalimat"}]` : ""}}
 Tulis dalam Bahasa Indonesia yang natural.`;
 
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 900, thinking: { type: "between_tools" }, output_config: { effort: "medium" }, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 1200, thinking: { type: "between_tools" }, output_config: { effort: "medium" }, messages: [{ role: "user", content: prompt }] }),
     });
     if (!resp.ok) return new Response(JSON.stringify({ error: "AI gagal bikin ringkasan" }), { status: 500, headers: cors });
     const dat = await resp.json();
@@ -130,12 +142,19 @@ Tulis dalam Bahasa Indonesia yang natural.`;
     obj.needs = Array.isArray(obj.needs) ? obj.needs.map(cleanText).filter(Boolean) : [];
     obj.budget_signal = cleanText(obj.budget_signal || "Gak ada info di catatan");
     obj.urgency = cleanText(obj.urgency || "Gak jelas");
+    // Buang rekomendasi yang namanya gak ada di katalog (jaga-jaga AI ngarang).
+    const catalogNames = new Map(catalogProducts.map((p) => [p.name.trim().toLowerCase(), p.name]));
+    obj.product_recommendations = (Array.isArray(obj.product_recommendations) ? obj.product_recommendations : [])
+      .map((r) => ({ product: catalogNames.get(String(r?.product || "").trim().toLowerCase()), reason: cleanText(r?.reason) }))
+      .filter((r) => r.product)
+      .slice(0, 3);
 
     if (memberRow) {
       await supabase.from("lead_needs_summaries").upsert(
         {
           lead_id, org_id: memberRow.org_id,
           summary: obj.summary, needs: obj.needs, budget_signal: obj.budget_signal, urgency: obj.urgency,
+          product_recommendations: obj.product_recommendations,
           based_on_notes_count: notes.length, generated_by: userData.user.id,
           created_at: new Date().toISOString(),
         },
@@ -143,7 +162,7 @@ Tulis dalam Bahasa Indonesia yang natural.`;
       );
     }
 
-    return new Response(JSON.stringify({ ...obj, based_on_notes_count: notes.length }), { headers: { ...cors, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ...obj, has_catalog: hasCatalog, based_on_notes_count: notes.length }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
   }

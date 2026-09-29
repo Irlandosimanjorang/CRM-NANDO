@@ -197,7 +197,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     setNeedsSummaryErr("");
     try {
       const res = await db.summarizeLeadNeeds(lead.id);
-      setNeedsSummary({ summary: res.summary, needs: res.needs, budget_signal: res.budget_signal, urgency: res.urgency, based_on_notes_count: res.based_on_notes_count });
+      setNeedsSummary({ summary: res.summary, needs: res.needs, budget_signal: res.budget_signal, urgency: res.urgency, product_recommendations: res.product_recommendations, has_catalog: res.has_catalog, based_on_notes_count: res.based_on_notes_count });
     } catch (e) {
       setNeedsSummaryErr(e.message);
     } finally {
@@ -484,6 +484,22 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                   )}
                   <div className="mt-2 text-xs text-slate-600"><span className="text-slate-400">Sinyal budget:</span> {needsSummary.budget_signal}</div>
                   <div className="mt-1 text-xs text-slate-600"><span className="text-slate-400">Urgency:</span> {needsSummary.urgency}</div>
+                  {needsSummary.product_recommendations?.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-emerald-200/70">
+                      <div className="text-[11px] font-semibold text-emerald-800">Rekomendasi produk kita</div>
+                      <ul className="mt-1.5 space-y-1.5">
+                        {needsSummary.product_recommendations.map((r, i) => (
+                          <li key={i} className="text-xs text-slate-700">
+                            <span className="font-semibold text-slate-800">{r.product}</span>
+                            {r.reason ? <span> - {r.reason}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {needsSummary.has_catalog === false && (
+                    <p className="mt-2 text-[10px] text-slate-500">Isi katalog di Pengaturan → Produk & Layanan Perusahaan biar AI bisa rekomendasiin produk yang cocok.</p>
+                  )}
                   <p className="mt-2 text-[10px] text-slate-400">Disimpulkan dari {needsSummary.based_on_notes_count || 0} catatan progress - AI dilarang ngarang, kalau gak ada info di catatan bakal bilang terus terang.</p>
                 </>
               ) : (

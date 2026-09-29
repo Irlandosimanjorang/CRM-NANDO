@@ -494,6 +494,25 @@ export async function getLeadNeedsSummary(leadId) {
   return data;
 }
 
+// Katalog produk/layanan perusahaan (1 baris per org) - dipake AI Ringkasan
+// Kebutuhan buat rekomendasiin produk yang cocok. Semua anggota org bisa
+// baca, cuma owner/manager yang bisa ubah (RLS org_product_catalog).
+export async function getProductCatalog() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("org_product_catalog").select("company_profile, products").eq("org_id", orgId).maybeSingle();
+  if (error) throw error;
+  return data || { company_profile: "", products: [] };
+}
+export async function saveProductCatalog(companyProfile, products) {
+  const orgId = await getMyOrgId();
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error } = await supabase.from("org_product_catalog").upsert(
+    { org_id: orgId, company_profile: companyProfile, products, updated_by: uid, updated_at: new Date().toISOString() },
+    { onConflict: "org_id" }
+  );
+  if (error) throw error;
+}
+
 // ---- HAPUS AKUN SENDIRI - self-service dari tab Pengaturan (sebelumnya gak
 // ada fitur ini sama sekali, satu-satunya cara hapus akun minta admin
 // jalanin SQL manual). Perilaku beda tergantung role - lihat komentar di
