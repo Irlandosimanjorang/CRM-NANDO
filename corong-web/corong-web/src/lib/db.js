@@ -503,34 +503,6 @@ export async function getProductCatalog() {
   if (error) throw error;
   return data || { company_profile: "", products: [] };
 }
-// Upload company profile/brosur (PDF atau Word) -> AI ekstrak profil +
-// daftar produk. Gak nyimpen apa-apa, hasilnya diisi ke form buat direview.
-// PDF dikirim base64 apa adanya; Word diubah jadi teks di browser (mammoth,
-// di-load dinamis biar gak ngeberatin bundle utama).
-export async function extractProductCatalog(file) {
-  const name = (file.name || "").toLowerCase();
-  let body;
-  if (name.endsWith(".pdf")) {
-    const buf = new Uint8Array(await file.arrayBuffer());
-    let bin = "";
-    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-    body = { pdf_base64: btoa(bin) };
-  } else if (name.endsWith(".docx")) {
-    const mammoth = await import("mammoth/mammoth.browser");
-    const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-    body = { text: value };
-  } else {
-    throw new Error("Format belum didukung. Pakai PDF atau Word (.docx).");
-  }
-  const { data, error } = await supabase.functions.invoke("extract-product-catalog", { body });
-  if (error) {
-    let specificMsg = null;
-    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
-    throw new Error(specificMsg || error.message || "Gagal baca dokumen");
-  }
-  if (data?.error) throw new Error(data.error);
-  return data;
-}
 export async function saveProductCatalog(companyProfile, products) {
   const orgId = await getMyOrgId();
   const uid = (await supabase.auth.getUser()).data.user.id;
