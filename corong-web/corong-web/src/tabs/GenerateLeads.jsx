@@ -440,7 +440,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                                     className="text-[11px] font-medium text-violet-300 hover:text-violet-200 disabled:opacity-50 flex items-center gap-1"
                                   >
                                     {enrichingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                    {enrichingId === r.id ? "Lagi buka website resminya (±30-60 detik)…" : "Lengkapi kontak (AI)"}
+                                    {enrichingId === r.id ? "Lagi buka website resminya (±1-2 menit)…" : "Lengkapi kontak (AI)"}
                                   </button>
                                   {enrichMsg[r.id] && <span className={`text-[11px] ${enrichMsg[r.id].startsWith("Gagal") ? "text-rose-400" : "text-slate-400"}`}>{enrichMsg[r.id]}</span>}
                                 </div>
