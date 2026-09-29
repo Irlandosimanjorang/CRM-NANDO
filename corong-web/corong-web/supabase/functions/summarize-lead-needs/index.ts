@@ -93,7 +93,9 @@ Deno.serve(async (req) => {
 
     // Katalog produk/layanan org (30 Sep 2026) - kalau diisi, AI juga
     // rekomendasiin produk dari katalog ini yang cocok sama kebutuhan lead.
-    const { data: catalog } = memberRow
+    // Khusus Enterprise (permintaan Nando) - paket lain tetep dapet ringkasan
+    // kebutuhan biasa tanpa rekomendasi produk.
+    const { data: catalog } = memberRow && isEnterprise
       ? await supabase.from("org_product_catalog").select("company_profile, products").eq("org_id", memberRow.org_id).maybeSingle()
       : { data: null };
     const catalogProducts = (Array.isArray(catalog?.products) ? catalog.products : []).filter((p) => p?.name).slice(0, 20);
@@ -162,7 +164,7 @@ Tulis dalam Bahasa Indonesia yang natural.`;
       );
     }
 
-    return new Response(JSON.stringify({ ...obj, has_catalog: hasCatalog, based_on_notes_count: notes.length }), { headers: { ...cors, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ...obj, has_catalog: isEnterprise ? hasCatalog : null, based_on_notes_count: notes.length }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
   }

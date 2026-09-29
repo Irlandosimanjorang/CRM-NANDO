@@ -23,3 +23,12 @@ create policy org_product_catalog_write on public.org_product_catalog
   with check ((org_id in (select my_org_ids())) and (my_role() = any (array['owner','manager'])));
 
 alter table public.lead_needs_summaries add column product_recommendations jsonb not null default '[]'::jsonb;
+
+-- Revisi (30 Sep 2026, permintaan Nando): katalog khusus Enterprise - migration
+-- "org_product_catalog_enterprise_only".
+drop policy org_product_catalog_write on public.org_product_catalog;
+create policy org_product_catalog_write on public.org_product_catalog
+  for all using ((org_id in (select my_org_ids())) and (my_role() = any (array['owner','manager']))
+    and exists (select 1 from organizations o where o.id = org_product_catalog.org_id and o.plan = 'enterprise'))
+  with check ((org_id in (select my_org_ids())) and (my_role() = any (array['owner','manager']))
+    and exists (select 1 from organizations o where o.id = org_product_catalog.org_id and o.plan = 'enterprise'));
