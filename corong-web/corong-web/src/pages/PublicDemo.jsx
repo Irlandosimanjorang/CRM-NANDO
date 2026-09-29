@@ -217,13 +217,13 @@ function AiTab() {
       <div className="rounded-3xl bg-slate-950 text-white p-5 border border-slate-800">
         <div className="flex items-center gap-2 mb-4">
           <MessageSquareText size={18} className="text-emerald-400" />
-          <p className="text-sm font-semibold text-slate-300">Bot Telegram Nexto</p>
+          <p className="text-sm font-semibold text-slate-300">NEX Pro - update lead pakai suara</p>
         </div>
         <div className="grid gap-2.5">
-          <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-orange-600 px-3.5 py-2.5 text-sm">Cek lead yang overdue follow-up hari ini.</div>
-          <div className="mr-auto max-w-[85%] rounded-2xl rounded-bl-sm bg-white/10 px-3.5 py-2.5 text-sm text-slate-200">Ada 2 lead overdue: PT Sinar Abadi Plastik (4 hari) dan CV Karya Plastindo (2 hari). Mau saya catetin hasil follow-up-nya?</div>
+          <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-orange-600 px-3.5 py-2.5 text-sm">"Tadi ketemu Pak Budi di Sinar Abadi, minta penawaran 2 ton, visit lagi Kamis."</div>
+          <div className="mr-auto max-w-[85%] rounded-2xl rounded-bl-sm bg-white/10 px-3.5 py-2.5 text-sm text-slate-200">Siap: catatan progress masuk ke PT Sinar Abadi Plastik dan visit dijadwalkan Kamis. Cek dulu sebelum disimpan?</div>
         </div>
-        <button onClick={() => demoAlert("Chat sama Bot Telegram")} className="mt-4 text-sm font-semibold text-emerald-400">Coba chat sendiri &rarr;</button>
+        <button onClick={() => demoAlert("NEX Pro (voice note)")} className="mt-4 text-sm font-semibold text-emerald-400">Coba rekam sendiri &rarr;</button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button onClick={() => demoAlert("Smart Import AI")} className="rounded-2xl bg-white border border-slate-200 p-5 text-left hover:border-orange-300">
