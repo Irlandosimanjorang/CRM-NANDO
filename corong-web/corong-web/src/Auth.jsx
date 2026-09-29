@@ -490,7 +490,7 @@ export const PROFESSIONAL_FEATURES = [
 export const ENTERPRISE_FEATURES = [
   { id: "Semua fitur Professional", en: "Everything in Professional" },
   { id: "GPS Check-in (tracking kunjungan tim real-time)", en: "GPS Check-in (real-time team visit tracking)" },
-  { id: "Ringkasan Kebutuhan Klien (AI simpulin kebutuhan prospek dari notulen)", en: "Client Needs Summary (AI distills prospect needs from meeting notes)" },
+  { id: "Ringkasan Kebutuhan Klien (AI simpulin kebutuhan prospek dari notulen), 15x/bulan", en: "Client Needs Summary (AI distills prospect needs from meeting notes), 15x/month" },
   { id: "Katalog Produk & Layanan - AI rekomendasiin produk yang cocok buat tiap prospek", en: "Product & Service Catalog - AI recommends the right product for each prospect" },
   { id: "4 anggota tim dalam satu organisasi", en: "4 team members in one organization" },
   { id: "Role-based visibility (Owner/Manager/Sales Rep)", en: "Role-based visibility (Owner/Manager/Sales Rep)" },

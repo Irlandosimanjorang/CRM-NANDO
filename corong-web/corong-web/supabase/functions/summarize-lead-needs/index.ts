@@ -16,9 +16,9 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-// Kuota 30x/BULAN (29 Sep 2026, dulu 10x/hari = maks 300x/bulan - kebesaran
-// buat fitur yang dipake per lead sesekali).
-const MONTHLY_LIMIT = 30;
+// Kuota 15x/BULAN per user (30 Sep 2026, permintaan Nando; sebelumnya 30x/bulan,
+// awalnya 10x/hari).
+const MONTHLY_LIMIT = 15;
 
 function wibMonthStartUTC(d = new Date()) {
   const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
