@@ -208,6 +208,44 @@ export const INDUSTRY_TEMPLATES = {
     aiContext: "Bisnis ini distribusi retail/FMCG. Istilah relevan: outlet, karton, distributor area, repeat order.",
     genLeadsExample: { productSold: "produk makanan ringan, minuman kemasan", keyword: "toko kelontong area Bekasi", targetRole: "pemilik toko atau distributor area" },
   },
+
+  corporate_consultant: {
+    key: "corporate_consultant",
+    label: "Corporate Consultant",
+    description: "Konsultan strategi, manajemen, hukum, pajak, HR, atau keuangan buat perusahaan",
+    // Pipeline konsultasi korporat nyata biasanya masuk lewat salah satu dari 2
+    // jalur: RFP/tender resmi dari procurement klien, ATAU pendekatan langsung
+    // (referral/networking) - makanya ada stage "Discovery" tersendiri sebelum
+    // proposal, beda dari sales produk biasa yang bisa langsung nawarin harga.
+    stages: [
+      { key: "prospek", label: "Prospek Baru", hex: "#94a3b8", type: "normal" },
+      { key: "discovery", label: "Discovery / RFP", hex: "#60a5fa", type: "normal" },
+      { key: "proposal", label: "Proposal & SOW", hex: "#fbbf24", type: "normal" },
+      { key: "negosiasi", label: "Negosiasi", hex: "#f97316", type: "normal" },
+      { key: "kontrak_signed", label: "Kontrak Signed", hex: "#10b981", type: "won" },
+      { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
+    ],
+    fieldLabels: {
+      name: "Nama perusahaan klien",
+      product: "Scope jasa yang dibutuhkan",
+      company_type: "Skala perusahaan",
+      key_person_title: "Jabatan (decision maker)",
+      quantity: "Nilai kontrak (Rp)",
+    },
+    categories: ["Konsultan Strategi & Manajemen", "Konsultan Hukum", "Konsultan Pajak", "Konsultan HR & Organisasi", "Konsultan Keuangan & Audit", "Konsultan IT/Digital Transformation", "Lainnya"],
+    companyTypeOptions: [
+      { v: "", label: "—" }, { v: "Startup", label: "Startup" }, { v: "UMKM", label: "UMKM" }, { v: "Korporat", label: "Korporat / Enterprise" }, { v: "BUMN/Pemerintah", label: "BUMN / Instansi Pemerintah" },
+    ],
+    hiddenFields: [],
+    customFieldLabels: {
+      custom_field_1: "Durasi engagement",
+      custom_field_2: "Sumber lead (RFP/Referral/Networking)",
+      custom_field_3: "Anggaran klien (budget range)",
+      custom_field_4: "Model billing (Fixed fee/Retainer/Hourly)",
+    },
+    aiContext: "Bisnis ini jasa konsultasi korporat (strategi/manajemen/hukum/pajak/HR/keuangan/IT). Istilah relevan: engagement, scope of work (SOW), RFP/tender, proposal, retainer, fixed fee, billing rate, deliverable, milestone, kickoff meeting, stakeholder mapping, decision maker vs pengaruh (influencer).",
+    genLeadsExample: { productSold: "jasa konsultasi manajemen, audit pajak, transformasi digital", keyword: "perusahaan yang butuh konsultan bisnis", targetRole: "Direktur, CEO, CFO, atau Head of Legal/HR" },
+  },
 };
 
 export const DEFAULT_INDUSTRY = "pvc_chemical";

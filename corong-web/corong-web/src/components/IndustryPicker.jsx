@@ -1,17 +1,7 @@
 import { useState } from "react";
-import { Loader2, ArrowRight, Factory, Car, Building2, Boxes, ShieldCheck, ShoppingBag } from "lucide-react";
+import { Loader2, ArrowRight, Factory, Car, Building2, Boxes, ShieldCheck, ShoppingBag, Briefcase } from "lucide-react";
 import { INDUSTRY_TEMPLATES } from "../lib/industryTemplates";
-
-// Duplikat kecil dari NextoBadge di App.jsx - sengaja gak di-import biar gak
-// bikin circular import (App.jsx <-> IndustryPicker.jsx).
-function Badge({ size = 48 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" className="shrink-0">
-      <path d="M51,92 L17.04,15.15 Q13,6 21.46,11.34 L51,30 Z" fill="#f97316" />
-      <path d="M51,92 L51,30 L80.54,11.34 Q89,6 84.96,15.15 Z" fill="#9a3412" />
-    </svg>
-  );
-}
+import { NextoRobotHead } from "../Auth";
 
 const ICONS = {
   pvc_chemical: Factory,
@@ -20,6 +10,7 @@ const ICONS = {
   b2b_general: Boxes,
   insurance: ShieldCheck,
   retail_fmcg: ShoppingBag,
+  corporate_consultant: Briefcase,
 };
 
 // Ditampilin SEKALI doang ke org yang belum pernah milih industri (org.industry
@@ -46,7 +37,7 @@ export default function IndustryPicker({ onSelect, busy, onLogout }) {
       )}
       <div className="w-full max-w-2xl">
         <div className="flex flex-col items-center text-center mb-8">
-          <Badge size={48} />
+          <NextoRobotHead size={48} />
           <h1 className="text-white text-2xl font-bold mt-4">Industri bisnis Anda apa?</h1>
           <p className="text-slate-400 text-sm mt-2 max-w-md">
             Nexto bakal nyiapin pipeline & istilah yang sesuai. Bisa diubah lagi kapan aja lewat Pengaturan.
