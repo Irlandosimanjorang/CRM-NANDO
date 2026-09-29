@@ -71,6 +71,9 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisMonth: 0, quotaMax: 4, nextAvailableAt: null });
   const [importingId, setImportingId] = useState(null);
   const pollRef = useRef(null);
+  const enrichPollRef = useRef(null);
+  const enrichRunRef = useRef(null);
+  const [enrichProgress, setEnrichProgress] = useState(null);
   // Riwayat hasil sekarang dikelompokin per tanggal generate & DEFAULT
   // KETUTUP (dropdown/accordion) - biar pas pertama buka tab gak langsung
   // ketumpuk puluhan kartu dari generate-generate lama, tinggal klik
@@ -116,7 +119,41 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   // total, begitu balik ke tab Generate Leads, app otomatis nunjukin "masih
   // nyari..." lagi (bukan form kosong) dan beres sendiri pas hasilnya kelar.
   const STALE_JOB_MS = 160 * 1000; // dikit di atas limit eksekusi 150 detik
+  // Tahap 2: kontak tiap lead dilengkapi otomatis di server (paralel, 1
+  // invocation per lead, ±1-2 menit). Lebih dari ini dianggap macet - yang
+  // belum beres ditampilin apa adanya + tombol "Coba lagi" di kartunya.
+  const ENRICH_MAX_MS = 4 * 60 * 1000;
   const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  const stopEnrichPolling = () => { if (enrichPollRef.current) { clearInterval(enrichPollRef.current); enrichPollRef.current = null; } };
+
+  const finishGenerate = (count) => {
+    stopEnrichPolling();
+    setBusy(false);
+    setEnrichProgress(null);
+    const successMsg = `✅ Ketemu ${count} calon lead baru, kontaknya udah dilengkapi - cek daftar di bawah.`;
+    setMsg(successMsg);
+    onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
+    load(true);
+  };
+
+  const waitForEnrichment = (runId, count) => {
+    stopPolling();
+    if (!runId) { finishGenerate(count); return; }
+    if (enrichPollRef.current && enrichRunRef.current === runId) return;
+    stopEnrichPolling();
+    enrichRunRef.current = runId;
+    setBusy(true);
+    const check = async () => {
+      let rows;
+      try { rows = await db.getEnrichProgress(runId); } catch (_) { return; }
+      const now = Date.now();
+      const stillRunning = rows.filter((r) => r.enrich_status === "pending" && (!r.enrich_started_at || now - new Date(r.enrich_started_at).getTime() < ENRICH_MAX_MS));
+      setEnrichProgress({ done: rows.length - stillRunning.length, total: rows.length });
+      if (stillRunning.length === 0) finishGenerate(rows.length || count);
+    };
+    check();
+    enrichPollRef.current = setInterval(check, 5000);
+  };
 
   const pollJob = () => {
     stopPolling();
@@ -125,12 +162,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       try { job = await db.getActiveLeadGenJob(); } catch (_) { return; }
       if (!job) { stopPolling(); setBusy(false); return; }
       if (job.status === "done") {
-        stopPolling();
-        setBusy(false);
-        const successMsg = `✅ Ketemu ${job.result_count ?? 0} calon lead baru, cek daftar di bawah.`;
-        setMsg(successMsg);
-        onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
-        load(true);
+        waitForEnrichment(job.run_id, job.result_count ?? 0);
         return;
       }
       if (job.status === "failed") {
@@ -165,11 +197,15 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         setBusy(true);
         pollJob();
       }
+    } else if (job && job.status === "done" && job.run_id) {
+      // Tab sempet ke-reload pas lagi tahap lengkapin kontak - lanjut nunggu.
+      const ageMs = Date.now() - new Date(job.updated_at || job.created_at).getTime();
+      if (ageMs <= ENRICH_MAX_MS) waitForEnrichment(job.run_id, job.result_count ?? 0);
     }
   };
   useEffect(() => {
     checkResumableJob();
-    return () => stopPolling();
+    return () => { stopPolling(); stopEnrichPolling(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -189,12 +225,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
     pollJob();
     try {
       const res = await db.generateLeads({ keyword, province, targetRole, productSold, companyScale, targetType });
-      stopPolling();
-      const successMsg = `✅ Ketemu ${res.count} calon lead baru, cek daftar di bawah.`;
-      setMsg(successMsg);
-      onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
-      load(true);
-      setBusy(false);
+      waitForEnrichment(res.run_id, res.count);
     } catch (e) {
       stopPolling();
       setMsg("Gagal: " + e.message);
@@ -264,7 +295,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
               <li><b>Otomatis skip yang udah ada</b> di daftar lead Anda, biar gak muncul dobel buang-buang kuota.</li>
               <li><b>Kalau hasilnya kesikit</b> (kebanyakan kena skip karena dobel), AI otomatis coba nyari lagi 1x dengan sudut pencarian yang beda.</li>
               <li><b>Tiap lead dikasih skor 3 komponen</b> (match industri, kelengkapan kontak, sinyal butuh beli) + skor keseluruhan, diurutin dari yang paling tinggi.</li>
-              <li><b>Kontak kurang lengkap?</b> Klik "Lengkapi kontak (AI)" di bawah kartu - AI buka website resmi perusahaannya buat verifikasi website, cari telepon kantor, email resmi (HR/karir/umum), dan cek PIC-nya masih kerja di situ atau udah pindah.</li>
+              <li><b>Kontak dilengkapi otomatis</b> - abis perusahaannya ketemu, AI langsung buka website resmi tiap perusahaan buat verifikasi website, cari telepon & email (kontak bisnis PIC kalau dipublikasikan, kalau gak ada kontak kantor/HR/umum), dan cek PIC-nya masih kerja di situ atau udah pindah.</li>
               <li>AI dilarang keras <b>ngarang data</b> — kalau info kayak nama PIC gak ketemu di sumber publik, dikosongin aja, bukan ditebak.</li>
             </ul>
           </div>
@@ -325,7 +356,11 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
               </label>
             </div>
             <button onClick={generate} disabled={busy || !productSold.trim() || !keyword.trim() || !targetRole.trim()} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
-              {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} {busy ? "Lagi nyari (bisa 1-2 menit)… bebas pindah tab, nanti ada notif" : "Generate 15 Leads"}
+              {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} {busy
+                ? (enrichProgress
+                  ? `Lagi lengkapin kontak (${enrichProgress.done}/${enrichProgress.total})… bebas pindah tab, nanti ada notif`
+                  : "Lagi nyari perusahaan (total ±3-4 menit)… bebas pindah tab, nanti ada notif")
+                : "Generate 15 Leads"}
             </button>
           </div>
         )}
@@ -432,16 +467,18 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                                   </div>
                                 </div>
                               </button>
-                              {!imported && (
+                              {!imported && (enrichingId === r.id || enrichMsg[r.id] || (!busy && (r.enrich_status === "failed" || r.enrich_status === "pending"))) && (
                                 <div className="flex items-center gap-2 flex-wrap mt-2 px-2">
-                                  <button
-                                    onClick={() => enrichLead(r)}
-                                    disabled={!!enrichingId}
-                                    className="text-[11px] font-medium text-violet-300 hover:text-violet-200 disabled:opacity-50 flex items-center gap-1"
-                                  >
-                                    {enrichingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                    {enrichingId === r.id ? "Lagi buka website resminya (±1-2 menit)…" : "Lengkapi kontak (AI)"}
-                                  </button>
+                                  {(enrichingId === r.id || r.enrich_status === "failed" || r.enrich_status === "pending") && (
+                                    <button
+                                      onClick={() => enrichLead(r)}
+                                      disabled={!!enrichingId}
+                                      className="text-[11px] font-medium text-violet-300 hover:text-violet-200 disabled:opacity-50 flex items-center gap-1"
+                                    >
+                                      {enrichingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                      {enrichingId === r.id ? "Lagi buka website resminya (±1-2 menit)…" : "Kontak belum berhasil dilengkapi - coba lagi"}
+                                    </button>
+                                  )}
                                   {enrichMsg[r.id] && <span className={`text-[11px] ${enrichMsg[r.id].startsWith("Gagal") ? "text-rose-400" : "text-slate-400"}`}>{enrichMsg[r.id]}</span>}
                                 </div>
                               )}

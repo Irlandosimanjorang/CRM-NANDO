@@ -353,6 +353,18 @@ export async function getActiveLeadGenJob() {
   return data || null;
 }
 
+// Progres pelengkapan kontak otomatis per batch generate (lihat
+// enrich-generated-lead) - dipake frontend buat nunggu semua lead beres
+// sebelum bilang "selesai".
+export async function getEnrichProgress(runId) {
+  const { data, error } = await supabase
+    .from("generated_leads")
+    .select("id, enrich_status, enrich_started_at")
+    .eq("run_id", runId);
+  if (error) throw error;
+  return data || [];
+}
+
 export async function getGeneratedLeads() {
   // Ambil SEMUA riwayat (bukan cuma yang pending) - biar tetep keliatan
   // walau udah diimport, gak ilang dari daftar.

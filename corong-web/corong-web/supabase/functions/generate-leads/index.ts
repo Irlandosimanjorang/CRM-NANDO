@@ -26,6 +26,7 @@ const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
+const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const cors = {
   "Access-Control-Allow-Origin": "https://nexto.site",
@@ -74,8 +75,9 @@ Buat TIAP calon lead, cari (kalau ada, JANGAN karang):
 - key_person: nama PIC/pemilik/direktur/jabatan target (SERING gak ketemu di sumber publik - kosongin aja kalau emang gak nemu, JANGAN NGARANG NAMA ORANG)
 - key_person_title: jabatannya
 - website: url resmi - HANYA isi kalau domain resminya muncul di hasil search yang kamu lihat, JANGAN isi dari ingatan/tebakan
-- phone: nomor telepon kantor/perusahaan yang tercantum publik (bukan HP pribadi orang)
-- email: email resmi yang TERTULIS PERSIS di sumber (website/listing) - JANGAN PERNAH nebak pola email kayak nama@domain
+- phone: nomor kontak bisnis PIC kalau dipublikasikan publik, kalau gak ada telepon kantor/perusahaan yang tercantum publik - JANGAN nebak
+- email: email bisnis PIC kalau tertulis publik, kalau gak ada email resmi perusahaan (HR/karir/umum) yang TERTULIS PERSIS di sumber - JANGAN PERNAH nebak pola email kayak nama@domain
+(Kontak yang belum ketemu di tahap ini bakal dilengkapi otomatis di tahap berikutnya dengan buka website resmi tiap perusahaan - jadi fokus utama kamu di sini: perusahaan yang TEPAT + website resminya.)
 - city: kota / alamat singkat
 - category: jenis industri/usaha
 - product: produk/kebutuhan spesifik yang relevan buat lead ini
@@ -357,11 +359,24 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
       score_contact_quality: Number.isFinite(l.score_contact_quality) ? Math.max(1, Math.min(100, Math.round(l.score_contact_quality))) : null,
       score_buying_signal: Number.isFinite(l.score_buying_signal) ? Math.max(1, Math.min(100, Math.round(l.score_buying_signal))) : null,
       score: Number.isFinite(l.score) ? Math.max(1, Math.min(100, Math.round(l.score))) : 50,
+      enrich_status: "pending",
+      enrich_started_at: new Date().toISOString(),
     }));
-    const { error: insErr } = await admin.from("generated_leads").insert(rows);
+    const { data: inserted, error: insErr } = await admin.from("generated_leads").insert(rows).select("id");
     if (insErr) {
       await failJob(insErr.message);
       return;
+    }
+
+    // Lengkapi kontak tiap lead OTOMATIS & PARALEL - lewat pg_net biar tiap
+    // lead jalan di invocation enrich-generated-lead sendiri (batas waktu
+    // masing-masing), gak numpuk di sisa waktu function ini. Frontend nunggu
+    // semua enrich_status beres baru bilang "selesai".
+    const ids = (inserted || []).map((r) => r.id);
+    const { error: dispatchErr } = await admin.rpc("dispatch_lead_enrichment", { p_ids: ids, p_secret: CRON_SECRET });
+    if (dispatchErr) {
+      console.log("[generate-leads] dispatch enrichment gagal:", dispatchErr.message);
+      await admin.from("generated_leads").update({ enrich_status: "failed" }).in("id", ids);
     }
 
     await admin.from("lead_gen_jobs").update({ status: "done", run_id: runId, result_count: rows.length, updated_at: new Date().toISOString() }).eq("id", jobId);
@@ -440,12 +455,12 @@ Deno.serve(async (req) => {
 
     await runGeneration({ jobId, orgId, userId, industryTerms, keyword, province, targetRole, productSold, companyScale, targetType });
 
-    const { data: finalJob } = await admin.from("lead_gen_jobs").select("status, result_count, error_message").eq("id", jobId).maybeSingle();
+    const { data: finalJob } = await admin.from("lead_gen_jobs").select("status, result_count, error_message, run_id").eq("id", jobId).maybeSingle();
     if (finalJob?.status === "failed") {
       if (reservedRunId) await admin.rpc("release_lead_gen_slot", { p_run_id: reservedRunId });
       return new Response(JSON.stringify({ error: finalJob.error_message || "Gagal generate lead." }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ ok: true, count: finalJob?.result_count ?? 0, job_id: jobId }), { headers: { ...cors, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ok: true, count: finalJob?.result_count ?? 0, job_id: jobId, run_id: finalJob?.run_id || null }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     console.log(`[generate-leads] FATAL (sinkron):`, String(e));
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
