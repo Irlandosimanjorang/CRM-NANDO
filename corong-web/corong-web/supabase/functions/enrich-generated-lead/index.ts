@@ -45,6 +45,7 @@ function wibDayStartUTC(d = new Date()) {
 async function callClaudeWithContinuation(body, signal) {
   const messages = [...body.messages];
   let dat = null;
+  const usage = { input: 0, cache_write: 0, cache_read: 0, output: 0, searches: 0, fetches: 0, calls: 0 };
   for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
     let resp;
     for (let r = 0; r <= MAX_RATE_RETRIES; r++) {
@@ -59,9 +60,21 @@ async function callClaudeWithContinuation(body, signal) {
     }
     if (!resp.ok) throw new Error(`AI gagal: ${resp.status} ${(await resp.text()).slice(0, 200)}`);
     dat = await resp.json();
+    const u = dat.usage || {};
+    usage.input += u.input_tokens || 0;
+    usage.cache_write += u.cache_creation_input_tokens || 0;
+    usage.cache_read += u.cache_read_input_tokens || 0;
+    usage.output += u.output_tokens || 0;
+    usage.searches += u.server_tool_use?.web_search_requests || 0;
+    usage.fetches += u.server_tool_use?.web_fetch_requests || 0;
+    usage.calls += 1;
     if (dat.stop_reason !== "pause_turn") break;
     messages.push({ role: "assistant", content: dat.content });
   }
+  // Harga Sonnet 5.5 (per MTok): input $2, cache write 5m $2.5, cache read
+  // $0.2, output $10; web search $10/1000. Web fetch gratis (cuma token).
+  const costUsd = (usage.input * 2 + usage.cache_write * 2.5 + usage.cache_read * 0.2 + usage.output * 10) / 1e6 + usage.searches * 0.01;
+  console.log("[enrich-generated-lead] USAGE", JSON.stringify({ ...usage, cost_usd: Math.round(costUsd * 10000) / 10000 }));
   return (dat?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
 }
 
