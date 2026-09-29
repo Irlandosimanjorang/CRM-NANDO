@@ -32,3 +32,8 @@ create policy org_product_catalog_write on public.org_product_catalog
     and exists (select 1 from organizations o where o.id = org_product_catalog.org_id and o.plan = 'enterprise'))
   with check ((org_id in (select my_org_ids())) and (my_role() = any (array['owner','manager']))
     and exists (select 1 from organizations o where o.id = org_product_catalog.org_id and o.plan = 'enterprise'));
+
+-- Revisi (30 Sep 2026, permintaan Nando): maks 8 produk - migration
+-- "org_product_catalog_max_8".
+alter table public.org_product_catalog drop constraint products_is_array;
+alter table public.org_product_catalog add constraint products_is_array check (jsonb_typeof(products) = 'array' and jsonb_array_length(products) <= 8);

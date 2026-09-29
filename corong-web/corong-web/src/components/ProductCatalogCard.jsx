@@ -6,7 +6,7 @@ import * as db from "../lib/db";
 // masukan calon klien) - dibaca AI "Ringkasan Kebutuhan" biar bisa
 // rekomendasiin produk yang cocok sama kebutuhan prospek, bukan cuma nyimpulin
 // kebutuhannya doang. Owner/manager yang ngisi, sales cuma liat.
-const MAX_PRODUCTS = 20;
+const MAX_PRODUCTS = 8;
 const EMPTY = { name: "", description: "", fit_for: "", price: "" };
 
 export default function ProductCatalogCard({ canManage }) {
