@@ -25,7 +25,25 @@ export default function ProductCatalogCard({ canManage }) {
 
   const setItem = (i, k, v) => setProducts((p) => p.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
   const addItem = () => setProducts((p) => (p.length >= MAX_PRODUCTS ? p : [...p, { ...EMPTY }]));
-  const delItem = (i) => setProducts((p) => p.filter((_, j) => j !== i));
+  // Hapus langsung kesimpen ke database (30 Sep 2026) - dulu cuma ilang dari
+  // layar & balik lagi pas refresh kalau user gak klik "Simpan katalog".
+  const delItem = async (i) => {
+    const removed = products[i];
+    const next = products.filter((_, j) => j !== i);
+    setProducts(next);
+    setMsg("");
+    try {
+      const clean = next
+        .map((x) => ({ name: x.name.trim(), description: x.description.trim(), fit_for: x.fit_for.trim(), price: x.price.trim() }))
+        .filter((x) => x.name);
+      await db.saveProductCatalog(profile.trim(), clean);
+      setMsg(removed?.name ? `"${removed.name}" dihapus` : "Produk dihapus");
+      setTimeout(() => setMsg(""), 2500);
+    } catch (e) {
+      setProducts(products);
+      setMsg("Gagal hapus: " + e.message);
+    }
+  };
 
   const save = async () => {
     const clean = products
@@ -75,7 +93,7 @@ export default function ProductCatalogCard({ canManage }) {
                 <div className="flex items-center gap-2">
                   <input className={inp} maxLength={80} disabled={!canManage} placeholder="Nama produk/layanan *" value={p.name} onChange={(e) => setItem(i, "name", e.target.value)} />
                   {canManage && (
-                    <button onClick={() => delItem(i)} className="text-slate-300 hover:text-rose-500 shrink-0" title="Hapus"><Trash2 size={15} /></button>
+                    <button onClick={() => delItem(i)} className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Hapus produk" aria-label="Hapus produk"><Trash2 size={16} /></button>
                   )}
                 </div>
                 <textarea className={inp} rows={2} maxLength={300} disabled={!canManage} placeholder="Deskripsi singkat" value={p.description} onChange={(e) => setItem(i, "description", e.target.value)} />
