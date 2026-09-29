@@ -146,6 +146,16 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [myUid, setMyUid] = useState(null);
   const [orgLoading, setOrgLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState("");
+  // Feedback visual pas tombol salin diklik (icon Copy -> centang ~1.5detik)
+  // - dipake di semua tombol "salin ke clipboard" di tab ini (kode invite,
+  // MCP URL/token, secret MFA, kode recovery), key-nya beda-beda per tombol
+  // biar gak ketuker nampilin centang di tombol lain.
+  const [copiedKey, setCopiedKey] = useState("");
+  const copyToClipboard = (text, key) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey((k) => (k === key ? "" : k)), 1500);
+  };
   const [inviteExpiresAt, setInviteExpiresAt] = useState(null);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -612,7 +622,9 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                       <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota tim, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
                       <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
                         <span className="flex-1 tracking-wider">{inviteCode}</span>
-                        <button onClick={() => navigator.clipboard.writeText(inviteCode)} className="text-slate-400 hover:text-slate-700" title="Salin kode"><Copy size={14} /></button>
+                        <button onClick={() => copyToClipboard(inviteCode, "invite")} className={copiedKey === "invite" ? "text-emerald-600" : "text-slate-400 hover:text-slate-700"} title="Salin kode">
+                          {copiedKey === "invite" ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                        </button>
                         <button onClick={cancelInvite} disabled={cancelBusy} className="text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Batalin kode ini"><X size={14} /></button>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-2">Bisa dipake berkali-kali sampe kuota anggota penuh. Berlaku 1 jam.</p>
@@ -826,7 +838,9 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
               <p className="text-[11px] font-medium text-slate-500 mb-1">Server URL (masukin ini di konfigurasi connector/MCP agent-nya)</p>
               <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-[11px]">
                 <span className="flex-1 break-all">{MCP_SERVER_URL}</span>
-                <button onClick={() => navigator.clipboard.writeText(MCP_SERVER_URL)} className="text-slate-400 hover:text-slate-700 shrink-0"><Copy size={13} /></button>
+                <button onClick={() => copyToClipboard(MCP_SERVER_URL, "mcpUrl")} className={(copiedKey === "mcpUrl" ? "text-emerald-600" : "text-slate-400 hover:text-slate-700") + " shrink-0"}>
+                  {copiedKey === "mcpUrl" ? <CheckCircle2 size={13} /> : <Copy size={13} />}
+                </button>
               </div>
             </div>
 
@@ -835,7 +849,9 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                 <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang - API key ini CUMA ditampilin sekali dan gak bisa dilihat ulang.</p>
                 <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg px-3 py-2 font-mono text-[11px]">
                   <span className="flex-1 break-all">{mcpNewPlaintext}</span>
-                  <button onClick={() => navigator.clipboard.writeText(mcpNewPlaintext)} className="text-amber-600 hover:text-amber-800 shrink-0"><Copy size={13} /></button>
+                  <button onClick={() => copyToClipboard(mcpNewPlaintext, "mcpToken")} className={(copiedKey === "mcpToken" ? "text-emerald-600" : "text-amber-600 hover:text-amber-800") + " shrink-0"}>
+                    {copiedKey === "mcpToken" ? <CheckCircle2 size={13} /> : <Copy size={13} />}
+                  </button>
                 </div>
                 <button onClick={() => setMcpNewPlaintext(null)} className="mt-2 w-full text-xs bg-amber-600 hover:bg-amber-700 text-white rounded-lg py-1.5 font-medium">Sudah saya simpan</button>
               </div>
@@ -899,7 +915,9 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
             <p className="text-[11px] text-slate-400">Gak bisa scan? Masukin manual kode ini di app authenticator-nya:</p>
             <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-[11px]">
               <span className="flex-1 break-all">{mfaSecret}</span>
-              <button onClick={() => navigator.clipboard.writeText(mfaSecret)} className="text-slate-400 hover:text-slate-700 shrink-0"><Copy size={13} /></button>
+              <button onClick={() => copyToClipboard(mfaSecret, "mfaSecret")} className={(copiedKey === "mfaSecret" ? "text-emerald-600" : "text-slate-400 hover:text-slate-700") + " shrink-0"}>
+                {copiedKey === "mfaSecret" ? <CheckCircle2 size={13} /> : <Copy size={13} />}
+              </button>
             </div>
             <p className="text-xs text-slate-600 pt-1">2. Masukin kode 6 digit yang muncul di app-nya:</p>
             <input
@@ -956,10 +974,10 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                   {recoveryCodes.map((c) => <div key={c}>{c}</div>)}
                 </div>
                 <button
-                  onClick={() => navigator.clipboard.writeText(recoveryCodes.join("\n"))}
-                  className="mt-2 text-[11px] text-amber-700 hover:text-amber-900 flex items-center gap-1"
+                  onClick={() => copyToClipboard(recoveryCodes.join("\n"), "recoveryCodes")}
+                  className={"mt-2 text-[11px] flex items-center gap-1 " + (copiedKey === "recoveryCodes" ? "text-emerald-700" : "text-amber-700 hover:text-amber-900")}
                 >
-                  <Copy size={11} /> Salin semua kode
+                  {copiedKey === "recoveryCodes" ? <><CheckCircle2 size={11} /> Tersalin</> : <><Copy size={11} /> Salin semua kode</>}
                 </button>
                 <label className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-800">
                   <input type="checkbox" checked={recoverySavedConfirm} onChange={(e) => setRecoverySavedConfirm(e.target.checked)} />
