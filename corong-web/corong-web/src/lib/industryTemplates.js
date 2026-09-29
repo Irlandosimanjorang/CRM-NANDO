@@ -212,25 +212,31 @@ export const INDUSTRY_TEMPLATES = {
   corporate_consultant: {
     key: "corporate_consultant",
     label: "Corporate Consultant",
-    description: "Konsultan strategi, manajemen, hukum, pajak, HR, atau keuangan buat perusahaan",
-    // Pipeline konsultasi korporat nyata biasanya masuk lewat salah satu dari 2
-    // jalur: RFP/tender resmi dari procurement klien, ATAU pendekatan langsung
-    // (referral/networking) - makanya ada stage "Discovery" tersendiri sebelum
-    // proposal, beda dari sales produk biasa yang bisa langsung nawarin harga.
+    description: "Konsultan/kontraktor jasa berbasis project buat perusahaan (SPK/kontrak kerja)",
+    // Pipeline & penamaan PERSIS dari masukan calon klien (bisnis project-based:
+    // konsultasi/jasa yang berakhir dengan SPK/kontrak kerja, bukan sekadar
+    // retainer bulanan) - BUKAN istilah generik konsultan yang gua karang
+    // sendiri di draft awal. 3 stage terakhir (Booking/Revenue/Cash In) SEMUA
+    // "type: won" sekaligus - deal-nya udah closed dari stage Booking, tapi
+    // masih perlu dilacak progress-nya (pekerjaan kelar -> invoice terbit ->
+    // uang masuk) - Nexto ngedukung banyak stage "won" sekaligus buat kasus
+    // kayak gini, win-rate/revenue tetep kehitung bener di stage manapun dari
+    // 3 itu leadnya lagi ada.
     stages: [
-      { key: "prospek", label: "Prospek Baru", hex: "#94a3b8", type: "normal" },
-      { key: "discovery", label: "Discovery / RFP", hex: "#60a5fa", type: "normal" },
-      { key: "proposal", label: "Proposal & SOW", hex: "#fbbf24", type: "normal" },
-      { key: "negosiasi", label: "Negosiasi", hex: "#f97316", type: "normal" },
-      { key: "kontrak_signed", label: "Kontrak Signed", hex: "#10b981", type: "won" },
+      { key: "prospect", label: "Prospect", hex: "#94a3b8", type: "normal" },
+      { key: "lead", label: "Lead", hex: "#60a5fa", type: "normal" },
+      { key: "hot_lead", label: "Hot Lead", hex: "#fbbf24", type: "normal" },
+      { key: "booking", label: "Booking", hex: "#10b981", type: "won" },
+      { key: "revenue", label: "Revenue", hex: "#0d9488", type: "won" },
+      { key: "cash_in", label: "Cash In", hex: "#059669", type: "won" },
       { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
     ],
     fieldLabels: {
       name: "Nama perusahaan klien",
-      product: "Scope jasa yang dibutuhkan",
+      product: "Scope jasa/project",
       company_type: "Skala perusahaan",
       key_person_title: "Jabatan (decision maker)",
-      quantity: "Nilai kontrak (Rp)",
+      quantity: "Nilai kontrak/SPK (Rp)",
     },
     categories: ["Konsultan Strategi & Manajemen", "Konsultan Hukum", "Konsultan Pajak", "Konsultan HR & Organisasi", "Konsultan Keuangan & Audit", "Konsultan IT/Digital Transformation", "Lainnya"],
     companyTypeOptions: [
@@ -238,12 +244,12 @@ export const INDUSTRY_TEMPLATES = {
     ],
     hiddenFields: [],
     customFieldLabels: {
-      custom_field_1: "Durasi engagement",
+      custom_field_1: "No. SPK / Kontrak",
       custom_field_2: "Sumber lead (RFP/Referral/Networking)",
-      custom_field_3: "Anggaran klien (budget range)",
-      custom_field_4: "Model billing (Fixed fee/Retainer/Hourly)",
+      custom_field_3: "Termin pembayaran",
+      custom_field_4: "Status invoice",
     },
-    aiContext: "Bisnis ini jasa konsultasi korporat (strategi/manajemen/hukum/pajak/HR/keuangan/IT). Istilah relevan: engagement, scope of work (SOW), RFP/tender, proposal, retainer, fixed fee, billing rate, deliverable, milestone, kickoff meeting, stakeholder mapping, decision maker vs pengaruh (influencer).",
+    aiContext: "Bisnis ini jasa/konsultasi korporat berbasis project (strategi/manajemen/hukum/pajak/HR/keuangan/IT). Pipeline-nya: Prospect (terindikasi ada kebutuhan) -> Lead (submit proposal/quotation sampai presentasi) -> Hot Lead (udah nanya lebih detail, potensial closing) -> Booking (deal, ada kontrak kerja/SPK) -> Revenue (pekerjaan selesai, invoice terbit) -> Cash In (uang udah masuk). Istilah relevan: SPK (Surat Perintah Kerja), scope of work, quotation, termin pembayaran, invoice, kickoff, deliverable, decision maker.",
     genLeadsExample: { productSold: "jasa konsultasi manajemen, audit pajak, transformasi digital", keyword: "perusahaan yang butuh konsultan bisnis", targetRole: "Direktur, CEO, CFO, atau Head of Legal/HR" },
   },
 };
