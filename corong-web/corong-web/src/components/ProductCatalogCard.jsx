@@ -51,7 +51,7 @@ export default function ProductCatalogCard({ canManage }) {
     <div className="bg-white border border-slate-100 rounded-[28px] p-4">
       <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Package size={15} className="text-orange-500" /> Produk & Layanan Perusahaan</h3>
       <p className="text-xs text-slate-500 mb-3">
-        Dipakai AI Ringkasan Kebutuhan buat rekomendasiin produk yang cocok ke tiap prospek. Makin jelas "cocok untuk siapa", makin tepat rekomendasinya.
+        Dibaca AI di 4 fitur: <b className="font-semibold text-slate-600">Ringkasan Kebutuhan</b> (rekomendasi produk yang cocok ke tiap prospek), <b className="font-semibold text-slate-600">Draft Follow-up</b> (pesan WA/email nyebut produk yang relevan), <b className="font-semibold text-slate-600">Generate Leads</b> (nyari perusahaan yang butuh produk Anda) dan <b className="font-semibold text-slate-600">Daily Digest</b> (saran harian nyebut produk yang pas ditawarin). Makin jelas "cocok untuk siapa", makin tepat hasilnya.
         {!canManage && " Cuma owner/manager yang bisa ubah."}
       </p>
 
