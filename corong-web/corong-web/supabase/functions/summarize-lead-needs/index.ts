@@ -59,15 +59,13 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData?.user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: cors });
 
-    // ---- TIER GATE - sama kayak AI Draft Follow-up, fitur Professional ke atas.
+    // ---- TIER GATE - khusus Enterprise (30 Sep 2026, permintaan Nando;
+    // sebelumnya Professional ke atas).
     const { data: memberRow } = await supabase.from("organization_members").select("org_id").eq("user_id", userData.user.id).limit(1).maybeSingle();
     const { data: orgRow } = memberRow ? await supabase.from("organizations").select("plan, industry").eq("id", memberRow.org_id).maybeSingle() : { data: null };
-    const { data: settingsRow } = await supabase.from("settings").select("plan").eq("user_id", userData.user.id).maybeSingle();
-    const GATE_PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
     const isEnterprise = orgRow?.plan === "enterprise";
-    const myPlanLevel = isEnterprise ? 2 : (GATE_PLAN_LEVEL[settingsRow?.plan] ?? 0);
-    if (myPlanLevel < 2) {
-      return new Response(JSON.stringify({ error: "Ringkasan Kebutuhan (AI) itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto ya." }), { status: 403, headers: cors });
+    if (!isEnterprise) {
+      return new Response(JSON.stringify({ error: "Ringkasan Kebutuhan (AI) itu fitur khusus paket Enterprise. Upgrade dulu di tab Pengaturan Nexto ya." }), { status: 403, headers: cors });
     }
 
     // RLS otomatis nge-filter, cuma bisa akses lead punya org sendiri (dan
@@ -93,9 +91,7 @@ Deno.serve(async (req) => {
 
     // Katalog produk/layanan org (30 Sep 2026) - kalau diisi, AI juga
     // rekomendasiin produk dari katalog ini yang cocok sama kebutuhan lead.
-    // Khusus Enterprise (permintaan Nando) - paket lain tetep dapet ringkasan
-    // kebutuhan biasa tanpa rekomendasi produk.
-    const { data: catalog } = memberRow && isEnterprise
+    const { data: catalog } = memberRow
       ? await supabase.from("org_product_catalog").select("company_profile, products").eq("org_id", memberRow.org_id).maybeSingle()
       : { data: null };
     const catalogProducts = (Array.isArray(catalog?.products) ? catalog.products : []).filter((p) => p?.name).slice(0, 20);
@@ -164,7 +160,7 @@ Tulis dalam Bahasa Indonesia yang natural.`;
       );
     }
 
-    return new Response(JSON.stringify({ ...obj, has_catalog: isEnterprise ? hasCatalog : null, based_on_notes_count: notes.length }), { headers: { ...cors, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ...obj, has_catalog: hasCatalog, based_on_notes_count: notes.length }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
   }

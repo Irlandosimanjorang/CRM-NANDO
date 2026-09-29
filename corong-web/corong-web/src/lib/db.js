@@ -459,7 +459,7 @@ export async function draftFollowup(leadId, channel) {
 
 // AI baca SEMUA catatan progress/notulen 1 lead, nyimpulin klien butuh
 // produk/layanan apa + kenapa + sinyal budget/urgency - dipanggil ON-DEMAND
-// (tombol "Ringkasan Kebutuhan (AI)" di LeadModal), fitur Professional ke atas.
+// (tombol "Ringkasan Kebutuhan (AI)" di LeadModal), fitur khusus Enterprise.
 export async function summarizeLeadNeeds(leadId) {
   const { data, error } = await supabase.functions.invoke("summarize-lead-needs", { body: { lead_id: leadId } });
   if (error) {

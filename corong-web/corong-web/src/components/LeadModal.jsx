@@ -192,7 +192,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   }, [lead.id]);
   const generateNeedsSummary = async () => {
     if (!lead.id) return;
-    if (!isProfessional) { alert("Fitur \"Ringkasan Kebutuhan (AI)\" itu khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan."); return; }
+    if (!isEnterprise) { alert("Fitur \"Ringkasan Kebutuhan (AI)\" itu khusus paket Enterprise. Upgrade dulu di tab Pengaturan."); return; }
     setNeedsSummaryBusy(true);
     setNeedsSummaryErr("");
     try {
@@ -465,11 +465,11 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 </div>
                 <button
                   onClick={generateNeedsSummary}
-                  disabled={needsSummaryBusy || !isProfessional}
-                  title={!isProfessional ? "Khusus paket Professional ke atas" : undefined}
+                  disabled={needsSummaryBusy || !isEnterprise}
+                  title={!isEnterprise ? "Khusus paket Enterprise" : undefined}
                   className="shrink-0 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 disabled:opacity-50 flex items-center gap-1"
                 >
-                  {needsSummaryBusy ? <Loader2 size={12} className="animate-spin" /> : !isProfessional ? <Lock size={12} /> : <Sparkles size={12} />}
+                  {needsSummaryBusy ? <Loader2 size={12} className="animate-spin" /> : !isEnterprise ? <Lock size={12} /> : <Sparkles size={12} />}
                   {needsSummary ? "Buat ulang" : "Simpulkan dari notulen"}
                 </button>
               </div>
@@ -503,7 +503,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                   <p className="mt-2 text-[10px] text-slate-400">Disimpulkan dari {needsSummary.based_on_notes_count || 0} catatan progress - AI dilarang ngarang, kalau gak ada info di catatan bakal bilang terus terang.</p>
                 </>
               ) : (
-                !needsSummaryErr && <p className="mt-2 text-[11px] text-slate-500">Belum ada ringkasan. Klik "Simpulkan dari notulen" buat baca semua catatan progress lead ini dan nyimpulin kebutuhan kliennya.</p>
+                !needsSummaryErr && <p className="mt-2 text-[11px] text-slate-500">{!isEnterprise ? "Fitur khusus paket Enterprise. " : ""}Belum ada ringkasan. Klik "Simpulkan dari notulen" buat baca semua catatan progress lead ini dan nyimpulin kebutuhan kliennya.</p>
               )}
             </div>
           )}
