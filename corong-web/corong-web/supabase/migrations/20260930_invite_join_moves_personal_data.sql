@@ -1,4 +1,4 @@
--- USULAN - BELUM DIJALANKAN (30 Sep 2026)
+-- SUDAH DIJALANKAN manual oleh Nando di Supabase SQL Editor (30 Sep 2026).
 -- Penerapan otomatis diblokir sistem keamanan; review dulu, lalu jalankan
 -- manual di Supabase SQL Editor kalau setuju.
 --

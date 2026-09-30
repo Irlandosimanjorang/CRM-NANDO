@@ -290,7 +290,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     setJoinBusy(true); setJoinMsg("");
     try {
       const res = await db.redeemInviteCode(joinCode.trim());
-      setJoinMsg(`✅ Berhasil gabung ke ${res.org_name}. Refresh halaman buat lihat data team.`);
+      setJoinMsg(`Berhasil bergabung ke ${res.org_name}.${res.moved_leads ? ` ${res.moved_leads} lead Anda ikut dipindahkan ke team.` : ""} Muat ulang halaman untuk melihat data team.`);
       setJoinCode("");
       loadOrg();
       onChanged();

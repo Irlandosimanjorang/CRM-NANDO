@@ -1,4 +1,4 @@
--- USULAN - dijalankan manual oleh Nando di Supabase SQL Editor (30 Sep 2026).
+-- SUDAH DIJALANKAN manual oleh Nando di Supabase SQL Editor (30 Sep 2026).
 -- Paket Enterprise team habis -> anggota selain owner dikunci dari data team.
 -- Owner tetap bisa masuk. Data tidak dihapus; begitu Enterprise aktif lagi,
 -- akses anggota otomatis kembali.

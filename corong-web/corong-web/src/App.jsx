@@ -194,11 +194,11 @@ export default function App() {
     setJoinBusy(true); setJoinMsg("");
     try {
       const res = await db.redeemInviteCode(joinCode.trim());
-      setJoinMsg(`✅ Gabung ke ${res.org_name}! Semua fitur Enterprise sekarang kebuka.`);
+      setJoinMsg(`Berhasil bergabung ke ${res.org_name}. Semua fitur Enterprise sudah aktif.${res.moved_leads ? ` ${res.moved_leads} lead Anda ikut dipindahkan ke team.` : ""}`);
       setJoinCode("");
       await reload();
     } catch (e) {
-      setJoinMsg("Gagal: " + e.message);
+      setJoinMsg("Gagal bergabung: " + e.message);
     } finally {
       setJoinBusy(false);
     }
