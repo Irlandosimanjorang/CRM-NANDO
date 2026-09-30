@@ -4,6 +4,7 @@ import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
 import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPos } from "./lib/uiPersist";
 import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
+import { getIndustryDemo } from "./lib/industryDemo";
 import Auth from "./Auth";
 import PreviewLock from "./components/PreviewLock";
 import AppTour from "./components/AppTour";
@@ -53,24 +54,9 @@ import {
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
 // di semua tempat, termasuk loading screen. Dihapus biar gak ada kode nganggur.)
 
-// ---- DATA DUMMY buat preview tab Premium (user Free) ----
-// Ngasal doang - biar user Free liat gambaran "beneran kepake" bukan tab kosong.
-// Gak pernah disimpen ke database, murni buat ditampilin doang.
-const today = new Date().toISOString().slice(0, 10);
-const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-const DUMMY_LEADS = [
-  { id: "dummy-1", name: "PT Sinar Abadi Distribusi", category: "Bahan Baku", stage_key: "presentasi", city: "Tangerang", key_person: "Budi Santoso", key_person_title: "Purchasing Manager", phone: "0812xxxxxx01", email: "budi@sinarabadi.co.id", visit_date: today, visit_meet: "Budi Santoso", visit_agenda: "Presentasi produk & harga penawaran", last_contact: "2026-08-20", next_action: "Follow up hasil presentasi minggu lalu", latitude: null, longitude: null, source: "manual" },
-  { id: "dummy-2", name: "CV Karya Mandiri", category: "Barang Jadi", stage_key: "negosiasi", city: "Bekasi", key_person: "Sari Wulandari", key_person_title: "Direktur", phone: "0812xxxxxx02", email: "sari@karyamandiri.id", visit_date: tomorrow, visit_meet: "Sari Wulandari", visit_agenda: "Trial sample produk", last_contact: "2026-08-18", next_action: "Kirim sample ke pabrik", latitude: null, longitude: null, source: "manual" },
-  { id: "dummy-3", name: "PT Maju Bersama Sejahtera", category: "Jasa", stage_key: "deal", city: "Surabaya", key_person: "Ahmad Fauzi", key_person_title: "Owner", phone: "0812xxxxxx03", email: "ahmad@majubersama.co.id", last_contact: "2026-08-15", latitude: null, longitude: null, source: "telegram" },
-];
-const DUMMY_DEAL_TX = [
-  { id: "dd-1", lead_id: "dummy-3", lead_name: "PT Maju Bersama Sejahtera", deal_date: "2026-08-15", deal_value: 45000000, tonnage: 5, tonnage_unit: "ton", chemical: "Produk A - Kemasan Reguler" },
-  { id: "dd-2", lead_id: "dummy-2", lead_name: "CV Karya Mandiri", deal_date: "2026-08-10", deal_value: 28000000, tonnage: 3, tonnage_unit: "ton", chemical: "Produk B - Kemasan Grosir" },
-];
-const DUMMY_COMPETITORS = [
-  { id: "dc-1", name: "PT Kompetitor Jaya", background: "Pemain lama di area Jabodetabek", product: "Produk Sejenis A", notes: "Harga agresif tapi servis lambat", usages: [{ id: "u1", company: "PT ABC Nusantara", product: "Produk X", price: "Rp15.000/pcs", quantity: "2000 pcs/bulan" }] },
-  { id: "dc-2", name: "CV Rival Sentosa", background: "Fokus segmen menengah ke bawah", product: "Produk Sejenis B", notes: "Kuat di after-sales support", usages: [] },
-];
+// ---- DATA CONTOH buat preview tab terkunci (user Free) ----
+// Disesuaikan per industri & pipeline org (lib/industryDemo.js) - gak pernah
+// disimpen ke database, murni buat ditampilin.
 
 const NAV = [
   { key: "dashboard", label: "Dashboard", short: "Beranda", icon: LayoutDashboard },
@@ -662,6 +648,7 @@ export default function App() {
   };
 
   const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
+  const demo = useMemo(() => getIndustryDemo(org?.industry, stageList), [org?.industry, stages]); // deps pakai `stages` (state stabil), bukan stageList yang dibuat ulang tiap render
 
 
   const effectiveTab = tab;
@@ -992,14 +979,14 @@ export default function App() {
                 {visitedTabs.has("deal") && (
                   <div style={{ display: effectiveTab === "deal" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("deal")} minLevel={TAB_MIN_LEVEL.deal}>
-                      <Deal leads={isLocked("deal") ? DUMMY_LEADS : leads} stages={stageList} dealTransactions={isLocked("deal") ? DUMMY_DEAL_TX : dealTransactions} industry={org?.industry} onEdit={setEditLead} onChanged={reload} />
+                      <Deal leads={isLocked("deal") ? demo.leads : leads} stages={stageList} dealTransactions={isLocked("deal") ? demo.deals : dealTransactions} industry={org?.industry} onEdit={setEditLead} onChanged={reload} />
                     </PreviewLock>
                   </div>
                 )}
                 {visitedTabs.has("visitfollowup") && (
                   <div style={{ display: effectiveTab === "visitfollowup" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("visitfollowup")} minLevel={TAB_MIN_LEVEL.visitfollowup}>
-                      <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} myLevel={myLevel} />
+                      <VisitFollowup leads={isLocked("visitfollowup") ? demo.leads : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} myLevel={myLevel} industry={org?.industry} />
                     </PreviewLock>
                   </div>
                 )}
@@ -1011,7 +998,7 @@ export default function App() {
                 {visitedTabs.has("kompetitor") && (
                   <div style={{ display: effectiveTab === "kompetitor" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("kompetitor")} minLevel={TAB_MIN_LEVEL.kompetitor}>
-                      <Kompetitor competitors={isLocked("kompetitor") ? DUMMY_COMPETITORS : competitors} onChanged={reload} />
+                      <Kompetitor competitors={isLocked("kompetitor") ? demo.competitors : competitors} onChanged={reload} />
                     </PreviewLock>
                   </div>
                 )}
@@ -1025,7 +1012,7 @@ export default function App() {
                 {visitedTabs.has("advisor") && (
                   <div style={{ display: effectiveTab === "advisor" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("advisor")} minLevel={TAB_MIN_LEVEL.advisor}>
-                      <Advisor leads={isLocked("advisor") ? DUMMY_LEADS : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} />
+                      <Advisor leads={isLocked("advisor") ? demo.leads : leads} stages={stageList} onOpen={setEditLead} dummy={isLocked("advisor")} demoRecs={demo.advisorRecs} />
                     </PreviewLock>
                   </div>
                 )}

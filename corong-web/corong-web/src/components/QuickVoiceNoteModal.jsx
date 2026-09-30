@@ -399,7 +399,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
 
               {action === "create_lead" ? (
                 <div className="grid gap-2 mb-3">
-                  <input className={darkInput} placeholder="Nama perusahaan *" value={newLead?.name || ""} onChange={(e) => setNewLead((p) => ({ ...(p || {}), name: e.target.value }))} />
+                  <input className={darkInput} placeholder="Nama lead *" value={newLead?.name || ""} onChange={(e) => setNewLead((p) => ({ ...(p || {}), name: e.target.value }))} />
                   <div className="grid grid-cols-2 gap-2">
                     <input className={darkInput} placeholder="Key person" value={newLead?.key_person || ""} onChange={(e) => setNewLead((p) => ({ ...(p || {}), key_person: e.target.value }))} />
                     <input className={darkInput} placeholder="Kota" value={newLead?.city || ""} onChange={(e) => setNewLead((p) => ({ ...(p || {}), city: e.target.value }))} />
@@ -423,7 +423,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                       <p className="text-xs text-amber-400 mb-1.5 flex items-center gap-1"><AlertTriangle size={12} /> AI gak yakin ini lead yang mana, pilih manual:</p>
                       <div className="relative">
                         <Search size={15} className="absolute left-2.5 top-3 text-slate-500" />
-                        <input autoFocus className={`${darkInput} pl-8`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
+                        <input autoFocus className={`${darkInput} pl-8`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari lead…" />
                       </div>
                       {matches.length > 0 && (
                         <div className="mt-1 border border-white/10 rounded-xl bg-[#0f1424] shadow-lg max-h-52 overflow-y-auto divide-y divide-white/5">

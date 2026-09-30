@@ -39,7 +39,7 @@ function clearManualMapDraft() {
 const BASE_FIELD_OPTIONS = [
   { value: "", label: "— Abaikan —" },
   { value: "name", label: "Nama Lead / Perusahaan *" },
-  { value: "company_type", label: "Tipe (Manufacturer/Trader)" },
+  { value: "company_type", label: "Tipe / skala perusahaan" },
   { value: "email", label: "Email" },
   { value: "phone", label: "Telepon / WA" },
   { value: "key_person", label: "Nama Kontak (PIC)" },

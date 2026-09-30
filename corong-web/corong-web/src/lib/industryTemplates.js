@@ -17,6 +17,8 @@ import { COMPANY_TYPES } from "./helpers";
 export const INDUSTRY_TEMPLATES = {
   pvc_chemical: {
     key: "pvc_chemical",
+    catalogExample: "Misal: Distributor resin PVC & kompon kabel untuk pabrik pipa dan kabel di Jawa Barat.",
+    quantityUnits: [{ v: "ton", label: "Ton" }, { v: "kg", label: "Kg" }],
     label: "PVC / Kimia (Manufaktur)",
     description: "Distributor & manufaktur resin, kompon, bahan kimia industri",
     stages: [
@@ -29,6 +31,7 @@ export const INDUSTRY_TEMPLATES = {
     ],
     fieldLabels: {
       name: "Perusahaan",
+      name_short: "Perusahaan",
       product: "Produk",
       company_type: "Tipe perusahaan",
       key_person_title: "Jabatan",
@@ -47,6 +50,8 @@ export const INDUSTRY_TEMPLATES = {
 
   automotive: {
     key: "automotive",
+    catalogExample: "Misal: Dealer resmi mobil keluarga & kendaraan niaga, melayani pembelian perorangan dan fleet perusahaan di Surabaya.",
+    quantityUnits: [{ v: "unit", label: "Unit" }],
     label: "Automotive / Dealer",
     description: "Dealer mobil, motor, atau kendaraan",
     stages: [
@@ -60,6 +65,7 @@ export const INDUSTRY_TEMPLATES = {
     ],
     fieldLabels: {
       name: "Nama calon pembeli",
+      name_short: "Pembeli",
       product: "Model kendaraan diminati",
       company_type: "Tipe pembeli",
       key_person_title: "Jabatan / Peran",
@@ -82,6 +88,8 @@ export const INDUSTRY_TEMPLATES = {
 
   property: {
     key: "property",
+    catalogExample: "Misal: Developer perumahan cluster & ruko di Tangerang, melayani pembelian KPR dan tunai.",
+    quantityUnits: null, // "Budget (Rp)" = uang, sama dengan Total Rp
     label: "Property / Real Estate",
     description: "Agen properti, developer, atau broker rumah/apartemen",
     stages: [
@@ -95,6 +103,7 @@ export const INDUSTRY_TEMPLATES = {
     ],
     fieldLabels: {
       name: "Nama calon pembeli",
+      name_short: "Pembeli",
       product: "Tipe properti diminati",
       company_type: "Status pembeli",
       key_person_title: "Jabatan / Peran",
@@ -117,6 +126,8 @@ export const INDUSTRY_TEMPLATES = {
 
   b2b_general: {
     key: "b2b_general",
+    catalogExample: "Misal: Distributor alat tulis kantor & perlengkapan kantor untuk perusahaan di Jabodetabek.",
+    quantityUnits: [{ v: "pcs", label: "Pcs" }, { v: "box", label: "Box" }, { v: "karton", label: "Karton" }, { v: "kg", label: "Kg" }, { v: "ton", label: "Ton" }],
     label: "B2B / Distributor Umum",
     description: "Distributor, trading, atau manufaktur non-kimia",
     stages: [
@@ -129,6 +140,7 @@ export const INDUSTRY_TEMPLATES = {
     ],
     fieldLabels: {
       name: "Perusahaan",
+      name_short: "Perusahaan",
       product: "Produk / Jasa",
       company_type: "Tipe perusahaan",
       key_person_title: "Jabatan",
@@ -146,6 +158,8 @@ export const INDUSTRY_TEMPLATES = {
 
   insurance: {
     key: "insurance",
+    catalogExample: "Misal: Agen asuransi jiwa & kesehatan untuk nasabah perorangan dan program karyawan perusahaan.",
+    quantityUnits: null, // "Premi (Rp)" = uang, sama dengan Total Rp
     label: "Asuransi / Financial Services",
     description: "Agen asuransi jiwa, umum, atau produk finansial",
     stages: [
@@ -158,6 +172,7 @@ export const INDUSTRY_TEMPLATES = {
     ],
     fieldLabels: {
       name: "Nama nasabah",
+      name_short: "Nasabah",
       product: "Produk diminati",
       company_type: "Tipe nasabah",
       key_person_title: "Jabatan / Peran",
@@ -180,6 +195,8 @@ export const INDUSTRY_TEMPLATES = {
 
   retail_fmcg: {
     key: "retail_fmcg",
+    catalogExample: "Misal: Distributor minuman & makanan ringan untuk minimarket dan toko kelontong di Jakarta Timur.",
+    quantityUnits: [{ v: "karton", label: "Karton" }, { v: "pcs", label: "Pcs" }],
     label: "Retail / FMCG",
     description: "Distribusi produk konsumen ke retailer/toko",
     stages: [
@@ -192,6 +209,7 @@ export const INDUSTRY_TEMPLATES = {
     ],
     fieldLabels: {
       name: "Nama outlet / toko",
+      name_short: "Outlet",
       product: "Produk diminati",
       company_type: "Tipe outlet",
       key_person: "Nama pemilik",
@@ -211,6 +229,8 @@ export const INDUSTRY_TEMPLATES = {
 
   corporate_consultant: {
     key: "corporate_consultant",
+    catalogExample: "Misal: Konsultan HR & training untuk perusahaan 100+ karyawan di Jabodetabek.",
+    quantityUnits: null, // "Nilai kontrak/SPK (Rp)" = uang, sama dengan Total Rp
     label: "Corporate Consultant",
     description: "Konsultan/kontraktor jasa berbasis project buat perusahaan (SPK/kontrak kerja)",
     // Pipeline & penamaan PERSIS dari masukan calon klien (bisnis project-based:
@@ -233,6 +253,7 @@ export const INDUSTRY_TEMPLATES = {
     ],
     fieldLabels: {
       name: "Nama perusahaan klien",
+      name_short: "Klien",
       product: "Scope jasa/project",
       company_type: "Skala perusahaan",
       key_person_title: "Jabatan (decision maker)",
@@ -277,6 +298,18 @@ export function getCategories(industryKey) {
 export function getCompanyTypeOptions(industryKey) {
   const tpl = getIndustryTemplate(industryKey);
   return tpl.companyTypeOptions || COMPANY_TYPES;
+}
+
+// Satuan kolom jumlah di tab Deal (30 Sep 2026, audit istilah per industri -
+// sebelumnya satuannya selalu "Ton/Kg" & total selalu "ton" di semua industri).
+// Balikin null kalau industri ini gak butuh kolom jumlah (jumlahnya berupa uang).
+export function getQuantityUnits(industryKey) {
+  const tpl = getIndustryTemplate(industryKey);
+  return tpl.quantityUnits === undefined ? INDUSTRY_TEMPLATES[DEFAULT_INDUSTRY].quantityUnits : tpl.quantityUnits;
+}
+
+export function getCatalogExample(industryKey) {
+  return getIndustryTemplate(industryKey).catalogExample || "Misal: jelaskan singkat bisnis Anda, produk utama, dan siapa target pelanggannya.";
 }
 
 export function getGenerateLeadsExample(industryKey) {

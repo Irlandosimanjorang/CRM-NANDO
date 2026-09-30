@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
+import { getFieldLabel } from "../lib/industryTemplates";
 import { createPortal } from "react-dom";
 import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock, Sparkles, Check, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
@@ -695,7 +696,7 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
         <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><CalendarCheck size={18} className="text-orange-500" /> Tambah Visit</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
         <div className="space-y-3">
           <div>
-            <span className="text-xs font-medium text-slate-500">Company *</span>
+            <span className="text-xs font-medium text-slate-500">Lead *</span>
             {sel ? (
               <div className="mt-1 flex items-center justify-between border border-orange-300 bg-orange-50 rounded-xl px-3 py-2"><span className="text-sm font-medium">{sel.name}</span><button onClick={() => setSel(null)} className="text-xs text-slate-500 hover:text-rose-500">ganti</button></div>
             ) : (
@@ -703,7 +704,7 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
                 <Search size={15} className="absolute left-2.5 top-3.5 text-slate-400" />
                 <input autoFocus className="w-full mt-1 pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
                 {matches.length > 0 && <div className="mt-1 border border-slate-200 rounded-xl bg-white shadow-sm max-h-52 overflow-y-auto">{matches.map((c) => <div key={c.id} onClick={() => pick(c)} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0"><div className="font-medium">{c.name}</div><div className="text-[11px] text-slate-400">{[c.city, c.category].filter(Boolean).join(" · ")}</div></div>)}</div>}
-                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Company ga ketemu. Tambahin di tab Leads dulu.</p>}
+                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan dulu di tab Leads.</p>}
               </div>
             )}
           </div>
@@ -899,7 +900,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
           <div className="bg-white border border-slate-100 rounded-panel overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-500 text-[11.5px] font-semibold"><tr>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Lokasi</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Tanggal visit</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Ketemu</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Agenda</th>
+                <th className="text-left px-3 py-2 font-medium">{getFieldLabel(industry, "name_short", "Lead")}</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Lokasi</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Tanggal visit</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Ketemu</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Agenda</th>
               </tr></thead>
               <tbody>
                 {visits.map((c) => { const past = c.visit_date < todayISO(); const today = c.visit_date === todayISO(); const meet = c.visit_meet || c.key_person; return (
@@ -950,7 +951,7 @@ function FollowupView({ leads, onEdit, onChanged }) {
   );
 }
 
-export default function VisitFollowup({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
+export default function VisitFollowup({ leads, onEdit, onChanged, isEnterprise, myLevel, industry }) {
   const [tab, setTab] = useState("visit");
   const visitCount = leads.filter((c) => c.visit_date).length;
   const followupCount = leads.filter((c) => c.next_action && c.next_action.trim()).length;

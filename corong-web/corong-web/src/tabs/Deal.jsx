@@ -4,7 +4,26 @@ import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, Chev
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
-import { getFieldLabel } from "../lib/industryTemplates";
+import { getFieldLabel, getQuantityUnits } from "../lib/industryTemplates";
+
+// Label satuan dari daftar satuan industri; fallback ke kode mentah.
+const unitLabel = (units, v) => ((units || []).find((u) => u.v === v)?.label || v || "").toLowerCase();
+
+// Total jumlah per satuan (30 Sep 2026, audit istilah per industri -
+// sebelumnya selalu dikonversi ke "ton" di semua industri). Kg digabung ke
+// ton kalau industrinya pakai dua-duanya (PVC/kimia).
+function qtyTotals(deals, units) {
+  const byUnit = {};
+  const hasTonKg = units?.some((u) => u.v === "ton") && units?.some((u) => u.v === "kg");
+  for (const d of deals) {
+    let n = Number(d.tonnage) || 0;
+    if (!n) continue;
+    let u = d.tonnage_unit || units?.[0]?.v || "";
+    if (hasTonKg && u === "kg") { n = n / 1000; u = "ton"; }
+    byUnit[u] = (byUnit[u] || 0) + n;
+  }
+  return Object.entries(byUnit).map(([u, n]) => ({ unit: u, n }));
+}
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 const DRAFT_KEY = "nexto_add_deal_draft";
@@ -31,6 +50,7 @@ function clearDraft() {
 function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
   const productLabel = getFieldLabel(industry, "product", "Produk");
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
+  const units = getQuantityUnits(industry);
   const wonStages = stages.filter((s) => s.type === "won");
   const draft = loadDraft();
   const [q, setQ] = useState("");
@@ -39,7 +59,7 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
   const [date, setDate] = useState(draft?.date || todayISO());
   const [chemical, setChemical] = useState(draft?.chemical || "");
   const [tonnage, setTonnage] = useState(draft?.tonnage || "");
-  const [tonnageUnit, setTonnageUnit] = useState(draft?.tonnageUnit || "ton");
+  const [tonnageUnit, setTonnageUnit] = useState(() => (units || []).some((u) => u.v === draft?.tonnageUnit) ? draft.tonnageUnit : units?.[0]?.v || "");
   const [valueDigits, setValueDigits] = useState(draft?.valueDigits || "");
   const [busy, setBusy] = useState(false);
   const hadDraft = !!draft?.sel;
@@ -54,7 +74,7 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
     setSel(c); setQ("");
     // Sengaja field-field ini dikosongin (bukan diisi dari deal lead sebelumnya) -
     // ini transaksi BARU, bukan nimpa transaksi lama.
-    setChemical(""); setTonnage(""); setTonnageUnit("ton");
+    setChemical(""); setTonnage(""); setTonnageUnit(units?.[0]?.v || "");
     setValueDigits("");
     setDate(todayISO());
   };
@@ -84,7 +104,7 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
         {hadDraft && <div className="mb-3 text-xs bg-orange-50 text-orange-700 border border-orange-200 rounded-xl px-3 py-2">Melanjutkan draft yang belum disimpan.</div>}
         <div className="space-y-3">
           <div>
-            <span className="text-xs font-medium text-slate-500">Company *</span>
+            <span className="text-xs font-medium text-slate-500">Lead *</span>
             {sel ? (
               <div className="mt-1 flex items-center justify-between border border-orange-300 bg-orange-50 rounded-xl px-3 py-2"><span className="text-sm font-medium">{sel.name}</span><button onClick={() => setSel(null)} className="text-xs text-slate-500 hover:text-rose-500">ganti</button></div>
             ) : (
@@ -92,7 +112,7 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
                 <Search size={15} className="absolute left-2.5 top-3.5 text-slate-400" />
                 <input autoFocus className="w-full mt-1 pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
                 {matches.length > 0 && <div className="mt-1 border border-slate-200 rounded-xl bg-white shadow-sm max-h-52 overflow-y-auto">{matches.map((c) => <div key={c.id} onClick={() => pick(c)} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0"><div className="font-medium">{c.name}</div><div className="text-[11px] text-slate-400">{[c.city, c.category].filter(Boolean).join(" · ")}</div></div>)}</div>}
-                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Company ga ketemu. Tambahin di tab Leads dulu.</p>}
+                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan dulu di tab Leads.</p>}
               </div>
             )}
           </div>
@@ -104,15 +124,14 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
               <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal deal</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">{productLabel}</span><input className={inp} value={chemical} onChange={(e) => setChemical(e.target.value)} /></label>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            {units && <div className="grid grid-cols-3 gap-3">
               <label className="block col-span-2"><span className="text-xs font-medium text-slate-500">{quantityLabel}</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">Satuan</span>
                 <select className={inp} value={tonnageUnit} onChange={(e) => setTonnageUnit(e.target.value)}>
-                  <option value="ton">Ton</option>
-                  <option value="kg">Kg</option>
+                  {units.map((u) => <option key={u.v} value={u.v}>{u.label}</option>)}
                 </select>
               </label>
-            </div>
+            </div>}
             <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Total Rp</span>
               <input
                 className={inp}
@@ -134,6 +153,7 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
 export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged }) {
   const productLabel = getFieldLabel(industry, "product", "Produk");
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
+  const units = getQuantityUnits(industry);
   // BUG FIX (6 Sep 2026): modal ini udah lama punya sistem draft field
   // (lihat DRAFT_KEY di atas) - tapi visibilitas modal-nya sendiri belum
   // ke-restore abis reload paksa, jadi orangnya harus klik "+Tambah Deal"
@@ -146,10 +166,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
 
   const deals = dealTransactions || [];
   const totalValue = deals.reduce((a, c) => a + (Number(c.deal_value) || 0), 0);
-  const totalTonInKg = deals.reduce((a, c) => {
-    const t = Number(c.tonnage) || 0;
-    return a + (c.tonnage_unit === "kg" ? t : t * 1000);
-  }, 0);
+  const totals = qtyTotals(deals, units);
 
   // Kelompokin semua transaksi per perusahaan - 1 baris per perusahaan di tabel,
   // transaksi lainnya kebuka lewat tombol expand.
@@ -195,14 +212,14 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
       ) : (
         <>
           <div className="bg-white border border-slate-100 rounded-panel p-4 mb-4">
-            <div className="grid grid-cols-3 divide-x divide-slate-100">
+            <div className={`grid ${units ? "grid-cols-3" : "grid-cols-2"} divide-x divide-slate-100`}>
               <div className="px-3 first:pl-1">
                 <div className="text-xs text-slate-400 flex items-center gap-1.5"><Trophy size={13} /> Total Deal</div>
                 <div className="font-bold text-2xl text-emerald-600 mt-1.5 tabular-nums">{groups.length}</div>
                 <div className="text-[11px] text-slate-400 mt-0.5">{deals.length} transaksi</div>
               </div>
 
-              <div className="px-3">
+              {units && <div className="px-3">
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-slate-400 flex items-center gap-1.5"><Building2 size={13} /> Total {quantityLabel}</div>
                   <button onClick={() => setQtyRevealed((v) => !v)} className="text-slate-400 hover:text-slate-700" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>
@@ -210,9 +227,11 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                   </button>
                 </div>
                 <div className="font-bold text-2xl text-slate-800 mt-1.5 tabular-nums">
-                  {qtyRevealed ? <>{(totalTonInKg / 1000).toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">ton</span></> : "••••••"}
+                  {qtyRevealed
+                    ? (totals.length ? totals.map((t, i) => <span key={t.unit}>{i > 0 && <span className="text-slate-300"> · </span>}{t.n.toLocaleString("id-ID")} <span className="text-sm font-normal text-slate-400">{unitLabel(units, t.unit)}</span></span>) : "0")
+                    : "••••••"}
                 </div>
-              </div>
+              </div>}
 
               <div className="px-3">
                 <div className="flex items-center justify-between">
@@ -229,7 +248,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-500 text-[11.5px] font-semibold"><tr>
                 <th className="px-3 py-2 font-medium" style={{ width: "28px" }}></th>
-                <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Sales</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">{productLabel}</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
+                <th className="text-left px-3 py-2 font-medium">{getFieldLabel(industry, "name_short", "Lead")}</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Sales</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">{productLabel}</th>{units && <th className="hidden sm:table-cell text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th>}<th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
               <tbody>
                 {groups.map((g) => {
@@ -256,7 +275,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                       <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{lead?.sales_owner || "—"}</td>
                       <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.deal_date ? fmtDate(latest.deal_date) : "—"}</td>
                       <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.chemical || "—"}</td>
-                      <td className="hidden sm:table-cell px-3 py-2 text-xs font-mono text-slate-700">{latest.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${latest.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
+                      {units && <td className="hidden sm:table-cell px-3 py-2 text-xs font-mono text-slate-700">{latest.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${unitLabel(units, latest.tonnage_unit)}` : "••••••") : "—"}</td>}
                       <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{groupTotalRp ? (rpRevealed ? fmtRp(groupTotalRp) : "••••••") : "—"}</td>
                     </tr>
                     {isOpen && g.txs.map((t) => (
@@ -268,7 +287,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                         <td className="hidden sm:table-cell px-3 py-1.5"></td>
                         <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.deal_date ? fmtDate(t.deal_date) : "—"}</td>
                         <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.chemical || "—"}</td>
-                        <td className="hidden sm:table-cell px-3 py-1.5 font-mono text-slate-600">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${t.tonnage_unit === "kg" ? "kg" : "ton"}` : "••••••") : "—"}</td>
+                        {units && <td className="hidden sm:table-cell px-3 py-1.5 font-mono text-slate-600">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : "••••••") : "—"}</td>}
                         <td className="px-3 py-1.5 font-mono text-emerald-700 font-semibold">
                           <div className="flex items-center justify-between gap-2">
                             {t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : "••••••") : "—"}

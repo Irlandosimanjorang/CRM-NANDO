@@ -47,7 +47,7 @@ export default function Kompetitor({ competitors, onChanged }) {
               {k.usages.length > 0 && (
                 <div className="overflow-x-auto mt-2">
                   <table className="w-full text-xs">
-                    <thead className="bg-slate-50 text-slate-500 font-semibold"><tr><th className="text-left px-2 py-1.5 font-medium">Company</th><th className="text-left px-2 py-1.5 font-medium">Produk dipakai</th><th className="text-left px-2 py-1.5 font-medium">Harga</th><th className="text-left px-2 py-1.5 font-medium">Jumlah</th></tr></thead>
+                    <thead className="bg-slate-50 text-slate-500 font-semibold"><tr><th className="text-left px-2 py-1.5 font-medium">Pelanggan</th><th className="text-left px-2 py-1.5 font-medium">Produk dipakai</th><th className="text-left px-2 py-1.5 font-medium">Harga</th><th className="text-left px-2 py-1.5 font-medium">Jumlah</th></tr></thead>
                     <tbody>{k.usages.map((u) => (<tr key={u.id} className="border-t border-slate-100"><td className="px-2 py-1.5">{u.company}</td><td className="px-2 py-1.5">{u.product}</td><td className="px-2 py-1.5">{u.price}</td><td className="px-2 py-1.5">{u.quantity}</td></tr>))}</tbody>
                   </table>
                 </div>

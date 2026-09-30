@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { getCatalogExample } from "../lib/industryTemplates";
 import { Package, Plus, Trash2, Save, Loader2, CheckCircle2 } from "lucide-react";
 import * as db from "../lib/db";
 
@@ -16,7 +17,7 @@ const EMPTY = { name: "", description: "", fit_for: "", price: "" };
 const trimItem = (x) => ({ name: x.name.trim(), description: x.description.trim(), fit_for: x.fit_for.trim(), price: x.price.trim() });
 const sameItem = (a, b) => !!a && !!b && JSON.stringify(trimItem(a)) === JSON.stringify(trimItem(b));
 
-export default function ProductCatalogCard({ canManage }) {
+export default function ProductCatalogCard({ canManage, industry }) {
   const [profile, setProfile] = useState("");
   const [products, setProducts] = useState([]);
   // Versi yang terakhir tersimpan di database - buat nentuin kartu mana yang
@@ -100,7 +101,7 @@ export default function ProductCatalogCard({ canManage }) {
             className={inp + " min-h-[64px]"}
             maxLength={1000}
             disabled={!canManage}
-            placeholder="Misal: Konsultan HR & training untuk perusahaan 100+ karyawan di Jabodetabek."
+            placeholder={getCatalogExample(industry)}
             value={profile}
             onChange={(e) => setProfile(e.target.value)}
           />

@@ -295,7 +295,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
 
         {!lead ? (
           <div>
-            <span className="text-xs font-medium text-slate-500">Company *</span>
+            <span className="text-xs font-medium text-slate-500">Lead *</span>
             <div className="relative mt-1">
               <Search size={15} className="absolute left-2.5 top-3 text-slate-400" />
               <input autoFocus className="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
@@ -305,7 +305,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
                 {matches.map((c) => <div key={c.id} onClick={() => { setLead(c); setQ(""); }} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0">{c.name}</div>)}
               </div>
             )}
-            {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Company ga ketemu. Tambahin di tab Leads dulu.</p>}
+            {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan dulu di tab Leads.</p>}
           </div>
         ) : (
           <>

@@ -10,25 +10,15 @@ const uMeta = { high: { label: "High", hex: "#e11d48" }, medium: { label: "Mediu
 // dayLabel() di bawah, tapi kelewat di sini. Buat user WIB jam 00:00-06:59,
 // chip "Hari ini" gak bakal ke-highlight buat data demo ini.
 const todayWIB = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0") + "-" + String(new Date().getDate()).padStart(2, "0");
-const DUMMY_HISTORY = [
-  {
-    run_date: todayWIB,
-    ran_at: "08:00",
-    recs: [
-      { id: "dummy-1", urgency: "high", assessment: "Lead ini udah 5 hari gak dikontak, padahal masih di tahap presentasi.", action: "Follow up hasil presentasi minggu lalu", steps: ["Telpon PIC-nya", "Tanya feedback soal harga penawaran"], talking_point: "Pak Budi, gimana pertimbangannya soal penawaran kemarin?" },
-      { id: "dummy-2", urgency: "medium", assessment: "Lagi di tahap negosiasi, sample udah dikirim tapi belum ada kabar.", action: "Follow up hasil trial sample", steps: ["Tanya kapan hasil trial keluar"], talking_point: "Gimana hasil trial sample-nya, ada kendala?" },
-    ],
-  },
-];
-
-export default function Advisor({ leads, stages, onApplied, onOpen, dummy }) {
+export default function Advisor({ leads, stages, onApplied, onOpen, dummy, demoRecs = [] }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null); // run_date yang dipilih
 
   const load = async () => {
-    if (dummy) { setHistory(DUMMY_HISTORY); setSelected(DUMMY_HISTORY[0].run_date); setLoading(false); return; }
+    // Contoh per industri (lib/industryDemo.js) buat user yang tab-nya masih terkunci.
+    if (dummy) { setHistory([{ run_date: todayWIB, ran_at: "08:00", recs: demoRecs }]); setSelected(todayWIB); setLoading(false); return; }
     setLoading(true); setError("");
     try {
       const rows = await db.getAdvisorHistory();
