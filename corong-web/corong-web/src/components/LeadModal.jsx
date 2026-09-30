@@ -5,6 +5,7 @@ import * as db from "../lib/db";
 import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
+import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 const inpRow = "flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
@@ -322,40 +323,32 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   // (mana duluan, sama kayak pola VisitFollowup.jsx), dan accuracy-nya ikut
   // disimpen. Kalau abis nyoba tetep gak presisi, user dikasih tau &
   // diminta konfirmasi eksplisit sebelum nyimpen fix yang kurang akurat.
+  // (30 Sep 2026) Pakai acquireLocation (lib/geo.js): izin ditolak dikasih
+  // tahu jelas, ada cadangan lokasi jaringan kalau GPS presisi gak jawab,
+  // dan titik yang terlalu kasar (> MAX_PIN_ACCURACY_M, biasanya dari
+  // laptop/WiFi) ditolak supaya gak ngerusak radius check-in.
   const GOOD_ACCURACY_M = 30;
-  const SCAN_TIMEOUT_MS = 12000;
-  const saveLocation = () => {
-    if (!lead.id) { alert("Simpan lead-nya dulu sebelum simpan lokasi."); return; }
-    if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
+  const saveLocation = async () => {
+    if (!lead.id) { alert("Simpan lead terlebih dahulu sebelum menyimpan lokasi."); return; }
     setLocBusy(true);
-    let best = null;
-    let done = false;
-    const finish = async () => {
-      if (done) return;
-      done = true;
-      navigator.geolocation.clearWatch(watchId);
-      if (!best) { alert("Gagal ambil lokasi GPS. Pastikan izin lokasi diaktifkan."); setLocBusy(false); return; }
-      if (best.accuracy > GOOD_ACCURACY_M) {
-        const lanjut = window.confirm(`Sinyal GPS kurang presisi (akurasi ±${Math.round(best.accuracy)}m, idealnya ≤${GOOD_ACCURACY_M}m) - titik ini jadi acuan radius check-in nanti. Tetap simpan, atau coba lagi di tempat terbuka?`);
-        if (!lanjut) { setLocBusy(false); return; }
+    try {
+      const best = await acquireLocation({ targetAccuracy: GOOD_ACCURACY_M, timeoutMs: 20000 }).promise;
+      if (best.accuracy > MAX_PIN_ACCURACY_M) {
+        alert(`Lokasi yang didapat terlalu kasar (±${Math.round(best.accuracy)}m), biasanya karena perangkat tanpa GPS (laptop) atau berada di dalam gedung. Simpan titik lokasi dari HP saat berada di lokasi customer.`);
+        return;
       }
-      try {
-        await db.saveLeadLocation(lead.id, best.lat, best.lng, best.accuracy);
-        setF((p) => ({ ...p, latitude: best.lat, longitude: best.lng }));
-        alert(`✅ Titik lokasi tersimpan (akurasi ±${Math.round(best.accuracy)}m).`);
-      } catch (e) { alert("Gagal simpan lokasi: " + e.message); }
-      finally { setLocBusy(false); }
-    };
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const accuracy = pos.coords.accuracy;
-        if (!best || accuracy < best.accuracy) best = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy };
-        if (accuracy <= GOOD_ACCURACY_M) finish();
-      },
-      () => { /* biarin timeout di bawah yang mutusin - error sesaat gak fatal selama watch masih jalan */ },
-      { enableHighAccuracy: true, maximumAge: 0 }
-    );
-    setTimeout(finish, SCAN_TIMEOUT_MS);
+      if (best.accuracy > GOOD_ACCURACY_M) {
+        const lanjut = window.confirm(`Sinyal GPS kurang presisi (±${Math.round(best.accuracy)}m, idealnya ±${GOOD_ACCURACY_M}m atau kurang). Titik ini menjadi acuan radius check-in. Tetap simpan?`);
+        if (!lanjut) return;
+      }
+      await db.saveLeadLocation(lead.id, best.lat, best.lng, best.accuracy);
+      setF((p) => ({ ...p, latitude: best.lat, longitude: best.lng }));
+      alert(`Titik lokasi tersimpan (akurasi ±${Math.round(best.accuracy)}m).`);
+    } catch (e) {
+      alert(e.message || "Gagal menyimpan lokasi.");
+    } finally {
+      setLocBusy(false);
+    }
   };
 
   const save = async () => {

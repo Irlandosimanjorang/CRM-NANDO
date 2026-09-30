@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { getFieldLabel } from "../lib/industryTemplates";
+import { acquireLocation, MAX_PIN_ACCURACY_M, GEO_PERMISSION_MESSAGE } from "../lib/geo";
 import { createPortal } from "react-dom";
 import { CalendarCheck, CalendarClock, Plus, Search, Save, X, CheckCircle2, Table2, Calendar, ChevronLeft, ChevronRight, MapPin, Navigation, History, Mic, Camera, Loader2, Lock, Sparkles, Check, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
@@ -26,6 +27,10 @@ const CHECKIN_RADIUS_M = 100;
 // Sekarang WAJIB nunggu sinyal di bawah ambang ini dulu sebelum GPS
 // dianggap valid buat check-in/simpan lokasi.
 const GOOD_ACCURACY_M = 30;
+// Syarat akurasi buat CHECK-IN (30 Sep 2026) - di dalam gedung HP biasanya
+// cuma dapet ±35-60m, dengan syarat 30m sales yang beneran di lokasi sering
+// gak bisa check-in. Target titik lokasi customer tetap GOOD_ACCURACY_M.
+const CHECKIN_ACCURACY_M = 50;
 
 // Konfirmasi lokasi SEBELUM minta foto - dulu langsung loncat ke ambil foto
 // begitu tombol diklik, user gak pernah eksplisit ngeliat/ngonfirmasi data
@@ -238,7 +243,7 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
 function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   const todayVisits = useMemo(() => leads.filter((c) => c.visit_date === todayISO()), [leads]);
   const [myPos, setMyPos] = useState(null);
-  const [geoError, setGeoError] = useState(false);
+  const [geoError, setGeoError] = useState(null); // null | "denied" | "searching"
   const [checkingIn, setCheckingIn] = useState(null);
   // Sengaja gak direstore dari localStorage (beda dari `recording` di
   // VisitView, 17 Sep 2026) - TodayVisitsCard ini ke-render BARENGAN sama
@@ -280,19 +285,21 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
         // begitu satu fix bagus kedapet - padahal user masih jalan.
         setMyPos((prev) => {
           const newFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
-          if (pos.coords.accuracy <= GOOD_ACCURACY_M) return newFix;
-          if (!prev || prev.accuracy > GOOD_ACCURACY_M) return newFix;
+          if (pos.coords.accuracy <= CHECKIN_ACCURACY_M) return newFix;
+          if (!prev || prev.accuracy > CHECKIN_ACCURACY_M) return newFix;
           return prev;
         });
-        setGeoError(false);
+        setGeoError(null);
       },
-      () => setGeoError(true),
+      // Kode 1 = izin ditolak (perlu tindakan user). Kode 2/3 = sinyal
+      // lambat/belum ada - watch tetap jalan, jangan langsung dibilang gagal.
+      (err) => setGeoError(err && err.code === 1 ? "denied" : "searching"),
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
     );
     return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
   }, [todayVisits.length]);
 
-  const gpsReady = !!(myPos && myPos.accuracy != null && myPos.accuracy <= GOOD_ACCURACY_M);
+  const gpsReady = !!(myPos && myPos.accuracy != null && myPos.accuracy <= CHECKIN_ACCURACY_M);
 
   // Dulu klik tombol langsung loncat ke minta foto - user gak pernah
   // eksplisit ngonfirmasi data GPS-nya sendiri dulu. Sekarang ask* munculin
@@ -307,14 +314,8 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   // pernah ke-clear - GPS tetep nyala nguras baterai di background sia-sia.
   // Disimpen ke ref di sini biar bisa dibersihin lewat cleanup useEffect
   // di bawah.
-  const scanWatchIdRef = useRef(null);
-  const scanTimeoutRef = useRef(null);
-  useEffect(() => {
-    return () => {
-      if (scanWatchIdRef.current !== null) navigator.geolocation.clearWatch(scanWatchIdRef.current);
-      if (scanTimeoutRef.current !== null) clearTimeout(scanTimeoutRef.current);
-    };
-  }, []);
+  const scanCancelRef = useRef(null);
+  useEffect(() => () => { scanCancelRef.current?.(); }, []);
 
   // BUG FIX (audit 17 Sep 2026): "Batal" di LocationConfirmModal sebelumnya
   // cuma nutup modal (setLocationConfirm(null)) - kalau scan GPS masih
@@ -328,14 +329,13 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   // watch/timeout yang lagi jalan & mbatalin request lama via geoReqIdRef.
   const cancelLocationConfirm = () => {
     geoReqIdRef.current++;
-    if (scanWatchIdRef.current !== null) { navigator.geolocation.clearWatch(scanWatchIdRef.current); scanWatchIdRef.current = null; }
-    if (scanTimeoutRef.current !== null) { clearTimeout(scanTimeoutRef.current); scanTimeoutRef.current = null; }
+    scanCancelRef.current?.(); scanCancelRef.current = null;
     setLocationConfirm(null);
   };
 
   const askCheckIn = (lead, distance) => {
     if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
-    if (!gpsReady) { alert(`Sinyal GPS belum cukup presisi (butuh ≤${GOOD_ACCURACY_M}m). Tunggu bentar atau pindah ke tempat terbuka.`); return; }
+    if (!gpsReady) { alert(`Sinyal GPS belum cukup presisi (dibutuhkan ±${CHECKIN_ACCURACY_M}m atau kurang). Tunggu sebentar atau pindah ke dekat jendela/tempat terbuka.`); return; }
     const reqId = ++geoReqIdRef.current;
     setLocationConfirm({ mode: "checkin", lead, distance, scanning: true, address: null, coords: myPos, accuracy: myPos.accuracy });
     db.reverseGeocode(myPos.lat, myPos.lng).then((address) => {
@@ -349,46 +349,39 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   // lead, yang jadi acuan semua check-in berikutnya. Sekarang nge-watch
   // terus dan ambil fix TERBAIK sampai akurasinya ≤GOOD_ACCURACY_M atau
   // 20 detik abis (mana duluan) - titik yang kesimpen jadi jauh lebih presisi.
+  // (30 Sep 2026) Pakai acquireLocation (lib/geo.js): izin ditolak dikasih
+  // tahu jelas, timeout sesaat gak langsung gagal, ada cadangan lokasi
+  // jaringan, dan titik yang terlalu kasar (> MAX_PIN_ACCURACY_M) ditolak.
   const askSavePin = (lead) => {
-    if (!navigator.geolocation) { alert("HP/browser Anda ga dukung GPS."); return; }
-    if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
+    if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini sudah habis (maks ${quota.quotaMax}x/bulan). Bisa digunakan lagi awal bulan depan.`); return; }
     const reqId = ++geoReqIdRef.current;
     setLocationConfirm({ mode: "savepin", lead, distance: null, scanning: true, address: null, coords: null, accuracy: null, liveAccuracy: null });
-    let best = null;
-    const finish = async () => {
+    const { promise, cancel } = acquireLocation({
+      targetAccuracy: GOOD_ACCURACY_M,
+      timeoutMs: 20000,
+      onProgress: (best) => {
+        if (geoReqIdRef.current !== reqId) return;
+        setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, liveAccuracy: best.accuracy } : prev));
+      },
+    });
+    scanCancelRef.current = cancel;
+    promise.then(async (best) => {
       if (geoReqIdRef.current !== reqId) return;
-      navigator.geolocation.clearWatch(watchId);
-      if (scanTimeoutRef.current !== null) { clearTimeout(scanTimeoutRef.current); scanTimeoutRef.current = null; }
-      scanWatchIdRef.current = null;
-      if (!best) {
+      scanCancelRef.current = null;
+      if (best.accuracy > MAX_PIN_ACCURACY_M) {
         setLocationConfirm(null);
-        alert("Gagal dapetin sinyal GPS yang cukup presisi. Coba pindah ke tempat terbuka (bukan dalam ruangan/gedung), lalu coba lagi.");
+        alert(`Lokasi yang didapat terlalu kasar (±${Math.round(best.accuracy)}m), biasanya karena perangkat tanpa GPS (laptop) atau berada di dalam gedung. Simpan titik lokasi dari HP saat berada di lokasi customer.`);
         return;
       }
       const address = await db.reverseGeocode(best.lat, best.lng);
       if (geoReqIdRef.current !== reqId) return;
       setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, scanning: false, address, coords: { lat: best.lat, lng: best.lng }, accuracy: best.accuracy } : prev));
-    };
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        if (geoReqIdRef.current !== reqId) return;
-        const accuracy = pos.coords.accuracy;
-        if (!best || accuracy < best.accuracy) best = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy };
-        setLocationConfirm((prev) => (prev && prev.scanning ? { ...prev, liveAccuracy: best.accuracy } : prev));
-        if (best.accuracy <= GOOD_ACCURACY_M) finish();
-      },
-      () => {
-        if (geoReqIdRef.current !== reqId) return;
-        navigator.geolocation.clearWatch(watchId);
-        if (scanTimeoutRef.current !== null) { clearTimeout(scanTimeoutRef.current); scanTimeoutRef.current = null; }
-        scanWatchIdRef.current = null;
-        setLocationConfirm(null);
-        alert("Gagal ambil lokasi. Kalau ini dari laptop, laptop emang gak punya GPS asli (beda sama HP) - cek Windows Settings > Privacy > Location harus nyala, dan izin lokasi Chrome buat nexto.site harus \"Allow\". Coba pake HP kalau masih gagal.");
-      },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-    );
-    scanWatchIdRef.current = watchId;
-    scanTimeoutRef.current = setTimeout(finish, 20000);
+    }).catch((e) => {
+      if (geoReqIdRef.current !== reqId) return;
+      scanCancelRef.current = null;
+      setLocationConfirm(null);
+      alert(e.message);
+    });
   };
 
   // Kedua alur (udah ada titik lokasi ATAU baru pertama kali) sama-sama minta
@@ -443,7 +436,8 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
           </span>
         )}
       </div>
-      {geoError && <p className="text-xs text-rose-500 mb-2">Gagal akses GPS. Pastikan izin lokasi diaktifkan buat browser/app ini.</p>}
+      {geoError === "denied" && <p className="text-xs text-rose-600 mb-2">{GEO_PERMISSION_MESSAGE}</p>}
+      {geoError === "searching" && !myPos && <p className="text-xs text-amber-700 mb-2">Masih mencari sinyal GPS. Pastikan GPS/Lokasi di perangkat menyala; di dalam gedung pencarian bisa lebih lama.</p>}
       <div className="space-y-2">
         {todayVisits.map((c) => {
           const hasCoords = c.latitude != null && c.longitude != null;
