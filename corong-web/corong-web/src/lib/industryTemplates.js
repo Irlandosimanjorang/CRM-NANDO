@@ -270,6 +270,10 @@ export const INDUSTRY_TEMPLATES = {
       custom_field_3: "Termin pembayaran",
       custom_field_4: "Status invoice",
     },
+    // Field yang isinya pilihan tetap (dropdown), bukan teks bebas (1 Okt 2026).
+    customFieldOptions: {
+      custom_field_4: ["Menunggu pembayaran", "Lunas"],
+    },
     aiContext: "Bisnis ini jasa/konsultasi korporat berbasis project (strategi/manajemen/hukum/pajak/HR/keuangan/IT). Pipeline-nya: Prospect (terindikasi ada kebutuhan) -> Lead (submit proposal/quotation sampai presentasi) -> Hot Lead (udah nanya lebih detail, potensial closing) -> Booking (deal, ada kontrak kerja/SPK) -> Revenue (pekerjaan selesai, invoice terbit) -> Cash In (uang udah masuk). Istilah relevan: SPK (Surat Perintah Kerja), scope of work, quotation, termin pembayaran, invoice, kickoff, deliverable, decision maker.",
     genLeadsExample: { productSold: "jasa konsultasi manajemen, audit pajak, transformasi digital", keyword: "perusahaan yang butuh konsultan bisnis", targetRole: "Direktur, CEO, CFO, atau Head of Legal/HR" },
   },
@@ -337,5 +341,10 @@ export function getCustomFieldSlots(industryKey, orgOverrides) {
   const labels = { ...(tpl.customFieldLabels || {}), ...(orgOverrides || {}) };
   return ["custom_field_1", "custom_field_2", "custom_field_3", "custom_field_4", "custom_field_5"]
     .filter((key) => labels[key])
-    .map((key) => ({ key, label: labels[key] }));
+    .map((key) => {
+      // Pilihan dropdown cuma berlaku kalau slot masih pakai label bawaan
+      // template (belum diganti nama lewat import).
+      const options = labels[key] === tpl.customFieldLabels?.[key] ? tpl.customFieldOptions?.[key] : undefined;
+      return options ? { key, label: labels[key], options } : { key, label: labels[key] };
+    });
 }

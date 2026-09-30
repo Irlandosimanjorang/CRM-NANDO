@@ -596,7 +596,18 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           {customSlots.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {customSlots.map((slot) => (
-                <Field key={slot.key} label={slot.label}><input className={inp} value={f[slot.key] || ""} onChange={(e) => set(slot.key, e.target.value)} /></Field>
+                <Field key={slot.key} label={slot.label}>
+                  {slot.options ? (
+                    <select className={inp} value={f[slot.key] || ""} onChange={(e) => set(slot.key, e.target.value)}>
+                      <option value="">Pilih status</option>
+                      {/* Nilai lama di luar pilihan tetap ditampilkan, biar gak hilang diam-diam. */}
+                      {f[slot.key] && !slot.options.includes(f[slot.key]) && <option value={f[slot.key]}>{f[slot.key]}</option>}
+                      {slot.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : (
+                    <input className={inp} value={f[slot.key] || ""} onChange={(e) => set(slot.key, e.target.value)} />
+                  )}
+                </Field>
               ))}
             </div>
           )}
