@@ -57,7 +57,7 @@ function fmtRupiah(n) {
 const TABS = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "leads", label: "Leads", icon: Users },
-  { key: "team", label: "Performa Tim", icon: Trophy },
+  { key: "team", label: "Tim (Manager)", icon: Trophy },
   { key: "ai", label: "Asisten AI", icon: Bot },
 ];
 
@@ -169,9 +169,86 @@ function LeadsTab() {
   );
 }
 
+// Rekap aktivitas tim versi demo (30 Sep 2026) - cermin tab "Tim" di app
+// asli, data contoh ala konsultan (tahap Prospect -> Lead -> Hot Lead ->
+// Booking) biar bisa dikirim ke calon klien Enterprise lewat nexto.site/demo?tab=tim.
+const DEMO_ACTIVITY = [
+  { name: "Budi Santoso", role: "Sales", visits: 6, notes: 11, newLeads: 4, moves: 5, deals: 1, last: "Hari ini" },
+  { name: "Sari Wulandari", role: "Sales", visits: 4, notes: 9, newLeads: 2, moves: 3, deals: 1, last: "Hari ini" },
+  { name: "Andi Pratama", role: "Sales", visits: 2, notes: 3, newLeads: 1, moves: 1, deals: 0, last: "1 hari lalu" },
+  { name: "Dewi Lestari", role: "Sales", visits: 0, notes: 0, newLeads: 0, moves: 0, deals: 0, last: "5 hari lalu", idle: true },
+];
+const DEMO_FEED = [
+  { who: "Budi Santoso", icon: MapPin, color: "text-sky-600 bg-sky-50", text: "check-in di", lead: "PT Mitra Logistik Nusantara", when: "10:15" },
+  { who: "Sari Wulandari", icon: ArrowRight, color: "text-amber-600 bg-amber-50", text: "mindahin tahap", lead: "PT Bank Sejahtera Makmur", extra: "(Hot Lead → Booking)", when: "09:40" },
+  { who: "Budi Santoso", icon: Pencil, color: "text-violet-600 bg-violet-50", text: "nulis catatan di", lead: "PT Mitra Logistik Nusantara", note: "HRD butuh assessment 40 supervisor sebelum Q1, minta proposal minggu ini.", when: "Kemarin, 16:20" },
+  { who: "Andi Pratama", icon: Plus, color: "text-emerald-600 bg-emerald-50", text: "nambah lead", lead: "PT Arta Graha Konstruksi", when: "Kemarin, 11:05" },
+];
+
 function TeamTab() {
+  const [range, setRange] = useState("week");
+  const COLS = [["visits", "Kunjungan"], ["notes", "Notulen"], ["newLeads", "Lead baru"], ["moves", "Pindah tahap"], ["deals", "Deal"]];
   return (
     <div className="grid gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xl font-bold text-slate-900">Tim</p>
+          <p className="text-sm text-slate-500">Rekap aktivitas tiap sales - cuma keliatan buat owner/manager.</p>
+        </div>
+        <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
+          {[["today", "Hari ini"], ["week", "Minggu ini"], ["month", "Bulan ini"]].map(([k, l]) => (
+            <button key={k} onClick={() => setRange(k)} className={`rounded-[10px] px-3 py-1.5 text-xs font-medium ${range === k ? "bg-slate-900 text-white" : "text-slate-500"}`}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <b>Perlu dicek:</b> Dewi Lestari (gak ada aktivitas 5 hari)
+      </div>
+      <div className="rounded-2xl bg-white border border-slate-200 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Users size={18} className="text-orange-500" />
+          <p className="font-bold text-slate-900">Rekap Aktivitas</p>
+          <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">Enterprise</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-left text-[11px] uppercase tracking-wide text-slate-400">
+                <th className="py-2 pr-3 font-semibold">Anggota</th>
+                {COLS.map(([k, l]) => <th key={k} className="px-2 py-2 text-right font-semibold">{l}</th>)}
+                <th className="py-2 pl-3 text-right font-semibold">Aktivitas terakhir</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {DEMO_ACTIVITY.map((m) => (
+                <tr key={m.name}>
+                  <td className="py-3 pr-3"><p className="font-semibold text-slate-800">{m.name}</p><p className="text-[11px] text-slate-400">{m.role}</p></td>
+                  {COLS.map(([k]) => <td key={k} className={`px-2 py-3 text-right tabular-nums ${m[k] > 0 ? "font-semibold text-slate-800" : "text-slate-300"}`}>{m[k]}</td>)}
+                  <td className={`py-3 pl-3 text-right text-xs ${m.idle ? "font-semibold text-amber-600" : "text-slate-500"}`}>{m.last}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="rounded-2xl bg-white border border-slate-200 p-5">
+        <p className="font-bold text-slate-900 mb-4">Aktivitas Terbaru</p>
+        <ul className="grid gap-3">
+          {DEMO_FEED.map((e, i) => {
+            const I = e.icon;
+            return (
+              <li key={i} className="flex gap-3">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${e.color}`}><I size={14} /></span>
+                <div className="text-sm">
+                  <p className="text-slate-700"><b className="text-slate-900">{e.who}</b> {e.text} <b className="text-slate-900">{e.lead}</b> {e.extra && <span className="text-slate-500">{e.extra}</span>}</p>
+                  {e.note && <p className="text-xs text-slate-500 mt-0.5">{e.note}</p>}
+                  <p className="text-[11px] text-slate-400 mt-0.5">{e.when}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
       <div className="rounded-2xl bg-white border border-slate-200 p-5">
         <div className="flex items-center gap-2 mb-4">
           <Trophy size={18} className="text-amber-500" />
@@ -247,7 +324,16 @@ function AiTab() {
 }
 
 export default function PublicDemo() {
-  const [tab, setTab] = useState("dashboard");
+  // Link langsung ke tab tertentu: nexto.site/demo?tab=tim (dipake buat
+  // ngirim preview dashboard manager ke calon klien Enterprise).
+  const [tab, setTab] = useState(() => {
+    try {
+      const t = new URLSearchParams(window.location.search).get("tab");
+      if (t === "tim" || t === "team") return "team";
+      if (TABS.some((x) => x.key === t)) return t;
+    } catch (_) {}
+    return "dashboard";
+  });
   const [bannerOpen, setBannerOpen] = useState(true);
 
   useEffect(() => {
