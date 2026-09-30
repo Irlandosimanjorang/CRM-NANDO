@@ -124,6 +124,146 @@ export async function setSalesTarget(userId, month, amount) {
   );
   if (error) throw error;
 }
+// Rincian kontrak per proyek (lead yang punya termin) - dipake kartu
+// "Kontrak & Pembayaran" di tab Team (tab Berjalan / Selesai).
+export async function getTeamContracts() {
+  const { data, error } = await supabase.rpc("get_team_contracts");
+  if (error) throw error;
+  return data || [];
+}
+port { supabase } from "./supabaseClient";
+import { getIndustryTemplate } from "./industryTemplates";
+import { todayISO } from "./helpers";
+
+// Bersihin kolom telepon/WA: cuma boleh angka + karakter pemisah wajar (+, -, spasi,
+// koma, slash, kurung). Nama/label kayak "Admin 1:" otomatis kebuang, sisa nomornya
+// digabung dipisah koma. Dipake di semua jalur nulis lead (manual, import Excel).
+function sanitizePhone(raw) {
+  if (!raw) return "";
+  const matches = String(raw).match(/(\+?\d[\d\-\s]{5,}\d)/g) || [];
+  const cleaned = matches.map((m) => m.replace(/\s+/g, "").trim()).filter(Boolean);
+  return cleaned.join(", ");
+}
+
+// ---- ORGANISASI ----
+let cachedOrgId = null;
+export async function getMyOrgId() {
+  if (cachedOrgId) return cachedOrgId;
+  const { data, error } = await supabase.rpc("ensure_my_org");
+  if (error) throw error;
+  cachedOrgId = data;
+  return cachedOrgId;
+}
+export function clearOrgCache() { cachedOrgId = null; }
+
+export async function getMyOrg() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("organizations").select("*").eq("id", orgId).single();
+  if (error) throw error;
+  return data;
+}
+
+// Simpen pilihan industri org (dipilih sekali pas onboarding lewat IndustryPicker,
+// nentuin template pipeline default + label field yang dipake di seluruh CRM).
+export async function setOrgIndustry(industryKey) {
+  const orgId = await getMyOrgId();
+  const { error } = await supabase.from("organizations").update({ industry: industryKey }).eq("id", orgId);
+  if (error) throw error;
+}
+
+// ---- MODE DEMO INDUSTRI (khusus admin platform) ----
+// Beda dari setOrgIndustry biasa (yang cuma dipake SEKALI pas onboarding),
+// fungsi ini boleh dipanggil BERKALI-KALI - buat Nando nunjukin "framework"
+// tiap industri pas lagi pitching ke calon klien. Selain ganti industry,
+// pipeline stages-nya juga ikut di-RESET total sesuai template industri baru
+// (bukan cuma label field yang berubah) - biar keliatan strukturnya beneran,
+// bukan cuma kosmetik doang.
+export async function switchDemoIndustry(industryKey) {
+  const orgId = await getMyOrgId();
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { error: orgErr } = await supabase.from("organizations").update({ industry: industryKey }).eq("id", orgId);
+  if (orgErr) throw orgErr;
+
+  const tpl = getIndustryTemplate(industryKey);
+  const { data: rows } = await supabase.from("stages").select("id");
+  if (rows?.length) await supabase.from("stages").delete().in("id", rows.map((r) => r.id));
+  const payload = tpl.stages.map((s, i) => ({ user_id: uid, org_id: orgId, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
+  const { error: stagesErr } = await supabase.from("stages").insert(payload);
+  if (stagesErr) throw stagesErr;
+}
+
+// Lewat edge function (service role) - bukan cuma query settings.
+// community_display_name doang, tapi FALLBACK ke email anggota kalau
+// mereka belum pernah ngisi nama profil (misal join lewat kode invite
+// tanpa lewat wizard signup lengkap). Client biasa gak bisa baca email
+// anggota LAIN (RLS gak ngasih akses ke auth.users), makanya butuh
+// service role - sebelumnya nama yang "belum diisi" jatuh ke potongan
+// UUID mentah ("Anggota 45dadf81") yang gak kebaca sama sekali.
+// Rekap aktivitas tim (tab "Tim", 30 Sep 2026) - khusus owner/manager
+// Enterprise, dicek ulang di RPC-nya. Balikin { members: [...], feed: [...] }.
+export async function getTeamActivity(from, to) {
+  const { data, error } = await supabase.rpc("get_team_activity", { p_from: from.toISOString(), p_to: to.toISOString() });
+  if (error) throw error;
+  return data || { members: [], feed: [] };
+}
+
+// Timeline aktivitas tim per rentang (dipake buat 1 hari yang diklik di strip
+// 7 hari) + jumlah aktivitas per hari (kalender WIB). Sama, khusus
+// owner/manager Enterprise - dicek ulang di RPC.
+export async function getTeamFeed(from, to, limit = 200) {
+  const { data, error } = await supabase.rpc("get_team_feed", { p_from: from.toISOString(), p_to: to.toISOString(), p_limit: limit });
+  if (error) throw error;
+  return data || [];
+}
+export async function getTeamActivityDays(days = 7) {
+  const { data, error } = await supabase.rpc("get_team_activity_days", { p_days: days });
+  if (error) throw error;
+  return data || [];
+}
+
+// ---- Kontrak & termin pembayaran per lead (Enterprise, 30 Sep 2026). RLS
+// payment_terms: owner/manager semua, sales cuma lead yang dia pegang.
+export async function getPaymentTerms(leadId) {
+  const { data, error } = await supabase.from("payment_terms").select("*").eq("lead_id", leadId).order("position").order("created_at");
+  if (error) throw error;
+  return data || [];
+}
+export async function addPaymentTerm(leadId, term) {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("payment_terms").insert({ org_id: orgId, lead_id: leadId, ...term }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function updatePaymentTerm(id, patch) {
+  const { data, error } = await supabase.from("payment_terms").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function deletePaymentTerm(id) {
+  const { error } = await supabase.from("payment_terms").delete().eq("id", id);
+  if (error) throw error;
+}
+// Target & forecast team (tab Team). month = tanggal 1 bulan itu (YYYY-MM-01).
+export async function getTeamTargets(month) {
+  const { data, error } = await supabase.rpc("get_team_targets", { p_month: month });
+  if (error) throw error;
+  return data || [];
+}
+export async function setSalesTarget(userId, month, amount) {
+  const orgId = await getMyOrgId();
+  const { error } = await supabase.from("sales_targets").upsert(
+    { org_id: orgId, user_id: userId, month, amount, updated_at: new Date().toISOString() },
+    { onConflict: "org_id,user_id,month" }
+  );
+  if (error) throw error;
+}
+// Rincian kontrak per proyek (lead yang punya termin) - dipake kartu
+// "Kontrak & Pembayaran" di tab Team (tab Berjalan / Selesai).
+export async function getTeamContracts() {
+  const { data, error } = await supabase.rpc("get_team_contracts");
+  if (error) throw error;
+  return data || [];
+}
 export async function getTeamPayments() {
   const { data, error } = await supabase.rpc("get_team_payments");
   if (error) throw error;

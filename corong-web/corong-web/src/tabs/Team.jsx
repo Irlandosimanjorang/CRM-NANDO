@@ -410,58 +410,117 @@ function TargetsCard({ members, reloadKey }) {
   );
 }
 
-// Ringkasan kontrak & pembayaran semua lead + termin yang jatuh tempo 14
-// hari ke depan / udah telat.
+// Kontrak & Pembayaran per proyek (lead yang punya termin). Tab "Berjalan" =
+// proyek yang uangnya belum masuk semua, "Selesai" = sudah lunas 100%. Kotak
+// total ngikutin tab yang dipilih.
 function PaymentsCard({ nameOf, reloadKey, onOpenLead }) {
-  const [p, setP] = useState(null);
-  useEffect(() => { db.getTeamPayments().then(setP).catch(() => setP(null)); }, [reloadKey]);
-  if (!p) return null;
-  const outstanding = Math.max(0, p.invoiced - p.paid);
+  const [rows, setRows] = useState(null);
+  const [view, setView] = useState("running");
+  useEffect(() => { db.getTeamContracts().then(setRows).catch(() => setRows([])); }, [reloadKey]);
+  if (rows === null) return null;
+
+  const running = rows.filter((r) => Number(r.paid) < Number(r.contract));
+  const done = rows.filter((r) => Number(r.paid) >= Number(r.contract));
+  const list = view === "running" ? running : done;
+  const sum = (k) => list.reduce((s, r) => s + Number(r[k] || 0), 0);
+  const contract = sum("contract"), invoiced = sum("invoiced"), paid = sum("paid"), overdue = sum("overdue");
+  const pctIn = contract > 0 ? Math.round((paid / contract) * 100) : 0;
+
   const tiles = [
-    { label: "Nilai kontrak (Booking)", value: p.contract, cls: "text-slate-900" },
-    { label: "Sudah ditagih (Revenue)", value: p.invoiced, cls: "text-sky-700" },
-    { label: "Sudah dibayar (Cash In)", value: p.paid, cls: "text-emerald-700" },
-    { label: "Piutang telat", value: p.overdue_total, cls: p.overdue_total > 0 ? "text-rose-600" : "text-slate-400" },
+    { label: "Nilai kontrak", hint: "Total nilai proyek yang sudah deal", value: contract, cls: "text-slate-900" },
+    { label: "Sudah ditagih", hint: "Invoice yang sudah dikirim ke klien", value: invoiced, cls: "text-sky-700" },
+    { label: "Sudah masuk", hint: "Uang yang sudah diterima (Cash In)", value: paid, cls: "text-emerald-700" },
+    { label: "Telat dibayar", hint: "Lewat jatuh tempo, belum dibayar", value: overdue, cls: overdue > 0 ? "text-rose-600" : "text-slate-400" },
   ];
+
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6">
-      <div className="mb-4">
-        <div className="text-sm font-bold text-slate-800">Kontrak & Pembayaran</div>
-        <div className="text-[10.5px] text-slate-400">Dari termin yang dicatat di tiap lead · tagihan yang belum dibayar: {fmtJt(outstanding)}</div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-bold text-slate-800">Kontrak & Pembayaran</div>
+          <div className="text-[10.5px] text-slate-400">Dari termin yang dicatat di tiap lead · Booking → Revenue → Cash In</div>
+        </div>
+        <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
+          {[["running", `Berjalan (${running.length})`], ["done", `Selesai (${done.length})`]].map(([k, l]) => (
+            <button key={k} onClick={() => setView(k)} className={`rounded-[10px] px-3 py-1.5 text-[12px] font-medium ${view === k ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"}`}>{l}</button>
+          ))}
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {tiles.map((t) => (
-          <div key={t.label} className="rounded-2xl bg-slate-50 px-3.5 py-3">
-            <div className={`text-[15px] font-bold tabular-nums ${t.cls}`}>{fmtJt(t.value)}</div>
-            <div className="mt-0.5 text-[10.5px] text-slate-500">{t.label}</div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-5 text-[12px] font-semibold text-slate-600">Jatuh tempo 14 hari ke depan & yang telat</div>
-      {p.items.length === 0 ? (
-        <p className="mt-2 text-[12px] text-slate-400">{p.contract > 0 ? "Gak ada termin yang jatuh tempo dalam 14 hari." : "Belum ada termin. Catat di detail lead (bagian Kontrak & Termin Pembayaran)."}</p>
+
+      {rows.length === 0 ? (
+        <p className="text-[12px] text-slate-500">Belum ada kontrak. Buka detail lead yang sudah deal, isi <b>Nilai proyek</b>, lalu catat termin pembayarannya di bagian <b>Kontrak & Termin Pembayaran</b>.</p>
       ) : (
-        <ul className="mt-2 divide-y divide-slate-100">
-          {p.items.map((it) => {
-            const late = it.days_left < 0;
-            return (
-              <li key={it.id}>
-                <button onClick={() => onOpenLead(it.lead_id)} className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-slate-50/60">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[12.5px] font-semibold text-slate-800">{it.lead_name}</div>
-                    <div className="text-[11px] text-slate-500">{it.label || "Termin"} · {nameOf[it.user_id] || "-"}{it.invoiced_at ? " · sudah ditagih" : " · belum ditagih"}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[12.5px] font-bold tabular-nums text-slate-800">{fmtRp(it.amount)}</div>
-                    <div className={`text-[10.5px] font-semibold ${late ? "text-rose-600" : it.days_left <= 3 ? "text-amber-600" : "text-slate-400"}`}>
-                      {late ? `Telat ${-it.days_left} hari` : it.days_left === 0 ? "Hari ini" : `${it.days_left} hari lagi`}
-                    </div>
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {tiles.map((t) => (
+              <div key={t.label} className="rounded-2xl bg-slate-50 px-3.5 py-3">
+                <div className={`text-[15px] font-bold tabular-nums ${t.cls}`}>{fmtJt(t.value)}</div>
+                <div className="mt-0.5 text-[11px] font-medium text-slate-600">{t.label}</div>
+                <div className="text-[10px] leading-snug text-slate-400">{t.hint}</div>
+              </div>
+            ))}
+          </div>
+
+          {contract > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between text-[11.5px] text-slate-600">
+                <span><b className="text-emerald-700">{fmtJt(paid)}</b> dari {fmtJt(contract)} sudah masuk</span>
+                <span className="tabular-nums">{pctIn}%</span>
+              </div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${pctIn}%` }} /></div>
+              {view === "running" && <div className="mt-1 text-[11px] text-slate-500">Sisa yang belum masuk: <b className="text-slate-800">{fmtJt(contract - paid)}</b></div>}
+            </div>
+          )}
+
+          <div className="mt-5 overflow-x-auto">
+            {list.length === 0 ? (
+              <p className="text-[12px] text-slate-400">{view === "running" ? "Semua proyek sudah lunas." : "Belum ada proyek yang lunas 100%."}</p>
+            ) : (
+              <table className="w-full min-w-[620px] text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-slate-100 text-left text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="py-2 pr-3 font-semibold">Proyek</th>
+                    <th className="px-2 py-2 text-right font-semibold">Nilai kontrak</th>
+                    <th className="px-2 py-2 text-right font-semibold">Sudah masuk</th>
+                    <th className="px-2 py-2 text-right font-semibold">Sisa</th>
+                    <th className="py-2 pl-3 font-semibold">{view === "running" ? "Termin berikutnya" : "Termin"}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {list.map((r) => {
+                    const pct = Number(r.contract) > 0 ? Math.round((Number(r.paid) / Number(r.contract)) * 100) : 0;
+                    const late = r.days_left != null && r.days_left < 0;
+                    return (
+                      <tr key={r.lead_id} onClick={() => onOpenLead(r.lead_id)} className="cursor-pointer hover:bg-slate-50/70">
+                        <td className="py-3 pr-3">
+                          <div className="font-semibold text-slate-800">{r.lead_name}</div>
+                          <div className="text-[10.5px] text-slate-400">{nameOf[r.user_id] || "-"} · {r.terms_paid}/{r.terms} termin lunas</div>
+                          <div className="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} /></div>
+                        </td>
+                        <td className="px-2 py-3 text-right tabular-nums text-slate-700">{fmtJt(r.contract)}</td>
+                        <td className="px-2 py-3 text-right tabular-nums font-semibold text-emerald-700">{fmtJt(r.paid)} <span className="text-[10.5px] font-normal text-slate-400">({pct}%)</span></td>
+                        <td className={`px-2 py-3 text-right tabular-nums font-semibold ${Number(r.overdue) > 0 ? "text-rose-600" : "text-slate-800"}`}>{fmtJt(Number(r.contract) - Number(r.paid))}</td>
+                        <td className="py-3 pl-3">
+                          {view === "running" && r.next_label != null ? (
+                            <>
+                              <div className="text-slate-700">{r.next_label || "Termin"}</div>
+                              <div className={`text-[10.5px] font-semibold ${late ? "text-rose-600" : r.days_left != null && r.days_left <= 3 ? "text-amber-600" : "text-slate-400"}`}>
+                                {r.days_left == null ? "belum ada jatuh tempo" : late ? `Telat ${-r.days_left} hari` : r.days_left === 0 ? "Jatuh tempo hari ini" : `${r.days_left} hari lagi`}
+                                {r.next_invoiced ? " · sudah ditagih" : " · belum ditagih"}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-emerald-700">Lunas</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
