@@ -116,12 +116,12 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
     <>
       <div className="fixed inset-0 z-40 bg-slate-900/20" onClick={onClose} />
       <div
-        className="fixed z-50 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
+        className="fixed z-50 bg-white rounded-panel shadow-2xl border border-slate-100 overflow-hidden"
         style={{ left, top, width: POPUP_W, maxHeight: "min(480px, calc(100vh - 24px))" }}
       >
-        <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-orange-50 to-white border-b border-slate-100 flex items-start justify-between gap-2">
+        <div className="px-4 pt-4 pb-3 bg-white border-b border-slate-100 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1"><Sparkles size={11} /> Draft Follow-up (AI)</div>
+            <div className="text-[11.5px] font-semibold text-ai flex items-center gap-1"><Sparkles size={12} /> Draft follow-up (AI)</div>
             <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{lead.name}</div>
           </div>
           <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-slate-600"><X size={16} /></button>

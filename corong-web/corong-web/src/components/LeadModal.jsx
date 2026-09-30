@@ -85,7 +85,7 @@ function StateChip({ label, level, invert }) {
   const hex = COLORS[level] || "#94a3b8";
   return (
     <div className="rounded-xl border px-2 py-1.5 text-center" style={{ borderColor: `${hex}55`, backgroundColor: `${hex}14` }}>
-      <div className="text-[9px] text-slate-500">{label}</div>
+      <div className="text-[10px] text-slate-500">{label}</div>
       <div className="text-[11px] font-bold capitalize" style={{ color: hex }}>{level || "—"}</div>
     </div>
   );
@@ -416,10 +416,10 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
   return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={handleClose}>
-      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl my-8 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-panel shadow-2xl w-full max-w-xl my-8 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header gradient sesuai warna tahap pipeline lead ini - avatar bubble
             "bocor" ke luar band, senada sama gaya kartu profil & popup lain. */}
-        <div className="relative h-20 shrink-0" style={{ background: `linear-gradient(135deg, ${sm.hex}, ${sm.hex}cc 55%, ${sm.hex}99)` }}>
+        <div className="relative h-20 shrink-0" style={{ background: sm.hex }}>
           <button onClick={handleClose} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"><X size={16} /></button>
           <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-2xl overflow-hidden bg-white ring-4 ring-white shadow-md flex items-center justify-center font-bold text-xl" style={{ color: sm.hex }}>
             {(f.name || "?").charAt(0).toUpperCase()}

@@ -39,7 +39,7 @@ export default function DeleteAccountModal({ isOwner, otherMemberCount, orgName,
 
   return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-panel shadow-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-bold text-lg flex items-center gap-2 text-rose-600">
             <AlertTriangle size={18} /> Hapus Akun

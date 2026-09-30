@@ -67,13 +67,13 @@ export default function ProgressPopup({ lead, onClose, onChanged, autoFocus }) {
   return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
       <div
-        className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-sm flex flex-col overflow-hidden"
+        className="bg-white rounded-panel shadow-2xl border border-slate-100 w-full max-w-sm flex flex-col overflow-hidden"
         style={{ maxHeight: "min(560px, calc(100vh - 32px))" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-orange-50 to-white border-b border-slate-100 flex items-start justify-between gap-2 shrink-0">
+        <div className="px-4 pt-4 pb-3 bg-white border-b border-slate-100 flex items-start justify-between gap-2 shrink-0">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1"><ClipboardList size={11} /> Progress Harian</div>
+            <div className="text-[11.5px] font-semibold text-brand-strong flex items-center gap-1"><ClipboardList size={12} /> Progress harian</div>
             <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{lead.name}</div>
           </div>
           <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-slate-600"><X size={16} /></button>

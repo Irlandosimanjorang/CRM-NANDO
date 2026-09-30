@@ -185,7 +185,7 @@ export default function LegalModal({ type, onClose, supportWaNumber }) {
   // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
   return createPortal(
     <div className="fixed inset-0 z-[1100] flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 py-8 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-[28px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-2xl rounded-panel bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 flex items-center justify-between rounded-t-[28px] border-b border-slate-100 bg-white/95 px-6 py-4 backdrop-blur">
           <h2 className="text-[16px] font-bold text-slate-900">{isTos ? "Ketentuan Layanan" : "Kebijakan Privasi"}</h2>
           <button onClick={onClose} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">

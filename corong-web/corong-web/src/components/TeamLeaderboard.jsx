@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Trophy, Crown, X, ChevronRight, Percent, Pencil, Check, Loader2 } from "lucide-react";
+import { Crown, X, ChevronRight, Pencil, Check, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 
@@ -50,7 +50,7 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="max-h-[75vh] w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-xl"
+        className="max-h-[75vh] w-full max-w-sm overflow-hidden rounded-panel bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -173,15 +173,10 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
   const hasAnyRevenue = maxRevenue > 0;
 
   return (
-    <div className="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]">
-      <div className="mb-5 flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
-          <Trophy size={17} />
-        </div>
-        <div>
-          <div className="text-sm font-bold text-slate-800">Performa Team</div>
-          <div className="text-[10.5px] text-slate-400">Peringkat berdasarkan total revenue closing</div>
-        </div>
+    <div className="rounded-panel border border-slate-200/80 bg-white p-5 sm:p-6">
+      <div className="mb-5">
+        <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">Performa team</h2>
+        <p className="mt-0.5 text-[11.5px] text-slate-500">Peringkat berdasarkan total revenue closing</p>
       </div>
 
       <div className="divide-y divide-slate-100">
@@ -193,7 +188,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
                 <div className={`flex h-11 w-11 items-center justify-center rounded-full text-[13px] font-bold text-white ${style.avatarBg}`}>
                   {i === 0 ? <Crown size={17} /> : initials(r.name.startsWith("Anggota ") ? null : r.name, r.uid)}
                 </div>
-                <span className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white ${style.badgeBg}`}>
+                <span className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white ${style.badgeBg}`}>
                   {i + 1}
                 </span>
               </div>
@@ -225,7 +220,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
                 {hasAnyRevenue && (
                   <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-orange-400 to-orange-500 transition-all duration-500"
+                      className="h-full rounded-full bg-brand transition-all duration-500"
                       style={{ width: `${(r.revenue / maxRevenue) * 100}%` }}
                     />
                   </div>
@@ -246,18 +241,13 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
           manager set rate-nya. */}
       {canManage && (
         <div className="mt-6 border-t border-slate-100 pt-5">
-          <div className="mb-3 flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-              <Percent size={16} />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-800">Komisi Team</div>
-              <div className="text-[10.5px] text-slate-400">% dari total revenue closing (all-time) - atur rate tiap anggota</div>
-            </div>
+          <div className="mb-3">
+            <h3 className="text-[14px] font-bold tracking-[-0.02em] text-ink">Komisi team</h3>
+            <p className="mt-0.5 text-[11.5px] text-slate-500">% dari total revenue closing (sepanjang masa) - atur rate tiap anggota</p>
           </div>
           <div className="space-y-2">
             {rows.map((r) => (
-              <div key={r.key} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3.5 py-2.5">
+              <div key={r.key} className="flex items-center justify-between gap-3 rounded-inner bg-slate-50 px-3.5 py-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[12.5px] font-semibold text-slate-700">{r.name}</div>
                   <div className="text-[10.5px] text-slate-400">Revenue {fmtRp(r.revenue)}</div>

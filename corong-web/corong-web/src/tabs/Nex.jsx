@@ -42,7 +42,7 @@ function Avatar({ name, url, size = 38 }) {
 // (avatar pojok kanan atas), otomatis kepakai juga di Nex.
 function ProfileCard({ myName, myAvatarUrl, myJobTitle, postCount, totalLikes }) {
   return (
-    <div className="bg-white border border-slate-100 rounded-[28px] p-3 flex items-center gap-3">
+    <div className="bg-white border border-slate-100 rounded-panel p-3 flex items-center gap-3">
       <Avatar name={myName} url={myAvatarUrl} size={44} />
       <div className="min-w-0 flex-1">
         <div className="font-bold text-sm text-slate-900 truncate">{myName || "User Nexto"}</div>
@@ -102,7 +102,7 @@ function ComposerModal({ displayName, avatarUrl, onClose, onPosted }) {
   // ManualColumnMapModal, diterapin ke SEMUA modal fullscreen di app ini.
   return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-panel shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg">Buat post</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
@@ -214,7 +214,7 @@ function PostCard({ post, myId, onDeleted }) {
   };
 
   return (
-    <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+    <div className="bg-white border border-slate-100 rounded-panel p-4">
       <div className="flex items-center gap-2.5">
         <Avatar name={post.author_name} />
         <div className="min-w-0 flex-1">
@@ -333,7 +333,7 @@ export default function Nex({ dummy, settings }) {
 
       <ProfileCard myName={myName} myAvatarUrl={myAvatarUrl} myJobTitle={myJobTitle} postCount={postCount} totalLikes={totalLikes} />
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => { setShowComposer(true); saveOpenModal("nexpost", {}); }}>
+      <div className="bg-white border border-slate-100 rounded-panel p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => { setShowComposer(true); saveOpenModal("nexpost", {}); }}>
         <div className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm text-slate-400">Apa yang mau Anda share, {myName ? myName.split(" ")[0] : ""}?</div>
         <ImageIcon size={20} className="text-emerald-500 shrink-0" />
       </div>

@@ -146,7 +146,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
   // profil ProfileAvatar - pola yang sama dipake di sini).
   return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={handleCancel}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl min-w-0 my-8 p-5" style={{ maxWidth: "min(56rem, calc(100vw - 2rem))" }} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-panel shadow-2xl w-full max-w-4xl min-w-0 my-8 p-5" style={{ maxWidth: "min(56rem, calc(100vw - 2rem))" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-bold text-lg flex items-center gap-2"><Table2 size={18} className="text-orange-500" /> Cek & Sesuaikan Kolom Import</h2>
           <button onClick={handleCancel} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>

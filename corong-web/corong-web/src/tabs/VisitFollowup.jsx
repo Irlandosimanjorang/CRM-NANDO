@@ -41,7 +41,7 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
   // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
   return createPortal(
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={scanning ? undefined : onCancel}>
-      <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-t-[28px] sm:rounded-panel w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-base flex items-center gap-1.5"><MapPin size={16} className="text-orange-500" /> Konfirmasi Lokasi</h3>
           {!scanning && <button onClick={onCancel} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>}
@@ -201,7 +201,7 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
   // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
   return createPortal(
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
-      <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-t-[28px] sm:rounded-panel w-full sm:max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-base">Foto Bukti Check-in</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
@@ -430,7 +430,7 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   if (!isEnterprise) return <GpsCheckinLocked />;
 
   return (
-    <div className="bg-white border border-orange-200 rounded-[28px] p-4 mb-4">
+    <div className="bg-white border border-orange-200 rounded-panel p-4 mb-4">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
           <span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Navigation size={14} /></span>
@@ -583,7 +583,7 @@ function CheckinHistory({ isEnterprise }) {
       ) : (
         <div className="space-y-2">
           {items.map((ci) => (
-            <div key={ci.id} className="bg-white border border-slate-100 rounded-[28px] p-3 flex items-center gap-3">
+            <div key={ci.id} className="bg-white border border-slate-100 rounded-panel p-3 flex items-center gap-3">
               {ci.photo_url ? (
                 <button onClick={() => setLightbox(ci)} className="shrink-0">
                   <img src={ci.photo_url} alt="" className="w-11 h-11 rounded-2xl object-cover border border-slate-200 hover:opacity-80 transition-opacity" />
@@ -691,7 +691,7 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
   // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
   return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-panel shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><CalendarCheck size={18} className="text-orange-500" /> Tambah Visit</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
         <div className="space-y-3">
           <div>
@@ -785,7 +785,7 @@ function MonthCalendar({ leads, onEdit, month, setMonth }) {
   const goToday = () => setMonth(new Date());
 
   return (
-    <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+    <div className="bg-white border border-slate-100 rounded-panel p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1.5">
           <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><ChevronLeft size={16} /></button>
@@ -809,11 +809,11 @@ function MonthCalendar({ leads, onEdit, month, setMonth }) {
               <div className={`text-[10px] font-medium mb-1 ${isToday ? "text-orange-600" : "text-slate-400"}`}>{d}</div>
               <div className="space-y-0.5">
                 {dayVisits.slice(0, 2).map((c) => (
-                  <button key={c.id} onClick={() => onEdit(c)} className="w-full text-left text-[9px] leading-tight bg-orange-100 text-orange-700 rounded px-1 py-0.5 truncate hover:bg-orange-200">
+                  <button key={c.id} onClick={() => onEdit(c)} className="w-full text-left text-[10px] leading-tight bg-orange-100 text-orange-700 rounded px-1 py-0.5 truncate hover:bg-orange-200">
                     {c.name}
                   </button>
                 ))}
-                {dayVisits.length > 2 && <div className="text-[9px] text-slate-400 px-1">+{dayVisits.length - 2} lagi</div>}
+                {dayVisits.length > 2 && <div className="text-[10px] text-slate-400 px-1">+{dayVisits.length - 2} lagi</div>}
               </div>
             </div>
           );
@@ -884,7 +884,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
         <MonthCalendar leads={leads} onEdit={openVisitDetail} month={month} setMonth={setMonth} />
       ) : (
         <>
-          <div className="bg-white border border-slate-100 rounded-[28px] p-4 mb-4">
+          <div className="bg-white border border-slate-100 rounded-panel p-4 mb-4">
             <div className="grid grid-cols-2 divide-x divide-slate-100">
               <div className="px-3 first:pl-1">
                 <div className="text-xs text-slate-400 flex items-center gap-1.5"><CalendarCheck size={13} /> Akan datang</div>
@@ -896,15 +896,15 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
               </div>
             </div>
           </div>
-          <div className="bg-white border border-slate-100 rounded-[28px] overflow-x-auto">
+          <div className="bg-white border border-slate-100 rounded-panel overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
+              <thead className="bg-slate-50/80 text-slate-500 text-[11.5px] font-semibold"><tr>
                 <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Lokasi</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Produk</th><th className="text-left px-3 py-2 font-medium">Tanggal visit</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Ketemu</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Agenda</th>
               </tr></thead>
               <tbody>
                 {visits.map((c) => { const past = c.visit_date < todayISO(); const today = c.visit_date === todayISO(); const meet = c.visit_meet || c.key_person; return (
                   <tr key={c.id} className={`border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer ${past ? "opacity-50" : ""}`} onClick={() => openVisitDetail(c)}>
-                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
+                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[10px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
                     <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
                     <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
                     <td className="px-3 py-2 text-xs"><span className={today ? "text-orange-600 font-medium" : "text-slate-600"}>{fmtDate(c.visit_date)}{today && " · hari ini"}</span></td>

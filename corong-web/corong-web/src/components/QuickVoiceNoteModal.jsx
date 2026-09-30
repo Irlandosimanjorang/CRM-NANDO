@@ -283,7 +283,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
   return createPortal(
     <div className="fixed inset-0 bg-[#050810]/80 backdrop-blur-sm flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto">
       <div
-        className="relative w-full max-w-[420px] my-8 rounded-[28px] overflow-hidden border border-white/10 shadow-[0_40px_100px_-30px_rgba(0,0,0,.8)]"
+        className="relative w-full max-w-[420px] my-8 rounded-panel overflow-hidden border border-white/10 shadow-float"
         style={{ background: "#0b0f1c" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -302,9 +302,9 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-60" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
               </span>
-              <h2 className="font-black text-[16px] tracking-tight text-white flex items-center gap-1.5">
+              <h2 className="font-bold text-[16px] tracking-tight text-white flex items-center gap-1.5">
                 <Zap size={15} className="text-orange-400" />
-                NEX <span className="bg-gradient-to-r from-orange-400 to-violet-400 bg-clip-text text-transparent">Pro</span>
+                NEX <span className="text-violet-300">Pro</span>
               </h2>
             </div>
             <button onClick={stage === "recording" ? cancelRecording : onClose} className="text-slate-500 hover:text-white transition-colors" aria-label="Tutup"><X size={18} /></button>
@@ -317,7 +317,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                 <span className="font-mono tabular-nums text-slate-400">{quota.used}/{quota.max}</span>
               </div>
               <div className="h-[3px] rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-violet-400" style={{ width: `${Math.min(100, (quota.used / quota.max) * 100)}%` }} />
+                <div className="h-full rounded-full bg-violet-400" style={{ width: `${Math.min(100, (quota.used / quota.max) * 100)}%` }} />
               </div>
             </div>
           )}
@@ -328,7 +328,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
               <div className="relative mx-auto w-28 h-28 flex items-center justify-center">
                 <span className="absolute inset-0 rounded-full border border-violet-400/20" />
                 <span className="absolute inset-2 rounded-full border border-orange-500/15 animate-pulse" style={{ animationDuration: "2.4s" }} />
-                <button onClick={startRecording} className="relative z-10 w-[72px] h-[72px] rounded-full bg-gradient-to-br from-orange-500 via-orange-600 to-violet-600 text-white flex items-center justify-center shadow-[0_0_40px_-8px_rgba(167,139,250,.6)] hover:shadow-[0_0_55px_-6px_rgba(167,139,250,.75)] transition-shadow">
+                <button onClick={startRecording} className="relative z-10 w-[72px] h-[72px] rounded-full bg-ai hover:bg-violet-700 text-white flex items-center justify-center shadow-float transition-colors">
                   <Mic size={26} />
                 </button>
               </div>
@@ -344,7 +344,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                 {Array.from({ length: 9 }).map((_, i) => (
                   <span
                     key={i}
-                    className={`w-[3px] rounded-full animate-pulse bg-gradient-to-t ${i % 3 === 0 ? "from-violet-500 to-violet-300" : "from-orange-500 to-orange-300"}`}
+                    className={`w-[3px] rounded-full animate-pulse ${i % 3 === 0 ? "bg-violet-300" : "bg-violet-400"}`}
                     style={{ height: `${10 + (i % 4) * 7}px`, animationDelay: `${i * 90}ms`, animationDuration: "900ms" }}
                   />
                 ))}
@@ -486,7 +486,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
               <button
                 onClick={save}
                 disabled={busy || !canSave || (action === "send_email" && (emailLoading || !emailDraft))}
-                className={`w-full mt-4 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm px-4 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5 transition-colors ${action === "delete_lead" ? "bg-rose-600 hover:bg-rose-500" : "bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 shadow-[0_8px_24px_-8px_rgba(249,115,22,.6)]"}`}
+                className={`w-full mt-4 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm px-4 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5 transition-colors ${action === "delete_lead" ? "bg-rose-600 hover:bg-rose-500" : "bg-brand-strong hover:bg-orange-600"}`}
               >
                 {busy ? <Loader2 size={15} className="animate-spin" /> : action === "delete_lead" ? <Trash2 size={15} /> : action === "send_email" ? <Mail size={15} /> : <Save size={15} />}
                 {action === "delete_lead" ? "Hapus Lead" : action === "send_email" ? "Kirim Email" : action === "close_lead" ? "Tutup Deal" : action === "create_lead" ? "Simpan Lead Baru" : "Simpan ke Progress"}

@@ -79,7 +79,7 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
   // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
   return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-panel shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><Trophy size={18} className="text-emerald-500" /> Tambah Deal</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
         {hadDraft && <div className="mb-3 text-xs bg-orange-50 text-orange-700 border border-orange-200 rounded-xl px-3 py-2">Melanjutkan draft yang belum disimpan.</div>}
         <div className="space-y-3">
@@ -194,7 +194,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Trophy size={32} className="mx-auto text-slate-300 mb-3" />Belum ada deal. Klik "Tambah Deal" atau ubah tahap lead jadi "Deal (menang)".</div>
       ) : (
         <>
-          <div className="bg-white border border-slate-100 rounded-[28px] p-4 mb-4">
+          <div className="bg-white border border-slate-100 rounded-panel p-4 mb-4">
             <div className="grid grid-cols-3 divide-x divide-slate-100">
               <div className="px-3 first:pl-1">
                 <div className="text-xs text-slate-400 flex items-center gap-1.5"><Trophy size={13} /> Total Deal</div>
@@ -225,9 +225,9 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               </div>
             </div>
           </div>
-          <div className="bg-white border border-slate-100 rounded-[28px] overflow-x-auto">
+          <div className="bg-white border border-slate-100 rounded-panel overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50/80 text-slate-400 text-[11px] uppercase tracking-wider"><tr>
+              <thead className="bg-slate-50/80 text-slate-500 text-[11.5px] font-semibold"><tr>
                 <th className="px-3 py-2 font-medium" style={{ width: "28px" }}></th>
                 <th className="text-left px-3 py-2 font-medium">Perusahaan</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Sales</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">{productLabel}</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th><th className="text-left px-3 py-2 font-medium">Total Rp</th>
               </tr></thead>
@@ -247,8 +247,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                       <td className="px-3 py-2">
                         <div className="font-medium flex items-center gap-1.5">
                           {latest.lead_name}
-                          {lead && typeBadge(lead.company_type) && <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(lead.company_type)}</span>}
-                          {g.txs.length > 1 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">{g.txs.length}x</span>}
+                          {lead && typeBadge(lead.company_type) && <span className="text-[10px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(lead.company_type)}</span>}
+                          {g.txs.length > 1 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">{g.txs.length}x</span>}
                         </div>
                       </td>
                       <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{lead?.city || "—"}</td>

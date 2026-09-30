@@ -516,7 +516,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       <PreviewLock locked={locked} minLevel={1}>
       <h1 className="text-2xl font-bold tracking-tight">Pengaturan</h1>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         {/* Judul & teks kartu ini beda buat Enterprise (tim beneran, banyak
             anggota) vs plan lain (akun pribadi, cuma dia sendiri) - biar gak
             kesan ada "tim"/"anggota" padahal cuma 1 orang. */}
@@ -670,7 +670,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           atau export data, harus minta izin owner/manager dulu. Kartu ini
           cuma nongol kalau ADA yang masih nunggu keputusan. */}
       {canManage && isEnterprise && pendingApprovals.length > 0 && (
-        <div className="bg-white border border-amber-200 rounded-[28px] p-4">
+        <div className="bg-white border border-amber-200 rounded-panel p-4">
           <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><ShieldAlert size={15} className="text-amber-500" /> Permintaan Approval</h3>
           <p className="text-xs text-slate-400 mb-3">Sales rep butuh persetujuan buat hapus lead atau export data team.</p>
           <div className="space-y-2">
@@ -694,7 +694,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         </div>
       )}
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <div className="flex items-center justify-between mb-2"><h3 className="font-semibold text-sm">Tahap pipeline</h3><button onClick={addStage} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={13} /> tambah tahap</button></div>
         <p className="text-xs text-slate-400 mb-3">Tipe nentuin hitungan dashboard: <b>Deal</b> = menang, <b>Lost</b> = gugur, <b>Normal</b> = masih jalan.</p>
         <div className="space-y-2">
@@ -716,7 +716,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
       {isEnterprise && <ProductCatalogCard canManage={canManage} />}
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Sparkles size={15} className="text-orange-500" /> Rapihin Data</h3>
         <p className="text-xs text-slate-500 mb-3">Cari saran kategori buat lead "Lainnya", lead yang udah lama ga aktif, dan data kontak yang kurang lengkap. Semua perubahan tetap Anda yang approve.</p>
         <button onClick={() => { setShowCleanup(true); saveOpenModal("datacleanup", {}); }} className="text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
@@ -724,7 +724,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         </button>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Trash2 size={15} className="text-slate-400" /> Recycle Bin</h3>
         <p className="text-xs text-slate-500 mb-3">Lead yang kehapus (manual atau otomatis dari bot) kesimpen di sini dulu, bisa dibalikin kapan aja sebelum di-hapus permanen.</p>
         <button onClick={() => { setShowRecycleBin(true); saveOpenModal("recyclebin", {}); }} className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
@@ -732,10 +732,10 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         </button>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
-        <h3 className="font-black text-sm mb-1 flex items-center gap-1.5">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
+        <h3 className="font-bold text-sm mb-1 flex items-center gap-1.5">
           <Zap size={15} className="text-orange-500" />
-          NEX <span className="bg-gradient-to-r from-orange-500 to-violet-500 bg-clip-text text-transparent">Pro</span>
+          NEX <span className="text-ai">Pro</span>
         </h3>
         <p className="text-xs text-slate-500 mb-3">
           Update lead pakai suara, langsung dari app - gak perlu app lain kayak Telegram lagi. Ngomong aja, AI yang urus sisanya: catat progress, jadwal visit{myLevel >= 2 ? " (otomatis sinkron ke Google Calendar di bawah)" : ""}, tutup deal menang/kalah, tambah lead baru, sampai kirim email follow-up. Hasilnya tetap direview dulu sebelum disimpan.
@@ -760,7 +760,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         )}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Smartphone size={15} className="text-orange-500" /> Install Nexto ke Home Screen HP</h3>
         <p className="text-xs text-slate-500 mb-3">
           Jadiin Nexto kayak app beneran di HP - buka langsung dari home screen tanpa buka browser, dan NEX Pro (voice note) otomatis muncul tiap buka. Berlaku buat semua paket, gratis sekalipun.
@@ -787,7 +787,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         </div>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
         <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar Anda biar jadwal visit & follow-up dari NEX Pro otomatis masuk ke calendar.</p>
         {myLevel < 2 ? (
@@ -821,7 +821,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         )}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Bot size={15} className="text-violet-500" /> Integrasi MCP ke Grok Bot</h3>
         <p className="text-xs text-slate-500 mb-3">
           Sambungin agent AI luar (misal Grok Bot dari xAI) ke data CRM Anda lewat protokol MCP - agent bisa baca lead, update stage,
@@ -902,7 +902,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         )}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5">
           {mfaFactor ? <ShieldCheck size={15} className="text-emerald-500" /> : <ShieldAlert size={15} className="text-slate-400" />}
           Autentikasi 2 Langkah (2FA)
@@ -999,7 +999,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         )}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><KeyRound size={15} className="text-slate-500" /> Ganti Password</h3>
         <p className="text-xs text-slate-500 mb-3">Ganti password akun Anda kapan aja. Minimal 8 karakter.</p>
         <div className="space-y-2 max-w-sm">
@@ -1013,7 +1013,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         </div>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-4">
+      <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1">Backup data</h3>
         <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori NEX AI Advisor) jadi 1 file — simpen di komputer/HP Anda sesekali biar aman.</p>
         <div className="flex flex-wrap gap-2">

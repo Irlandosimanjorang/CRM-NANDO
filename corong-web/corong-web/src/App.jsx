@@ -104,7 +104,7 @@ const TEAM_NAV_ITEM = { key: "team", label: "Team", short: "Team", icon: UserChe
 function ConfigScreen() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
+      <div className="max-w-md bg-white border border-slate-200/80 rounded-panel shadow-sm p-7">
         <div className="mb-4"><NextoRobotHead size={48} /></div>
         <h1 className="text-lg font-bold mb-2">Sambungin ke Supabase dulu</h1>
         <p className="text-sm text-slate-500 mb-3">Buat file <code className="bg-slate-100 px-1 rounded">.env</code> di root project (salin dari <code className="bg-slate-100 px-1 rounded">.env.example</code>), isi:</p>
@@ -126,7 +126,7 @@ function Toast({ toast, onDismiss }) {
   const Icon = isError ? XCircle : toast.type === "info" ? InfoIcon : CheckCircle2;
   return (
     <div
-      className={`pointer-events-auto flex items-start gap-2.5 w-full max-w-sm rounded-2xl px-4 py-3 shadow-[0_16px_40px_-12px_rgba(15,23,42,0.35)] border ${isError ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-white border-slate-200 text-slate-800"}`}
+      className={`pointer-events-auto flex items-start gap-2.5 w-full max-w-sm rounded-2xl px-4 py-3 shadow-float border ${isError ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-white border-slate-200 text-slate-800"}`}
     >
       <Icon size={18} className={`shrink-0 mt-0.5 ${isError ? "text-rose-500" : "text-emerald-500"}`} />
       <span className="text-sm flex-1">{toast.text}</span>
@@ -690,23 +690,11 @@ export default function App() {
              lagi di desktop, ada jarak tipis di celahnya. Warna dasarnya
              TETEP #f7f8fc (warna dasar Nexto yang udah ada), cuma ditambah
              glow oranye/violet samar - bukan diganti gelap kayak referensi. */
-          background:
-            radial-gradient(circle at 12% 0%, rgba(109,93,252,.06), transparent 38%),
-            radial-gradient(circle at 88% 100%, rgba(249,115,22,.05), transparent 42%),
-            #f7f8fc;
-        }
-        .nexto-app .nexto-grid {
-          background-image:
-            linear-gradient(rgba(148,163,184,.045) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(148,163,184,.045) 1px, transparent 1px);
-          background-size: 32px 32px;
-          mask-image: linear-gradient(to bottom, rgba(0,0,0,.65), transparent 75%);
-          -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.65), transparent 75%);
+          /* Glow dekoratif dihapus (30 Sep 2026, docs/DESIGN.md). */
+          background: #f7f8fc;
         }
         .nexto-app .nexto-sidebar {
-          background:
-            radial-gradient(circle at 20% 0%, rgba(109,93,252,.16), transparent 30%),
-            linear-gradient(180deg, #0b1220 0%, #080d18 100%);
+          background: #0b1220;
         }
         .nexto-app .nexto-panel {
           background: var(--nexto-panel);
@@ -717,29 +705,22 @@ export default function App() {
           backdrop-filter: blur(18px);
           -webkit-backdrop-filter: blur(18px);
         }
+        /* Menu aktif: netral terang di sidebar gelap - ungu khusus AI. */
         .nexto-app .nexto-nav-active {
-          background: linear-gradient(135deg, #5b5cf6 0%, #7c4dff 100%);
-          box-shadow: 0 12px 28px -15px rgba(91,92,246,.9);
+          background: rgba(255,255,255,.1);
+          border: 1px solid rgba(255,255,255,.08);
         }
         .nexto-app .nexto-nav-item {
-          transition: transform .16s ease, background .16s ease, color .16s ease;
-        }
-        .nexto-app .nexto-nav-item:hover {
-          transform: translateX(2px);
+          transition: background .16s ease, color .16s ease;
         }
         .nexto-app .nexto-status-dot {
           box-shadow: 0 0 0 4px rgba(34,197,94,.08), 0 0 14px rgba(34,197,94,.5);
-        }
-        .nexto-app .nexto-content-glow {
-          background:
-            radial-gradient(circle at 78% 2%, rgba(109,93,252,.08), transparent 24%),
-            radial-gradient(circle at 20% 18%, rgba(99,102,241,.045), transparent 20%);
         }
         .nexto-app button, .nexto-app input, .nexto-app textarea, .nexto-app select {
           font-family: inherit;
         }
         .nexto-app ::selection {
-          background: rgba(109,93,252,.18);
+          background: rgba(249,115,22,.18);
         }
         .nexto-app .nexto-nav-item:not(.nexto-nav-active) {
           border: 1px solid transparent;
@@ -753,11 +734,6 @@ export default function App() {
           scrollbar-color: rgba(100,116,139,.25) transparent;
         }
 
-        @media (max-width: 767px) {
-          .nexto-app .nexto-content-glow {
-            background: radial-gradient(circle at 80% 0%, rgba(109,93,252,.07), transparent 30%);
-          }
-        }
       `}</style>
 
       {(pullVisual > 0 || refreshing) && (
@@ -765,7 +741,7 @@ export default function App() {
           className="md:hidden fixed top-0 inset-x-0 z-50 flex items-start justify-center pointer-events-none transition-[height] duration-150"
           style={{ height: refreshing ? 56 : pullVisual }}
         >
-          <div className="bg-white/95 backdrop-blur-xl rounded-full p-2 shadow-[0_10px_30px_-8px_rgba(15,23,42,.3)] mt-2 border border-white">
+          <div className="bg-white/95 backdrop-blur-xl rounded-full p-2 shadow-float mt-2 border border-white">
             <Loader2
               size={18}
               className="text-orange-500"
@@ -785,12 +761,12 @@ export default function App() {
       {/* DESKTOP SIDEBAR - panel melayang (16 Sep 2026), rounded penuh +
           inset dari tepi layar, ganti border-r doang jadi border keliling
           biar konsisten sama bentuk panel yang gak nempel ke sisi manapun. */}
-      <aside className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-[28px] overflow-hidden border border-white/[0.07] shadow-[0_30px_70px_-35px_rgba(0,0,0,.7)]">
+      <aside className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float">
         {/* Header sidebar (16 Sep 2026): profil + badge plan DIPINDAH ke
             bawah (pola app pada umumnya - Slack/Notion dst naro profil di
             footer sidebar, bukan header). Header sekarang logo doang. */}
         <div className="px-4 pt-5 pb-4">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3.5 shadow-[0_14px_35px_-25px_rgba(0,0,0,.8)]">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3.5">
             <div className="flex items-center gap-2.5">
               <NextoRobotHead size={30} />
               <NextoDarkWordmark width={70} />
@@ -804,7 +780,7 @@ export default function App() {
                     // Warna & ukuran disamain sama badge plan di footer sidebar
                     // (16 Sep 2026, permintaan Nando) - biar 2 badge ini kerasa
                     // 1 bahasa visual, bukan 2 gaya beda sendiri-sendiri.
-                    <span className="inline-block text-[7px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 rounded-full px-1.5 py-0.5 truncate max-w-full">
+                    <span className="inline-block text-[9.5px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 rounded-full px-1.5 py-0.5 truncate max-w-full">
                       {getIndustryTemplate(org.industry).label}
                     </span>
                   )
@@ -814,10 +790,10 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mx-4 mb-3 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="mx-4 mb-3 h-px bg-white/10" />
 
         <nav className="flex-1 px-3 py-2.5 space-y-1 overflow-y-auto">
-          <div className="px-3 pb-2 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600">Menu utama</div>
+          <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Menu utama</div>
           {navItems.map((n) => {
             const I = n.icon;
             const active = effectiveTab === n.key;
@@ -825,7 +801,7 @@ export default function App() {
             const cls = locked
               ? "text-slate-600 hover:bg-white/[0.03] cursor-pointer"
               : n.special
-              ? (active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold shadow-[0_14px_32px_-18px_rgba(168,85,247,.9)]" : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200")
+              ? (active ? "bg-violet-600 text-white font-semibold" : "text-violet-300 hover:bg-violet-500/10 hover:text-violet-200")
               : (active ? "nexto-nav-active text-white font-semibold" : "text-slate-400 hover:bg-white/[0.055] hover:text-white");
 
             return (
@@ -873,18 +849,17 @@ export default function App() {
           .nexto-app (tetep terang, cuma ditambah glow tipis) keliatan di
           celahnya. bg-[#f7f8fc] eksplisit di sini biar warnanya presisi
           sama walau nanti .nexto-app di-tweak lagi. */}
-      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow bg-[#f7f8fc] md:ml-[252px] md:mr-3 md:my-3 md:rounded-[28px] md:overflow-hidden md:shadow-[0_30px_70px_-35px_rgba(0,0,0,.5)]">
-        <div className="nexto-grid pointer-events-none absolute inset-x-0 top-0 h-72 opacity-70" />
+      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow bg-[#f7f8fc] md:ml-[252px] md:mr-3 md:my-3 md:rounded-panel md:overflow-hidden md:shadow-float">
 
         {/* MOBILE TOPBAR */}
         <header className="md:hidden sticky top-0 z-30 bg-white/82 backdrop-blur-2xl border-b border-slate-200/70">
           <div className="px-4 py-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-slate-950 text-orange-400 shadow-[0_8px_20px_-10px_rgba(15,23,42,.55)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-slate-950 text-orange-400">
               <Bot size={18} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-extrabold tracking-[-0.03em] text-[14px]">NE<span className="text-orange-500">X</span>TO</div>
-              <div className="text-[9px] font-medium text-slate-400 truncate">{navItems.find((n) => n.key === effectiveTab)?.label}</div>
+              <div className="text-[11px] font-medium text-slate-400 truncate">{navItems.find((n) => n.key === effectiveTab)?.label}</div>
             </div>
             <NotificationBell onNavigate={setTab} />
             <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={34} />
@@ -930,7 +905,7 @@ export default function App() {
               tumpang tindih. Sekarang di-skip eksplisit pas effectiveTab ===
               "settings", karena tab itu udah punya CTA upgrade sendiri. */}
           {!loading && myLevel < 1 && effectiveTab !== "settings" && (
-            <div className="mb-5 overflow-hidden rounded-[20px] border border-orange-200/70 bg-gradient-to-r from-orange-50 via-white to-orange-50/60 shadow-[0_12px_35px_-25px_rgba(249,115,22,.45)]">
+            <div className="mb-5 overflow-hidden rounded-[20px] border border-orange-200/70 bg-brand-soft">
               <div className="flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-5">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
@@ -947,7 +922,7 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-                <a href={MAYAR_PAYMENT_LINK} target="_blank" rel="noreferrer" className="shrink-0 rounded-xl bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold text-white shadow-[0_8px_18px_-10px_rgba(15,23,42,.7)] hover:bg-slate-800">
+                <a href={MAYAR_PAYMENT_LINK} target="_blank" rel="noreferrer" className="shrink-0 rounded-xl bg-slate-950 px-4 py-2 text-center text-[11px] font-semibold text-white hover:bg-slate-800">
                   {intendedTierLabel ? `Bayar ${intendedTierLabel} →` : "Upgrade Professional →"}
                 </a>
               </div>
@@ -1047,7 +1022,7 @@ export default function App() {
 
         {/* MOBILE BOTTOM NAV */}
         <nav className="md:hidden fixed bottom-3 inset-x-3 z-40">
-          <div className="max-w-lg mx-auto flex justify-around px-1.5 py-2 bg-slate-950/95 backdrop-blur-2xl rounded-[24px] shadow-[0_16px_42px_-10px_rgba(15,23,42,.42)] border border-white/10">
+          <div className="max-w-lg mx-auto flex justify-around px-1.5 py-2 bg-slate-950/95 backdrop-blur-2xl rounded-panel shadow-float border border-white/10">
             {navItems.map((n) => {
               const I = n.icon;
               const active = effectiveTab === n.key;
@@ -1070,7 +1045,7 @@ export default function App() {
                   className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition-colors ${cls}`}
                 >
                   <I size={18} strokeWidth={active ? 2.5 : 1.9} />
-                  <span className="mt-0.5 max-w-full truncate text-[8px] font-medium leading-none">{n.short}</span>
+                  <span className="mt-0.5 max-w-full truncate text-[10px] font-medium leading-none">{n.short}</span>
                   {locked && <Lock size={8} className="absolute right-2 top-0.5" />}
                 </button>
               );
@@ -1098,7 +1073,7 @@ export default function App() {
           <span className="absolute inset-0 rounded-full bg-orange-500/40 animate-ping" style={{ animationDuration: "2.4s" }} />
           <button
             onClick={() => setQuickVoiceOpen(true)}
-            className="relative w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 via-orange-600 to-violet-600 text-white flex items-center justify-center shadow-[0_12px_32px_-6px_rgba(234,88,12,.65)] hover:shadow-[0_14px_38px_-4px_rgba(167,139,250,.55)] transition-shadow"
+            className="relative w-14 h-14 rounded-full bg-ai hover:bg-violet-700 text-white flex items-center justify-center shadow-float transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
             aria-label="NEX Pro"
             title="NEX Pro - voice note ke progress"
           >
@@ -1147,7 +1122,7 @@ function IndustryDemoSwitcher({ org, onSwitched }) {
           netral putih biar 1 bahasa visual. */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 text-[7px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 hover:bg-white/[0.12] rounded-full px-1.5 py-0.5 truncate max-w-full transition-colors"
+        className="inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 hover:bg-white/[0.12] rounded-full px-1.5 py-0.5 truncate max-w-full transition-colors"
         title="Mode demo - khusus admin, ganti industri buat pitching"
       >
         {current ? getIndustryTemplate(current).label : "Pilih industri"}
@@ -1156,7 +1131,7 @@ function IndustryDemoSwitcher({ org, onSwitched }) {
       {open && (
         <>
           <div className="fixed inset-0 z-[998]" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1.5 w-56 bg-[#0b101a] border border-white/10 rounded-2xl shadow-[0_16px_40px_-8px_rgba(0,0,0,0.6)] z-[999] overflow-hidden py-1.5">
+          <div className="absolute left-0 top-full mt-1.5 w-56 bg-[#0b101a] border border-white/10 rounded-2xl shadow-float z-[999] overflow-hidden py-1.5">
             <div className="px-3 py-1.5 text-[9px] font-mono uppercase tracking-widest text-slate-600">Mode Demo - Pitching</div>
             {Object.entries(INDUSTRY_TEMPLATES).map(([key, tpl]) => (
               <button
@@ -1252,14 +1227,14 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
     <>
       <div className="fixed inset-0 z-[999] bg-slate-900/25 backdrop-blur-[1px]" onClick={() => { setOpen(false); setEditing(false); }} />
       <div
-        className="fixed w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-[1000] overflow-hidden border border-slate-100"
+        className="fixed w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-panel shadow-float z-[1000] overflow-hidden border border-slate-100"
         style={{ top: pos.top, left: pos.left }}
       >
         {!editing ? (
           <>
             {/* Header gradient band + avatar nongol - pola kartu profil app mobile */}
-            <div className="h-16 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800 relative">
-              <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-2xl ring-4 ring-white shadow-md">
+            <div className="h-16 bg-brand-strong relative">
+              <div className="absolute -bottom-7 left-5 w-16 h-16 rounded-full overflow-hidden bg-brand-strong text-white flex items-center justify-center font-bold text-2xl ring-4 ring-white shadow-md">
                 {settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
               </div>
             </div>
@@ -1286,7 +1261,7 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
         ) : (
           <div className="p-5">
             <label className="flex items-center gap-3 mb-4 cursor-pointer">
-              <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-bold text-xl shrink-0 ring-2 ring-orange-100">
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-brand-strong text-white flex items-center justify-center font-bold text-xl shrink-0 ring-2 ring-orange-100">
                 {uploading ? <Loader2 size={18} className="animate-spin" /> : settings.avatar_url ? <img src={settings.avatar_url} alt="" className="w-full h-full object-cover" /> : initial}
               </div>
               <span className="text-xs text-orange-600 font-medium flex items-center gap-1"><Camera size={13} /> Ganti foto</span>
@@ -1334,7 +1309,7 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
     <div className={`relative ${className}`}>
       {expanded ? (
         <button ref={btnRef} onClick={toggleOpen} className="w-full flex items-center gap-2.5 text-left">
-          <span className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+          <span className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-brand-strong text-white flex items-center justify-center font-semibold" style={{ width: size, height: size, fontSize: size * 0.4 }}>
             {avatarImg}
           </span>
           <span className="min-w-0 flex-1">
@@ -1343,11 +1318,11 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
                 (16 Sep 2026, permintaan Nando: "hapus aja industrinya ganti
                 dengan bedge plan") - lebih kepake buat cepet liat plan
                 lu tanpa buka popup profil. */}
-            <span className={`inline-block mt-0.5 text-[7px] font-semibold uppercase tracking-wide rounded-full px-1.5 py-0.5 ${planBadgeDark.cls}`}>{planBadgeDark.label}</span>
+            <span className={`inline-block mt-0.5 text-[9.5px] font-semibold uppercase tracking-wide rounded-full px-1.5 py-0.5 ${planBadgeDark.cls}`}>{planBadgeDark.label}</span>
           </span>
         </button>
       ) : (
-        <button ref={btnRef} onClick={toggleOpen} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-gradient-to-br from-orange-400 to-orange-700 text-white flex items-center justify-center font-semibold shadow-[0_2px_8px_-1px_rgba(0,0,0,0.3)]" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+        <button ref={btnRef} onClick={toggleOpen} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-brand-strong text-white flex items-center justify-center font-semibold" style={{ width: size, height: size, fontSize: size * 0.4 }}>
           {avatarImg}
         </button>
       )}
@@ -1417,7 +1392,7 @@ function NotificationBell({ onNavigate }) {
     <>
       <div className="fixed inset-0 z-[999]" onClick={() => setOpen(false)} />
       <div
-        className="fixed w-[340px] max-w-[calc(100vw-1.5rem)] bg-white rounded-[24px] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.25)] z-[1000] overflow-hidden border border-slate-100 max-h-[70vh] flex flex-col"
+        className="fixed w-[340px] max-w-[calc(100vw-1.5rem)] bg-white rounded-panel shadow-float z-[1000] overflow-hidden border border-slate-100 max-h-[70vh] flex flex-col"
         style={{ top: pos.top, left: pos.left }}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
@@ -1511,7 +1486,7 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-sm w-full bg-white border border-slate-200/80 rounded-3xl shadow-sm p-7">
+      <div className="max-w-sm w-full bg-white border border-slate-200/80 rounded-panel shadow-sm p-7">
         <div className="mb-4 flex justify-center"><NextoRobotHead size={48} /></div>
         <div className="text-center mb-1">
           <ShieldCheck size={22} className="mx-auto text-orange-600 mb-2" />

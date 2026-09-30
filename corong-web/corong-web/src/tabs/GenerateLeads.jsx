@@ -28,7 +28,7 @@ function ScoreBadge({ score }) {
       }}
     >
       <span className="text-xl font-extrabold leading-none" style={{ color: t.text, textShadow: `0 0 14px ${t.glow}` }}>{score}</span>
-      <span className="text-[8px] font-bold uppercase tracking-wider mt-1" style={{ color: t.ring, opacity: 0.8 }}>skor</span>
+      <span className="text-[10px] font-bold uppercase tracking-wider mt-1" style={{ color: t.ring, opacity: 0.8 }}>skor</span>
     </div>
   );
 }
@@ -302,7 +302,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         )}
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[28px] p-5">
+      <div className="bg-white border border-slate-100 rounded-panel p-5">
         <div className="flex items-center gap-2 mb-4">
           <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
             <div
@@ -372,9 +372,9 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         {loadingResults ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : results.length === 0 ? (
-          <div className="text-sm text-slate-400 rounded-[28px] p-8 text-center border border-white/5" style={{ background: "#05060b" }}>Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
+          <div className="text-sm text-slate-400 rounded-panel p-8 text-center border border-white/5" style={{ background: "#05060b" }}>Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
         ) : (
-          <div className="rounded-[32px] p-4 sm:p-6 space-y-3" style={{ background: "#05060b", backgroundImage: "radial-gradient(60% 40% at 20% 0%, rgba(99,102,241,0.10), transparent 70%)" }}>
+          <div className="rounded-panel p-4 sm:p-6 space-y-3" style={{ background: "#05060b", backgroundImage: "radial-gradient(60% 40% at 20% 0%, rgba(99,102,241,0.10), transparent 70%)" }}>
             {(() => {
               // Kelompokin hasil per-batch generate (run_id) jadi dropdown
               // per tanggal - backend udah ngurutin run_started_at DESC lalu
@@ -397,7 +397,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                 const isOpen = openBatches.has(batch.key);
                 const importedCount = batch.items.filter((r) => r.status === "imported").length;
                 return (
-                  <div key={batch.key} className="rounded-3xl overflow-hidden border border-white/10" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div key={batch.key} className="rounded-panel overflow-hidden border border-white/10" style={{ background: "rgba(255,255,255,0.02)" }}>
                     <button
                       onClick={() => toggleBatch(batch.key)}
                       className="w-full flex items-center gap-2.5 px-4 py-3.5 text-left hover:bg-white/[0.03] transition-colors"
@@ -405,7 +405,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                       <ChevronDown size={15} className={`shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
                       <span className="text-[12.5px] font-bold text-slate-200">{batch.headerLabel}</span>
                       <span className="text-[11px] text-slate-500">· {batch.items.length} hasil{importedCount > 0 ? `, ${importedCount} udah di-import` : ""}</span>
-                      {bi === 0 && <span className="ml-1 text-[9px] font-bold uppercase tracking-wide text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5">Terbaru</span>}
+                      {bi === 0 && <span className="ml-1 text-[10px] font-bold uppercase tracking-wide text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5">Terbaru</span>}
                     </button>
                     {isOpen && (
                       <div className="px-4 pb-4 space-y-4 pt-1">
@@ -417,7 +417,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                               <button
                                 onClick={() => importLead(r)}
                                 disabled={imported || importingId === r.id}
-                                className="relative w-full text-left rounded-3xl p-4 transition-all duration-200"
+                                className="relative w-full text-left rounded-panel p-4 transition-all duration-200"
                                 style={{
                                   background: imported
                                     ? "linear-gradient(160deg, rgba(16,185,129,0.10), rgba(5,6,11,0.9))"
