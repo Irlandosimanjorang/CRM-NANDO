@@ -818,7 +818,7 @@ function MonthCalendar({ leads, onEdit, month, setMonth }) {
   );
 }
 
-function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel }) {
+function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel, industry }) {
   // BUG FIX (6 Sep 2026): form-nya masih blank waktu dibuka ulang (beda dari
   // Tambah Deal yang udah punya draft field) - tapi minimal MODAL-nya otomatis
   // kebuka lagi abis app di-reload paksa, gak keliatan "ilang" gitu aja.
@@ -965,7 +965,7 @@ export default function VisitFollowup({ leads, onEdit, onChanged, isEnterprise, 
         </button>
       </div>
 
-      {tab === "visit" && <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} isEnterprise={isEnterprise} myLevel={myLevel} />}
+      {tab === "visit" && <VisitView leads={leads} onEdit={onEdit} onChanged={onChanged} isEnterprise={isEnterprise} myLevel={myLevel} industry={industry} />}
       {tab === "followup" && <FollowupView leads={leads} onEdit={onEdit} onChanged={onChanged} />}
       {tab === "checkin" && <CheckinHistory isEnterprise={isEnterprise} />}
     </div>

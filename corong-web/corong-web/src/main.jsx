@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import GrokBotMcp from "./pages/GrokBotMcp.jsx";
 import PublicDemo from "./pages/PublicDemo.jsx";
 import { installClientErrorLog } from "./lib/clientErrorLog";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./index.css";
 
 // Catat alert "Gagal ..." yang dialami user ke client_error_log biar health
@@ -24,7 +25,9 @@ const RootComponent = path === "/grok-bot" ? GrokBotMcp : path === "/demo" ? Pub
 // di SEMUA halaman (landing page, /grok-bot, dan app abis login).
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <RootComponent />
+    <ErrorBoundary name="app" fullScreen>
+      <RootComponent />
+    </ErrorBoundary>
     <Analytics />
   </React.StrictMode>
 );

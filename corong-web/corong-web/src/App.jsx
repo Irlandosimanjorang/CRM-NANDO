@@ -45,6 +45,7 @@ const Team = lazy(() => import("./tabs/Team"));
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
 import TeamLockedScreen from "./components/TeamLockedScreen";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
@@ -889,6 +890,8 @@ export default function App() {
         </header>
 
         <main className="relative z-10 flex-1 w-full max-w-[1440px] mx-auto px-4 py-5 md:px-7 md:py-6 lg:px-9 pb-32">
+          {/* key={tab}: pindah tab = mulai bersih, crash di satu tab gak ikut ke tab lain. */}
+          <ErrorBoundary key={tab} name={tab}>
           {/* Banner ini cuma buat user Free - begitu udah bayar (Standard ke
               atas), gak perlu terus dipajang gede di ATAS SETIAP TAB (dulu
               nongol truss walau udah jadi pelanggan bayar, kesannya maksa).
@@ -1045,6 +1048,7 @@ export default function App() {
               </div>
             </>
           )}
+          </ErrorBoundary>
         </main>
 
         {/* MOBILE BOTTOM NAV */}

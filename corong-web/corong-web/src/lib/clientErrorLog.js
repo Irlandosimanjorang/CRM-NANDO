@@ -16,7 +16,7 @@ import { supabase } from "./supabaseClient";
 const RECENT = new Map();
 let installed = false;
 
-async function report(text) {
+export async function report(text) {
   try {
     const message = String(text).replace(/\s+/g, " ").trim().slice(0, 500);
     const now = Date.now();
