@@ -189,7 +189,7 @@ function TeamTab() {
   const [range, setRange] = useState("week");
   const COLS = [["visits", "Kunjungan"], ["notes", "Notulen"], ["newLeads", "Lead baru"], ["moves", "Pindah tahap"], ["deals", "Deal"]];
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5 [&>*]:min-w-0">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xl font-bold text-slate-900">Tim</p>
