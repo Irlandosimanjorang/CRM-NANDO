@@ -552,6 +552,19 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                   upgrade yang keliatan (punya PreviewLock) buat user Free;
                   buat Standard/Professional (gak locked) tombol ini tetep
                   satu-satunya & tetep dipertahanin. */}
+              {/* Tombol perpanjang buat owner Enterprise (30 Sep 2026) -
+                  sebelumnya owner Enterprise gak punya tombol bayar sama
+                  sekali di dalam Nexto. */}
+              {isEnterprise && org?.owner_user_id === myUid && (
+                <a
+                  href={MAYAR_PAYMENT_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-full px-2.5 py-1 transition-colors"
+                >
+                  Perpanjang Enterprise →
+                </a>
+              )}
               {!isEnterprise && !locked && (
                 <a
                   href={MAYAR_PAYMENT_LINK}

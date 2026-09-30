@@ -904,6 +904,35 @@ export default function App() {
               "Upgrade ke Standard") - dua CTA beda tier, kesannya berantakan/
               tumpang tindih. Sekarang di-skip eksplisit pas effectiveTab ===
               "settings", karena tab itu udah punya CTA upgrade sendiri. */}
+          {/* Pengingat perpanjang Enterprise (30 Sep 2026, permintaan Nando:
+              owner bisa perpanjang langsung dari Nexto) - muncul buat OWNER
+              org Enterprise mulai 7 hari sebelum masa aktif habis. Bayarnya
+              tetap di halaman Mayar; masa aktif baru ditambahkan di atas sisa
+              masa aktif lama (stacking di mayar-webhook). */}
+          {!loading && isEnterprise && org?.owner_user_id === session?.user?.id && org?.plan_expires_at && (() => {
+            const WIB = 7 * 3600e3;
+            const dayStart = (d) => { const w = new Date(new Date(d).getTime() + WIB); return Date.UTC(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate()); };
+            const daysLeft = Math.round((dayStart(org.plan_expires_at) - dayStart(Date.now())) / 864e5);
+            if (daysLeft > 7) return null;
+            const tanggal = new Date(org.plan_expires_at).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", year: "numeric" });
+            const urgent = daysLeft <= 3;
+            return (
+              <div className={`mb-5 flex flex-col gap-3 rounded-panel border px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-5 ${urgent ? "border-rose-200 bg-rose-50" : "border-amber-200 bg-amber-50"}`}>
+                <div>
+                  <div className={`text-[13px] font-semibold ${urgent ? "text-rose-800" : "text-amber-900"}`}>
+                    Paket Enterprise berakhir {daysLeft <= 0 ? "hari ini" : daysLeft === 1 ? "besok" : `dalam ${daysLeft} hari`} ({tanggal})
+                  </div>
+                  <div className={`mt-0.5 text-[11.5px] ${urgent ? "text-rose-700" : "text-amber-800"}`}>
+                    Perpanjang sekarang agar team Anda tetap bisa bekerja tanpa gangguan. Pilih paket Enterprise dan gunakan email <b>{session?.user?.email}</b> saat membayar. Masa aktif baru ditambahkan setelah masa aktif sekarang, jadi tidak ada hari yang hilang.
+                  </div>
+                </div>
+                <a href={MAYAR_PAYMENT_LINK} target="_blank" rel="noreferrer" className="shrink-0 rounded-inner bg-ink px-4 py-2.5 text-center text-[12px] font-semibold text-white hover:bg-slate-800">
+                  Perpanjang Enterprise
+                </a>
+              </div>
+            );
+          })()}
+
           {!loading && myLevel < 1 && effectiveTab !== "settings" && (
             <div className="mb-5 overflow-hidden rounded-[20px] border border-orange-200/70 bg-brand-soft">
               <div className="flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-5">
