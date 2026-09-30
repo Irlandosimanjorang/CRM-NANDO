@@ -181,6 +181,10 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         )}
       </div>
 
+      <TargetsCard members={members} reloadKey={reloadKey} />
+
+      <PaymentsCard nameOf={nameOf} reloadKey={reloadKey} onOpenLead={(id) => { const l = (leads || []).find((x) => x.id === id); if (l) onOpenLead?.(l); }} />
+
       <ActivityTimeline nameOf={nameOf} reloadKey={reloadKey} />
 
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />
@@ -299,6 +303,161 @@ function ActivityTimeline({ nameOf, reloadKey }) {
                   {!INLINE_DETAIL.has(e.kind) && e.detail && <div className="mt-0.5 line-clamp-2 text-[11.5px] text-slate-500">{e.detail}</div>}
                   <div className="mt-0.5 text-[10.5px] text-slate-400">{new Date(e.at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</div>
                 </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+const fmtRp = (n) => "Rp" + Math.round(Number(n) || 0).toLocaleString("id-ID");
+const fmtJt = (n) => {
+  const v = Number(n) || 0;
+  if (v >= 1e9) return "Rp" + (v / 1e9).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " M";
+  if (v >= 1e6) return "Rp" + (v / 1e6).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " jt";
+  return fmtRp(v);
+};
+function monthStartIso(offset = 0) {
+  const wib = new Date(Date.now() + WIB_OFFSET_MS);
+  const d = new Date(Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth() + offset, 1));
+  return d.toISOString().slice(0, 10);
+}
+
+// Target bulanan per sales + pencapaian (deal masuk bulan itu) + forecast
+// (nilai proyek lead aktif x peluang tahap). Target diatur owner/manager.
+function TargetsCard({ members, reloadKey }) {
+  const [month, setMonth] = useState(monthStartIso(0));
+  const [rows, setRows] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = () => db.getTeamTargets(month).then(setRows).catch(() => setRows([]));
+  useEffect(() => { setRows(null); load(); }, [month, reloadKey]);
+
+  const save = async (uid) => {
+    setBusy(true);
+    try {
+      await db.setSalesTarget(uid, month, Number(input.replace(/[^\d]/g, "")) || 0);
+      setEditing(null);
+      await load();
+    } catch (e) { alert("Gagal simpan target: " + e.message); } finally { setBusy(false); }
+  };
+
+  const byId = Object.fromEntries((rows || []).map((r) => [r.user_id, r]));
+  const monthLabel = new Date(month + "T00:00:00Z").toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" });
+  const noValue = (rows || []).reduce((s, r) => s + (r.open_without_value || 0), 0);
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-sm font-bold text-slate-800">Target & Forecast</div>
+          <div className="text-[10.5px] text-slate-400">Pencapaian = nilai deal yang masuk bulan ini · Forecast = nilai proyek lead aktif × peluang tahapnya</div>
+        </div>
+        <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
+          {[[0, "Bulan ini"], [1, "Bulan depan"]].map(([o, l]) => (
+            <button key={o} onClick={() => setMonth(monthStartIso(o))} className={`rounded-[10px] px-3 py-1.5 text-[12px] font-medium ${month === monthStartIso(o) ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"}`}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {rows === null ? (
+        <div className="py-6 text-center"><Loader2 size={16} className="mx-auto animate-spin text-slate-400" /></div>
+      ) : (
+        <div className="space-y-4">
+          {members.map((m) => {
+            const r = byId[m.user_id] || { target: 0, achieved: 0, forecast: 0, pipeline: 0 };
+            const pct = r.target > 0 ? Math.min(100, Math.round((r.achieved / r.target) * 100)) : 0;
+            const projected = r.target > 0 ? Math.min(100, Math.round(((r.achieved + r.forecast) / r.target) * 100)) : 0;
+            return (
+              <div key={m.user_id}>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="text-[13px] font-semibold text-slate-800">{m.name} <span className="text-[10.5px] font-normal text-slate-400">{ROLE_LABEL[m.role] || m.role}</span></div>
+                  {editing === m.user_id ? (
+                    <div className="flex items-center gap-1.5">
+                      <input autoFocus inputMode="numeric" className="w-36 rounded-lg border border-slate-300 px-2 py-1 text-[12px]" placeholder="Target (Rp)" value={input}
+                        onChange={(e) => setInput(e.target.value.replace(/[^\d]/g, "") ? Number(e.target.value.replace(/[^\d]/g, "")).toLocaleString("id-ID") : "")}
+                        onKeyDown={(e) => { if (e.key === "Enter") save(m.user_id); if (e.key === "Escape") setEditing(null); }} />
+                      <button disabled={busy} onClick={() => save(m.user_id)} className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-50">Simpan</button>
+                      <button onClick={() => setEditing(null)} className="text-[11px] text-slate-400">Batal</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setEditing(m.user_id); setInput(r.target ? Number(r.target).toLocaleString("id-ID") : ""); }} className="text-[12px] tabular-nums text-slate-600 hover:text-orange-600">
+                      <b className="text-slate-900">{fmtJt(r.achieved)}</b> / {r.target > 0 ? fmtJt(r.target) : <span className="underline decoration-dotted">set target</span>}
+                    </button>
+                  )}
+                </div>
+                <div className="relative mt-1.5 h-2.5 overflow-hidden rounded-full bg-slate-100" title={`Tercapai ${pct}% · dengan forecast ${projected}%`}>
+                  <div className="absolute inset-y-0 left-0 rounded-full bg-orange-200" style={{ width: `${projected}%` }} />
+                  <div className="absolute inset-y-0 left-0 rounded-full bg-orange-500" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-3 text-[10.5px] text-slate-400 tabular-nums">
+                  {r.target > 0 && <span>{pct}% tercapai</span>}
+                  <span>Forecast {fmtJt(r.forecast)}</span>
+                  <span>Pipeline aktif {fmtJt(r.pipeline)}</span>
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[10.5px] text-slate-400">
+            Target {monthLabel}. Klik angka target buat ubah.{noValue > 0 && ` ${noValue} lead aktif belum punya nilai proyek - isi di detail lead biar forecast-nya akurat.`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Ringkasan kontrak & pembayaran semua lead + termin yang jatuh tempo 14
+// hari ke depan / udah telat.
+function PaymentsCard({ nameOf, reloadKey, onOpenLead }) {
+  const [p, setP] = useState(null);
+  useEffect(() => { db.getTeamPayments().then(setP).catch(() => setP(null)); }, [reloadKey]);
+  if (!p) return null;
+  const outstanding = Math.max(0, p.invoiced - p.paid);
+  const tiles = [
+    { label: "Nilai kontrak (Booking)", value: p.contract, cls: "text-slate-900" },
+    { label: "Sudah ditagih (Revenue)", value: p.invoiced, cls: "text-sky-700" },
+    { label: "Sudah dibayar (Cash In)", value: p.paid, cls: "text-emerald-700" },
+    { label: "Piutang telat", value: p.overdue_total, cls: p.overdue_total > 0 ? "text-rose-600" : "text-slate-400" },
+  ];
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="mb-4">
+        <div className="text-sm font-bold text-slate-800">Kontrak & Pembayaran</div>
+        <div className="text-[10.5px] text-slate-400">Dari termin yang dicatat di tiap lead · tagihan yang belum dibayar: {fmtJt(outstanding)}</div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-2xl bg-slate-50 px-3.5 py-3">
+            <div className={`text-[15px] font-bold tabular-nums ${t.cls}`}>{fmtJt(t.value)}</div>
+            <div className="mt-0.5 text-[10.5px] text-slate-500">{t.label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 text-[12px] font-semibold text-slate-600">Jatuh tempo 14 hari ke depan & yang telat</div>
+      {p.items.length === 0 ? (
+        <p className="mt-2 text-[12px] text-slate-400">{p.contract > 0 ? "Gak ada termin yang jatuh tempo dalam 14 hari." : "Belum ada termin. Catat di detail lead (bagian Kontrak & Termin Pembayaran)."}</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-slate-100">
+          {p.items.map((it) => {
+            const late = it.days_left < 0;
+            return (
+              <li key={it.id}>
+                <button onClick={() => onOpenLead(it.lead_id)} className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-slate-50/60">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[12.5px] font-semibold text-slate-800">{it.lead_name}</div>
+                    <div className="text-[11px] text-slate-500">{it.label || "Termin"} · {nameOf[it.user_id] || "-"}{it.invoiced_at ? " · sudah ditagih" : " · belum ditagih"}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[12.5px] font-bold tabular-nums text-slate-800">{fmtRp(it.amount)}</div>
+                    <div className={`text-[10.5px] font-semibold ${late ? "text-rose-600" : it.days_left <= 3 ? "text-amber-600" : "text-slate-400"}`}>
+                      {late ? `Telat ${-it.days_left} hari` : it.days_left === 0 ? "Hari ini" : `${it.days_left} hari lagi`}
+                    </div>
+                  </div>
+                </button>
               </li>
             );
           })}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
 import * as db from "../lib/db";
+import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 
@@ -574,6 +575,20 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             </div>
           )}
           <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
+          {/* Enterprise (30 Sep 2026): nilai proyek/kontrak (dipake forecast di
+              tab Team) + termin pembayaran per lead. */}
+          {isEnterprise && (
+            <Field label="Nilai proyek / kontrak (Rp)">
+              <input
+                className={inp}
+                inputMode="numeric"
+                placeholder="Mis. 120.000.000 - dipakai buat forecast di tab Team"
+                value={Number(f.deal_value) ? Number(f.deal_value).toLocaleString("id-ID") : ""}
+                onChange={(e) => set("deal_value", Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
+              />
+            </Field>
+          )}
+          {isEnterprise && lead.id && <PaymentTermsCard leadId={lead.id} projectValue={lead.deal_value} />}
           <div className="grid grid-cols-2 gap-3">
             <MultiField label="Email" value={f.email} onChange={(v) => set("email", v)} placeholder="nama@email.com" />
             <Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field>

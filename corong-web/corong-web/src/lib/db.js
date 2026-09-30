@@ -88,6 +88,48 @@ export async function getTeamActivityDays(days = 7) {
   return data || [];
 }
 
+// ---- Kontrak & termin pembayaran per lead (Enterprise, 30 Sep 2026). RLS
+// payment_terms: owner/manager semua, sales cuma lead yang dia pegang.
+export async function getPaymentTerms(leadId) {
+  const { data, error } = await supabase.from("payment_terms").select("*").eq("lead_id", leadId).order("position").order("created_at");
+  if (error) throw error;
+  return data || [];
+}
+export async function addPaymentTerm(leadId, term) {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("payment_terms").insert({ org_id: orgId, lead_id: leadId, ...term }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function updatePaymentTerm(id, patch) {
+  const { data, error } = await supabase.from("payment_terms").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function deletePaymentTerm(id) {
+  const { error } = await supabase.from("payment_terms").delete().eq("id", id);
+  if (error) throw error;
+}
+// Target & forecast team (tab Team). month = tanggal 1 bulan itu (YYYY-MM-01).
+export async function getTeamTargets(month) {
+  const { data, error } = await supabase.rpc("get_team_targets", { p_month: month });
+  if (error) throw error;
+  return data || [];
+}
+export async function setSalesTarget(userId, month, amount) {
+  const orgId = await getMyOrgId();
+  const { error } = await supabase.from("sales_targets").upsert(
+    { org_id: orgId, user_id: userId, month, amount, updated_at: new Date().toISOString() },
+    { onConflict: "org_id,user_id,month" }
+  );
+  if (error) throw error;
+}
+export async function getTeamPayments() {
+  const { data, error } = await supabase.rpc("get_team_payments");
+  if (error) throw error;
+  return data || { contract: 0, invoiced: 0, paid: 0, overdue_total: 0, items: [] };
+}
+
 export async function getOrgMembers() {
   const { data, error } = await supabase.functions.invoke("get-org-members");
   if (error) throw error;

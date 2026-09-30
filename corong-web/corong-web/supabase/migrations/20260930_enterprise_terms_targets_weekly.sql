@@ -1,0 +1,22 @@
+-- Enterprise (30 Sep 2026, permintaan Nando buat perusahaan konsultan):
+-- 1. payment_terms: termin pembayaran per lead (label, amount, due_date,
+--    invoiced_at, paid_at). RLS: owner/manager semua lead org, sales cuma
+--    lead yang dia pegang; tulis cuma org Enterprise.
+-- 2. sales_targets (org_id, user_id, month, amount): target bulanan per
+--    sales. Baca: owner/manager semua, sales punya sendiri. Tulis:
+--    owner/manager org Enterprise.
+-- 3. RPC get_team_targets(month): target, pencapaian (deal_transactions
+--    bulan itu), pipeline & forecast (deal_value lead aktif x
+--    stage_win_probability - tahap normal dibagi rata per urutan).
+-- 4. RPC get_team_payments(): total kontrak/ditagih/dibayar/telat + termin
+--    jatuh tempo 14 hari ke depan.
+-- 5. notify_due_payment_terms() + cron nexto-payment-term-reminder (tiap
+--    hari 08:00 WIB): notif H-3, hari H, telat 1 hari ke sales pemegang
+--    lead & owner/manager.
+-- 6. team_weekly_report(org, from, to) + edge function weekly-team-report +
+--    cron nexto-weekly-team-report (Senin 08:00 WIB) - email ke owner/manager.
+--
+-- Sudah diterapkan ke project cewggulyfshnbebcpyui via migration
+-- "enterprise_terms_targets", "notify_due_terms_dedupe",
+-- "team_weekly_report_fn". Dokumentasi lokal - definisi lengkap fungsi ada
+-- di database (pg_get_functiondef).
