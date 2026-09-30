@@ -538,6 +538,12 @@ export default function App() {
     else if (viaQuickvoiceLink) alert("NEX Pro (voice) itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan Nexto.");
   }, [loading, session, myLevel]);
 
+  // Hook WAJIB di atas semua `return` lebih awal di bawah (Splash/Auth/2FA/
+  // IndustryPicker/layar kunci). Kalau ditaruh di bawahnya, jumlah hook beda
+  // antar render -> React crash ("Rendered more hooks...") dan layar putih.
+  const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
+  const demo = useMemo(() => getIndustryDemo(org?.industry, stageList), [org?.industry, stages]); // deps pakai `stages` (state stabil), bukan stageList yang dibuat ulang tiap render
+
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
   if (!session) return <Auth />;
@@ -654,8 +660,6 @@ export default function App() {
     generateleads: 2, deal: 2, visitfollowup: 1, kompetitor: 2, advisor: 1,
   };
 
-  const stageList = stages.length ? stages : [{ key: "prospek", label: "Prospek", hex: "#94a3b8", type: "normal" }];
-  const demo = useMemo(() => getIndustryDemo(org?.industry, stageList), [org?.industry, stages]); // deps pakai `stages` (state stabil), bukan stageList yang dibuat ulang tiap render
 
 
   const effectiveTab = tab;
