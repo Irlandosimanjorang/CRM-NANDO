@@ -48,7 +48,9 @@ export async function setOrgIndustry(industryKey) {
 export async function switchDemoIndustry(industryKey) {
   const orgId = await getMyOrgId();
   const uid = (await supabase.auth.getUser()).data.user.id;
-  const { error: orgErr } = await supabase.from("organizations").update({ industry: industryKey }).eq("id", orgId);
+  // custom_field_labels ikut dikosongkan: label custom dari import industri
+  // sebelumnya (misal "Consumption" dari PVC) gak boleh kebawa ke industri baru.
+  const { error: orgErr } = await supabase.from("organizations").update({ industry: industryKey, custom_field_labels: {} }).eq("id", orgId);
   if (orgErr) throw orgErr;
 
   const tpl = getIndustryTemplate(industryKey);

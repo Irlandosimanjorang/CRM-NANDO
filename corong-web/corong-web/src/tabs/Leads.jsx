@@ -1205,7 +1205,11 @@ export default function Leads({
     // Label baru dikasih slot kosong pertama yang ketemu. Cuma ada 5 slot -
     // kalau abis, import DIBATALIN (bukan diem-diem buang datanya) biar user
     // sadar & bisa pilih mau reuse slot lain atau lewatin kolom itu.
-    const currentLabels = { ...(customFieldLabels || {}) };
+    // Label bawaan template industri IKUT dihitung (1 Okt 2026). Dulu cuma
+    // label buatan org yang dihitung, jadi kolom Excel baru bisa nimpa slot
+    // template (misal "No. SPK / Kontrak" di Corporate Consultant ketimpa
+    // "Consumption") dan field bawaan industri itu hilang dari form lead.
+    const currentLabels = Object.fromEntries(getCustomFieldSlots(industry, customFieldLabels).map((s) => [s.key, s.label]));
     const usedSlotKeys = new Set(Object.keys(currentLabels).filter((k) => currentLabels[k]));
     const newLabelAssignments = {};
     const finalMapping = { ...mapping };
