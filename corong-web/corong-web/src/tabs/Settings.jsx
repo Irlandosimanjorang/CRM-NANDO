@@ -894,7 +894,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                 <li>Buat API Key di atas, salin Server URL & key-nya.</li>
                 <li>Di chat Grok Bot, bilang "Pasang Nexto MCP" lalu kirim Server URL + API Key-nya (jangan di-screenshot/share ke publik).</li>
                 <li>Grok Bot bakal nambahin sebagai connector - tunggu sampai statusnya "connected".</li>
-                <li>Tes dengan suruh Grok Bot: "cek pipeline stats gua" atau "list lead yang overdue".</li>
+                <li>Tes dengan suruh Grok Bot: "cek pipeline stats saya" atau "list lead yang overdue".</li>
               </ol>
               <p className="text-[11px] text-slate-400 mt-2">Tiap user generate & pasang key-nya sendiri-sendiri - bukan sekali pasang buat semua anggota team.</p>
             </div>

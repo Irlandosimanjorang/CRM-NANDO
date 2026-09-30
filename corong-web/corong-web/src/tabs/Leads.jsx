@@ -1349,7 +1349,7 @@ export default function Leads({
       return;
     }
     if (exportApproval?.status === "pending") {
-      alert("Permintaan export kamu masih nunggu di-approve owner/manager.");
+      alert("Permintaan export Anda masih menunggu persetujuan owner/manager.");
       return;
     }
     if (!window.confirm("Export butuh persetujuan owner/manager. Kirim permintaan sekarang?")) return;

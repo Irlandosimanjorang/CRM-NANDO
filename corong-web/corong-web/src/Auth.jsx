@@ -573,7 +573,7 @@ const AI_DEMO_STATES = [
   },
   {
     type: "progress",
-    user: "Hari ini gue visit 4 customer. PT ABC interested, PT XYZ minta sample.",
+    user: "Hari ini saya visit 4 customer. PT ABC interested, PT XYZ minta sample.",
     ai: "Progress hari ini sudah diperbarui.",
     status: "Progress tersimpan ke CRM",
     detail: "4 visit • 1 interested • 1 sample request",

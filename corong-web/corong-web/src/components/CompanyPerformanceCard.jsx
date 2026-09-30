@@ -81,9 +81,9 @@ export default function CompanyPerformanceCard() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[.18em] text-orange-500">Performa perusahaan · {monthLabel}</div>
-          <h2 className="mt-1 text-[16px] font-black tracking-[-0.02em] text-slate-900">Semua team, bulan ini</h2>
+          <h2 className="mt-1 text-[16px] font-black tracking-[-0.02em] text-slate-900">Seluruh team, bulan ini</h2>
         </div>
-        <span className="text-[10.5px] text-slate-400">Rincian per sales cuma bisa dilihat manager</span>
+        <span className="text-[10.5px] text-slate-400">Rincian per sales hanya dapat dilihat manager</span>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
@@ -96,13 +96,13 @@ export default function CompanyPerformanceCard() {
           ) : (
             <div className="mt-3">
               <div className="text-[24px] font-black leading-none tracking-[-0.04em] tabular-nums text-slate-900">{fmtJt(company.revenue)}</div>
-              <div className="mt-1 text-[11px] text-slate-400">Revenue bulan ini · target belum di-set manager</div>
+              <div className="mt-1 text-[11px] text-slate-400">Revenue bulan ini · target belum ditetapkan manager</div>
             </div>
           )}
           <div className="mt-auto pt-2 text-center text-[10.5px] text-slate-400">{company.deals} deal closing bulan ini</div>
         </Panel>
 
-        <Panel icon={UserRound} tone="bg-violet-50 text-violet-500" title="Kontribusi lu">
+        <Panel icon={UserRound} tone="bg-violet-50 text-violet-500" title="Kontribusi Anda">
           <div className="mt-3 text-[26px] font-black leading-none tracking-[-0.04em] tabular-nums text-slate-900">{share}%</div>
           <div className="mt-1 text-[11px] text-slate-500">
             {Number(company.revenue) > 0
@@ -113,8 +113,8 @@ export default function CompanyPerformanceCard() {
             <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-violet-500 motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${share}%` }} />
           </div>
           <div className="mt-1.5 flex justify-between text-[10px] text-slate-400">
-            <span>Deal lu: {me.deals}</span>
-            <span>Team lain: {Math.max(0, Number(company.deals) - Number(me.deals))}</span>
+            <span>Deal Anda: {me.deals}</span>
+            <span>Anggota lain: {Math.max(0, Number(company.deals) - Number(me.deals))}</span>
           </div>
         </Panel>
 
@@ -126,7 +126,7 @@ export default function CompanyPerformanceCard() {
               <div className="mt-0.5 text-[10.5px] tabular-nums text-slate-400">Forecast pipeline {fmtJt(me.forecast)}</div>
             </div>
           ) : (
-            <div className="mt-3 text-[11.5px] text-slate-500">Manager belum set target lu bulan ini. Forecast pipeline lu: <b className="text-slate-800">{fmtJt(me.forecast)}</b></div>
+            <div className="mt-3 text-[11.5px] text-slate-500">Target Anda bulan ini belum ditetapkan manager. Forecast pipeline Anda: <b className="text-slate-800">{fmtJt(me.forecast)}</b></div>
           )}
         </Panel>
       </div>

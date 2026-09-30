@@ -35,18 +35,18 @@ const RANGES = [
 
 const KIND = {
   visit: { icon: MapPin, color: "text-sky-600 bg-sky-50", verb: "check-in di" },
-  note: { icon: NotebookPen, color: "text-violet-600 bg-violet-50", verb: "nulis catatan di" },
-  stage: { icon: ArrowRightLeft, color: "text-amber-600 bg-amber-50", verb: "mindahin tahap" },
-  lead: { icon: UserPlus, color: "text-emerald-600 bg-emerald-50", verb: "nambah lead" },
+  note: { icon: NotebookPen, color: "text-violet-600 bg-violet-50", verb: "menulis catatan di" },
+  stage: { icon: ArrowRightLeft, color: "text-amber-600 bg-amber-50", verb: "memindahkan tahap" },
+  lead: { icon: UserPlus, color: "text-emerald-600 bg-emerald-50", verb: "menambahkan lead" },
   lead_deleted: { icon: Trash2, color: "text-rose-600 bg-rose-50", verb: "menghapus lead" },
   lead_restored: { icon: RotateCcw, color: "text-teal-600 bg-teal-50", verb: "memulihkan lead" },
   lead_edited: { icon: PencilLine, color: "text-slate-600 bg-slate-100", verb: "mengubah data" },
   visit_scheduled: { icon: CalendarPlus, color: "text-sky-600 bg-sky-50", verb: "menjadwalkan visit ke" },
   visit_cancelled: { icon: CalendarX, color: "text-orange-600 bg-orange-50", verb: "membatalkan visit ke" },
-  deal: { icon: Trophy, color: "text-emerald-700 bg-emerald-50", verb: "input deal" },
-  email: { icon: Mail, color: "text-blue-600 bg-blue-50", verb: "kirim email ke" },
-  ai_draft: { icon: Sparkles, color: "text-fuchsia-600 bg-fuchsia-50", verb: "bikin draft AI buat" },
-  needs_summary: { icon: Sparkles, color: "text-fuchsia-600 bg-fuchsia-50", verb: "bikin Ringkasan Kebutuhan" },
+  deal: { icon: Trophy, color: "text-emerald-700 bg-emerald-50", verb: "mencatat deal" },
+  email: { icon: Mail, color: "text-blue-600 bg-blue-50", verb: "mengirim email ke" },
+  ai_draft: { icon: Sparkles, color: "text-fuchsia-600 bg-fuchsia-50", verb: "membuat draft AI untuk" },
+  needs_summary: { icon: Sparkles, color: "text-fuchsia-600 bg-fuchsia-50", verb: "membuat Ringkasan Kebutuhan untuk" },
 };
 const INLINE_DETAIL = new Set(["stage", "visit_scheduled", "deal", "ai_draft", "lead_deleted"]);
 
@@ -105,7 +105,7 @@ function activityStatus(m) {
   if (idle == null) return { dot: "bg-rose-500", text: "belum ada aktivitas", cls: "text-rose-600" };
   if (idle === 0) return { dot: "bg-emerald-500", text: "aktif hari ini", cls: "text-emerald-600" };
   if (idle < INACTIVE_DAYS) return { dot: "bg-slate-300", text: `${idle} hari lalu`, cls: "text-slate-500" };
-  return { dot: "bg-amber-400", text: `${idle} hari gak aktif`, cls: "text-amber-600" };
+  return { dot: "bg-amber-400", text: `${idle} hari tidak aktif`, cls: "text-amber-600" };
 }
 
 const CARD = "rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]";
@@ -197,7 +197,7 @@ function Ring({ pct, size = 46 }) {
   const r = (size - 7) / 2, c = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(100, pct));
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }} title={`Skor aktivitas ${p}/100 (dibanding anggota lain)`}>
+    <div className="relative shrink-0" style={{ width: size, height: size }} title={`Skor aktivitas ${p}/100 (dibandingkan anggota lain)`}>
       <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth="5" />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f97316" strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - p / 100)} className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700" />
@@ -217,7 +217,7 @@ function Gauge({ pct, forecastPct }) {
       <path d={arc} fill="none" stroke="#f1f5f9" strokeWidth="10" strokeLinecap="round" />
       <path d={arc} fill="none" stroke="#fed7aa" strokeWidth="10" strokeLinecap="round" strokeDasharray={len} strokeDashoffset={len * (1 - clamp(forecastPct) / 100)} />
       <path d={arc} fill="none" stroke="#f97316" strokeWidth="10" strokeLinecap="round" strokeDasharray={len} strokeDashoffset={len * (1 - clamp(pct) / 100)} className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700" />
-      <text x="60" y="56" textAnchor="middle" className="fill-slate-900" style={{ fontSize: 20, fontWeight: 900 }}>{clamp(pct)}%</text>
+      <text x="60" y="56" textAnchor="middle" className="fill-slate-900" style={{ fontSize: 20, fontWeight: 900 }}>{Math.max(0, pct || 0)}%</text>
     </svg>
   );
 }
@@ -253,7 +253,7 @@ function DayBars({ days, selected, onSelect }) {
             <div className="mt-1 flex h-20 w-full items-end justify-center">
               <div className={`w-3/5 max-w-[26px] rounded-t-lg motion-safe:transition-all motion-safe:duration-500 ${active ? "bg-gradient-to-t from-orange-500 to-violet-400" : d.count ? "bg-orange-200 group-hover:bg-orange-300" : "bg-slate-100"}`} style={{ height: `${h}%` }} />
             </div>
-            <span className={`mt-1.5 text-[10px] ${active ? "text-slate-400" : "text-slate-400"}`}>{d.day === t ? "Hari ini" : HARI[dt.getUTCDay()]}</span>
+            <span className={"mt-1.5 text-[10px] text-slate-400"}>{d.day === t ? "Hari ini" : HARI[dt.getUTCDay()]}</span>
             <span className={`text-[13px] font-bold leading-tight ${active ? "text-white" : "text-slate-700"}`}>{dt.getUTCDate()}</span>
           </button>
         );
@@ -269,7 +269,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
   const [range, setRange] = useState("week");
   const [data, setData] = useState(null);
   const [contracts, setContracts] = useState([]);
-  const [days, setDays] = useState([]);
+  const [daysRaw, setDays] = useState(null); // null = belum dimuat
+  const days = daysRaw || [];
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -308,7 +309,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
   const attention = [
     ...members
       .filter((m) => m.role === "sales_rep" && (m.last_activity_at == null || daysSince(m.last_activity_at) >= INACTIVE_DAYS))
-      .map((m) => ({ key: "idle-" + m.user_id, tone: "amber", title: m.name, text: m.last_activity_at ? `gak ada aktivitas ${daysSince(m.last_activity_at)} hari` : "belum pernah ada aktivitas" })),
+      .map((m) => ({ key: "idle-" + m.user_id, tone: "amber", title: m.name, text: m.last_activity_at ? `tidak ada aktivitas ${daysSince(m.last_activity_at)} hari` : "belum pernah ada aktivitas" })),
     ...running
       .filter((c) => Number(c.overdue) > 0)
       .map((c) => ({ key: "late-" + c.lead_id, tone: "rose", title: c.lead_name, text: `telat bayar ${fmtJt(c.overdue)}`, leadId: c.lead_id })),
@@ -379,7 +380,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
               {attention.length ? `Perlu perhatian (${attention.length})` : "Semua aman"}
             </div>
             {attention.length === 0 ? (
-              <p className="mt-2 text-[11.5px] text-slate-400">Gak ada sales yang lagi pasif dan gak ada termin yang telat atau mepet jatuh tempo.</p>
+              <p className="mt-2 text-[11.5px] text-slate-400">Tidak ada sales yang pasif dan tidak ada termin yang telat atau mendekati jatuh tempo.</p>
             ) : (
               <ul className="mt-3 space-y-2">
                 {attention.slice(0, 5).map((a) => (
@@ -399,7 +400,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
         {/* REKAP AKTIVITAS */}
         <section className={CARD}>
-          <SectionHead icon={Activity} tone="orange" title="Rekap Aktivitas" sub={`${rangeLabel} · cincin = skor aktivitas dibanding anggota lain`} />
+          <SectionHead icon={Activity} tone="orange" title="Rekap Aktivitas" sub={`${rangeLabel} · cincin = skor aktivitas dibandingkan anggota lain`} />
           {loading && !data ? (
             <div className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-[118px] rounded-2xl" />)}</div>
           ) : (
@@ -437,7 +438,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
                   </div>
                 );
               })}
-              <p className="text-[10.5px] text-slate-400">"Pindah tahap" & "Deal" dihitung dari perubahan tahap lead yang tercatat mulai 30 Sep 2026.</p>
+              <p className="text-[10.5px] text-slate-400">"Pindah tahap" & "Deal" dihitung dari perubahan tahap lead yang tercatat sejak 30 Sep 2026.</p>
             </div>
           )}
         </section>
@@ -447,7 +448,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
 
       <PaymentsCard nameOf={nameOf} rows={contracts} loading={loading && !data} onOpenLead={openLeadById} />
 
-      <ActivityTimeline api={api} nameOf={nameOf} days={days} reloadKey={reloadKey} />
+      <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />
     </div>
@@ -455,7 +456,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
 }
 
 // Timeline 7 hari: grafik batang (klik tanggal) + daftar aktivitas hari itu.
-function ActivityTimeline({ api, nameOf, days, reloadKey }) {
+function ActivityTimeline({ api, nameOf, days, daysLoaded, reloadKey }) {
   const [selected, setSelected] = useState(null);
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -478,9 +479,10 @@ function ActivityTimeline({ api, nameOf, days, reloadKey }) {
 
   return (
     <section className={CARD}>
-      <SectionHead icon={CalendarDays} tone="sky" title="Aktivitas 7 Hari Terakhir" sub="Klik batang buat liat aktivitas di tanggal itu" />
-      {days.length === 0 ? <Skeleton className="h-36 rounded-2xl" /> : <DayBars days={days} selected={selected} onSelect={setSelected} />}
+      <SectionHead icon={CalendarDays} tone="sky" title="Aktivitas 7 Hari Terakhir" sub="Klik batang untuk melihat aktivitas pada tanggal tersebut" />
+      {!daysLoaded ? <Skeleton className="h-36 rounded-2xl" /> : days.length === 0 ? <p className="text-[12px] text-slate-500">Timeline belum dapat dimuat. Klik tombol muat ulang di kanan atas.</p> : <DayBars days={days} selected={selected} onSelect={setSelected} />}
 
+      {selected && (<>
       <div className="mb-3 mt-5 flex items-baseline justify-between gap-2 border-t border-slate-100 pt-4">
         <div className="text-[13px] font-bold capitalize text-slate-800">{selLabel}</div>
         {sel && <div className="text-[11px] tabular-nums text-slate-400">{sel.count} aktivitas</div>}
@@ -491,7 +493,7 @@ function ActivityTimeline({ api, nameOf, days, reloadKey }) {
       ) : feed.length === 0 ? (
         showExamples ? (
           <div>
-            <p className="text-[12px] text-slate-500">Belum ada aktivitas. Nanti di sini muncul otomatis setiap anggota team check-in GPS, nulis catatan, nambah/edit/hapus lead, jadwalin visit, mindahin tahap, input deal, atau kirim email - kayak contoh di bawah.</p>
+            <p className="text-[12px] text-slate-500">Belum ada aktivitas. Aktivitas akan muncul otomatis di sini setiap anggota team melakukan check-in GPS, menulis catatan, menambah/mengubah/menghapus lead, menjadwalkan visit, memindahkan tahap, mencatat deal, atau mengirim email - seperti contoh di bawah.</p>
             <ul className="mt-4 space-y-3 opacity-50" aria-label="Contoh tampilan">
               {EMPTY_EXAMPLES.map((e, i) => {
                 const k = KIND[e.kind];
@@ -514,7 +516,7 @@ function ActivityTimeline({ api, nameOf, days, reloadKey }) {
             </ul>
           </div>
         ) : (
-          <div className="py-6 text-center text-[12px] text-slate-400">Gak ada aktivitas di tanggal ini.</div>
+          <div className="py-6 text-center text-[12px] text-slate-400">Tidak ada aktivitas pada tanggal ini.</div>
         )
       ) : (
         <ol className="relative space-y-3 before:absolute before:bottom-2 before:left-4 before:top-2 before:w-px before:bg-slate-100">
@@ -537,6 +539,7 @@ function ActivityTimeline({ api, nameOf, days, reloadKey }) {
           })}
         </ol>
       )}
+      </>)}
     </section>
   );
 }
@@ -558,7 +561,7 @@ function TargetsCard({ api, members, reloadKey }) {
       await api.setSalesTarget(uid, month, Number(input.replace(/[^\d]/g, "")) || 0);
       setEditing(null);
       await load();
-    } catch (e) { alert("Gagal simpan target: " + e.message); } finally { setBusy(false); }
+    } catch (e) { alert("Gagal menyimpan target: " + e.message); } finally { setBusy(false); }
   };
 
   const byId = Object.fromEntries((rows || []).map((r) => [r.user_id, r]));
@@ -567,7 +570,7 @@ function TargetsCard({ api, members, reloadKey }) {
 
   return (
     <section className={CARD}>
-      <SectionHead icon={Target} tone="violet" title="Target & Forecast" sub={`${monthLabel} · klik angka target buat ubah`}
+      <SectionHead icon={Target} tone="violet" title="Target & Forecast" sub={`${monthLabel} · klik angka target untuk mengubah`}
         right={<Segmented options={[[monthStartIso(0), "Bulan ini"], [monthStartIso(1), "Bulan depan"]]} value={month} onChange={setMonth} />} />
       {rows === null ? (
         <div className="grid grid-cols-2 gap-4">{[0, 1].map((i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div>
@@ -607,9 +610,9 @@ function TargetsCard({ api, members, reloadKey }) {
           </div>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] text-slate-500">
             <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-orange-500" />Tercapai</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-orange-200" />Kalau forecast closing</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-orange-200" />Jika forecast closing</span>
           </div>
-          {noValue > 0 && <p className="mt-2 text-[10.5px] text-slate-400">{noValue} lead aktif belum punya nilai proyek - isi di detail lead biar forecast-nya akurat.</p>}
+          {noValue > 0 && <p className="mt-2 text-[10.5px] text-slate-400">{noValue} lead aktif belum memiliki nilai proyek - lengkapi di detail lead agar forecast akurat.</p>}
         </>
       )}
     </section>

@@ -1159,7 +1159,7 @@ export default function AdminDashboard() {
         <div className="text-[11px] text-slate-400 font-mono">
           <span className="text-slate-200 font-bold">{status?.support?.messages_today ?? 0}</span> pertanyaan hari ini ·{" "}
           {(status?.support?.escalated_today ?? 0) > 0 ? (
-            <span className="text-amber-400">{status.support.escalated_today} dieskalasi ke kamu</span>
+            <span className="text-amber-400">{status.support.escalated_today} dieskalasi ke Anda</span>
           ) : (
             <span className="text-emerald-400">nihil eskalasi</span>
           )}

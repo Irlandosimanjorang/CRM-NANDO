@@ -347,8 +347,8 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
 
     if (leads.length === 0) {
       const msg = dedupedCount > 0
-        ? `Semua ${dedupedCount} hasil ternyata udah ada di daftar lead lo${retried ? " (udah dicoba nyari ulang juga)" : ""}. Coba kata kunci/kota lain buat hasil yang baru.`
-        : "Gak nemu lead yang cocok, coba kata kunci lain.";
+        ? `Semua ${dedupedCount} hasil sudah ada di daftar lead Anda${retried ? " (pencarian ulang juga sudah dicoba)" : ""}. Silakan coba kata kunci atau kota lain untuk mendapatkan hasil baru.`
+        : "Tidak ditemukan lead yang sesuai. Silakan coba kata kunci lain.";
       await failJob(msg);
       return;
     }
@@ -411,7 +411,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     const { data: memberRow } = await admin.from("organization_members").select("org_id").eq("user_id", userId).limit(1).maybeSingle();
-    if (!memberRow) return new Response(JSON.stringify({ error: "Organisasi gak ketemu" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+    if (!memberRow) return new Response(JSON.stringify({ error: "Organisasi tidak ditemukan" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
     const orgId = memberRow.org_id;
 
     const { data: orgRow } = await admin.from("organizations").select("industry, plan").eq("id", orgId).maybeSingle();
@@ -422,7 +422,7 @@ Deno.serve(async (req) => {
     const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
     const myPlanLevel = orgRow?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settingsRow?.plan] ?? 0);
     if (!isAdmin && myPlanLevel < 2) {
-      return new Response(JSON.stringify({ error: "Generate Leads AI itu fitur khusus paket Professional ke atas. Upgrade dulu di tab Pengaturan Nexto ya." }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Generate Leads AI tersedia untuk paket Professional ke atas. Silakan upgrade melalui tab Pengaturan." }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     // ---- KUOTA BULANAN ORG - admin platform (ADMIN_EMAIL) skip sama sekali,
@@ -435,7 +435,7 @@ Deno.serve(async (req) => {
       }
       if (!reserved) {
         const nextAt = wibNextMonthStartUTC();
-        return new Response(JSON.stringify({ error: `Kuota ${QUOTA_MAX_RUNS}x/bulan udah kepake. Coba lagi mulai ${nextAt.toISOString().slice(0, 10)} ya.`, next_available_at: nextAt.toISOString() }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: `Kuota ${QUOTA_MAX_RUNS}x/bulan sudah terpakai. Silakan coba lagi mulai ${nextAt.toISOString().slice(0, 10)}.`, next_available_at: nextAt.toISOString() }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
       }
       reservedRunId = reserved;
     }

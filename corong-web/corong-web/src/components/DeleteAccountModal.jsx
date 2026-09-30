@@ -49,15 +49,15 @@ export default function DeleteAccountModal({ isOwner, otherMemberCount, orgName,
 
         {blockedByOtherMembers ? (
           <div className="text-sm text-slate-600 bg-amber-50 border border-amber-200 rounded-2xl p-3.5">
-            Kamu owner team <b>{orgName || "ini"}</b> yang masih punya <b>{otherMemberCount} anggota lain</b>. Keluarin dulu semua anggota lain (tab Pengaturan &rarr; Team) sebelum bisa hapus akun - biar mereka gak kehilangan akses tiba-tiba tanpa sepengetahuan mereka.
+            Anda adalah owner team <b>{orgName || "ini"}</b> yang masih memiliki <b>{otherMemberCount} anggota lain</b>. Keluarkan semua anggota lain terlebih dahulu (tab Pengaturan &rarr; Team) sebelum menghapus akun, agar mereka tidak kehilangan akses secara tiba-tiba.
           </div>
         ) : isOwner ? (
           <>
             <p className="text-sm text-slate-600 mb-3">
-              Ini bakal hapus akun kamu <b>DAN SELURUH DATA organisasi</b> <b>{orgName || "kamu"}</b> secara permanen - semua leads, deal, riwayat kunjungan, kompetitor, dst. <b>Gak bisa dibalikin.</b>
+              Tindakan ini akan menghapus akun Anda <b>DAN SELURUH DATA organisasi</b> <b>{orgName || "Anda"}</b> secara permanen - semua leads, deal, riwayat kunjungan, kompetitor, dan lainnya. <b>Tidak dapat dibatalkan.</b>
             </p>
             <label className="block text-xs font-medium text-slate-500 mb-1">
-              Ketik ulang email kamu (<span className="font-mono">{userEmail}</span>) buat konfirmasi:
+              Ketik ulang email Anda (<span className="font-mono">{userEmail}</span>) untuk konfirmasi:
             </label>
             <input
               value={confirmText}
@@ -68,7 +68,7 @@ export default function DeleteAccountModal({ isOwner, otherMemberCount, orgName,
           </>
         ) : (
           <p className="text-sm text-slate-600 mb-1">
-            Kamu bakal keluar dari team <b>{orgName || "ini"}</b> dan akunmu dihapus permanen. Data team (leads, dst) <b>TIDAK ikut terhapus</b> - anggota lain tetep bisa akses seperti biasa.
+            Anda akan keluar dari team <b>{orgName || "ini"}</b> dan akun Anda dihapus permanen. Data team (leads, dan lainnya) <b>TIDAK ikut terhapus</b> - anggota lain tetap dapat mengakses seperti biasa.
           </p>
         )}
 

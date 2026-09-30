@@ -33,7 +33,7 @@ function usePrompts(tr) {
     tr("Cek lead yang overdue follow-up hari ini.", "Check leads with overdue follow-ups today."),
     tr("Bikin lead baru buat PT Sumber Makmur, kategori distribusi, priority tinggi.", "Create a new lead for PT Sumber Makmur, distribution category, high priority."),
     tr("Pindahin PT Asiaplast ke stage Negosiasi.", "Move PT Asiaplast to the Negotiation stage."),
-    tr("Kasih summary win rate pipeline gua bulan ini.", "Give me a summary of my pipeline win rate this month."),
+    tr("Kasih summary win rate pipeline saya bulan ini.", "Give me a summary of my pipeline win rate this month."),
   ];
 }
 

@@ -13,15 +13,15 @@
 // yang sama dipake landing page) - kalau salah satu daftar fitur berubah,
 // cek juga teks di sini biar gak keselisih.
 export const TOUR_STEPS = [
-  { key: "dashboard", minLevel: 0, title: "Dashboard", desc: "Ringkasan performa & rekomendasi AI harian (Daily Digest), plus skor kualitas Memory - makin tinggi, makin nyambung rekomendasi AI-nya sama histori kamu." },
+  { key: "dashboard", minLevel: 0, title: "Dashboard", desc: "Ringkasan performa & rekomendasi AI harian (Daily Digest), plus skor kualitas Memory - makin tinggi, makin nyambung rekomendasi AI-nya dengan histori Anda." },
   { key: "leads", minLevel: 0, title: "Leads", desc: "Kartu lead per perusahaan, drag antar tahap pipeline, catat progress harian. Ada juga AI Draft Follow-up (WhatsApp & Email), Deteksi Duplikat, dan (Standard ke atas) NEX Pro - update lead pakai voice note." },
   { key: "komunitas", minLevel: 0, title: "Nex", desc: "Komunitas & tips dari sesama sales pengguna Nexto - share cerita closing & tanya-tanya bareng." },
   { key: "visitfollowup", minLevel: 1, title: "Visit & Follow-up", desc: "Jadwal kunjungan, Poin Diskusi (AI) sebelum ketemu customer, dan Rekam Meeting otomatis biar gak perlu nyatet manual pas ketemu klien." },
   { key: "settings", minLevel: 1, title: "Pengaturan", desc: "Profil, dan sinkron otomatis jadwal visit ke Google Calendar." },
-  { key: "generateleads", minLevel: 2, title: "Generate Leads", desc: "AI nyari calon customer baru otomatis sesuai industri & lokasi kamu - tinggal generate, langsung dapet daftar lead siap di-follow-up." },
+  { key: "generateleads", minLevel: 2, title: "Generate Leads", desc: "AI nyari calon customer baru otomatis sesuai industri & lokasi Anda - tinggal generate, langsung dapet daftar lead siap di-follow-up." },
   { key: "deal", minLevel: 2, title: "Deal", desc: "Leaderboard revenue & win rate, plus Pipeline Review otomatis buat nunjukin deal mana yang butuh perhatian sebelum keburu dingin." },
   { key: "team", minLevel: 2, managerEnterpriseOnly: true, title: "Team", desc: "Khusus owner/manager Enterprise: rekap aktivitas tiap sales (kunjungan, notulen, lead baru, pindah tahap, deal), tanda sales yang lagi gak aktif, timeline 7 hari yang bisa diklik per tanggal, plus Performa & Komisi Team." },
-  { key: "kompetitor", minLevel: 2, title: "Kompetitor", desc: "Catat & analisa data kompetitor - harga, kekuatan, kelemahan - biar strategi penawaran kamu lebih tajam." },
+  { key: "kompetitor", minLevel: 2, title: "Kompetitor", desc: "Catat & analisa data kompetitor - harga, kekuatan, kelemahan - biar strategi penawaran Anda lebih tajam." },
 ];
 
 // Bangun daftar step yang beneran ditampilin: filter sesuai level plan user
