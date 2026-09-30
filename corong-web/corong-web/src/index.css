@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Judul pakai Sora, teks biasa Plus Jakarta Sans (docs/DESIGN.md). */
+@layer base {
+  h1, h2, h3 {
+    font-family: theme("fontFamily.display");
+  }
+}
+
 /* Sembunyiin scrollbar bawaan browser di semua elemen (tetep bisa discroll,
    cuma bar-nya aja yang gak keliatan) biar kesannya lebih kayak app mobile. */
 * {

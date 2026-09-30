@@ -1,12 +1,10 @@
 import React, { useMemo, useEffect, useState } from "react";
-import {
-  Users, MessageCircle, MapPin, Trophy, ArrowRight,
-  CheckCircle2, Clock3, Target, ChevronDown,
-} from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { ArrowRight, ChevronDown } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { NextoRobotHead } from "../Auth";
 import * as db from "../lib/db";
 import CompanyPerformanceCard from "../components/CompanyPerformanceCard";
+import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../ui";
 import { todayISO } from "../lib/helpers";
 
 const cn = (...v) => v.filter(Boolean).join(" ");
@@ -16,45 +14,6 @@ function sameDay(value) {
   const d = new Date(`${value}T00:00:00`);
   const n = new Date();
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
-}
-
-function Card({ children, className = "" }) {
-  // Radius disamain 28px (28 Sep 2026 - sebelumnya 20px, beda sendiri dari
-  // semua kartu di tab lain yang pakai rounded-[28px]) biar konsisten satu
-  // bahasa visual di seluruh app.
-  return <section className={cn("rounded-[28px] border border-slate-200/80 bg-white shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]", className)}>{children}</section>;
-}
-
-function SectionTitle({ title, action, onClick }) {
-  // BUG FIX (audit 16 Sep 2026): di kolom sempit (misal kartu "Distribusi
-  // Pipeline" di grid 3 kolom), judul DAN tombol aksi sama-sama kepotong
-  // jadi 2 baris terus numpuk tumpang tindih. Sekarang tombol aksi dipaksa
-  // 1 baris (whitespace-nowrap + shrink-0) dan barisnya boleh wrap - kalau
-  // beneran sempit, tombol jatuh ke baris baru di bawah judul, bukan
-  // numpuk berantakan.
-  return (
-    <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-      <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-slate-900">{title}</h2>
-      {action && <button onClick={onClick} className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-orange-600 hover:text-orange-800 flex items-center gap-1">{action}<ArrowRight size={13}/></button>}
-    </div>
-  );
-}
-
-function Kpi({ icon: Icon, value, label, trend, iconClass }) {
-  return (
-    <Card className="p-4">
-      <div className="flex items-center gap-3">
-        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", iconClass)}><Icon size={19} strokeWidth={2}/></div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-end justify-between gap-2">
-            <div className="text-[24px] leading-none font-black tracking-[-0.04em] text-slate-900">{value}</div>
-            {trend && <span className="text-[10px] font-bold text-emerald-500">{trend}</span>}
-          </div>
-          <div className="mt-1 text-[10px] font-medium text-slate-500">{label}</div>
-        </div>
-      </div>
-    </Card>
-  );
 }
 
 export default function Dashboard({
@@ -92,10 +51,6 @@ export default function Dashboard({
     const usable = stages.filter(s => s.type !== "lost").slice(0, 4);
     return usable.length ? usable : [{ key: "prospek", label: "Prospek", type: "normal" }];
   }, [stages]);
-
-  // Dipake bareng buat donut "Distribusi Pipeline" & progress bar "Pipeline
-  // Stages" - satu sumber warna biar dua-duanya nyambung visualnya.
-  const DONUT_COLORS = ["#f97316", "#6d5dfc", "#3b82f6", "#10b981"];
 
   // BUG FIX (audit 16 Sep 2026): time/title sebelumnya ngecek `l.visit_date`
   // ADA-GAKNYA doang, bukan `sameDay(l.visit_date)` - padahal lead bisa
@@ -239,12 +194,12 @@ export default function Dashboard({
     todayTasks.forEach(t => {
       if (seen.has(t.lead.id)) return;
       seen.add(t.lead.id);
-      combined.push({ id: t.lead.id, lead: t.lead, title: t.title, meta: `${t.time} · ${t.sub}` });
+      combined.push({ id: t.lead.id, lead: t.lead, title: t.title, tag: t.time, sub: t.sub });
     });
     upcoming.forEach(l => {
       if (seen.has(l.id)) return;
       seen.add(l.id);
-      combined.push({ id: l.id, lead: l, title: `Visit — ${l.name}`, meta: `Terjadwal · ${l.visit_date}` });
+      combined.push({ id: l.id, lead: l, title: `Visit - ${l.name}`, tag: "Terjadwal", sub: new Date(`${l.visit_date}T00:00:00`).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" }) });
     });
     return combined.slice(0, 6);
   }, [todayTasks, upcoming]);
@@ -257,23 +212,25 @@ export default function Dashboard({
   const greeting = hourNow < 11 ? "Good morning" : hourNow < 18 ? "Good afternoon" : "Good evening";
   const todayLabel = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
+  const nextVisit = upcoming[0];
+  const depthTotal = priorityData.reduce((s, d) => s + d.value, 0);
+  const TASK_TONE = { "Hari ini": "brand", Prioritas: "warn", Terjadwal: "neutral", "Follow-up": "neutral" };
+
   return (
     <div className="space-y-5">
-      {/* Hero */}
+      {/* Kepala halaman */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[30px] md:text-[34px] leading-tight font-black tracking-[-0.045em] text-slate-950">{greeting}, {displayName}</h1>
-          <p className="mt-1 text-[13px] text-slate-500">Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
-          <p className="mt-1 text-[11px] text-slate-400">{todayLabel}</p>
+          <h1 className="text-[28px] md:text-[32px] leading-tight font-bold tracking-[-0.045em] text-ink">{greeting}, {displayName}</h1>
+          <p className="mt-1 text-[13px] text-slate-500">{todayLabel} · Fokus pada follow-up yang paling berpeluang menghasilkan deal.</p>
         </div>
-        {/* Label tulisan tangan (18 Sep 2026, permintaan Nando) - dipindah
-            dari header ke sini, di sebelah kanan sapaan "Good ..., Nama"
-            (sebelumnya di tengah topbar). Cuma tagline dekoratif. */}
+        {/* Label tulisan tangan (18 Sep 2026, permintaan Nando). Tanda seru
+            ganda dihapus (30 Sep 2026, aturan desain docs/DESIGN.md). */}
         <div
           className="hidden lg:block shrink-0 mt-1 -rotate-3 select-none pointer-events-none text-[26px] leading-none text-blue-600/80"
           style={{ fontFamily: "'Caveat', cursive" }}
         >
-          Always Know What's Next !!
+          Always know what's next.
         </div>
       </div>
 
@@ -282,32 +239,27 @@ export default function Dashboard({
           secara umum"). Ditaruh paling atas biar keliatan tiap buka app. */}
       {isEnterprise && !canManage && <CompanyPerformanceCard />}
 
-      {/* Rekomendasi AI (Next best action) - dipindah ke paling atas (16 Sep
-          2026, permintaan Nando) biar langsung keliatan begitu buka
-          Dashboard, gak ketutup di paling bawah. !bg-slate-950 pakai
-          modifier "!" (important) - tanpa itu, class bg-white bawaan dari
-          Card() bentrok sama bg-slate-950 di sini dan yang menang urutannya
-          ditentuin Tailwind pas generate CSS (bukan urutan di className),
-          jadi kartunya kemarin keliatan putih padahal harusnya gelap. */}
-      <Card className="!bg-slate-950 overflow-hidden text-white !border-slate-800">
-        <div className="p-5 bg-[radial-gradient(circle_at_85%_10%,rgba(109,93,252,.42),transparent_35%)]">
+      {/* NEX AI - satu-satunya permukaan gelap di Dashboard (titik fokus).
+          Ungu = warna khusus AI. */}
+      <section className="overflow-hidden rounded-panel border border-slate-800 bg-slate-950 text-white">
+        <div className="p-5 bg-[radial-gradient(circle_at_88%_0%,rgba(109,93,252,.38),transparent_40%)]">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-start gap-3 flex-1 min-w-0">
               <NextoRobotHead size={44} />
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-300">NEX AI</div>
-                <h2 className="mt-1 text-[16px] font-black tracking-tight">Rekomendasi Hari Ini</h2>
-                <p className="mt-1 text-[11px] leading-5 text-slate-400">{aiRecs.length > 1 ? `${aiRecs.length} lead paling potensial buat difollow-up hari ini.` : "Tambahkan lead baru agar AI bisa menemukan prioritas."}</p>
+                <h2 className="mt-1 text-[16px] font-bold tracking-tight">Rekomendasi hari ini</h2>
+                <p className="mt-1 text-[12px] leading-5 text-slate-400">{aiRecs.length > 1 ? `${aiRecs.length} lead paling potensial untuk di-follow-up hari ini.` : "Tambahkan lead baru agar AI dapat menemukan prioritas."}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => onGo?.("advisor")} className="rounded-xl bg-white text-slate-950 py-2.5 px-4 text-[11px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2">Buka NEX AI Advisor <ArrowRight size={14} /></button>
+              <button onClick={() => onGo?.("advisor")} className="rounded-inner bg-white text-slate-950 py-2.5 px-4 text-[12px] font-bold hover:bg-slate-100 flex items-center justify-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300">Buka NEX AI Advisor <ArrowRight size={14} /></button>
               {aiRecs.length > 0 && (
                 <button
                   onClick={() => setRecsOpen((v) => !v)}
                   aria-expanded={recsOpen}
-                  title={recsOpen ? "Sembunyikan daftar" : "Tampilkan daftar"}
-                  className="h-9 w-9 rounded-xl bg-white/10 hover:bg-white/15 flex items-center justify-center transition-colors"
+                  aria-label={recsOpen ? "Sembunyikan daftar" : "Tampilkan daftar"}
+                  className="h-10 w-10 rounded-inner bg-white/10 hover:bg-white/15 flex items-center justify-center transition-colors"
                 >
                   <ChevronDown size={16} className={`transition-transform duration-200 ${recsOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -315,201 +267,177 @@ export default function Dashboard({
             </div>
           </div>
 
-          {/* Dropdown (16 Sep 2026, permintaan Nando) - list rekomendasi
-              bisa ditutup/dibuka pakai tombol chevron di atas. */}
           {aiRecs.length > 0 && recsOpen && (
-            <div className="mt-4 pt-4 border-t border-white/10 grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            <ol className="mt-4 pt-4 border-t border-white/10 grid sm:grid-cols-2 gap-x-6 gap-y-2">
               {aiRecs.map((r, i) => (
-                <div key={i} className="flex items-start gap-2 text-[11px] leading-5 min-w-0">
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-violet-400 shrink-0" />
-                  <div className="min-w-0"><span className="font-semibold text-white">{r.name}</span><span className="text-slate-400"> — {r.action}</span></div>
-                </div>
+                <li key={i} className="flex items-start gap-2.5 text-[12px] leading-5 min-w-0">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-violet-400/20 text-[9.5px] font-bold text-violet-200 tabular-nums">{i + 1}</span>
+                  <div className="min-w-0"><span className="font-semibold text-white">{r.name}</span><span className="text-slate-400"> - {r.action}</span></div>
+                </li>
               ))}
-            </div>
+            </ol>
           )}
         </div>
-      </Card>
+      </section>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <Kpi icon={Users} value={stats.total} label="Total Leads" trend="↑ aktif" iconClass="bg-orange-50 text-orange-600" />
-        <Kpi icon={MessageCircle} value={stats.followups} label="Follow-up" trend="hari ini" iconClass="bg-violet-50 text-violet-600" />
-        <Kpi icon={MapPin} value={stats.visits} label="Kunjungan Hari Ini" trend="agenda" iconClass="bg-emerald-50 text-emerald-600" />
-        <Kpi icon={Trophy} value={stats.won} label="Deal Won" trend={`${stats.winRate}% win rate`} iconClass="bg-amber-50 text-amber-600" />
-      </div>
+      {/* Angka utama - satu panel dengan garis pemisah, bukan 4 kartu. */}
+      <StatRow>
+        <Stat value={stats.total} label="Total lead" hint={`${stats.won} menang, ${stats.lost} kalah`} />
+        <Stat value={stats.followups} label="Perlu follow-up" hint="Lead dengan langkah berikutnya" tone={stats.followups ? "brand" : "ink"} />
+        <Stat value={stats.visits} label="Kunjungan hari ini" hint={nextVisit ? `Berikutnya: ${nextVisit.name}` : "Belum ada jadwal kunjungan"} />
+        <Stat value={stats.won} label="Deal menang" hint={`Win rate ${stats.winRate}%`} tone={stats.won ? "good" : "ink"} />
+      </StatRow>
 
-      {/* Layout 3 kolom niru struktur referensi "Cortex" (Analytics / CRM
-          Sidebar / Upcoming Tasks) - datanya Nexto asli, warnanya ngikutin
-          brand Nexto (oranye utama, violet cuma buat penanda AI). */}
-      {/* Rasio kolom dilebarin di kolom 1 (Analytics/chart) - Key Accounts &
-          Upcoming Tasks dipersempit (16 Sep 2026, permintaan Nando) biar
-          chart tren punya ruang lebih lega. */}
-      <div className="grid grid-cols-1 xl:grid-cols-[7fr_1fr_1fr] gap-4">
-        {/* Kolom 1: Analytics - area chart tren + donut distribusi pipeline */}
-        <div className="space-y-4">
-          <Card className="p-5">
-            <SectionTitle title="Tren Leads & Deal" />
-            <div className="h-40 -mx-2">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-5">
+        {/* Kolom kiri: tren + kedalaman riwayat */}
+        <div className="space-y-5 min-w-0">
+          <Panel className="p-5">
+            <PanelHeader title="Tren lead & deal" meta="6 bulan terakhir"
+              right={(
+                <div className="flex items-center gap-4 text-[11px] text-slate-500">
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand" />Lead baru</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Deal menang</span>
+                </div>
+              )} />
+            <div className="mt-4 h-44 -mx-2">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trend} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
                   <defs>
                     <linearGradient id="nextoLeadsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f97316" stopOpacity={0.35} />
+                      <stop offset="0%" stopColor="#f97316" stopOpacity={0.22} />
                       <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="nextoDealsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6d5dfc" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#6d5dfc" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.22} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 11 }} labelStyle={{ fontWeight: 700, color: "#0f172a" }} />
-                  <Area type="monotone" dataKey="leads" name="Leads Baru" stroke="#f97316" strokeWidth={2} fill="url(#nextoLeadsGrad)" />
-                  <Area type="monotone" dataKey="deals" name="Deal Menang" stroke="#6d5dfc" strokeWidth={2} fill="url(#nextoDealsGrad)" />
+                  <CartesianGrid vertical={false} stroke="#eef2f7" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} labelStyle={{ fontWeight: 700, color: "#0f172a" }} />
+                  <Area type="monotone" dataKey="leads" name="Lead baru" stroke="#f97316" strokeWidth={2} fill="url(#nextoLeadsGrad)" />
+                  <Area type="monotone" dataKey="deals" name="Deal menang" stroke="#10b981" strokeWidth={2} fill="url(#nextoDealsGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex items-center gap-4 mt-1">
-              <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500"><span className="h-2 w-2 rounded-full bg-orange-500" />Leads Baru</span>
-              <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500"><span className="h-2 w-2 rounded-full bg-violet-500" />Deal Menang</span>
-            </div>
-          </Card>
+          </Panel>
 
-          <Card className="p-5">
-            <SectionTitle title="Kedalaman Riwayat Lead" action="Lihat" onClick={() => onGo?.("leads")} />
-            {priorityData.length > 0 ? (
-              <div className="flex items-center gap-4">
-                <div className="h-28 w-28 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={priorityData} dataKey="value" nameKey="name" innerRadius={34} outerRadius={54} paddingAngle={3} strokeWidth={0}>
-                        {priorityData.map((d) => <Cell key={d.key} fill={d.color} />)}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+          <Panel className="p-5">
+            <PanelHeader title="Kedalaman riwayat lead" meta="Makin banyak catatan, makin tepat saran AI untuk lead tersebut" action="Lihat lead" onAction={() => onGo?.("leads")} />
+            {depthTotal > 0 ? (
+              <div className="mt-4">
+                <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                  {priorityData.map((d) => <div key={d.key} style={{ width: `${(d.value / depthTotal) * 100}%`, background: d.color }} />)}
                 </div>
-                <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                   {priorityData.map((d) => (
-                    <div key={d.key} className="flex items-center justify-between gap-2 text-[11px]">
-                      <span className="flex items-center gap-1.5 text-slate-600 truncate"><span className="h-2 w-2 rounded-full shrink-0" style={{ background: d.color }} />{d.name}</span>
-                      <span className="font-bold text-slate-800 shrink-0">{d.value}</span>
+                    <div key={d.key} className="flex items-baseline gap-2">
+                      <span className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-full" style={{ background: d.color }} />
+                      <span className="font-display text-[18px] font-bold tabular-nums text-ink">{d.value}</span>
+                      <span className="truncate text-[11.5px] text-slate-500">{d.name}</span>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="py-6 text-center text-[11px] text-slate-400">Belum ada progress notes tercatat.</div>
+              <div className="mt-4"><EmptyState>Belum ada catatan progress. Tambahkan catatan setelah menghubungi lead agar AI mengenal riwayatnya.</EmptyState></div>
             )}
 
-            {/* "Kualitas Memori Nexto" - REVISI FINAL (16 Sep 2026, permintaan
-                Nando: "itu bukan cuma angka, tapi Nexto bisa menilai
-                sendiri") - skornya beneran dinilai AI (assessMemoryHealth di
-                daily-digest.ts), ditampilin apa adanya tanpa breakdown
-                parameter/penjelasan di bawahnya. */}
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Skor Kualitas Memori (AI)</div>
-                {typeof memoryScore === "number" ? (
-                  <span className="flex items-baseline gap-1.5">
-                    <span className={cn(
-                      "text-[20px] font-black leading-none",
-                      memoryScore >= 70 ? "text-emerald-600" : memoryScore >= 40 ? "text-amber-600" : "text-rose-600"
-                    )}>{memoryScore}%</span>
-                    {memoryLabel && <span className="text-[10px] font-semibold text-slate-400">{memoryLabel}</span>}
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-slate-400">Belum dinilai</span>
-                )}
+            {/* Skor Kualitas Memori - dinilai AI (edge function
+                memory-health-check), ditampilkan apa adanya. */}
+            <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+              <div>
+                <div className="text-[12px] font-semibold text-slate-700">Skor kualitas memori</div>
+                <div className="text-[11px] text-slate-400">Dinilai AI dari kelengkapan data lead</div>
+              </div>
+              {typeof memoryScore === "number" ? (
+                <span className="flex items-baseline gap-1.5">
+                  <span className={cn(
+                    "font-display text-[22px] font-bold leading-none tabular-nums",
+                    memoryScore >= 70 ? "text-emerald-600" : memoryScore >= 40 ? "text-amber-600" : "text-rose-600"
+                  )}>{memoryScore}%</span>
+                  {memoryLabel && <span className="text-[11px] font-semibold text-slate-400">{memoryLabel}</span>}
+                </span>
+              ) : (
+                <Pill>Belum dinilai</Pill>
+              )}
+            </div>
+          </Panel>
+        </div>
+
+        {/* Kolom kanan: yang bisa langsung dikerjakan */}
+        <div className="space-y-5 min-w-0">
+          <Panel className="p-5">
+            <PanelHeader title="Tugas terdekat" action="Lihat semua" onAction={() => onGo?.("visitfollowup")} />
+            {taskList.length ? (
+              <ul className="mt-3 -mx-2 divide-y divide-slate-100">
+                {taskList.map((item) => (
+                  <li key={item.id}>
+                    <button onClick={() => onOpenLead?.(item.lead)} className="w-full rounded-inner px-2 py-2.5 text-left hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 text-[12.5px] font-semibold leading-snug text-slate-800 line-clamp-2">{item.title}</div>
+                        <Pill tone={TASK_TONE[item.tag] || "neutral"}>{item.tag}</Pill>
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] text-slate-400">{item.sub}</div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-3"><EmptyState action="Buka Visit & Follow-up" onAction={() => onGo?.("visitfollowup")}>Belum ada tugas. Isi langkah berikutnya atau jadwal kunjungan di lead agar muncul di sini.</EmptyState></div>
+            )}
+          </Panel>
+
+          <Panel className="p-5">
+            <PanelHeader title="Lead prioritas" action="Lihat semua" onAction={() => onGo?.("leads")} />
+            {keyAccounts.length ? (
+              <ul className="mt-3 -mx-2">
+                {keyAccounts.map(({ lead: l, active }) => (
+                  <li key={l.id}>
+                    <button onClick={() => onOpenLead?.(l)} className="w-full flex items-center gap-3 rounded-inner px-2 py-2 text-left hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                      <div className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[11px] font-bold shrink-0">{(l.name || "?").slice(0, 2).toUpperCase()}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[12.5px] font-semibold text-slate-800">{l.name}</div>
+                        <div className="truncate text-[11px] text-slate-400">{l.key_person || l.city || "-"}</div>
+                      </div>
+                      <Pill tone={active ? "good" : "neutral"}>{active ? "Aktif" : "Lead"}</Pill>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-3"><EmptyState action="Tambah lead" onAction={() => onGo?.("leads")}>Belum ada lead.</EmptyState></div>
+            )}
+
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <div className="text-[12px] font-semibold text-slate-700">Tahap pipeline</div>
+              <div className="mt-3 space-y-2.5">
+                {pipeline.map((s, i) => (
+                  <div key={s.key}>
+                    <div className="mb-1 flex items-center justify-between text-[11.5px]"><span className="text-slate-600">{s.label}</span><span className="font-semibold tabular-nums text-slate-800">{pipelineCounts[i] || 0}</span></div>
+                    <Meter value={pipelineCounts[i] || 0} max={maxPipeline} tone={s.type === "won" ? "good" : "brand"} />
+                  </div>
+                ))}
               </div>
             </div>
-          </Card>
+          </Panel>
         </div>
-
-        {/* Kolom 2: "CRM Sidebar" - key accounts + pipeline stages */}
-        <div className="space-y-4">
-          <Card className="p-5">
-            <SectionTitle title="Key Accounts" action="Lihat Semua" onClick={() => onGo?.("leads")} />
-            <div className="space-y-1">
-              {keyAccounts.length ? keyAccounts.map(({ lead: l, active }) => (
-                <button key={l.id} onClick={() => onOpenLead?.(l)} className="w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-slate-50">
-                  <div className="h-8 w-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-[11px] font-bold shrink-0">{(l.name || "?").slice(0, 2).toUpperCase()}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[11px] font-semibold text-slate-800">{l.name}</div>
-                    <div className="truncate text-[9px] text-slate-400">{l.key_person || l.city || "—"}</div>
-                  </div>
-                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0", active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>{active ? "Aktif" : "Lead"}</span>
-                </button>
-              )) : <div className="py-6 text-center text-[11px] text-slate-400">Belum ada lead.</div>}
-            </div>
-          </Card>
-
-          <Card className="p-5">
-            <SectionTitle title="Pipeline Stages" />
-            <div className="space-y-3">
-              {pipeline.map((s, i) => (
-                <div key={s.key}>
-                  <div className="flex items-center justify-between text-[10.5px] mb-1"><span className="font-semibold text-slate-600">{s.label}</span><span className="text-slate-400">{pipelineCounts[i] || 0}</span></div>
-                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.max(6, ((pipelineCounts[i] || 0) / maxPipeline) * 100)}%`, background: DONUT_COLORS[i % DONUT_COLORS.length] }} /></div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        {/* Kolom 3: Upcoming Tasks */}
-        <Card className="p-5">
-          <SectionTitle title="Upcoming Tasks" action="Lihat Semua" onClick={() => onGo?.("visitfollowup")} />
-          <div className="space-y-1">
-            {taskList.length ? taskList.map((item, i) => (
-              <button key={item.id} onClick={() => onOpenLead?.(item.lead)} className="w-full flex items-start gap-2.5 rounded-xl px-2 py-2.5 text-left hover:bg-slate-50">
-                <div className={cn("h-5 w-5 mt-0.5 rounded-md border flex items-center justify-center shrink-0", i === 0 ? "bg-orange-600 border-orange-600 text-white" : "border-slate-300 text-transparent")}><CheckCircle2 size={12} /></div>
-                <div className="min-w-0 flex-1">
-                  {/* Judul tugas sebelumnya `truncate` (dipaksa 1 baris,
-                      kepotong rapi tanpa "..." kalau kepanjangan sampe
-                      nabrak tepi kartu). Sekarang boleh wrap 2 baris. */}
-                  <div className="text-[11px] font-semibold text-slate-800 leading-snug line-clamp-2">{item.title}</div>
-                  <div className="text-[9px] text-slate-400 flex items-center gap-1 mt-1"><Clock3 size={9} className="shrink-0" /><span className="truncate">{item.meta}</span></div>
-                </div>
-              </button>
-            )) : <div className="py-8 text-center text-[11px] text-slate-400">Belum ada tugas.</div>}
-          </div>
-        </Card>
       </div>
 
-      {/* GATE FIX (audit 16 Sep 2026): sebelumnya TeamLeaderboard cuma
-          self-gate dari jumlah anggota (>1) doang, gak peduli plan org-nya
-          apa - "Laporan Performa Tim" diiklanin fitur Enterprise, tapi org
-          non-Enterprise yang KEBETULAN pernah punya >1 anggota (misal abis
-          di-downgrade dari Enterprise) tetep keliatan leaderboard-nya.
-          Sekarang eksplisit di-gate isEnterprise juga di sini.
-          BUG FIX (29 Sep 2026): ditambah gate `canManage` juga - komponen
-          ini ngitung stats per anggota dari props `leads`/`dealTransactions`
-          yang buat sales_rep udah kefilter RLS ke lead dia sendiri doang,
-          jadi kalau sales_rep yang liat, SEMUA teammate lain keliatan
-          0 lead/0 deal/Rp0 (data nyasar, bukan kebocoran - RLS-nya bener -
-          tapi nampilinnya membingungkan). Rincian per orang emang cuma
-          buat manager; sales_rep dapet angka company-wide lewat widget
-          "Performa Perusahaan" di atas. */}
-      {/* (30 Sep 2026) Performa Tim dipindah ke tab "Tim" bareng Rekap
-          Aktivitas - Dashboard cukup nampilin shortcut ke sana. */}
+      {/* (30 Sep 2026) Performa Team ada di tab "Team" (owner/manager
+          Enterprise) - Dashboard cukup nampilin pintasan ke sana. */}
       {isEnterprise && canManage && (
-        <button onClick={() => onGo?.("team")} className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 flex items-center gap-3 text-left hover:border-orange-300 transition-colors">
-          <Trophy size={18} className="text-amber-500 shrink-0" />
-          <div className="flex-1">
-            <div className="text-sm font-bold text-slate-800">Rekap Aktivitas & Performa Team</div>
-            <div className="text-[11px] text-slate-400">Kunjungan, notulen, pindah tahap, dan peringkat revenue tiap sales - buka tab Team</div>
+        <Panel as="button" onClick={() => onGo?.("team")} className="w-full px-5 py-4 flex items-center gap-3 text-left hover:border-brand-line transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-bold text-ink">Rekap aktivitas & performa team</div>
+            <div className="text-[11.5px] text-slate-500">Kunjungan, notulen, target, dan kontrak setiap sales ada di tab Team.</div>
           </div>
-          <span className="text-[12px] font-semibold text-orange-600">Buka &rarr;</span>
-        </button>
+          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-strong">Buka tab Team <ArrowRight size={13} /></span>
+        </Panel>
       )}
 
-      <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-orange-50/50 px-5 py-4 flex items-center gap-3">
-        <Target size={18} className="text-orange-500 shrink-0"/>
-        <p className="text-[11px] font-medium text-slate-500">“Discipline in follow-up creates freedom in revenue.”</p>
-        <span className="ml-auto text-[10px] font-bold text-slate-400">— NEXTO</span>
-      </div>
+      <p className="pb-2 text-center text-[11.5px] text-slate-400">"Discipline in follow-up creates freedom in revenue." - Nexto</p>
     </div>
   );
 }
