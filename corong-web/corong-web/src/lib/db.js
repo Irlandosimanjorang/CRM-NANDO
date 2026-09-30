@@ -66,6 +66,14 @@ export async function switchDemoIndustry(industryKey) {
 // anggota LAIN (RLS gak ngasih akses ke auth.users), makanya butuh
 // service role - sebelumnya nama yang "belum diisi" jatuh ke potongan
 // UUID mentah ("Anggota 45dadf81") yang gak kebaca sama sekali.
+// Rekap aktivitas tim (tab "Tim", 30 Sep 2026) - khusus owner/manager
+// Enterprise, dicek ulang di RPC-nya. Balikin { members: [...], feed: [...] }.
+export async function getTeamActivity(from, to) {
+  const { data, error } = await supabase.rpc("get_team_activity", { p_from: from.toISOString(), p_to: to.toISOString() });
+  if (error) throw error;
+  return data || { members: [], feed: [] };
+}
+
 export async function getOrgMembers() {
   const { data, error } = await supabase.functions.invoke("get-org-members");
   if (error) throw error;

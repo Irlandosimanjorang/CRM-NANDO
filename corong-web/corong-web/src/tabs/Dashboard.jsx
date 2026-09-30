@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { NextoRobotHead } from "../Auth";
-import TeamLeaderboard from "../components/TeamLeaderboard";
 import * as db from "../lib/db";
 import { todayISO } from "../lib/helpers";
 
@@ -533,7 +532,18 @@ export default function Dashboard({
           tapi nampilinnya membingungkan). Rincian per orang emang cuma
           buat manager; sales_rep dapet angka company-wide lewat widget
           "Performa Perusahaan" di atas. */}
-      {isEnterprise && canManage && <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />}
+      {/* (30 Sep 2026) Performa Tim dipindah ke tab "Tim" bareng Rekap
+          Aktivitas - Dashboard cukup nampilin shortcut ke sana. */}
+      {isEnterprise && canManage && (
+        <button onClick={() => onGo?.("team")} className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 flex items-center gap-3 text-left hover:border-orange-300 transition-colors">
+          <Trophy size={18} className="text-amber-500 shrink-0" />
+          <div className="flex-1">
+            <div className="text-sm font-bold text-slate-800">Rekap Aktivitas & Performa Tim</div>
+            <div className="text-[11px] text-slate-400">Kunjungan, notulen, pindah tahap, dan peringkat revenue tiap sales - buka tab Tim</div>
+          </div>
+          <span className="text-[12px] font-semibold text-orange-600">Buka &rarr;</span>
+        </button>
+      )}
 
       <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-orange-50/50 px-5 py-4 flex items-center gap-3">
         <Target size={18} className="text-orange-500 shrink-0"/>

@@ -40,13 +40,14 @@ const IndustryDemo = lazy(() => import("./tabs/IndustryDemo"));
 // ke-bundle statis buat SEMUA user termasuk yang bukan admin, bawa serta
 // "recharts" (lumayan berat) yang gak kepake sama sekali kalau bukan admin.
 const AdminDashboard = lazy(() => import("./tabs/AdminDashboard"));
+const Team = lazy(() => import("./tabs/Team"));
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
 import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -86,6 +87,10 @@ const NAV = [
 // Ini murni buat kerapian UI - keamanan ASLI-nya di server (ADMIN_EMAIL),
 // jadi meskipun somehow ke-tembus tampil, data-nya tetep ke-block backend.
 const ADMIN_NAV_ITEM = { key: "adminops", label: "Command Center", short: "AI Ops", icon: Bot };
+// Tab "Tim" (30 Sep 2026) - cuma nempel buat owner/manager org Enterprise,
+// disisipin setelah "Visit & Follow-up". Rekap aktivitas-nya dijaga ulang di
+// RPC get_team_activity (server nolak selain owner/manager Enterprise).
+const TEAM_NAV_ITEM = { key: "team", label: "Tim", short: "Tim", icon: UserCheck };
 
 // ---- COST/BUG FIX (5 Sep 2026) ----
 // SEMUA tab sekarang selalu di-mount (gak pernah di-unmount pas pindah tab),
@@ -655,7 +660,10 @@ export default function App() {
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
   // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
   // Customer biasa (99.9% user) gak akan pernah liat item ini nongol sama sekali.
-  const navItems = settings?.is_platform_admin ? [...NAV, ADMIN_NAV_ITEM] : NAV;
+  const baseNav = isEnterprise && canManage
+    ? NAV.flatMap((n) => (n.key === "visitfollowup" ? [n, TEAM_NAV_ITEM] : [n]))
+    : NAV;
+  const navItems = settings?.is_platform_admin ? [...baseNav, ADMIN_NAV_ITEM] : baseNav;
 
   return (
     <div className="nexto-app min-h-screen text-slate-900 flex overflow-x-hidden">
@@ -868,7 +876,7 @@ export default function App() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-extrabold tracking-[-0.03em] text-[14px]">NE<span className="text-orange-500">X</span>TO</div>
-              <div className="text-[9px] font-medium text-slate-400 truncate">{NAV.find((n) => n.key === effectiveTab)?.label}</div>
+              <div className="text-[9px] font-medium text-slate-400 truncate">{navItems.find((n) => n.key === effectiveTab)?.label}</div>
             </div>
             <NotificationBell onNavigate={setTab} />
             <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={34} />
@@ -885,7 +893,7 @@ export default function App() {
               <div className="mt-0.5 flex items-center gap-2 text-[13px] font-medium text-slate-400">
                 <span>Workspace</span>
                 <span className="text-slate-300">/</span>
-                <span className="text-slate-700">{NAV.find((n) => n.key === effectiveTab)?.label}</span>
+                <span className="text-slate-700">{navItems.find((n) => n.key === effectiveTab)?.label}</span>
               </div>
             </div>
           </div>
@@ -981,6 +989,11 @@ export default function App() {
                     <PreviewLock locked={isLocked("visitfollowup")} minLevel={TAB_MIN_LEVEL.visitfollowup}>
                       <VisitFollowup leads={isLocked("visitfollowup") ? DUMMY_LEADS : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} myLevel={myLevel} />
                     </PreviewLock>
+                  </div>
+                )}
+                {visitedTabs.has("team") && isEnterprise && canManage && (
+                  <div style={{ display: effectiveTab === "team" ? "block" : "none" }}>
+                    <Team leads={leads} stages={stageList} dealTransactions={dealTransactions} onOpenLead={setEditLead} canManage={canManage} />
                   </div>
                 )}
                 {visitedTabs.has("kompetitor") && (
