@@ -633,7 +633,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                     <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
                   ) : inviteCode ? (
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                      <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota team, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
+                      <p className="text-xs text-slate-600 mb-2">Bagikan kode ini ke anggota team. Mereka memasukkannya di Pengaturan → Team, bagian "Punya kode undangan?":</p>
                       <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
                         <span className="flex-1 tracking-wider">{inviteCode}</span>
                         <button onClick={() => copyToClipboard(inviteCode, "invite")} className={copiedKey === "invite" ? "text-emerald-600" : "text-slate-400 hover:text-slate-700"} title="Salin kode">
@@ -658,11 +658,12 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                   <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise buat bisa undang anggota team.</p>
                 )}
 
-                {/* Kotak "Punya kode undangan?" ini sekarang keliatan buat SEMUA
-                    owner (Free, Individual/Premium, Enterprise) - sebelumnya
-                    kepencet gak muncul sama sekali buat owner Individual/Premium,
-                    padahal mereka justru yang paling mungkin diundang gabung
-                    tim Enterprise orang lain. */}
+                {/* Kotak "Punya kode undangan?" untuk yang BELUM di team Enterprise
+                    (Free, Standard, Professional) - merekalah yang mungkin diundang.
+                    Anggota team Enterprise (owner/manager/sales) tidak perlu: owner
+                    yang punya anggota ditolak, dan pindah team lewat owner team.
+                    (1 Okt 2026, permintaan Nando) */}
+                {!isEnterprise && (
                 <div className="border-t border-slate-100 mt-3 pt-3">
                   <p className="text-xs font-medium text-slate-500 mb-1.5">Punya kode undangan?</p>
                   <div className="flex gap-2">
@@ -673,6 +674,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                   </div>
                   {joinMsg && <p className={`text-xs mt-2 ${joinMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{joinMsg}</p>}
                 </div>
+                )}
               </>
             )}
           </>
