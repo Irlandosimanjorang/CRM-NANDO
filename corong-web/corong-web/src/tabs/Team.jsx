@@ -38,7 +38,16 @@ const KIND = {
   lead: { icon: UserPlus, color: "text-emerald-600 bg-emerald-50", verb: "nambah lead" },
 };
 
-const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales" };
+// Contoh yang ditampilin (transparan + label "Contoh") kalau timeline kosong,
+// biar manager langsung ngerti isinya nanti apa. Gak pernah disimpen ke DB.
+const EMPTY_EXAMPLES = [
+  { kind: "visit", who: "Budi", lead: "PT Mitra Logistik", when: "10:15" },
+  { kind: "stage", who: "Sari", lead: "PT Bank Sejahtera", detail: "Hot Lead → Booking", when: "09:40" },
+  { kind: "note", who: "Budi", lead: "PT Mitra Logistik", detail: "HRD butuh assessment 40 supervisor sebelum Q1, minta proposal minggu ini.", when: "Kemarin, 16:20" },
+  { kind: "lead", who: "Andi", lead: "PT Arta Graha Konstruksi", when: "Kemarin, 11:05" },
+];
+
+const ROLE_LABEL ={ owner: "Owner", manager: "Manager", sales_rep: "Sales" };
 
 function daysSince(iso) {
   if (!iso) return null;
@@ -180,7 +189,35 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="mb-4 text-sm font-bold text-slate-800">Aktivitas Terbaru</div>
         {(data?.feed || []).length === 0 ? (
-          <div className="py-6 text-center text-[12px] text-slate-400">{loading ? "Memuat…" : "Belum ada aktivitas di rentang ini."}</div>
+          loading ? (
+            <div className="py-6 text-center text-[12px] text-slate-400">Memuat…</div>
+          ) : (
+            <div>
+              <p className="text-[12px] text-slate-500">
+                Belum ada aktivitas di rentang ini. Nanti di sini muncul otomatis setiap anggota tim check-in GPS, nulis catatan/notulen, nambah lead, atau mindahin tahap lead - kayak contoh di bawah.
+              </p>
+              <ul className="mt-4 space-y-3 opacity-50" aria-label="Contoh tampilan">
+                {EMPTY_EXAMPLES.map((e, i) => {
+                  const k = KIND[e.kind];
+                  const I = k.icon;
+                  return (
+                    <li key={i} className="flex gap-3">
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${k.color}`}><I size={14} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[12.5px] text-slate-700">
+                          <span className="mr-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-slate-500">Contoh</span>
+                          <b className="text-slate-900">{e.who}</b> {k.verb} <b className="text-slate-900">{e.lead}</b>
+                          {e.detail && e.kind === "stage" && <span className="text-slate-500"> ({e.detail})</span>}
+                        </div>
+                        {e.kind === "note" && <div className="mt-0.5 text-[11.5px] text-slate-500">{e.detail}</div>}
+                        <div className="mt-0.5 text-[10.5px] text-slate-400">{e.when}</div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )
         ) : (
           <ul className="space-y-3">
             {data.feed.map((e, i) => {
