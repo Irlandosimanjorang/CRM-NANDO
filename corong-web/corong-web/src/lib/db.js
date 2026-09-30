@@ -213,6 +213,14 @@ export async function getOrgDashboardStats() {
   return data;
 }
 
+// Kartu Performa Perusahaan buat sales Enterprise: angka perusahaan bulan
+// ini, target perusahaan, kontribusi & target pribadi, tren revenue 6 bulan.
+export async function getSalesCompanyView() {
+  const { data, error } = await supabase.rpc("get_sales_company_view");
+  if (error) throw error;
+  return data;
+}
+
 // ---- APPROVAL GATE (Enterprise) - sales_rep butuh persetujuan owner/manager
 // buat hapus lead atau export data, biar data tim gak bisa dibawa kabur atau
 // dihapus sepihak tanpa sepengetahuan owner. ----

@@ -6,6 +6,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { NextoRobotHead } from "../Auth";
 import * as db from "../lib/db";
+import CompanyPerformanceCard from "../components/CompanyPerformanceCard";
 import { todayISO } from "../lib/helpers";
 
 const cn = (...v) => v.filter(Boolean).join(" ");
@@ -67,21 +68,6 @@ export default function Dashboard({
   canManage = false,
 }) {
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
-
-  // Permintaan calon klien Enterprise: sales_rep gak boleh liat lead sales
-  // lain (udah dijaga RLS `leads_select_access` di DB), TAPI tetep pengen
-  // liat performa perusahaan secara umum. `leads`/`dealTransactions` yang
-  // di-props ke Dashboard ini udah kefilter RLS ke lead sales_rep sendiri
-  // doang, jadi angka company-wide-nya harus diambil lewat RPC terpisah
-  // (`get_org_dashboard_stats`, SECURITY DEFINER, nentuin org dari
-  // auth.uid() sendiri) - bukan dari props ini.
-  const [orgStats, setOrgStats] = useState(null);
-  useEffect(() => {
-    if (!isEnterprise || canManage) { setOrgStats(null); return; }
-    let alive = true;
-    db.getOrgDashboardStats().then(d => { if (alive) setOrgStats(d); }).catch(() => {});
-    return () => { alive = false; };
-  }, [isEnterprise, canManage]);
 
   const stats = useMemo(() => {
     const wonKeys = stages.filter(s => s.type === "won").map(s => s.key);
@@ -291,6 +277,11 @@ export default function Dashboard({
         </div>
       </div>
 
+      {/* Performa Perusahaan - khusus sales_rep Enterprise (30 Sep 2026,
+          permintaan calon klien "Sales bisa lihat dashboard perusahaan
+          secara umum"). Ditaruh paling atas biar keliatan tiap buka app. */}
+      {isEnterprise && !canManage && <CompanyPerformanceCard />}
+
       {/* Rekomendasi AI (Next best action) - dipindah ke paling atas (16 Sep
           2026, permintaan Nando) biar langsung keliatan begitu buka
           Dashboard, gak ketutup di paling bawah. !bg-slate-950 pakai
@@ -346,37 +337,6 @@ export default function Dashboard({
         <Kpi icon={MapPin} value={stats.visits} label="Kunjungan Hari Ini" trend="agenda" iconClass="bg-emerald-50 text-emerald-600" />
         <Kpi icon={Trophy} value={stats.won} label="Deal Won" trend={`${stats.winRate}% win rate`} iconClass="bg-amber-50 text-amber-600" />
       </div>
-
-      {/* Widget khusus sales_rep di plan Enterprise: rangkuman performa
-          SELURUH perusahaan (bukan cuma lead dia sendiri). Rincian per
-          orang tetep owner/manager doang yang boleh liat (lewat
-          TeamLeaderboard di bawah), di sini cuma angka agregat. */}
-      {isEnterprise && !canManage && orgStats && (
-        <Card className="p-4">
-          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-slate-900">Performa Perusahaan (Semua Team)</h2>
-            <span className="text-[10px] font-medium text-slate-400">Rincian per sales cuma bisa dilihat manager</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <div className="text-[20px] leading-none font-black tracking-[-0.04em] text-slate-900">{orgStats.total}</div>
-              <div className="mt-1 text-[10px] font-medium text-slate-500">Total Leads Perusahaan</div>
-            </div>
-            <div>
-              <div className="text-[20px] leading-none font-black tracking-[-0.04em] text-slate-900">{orgStats.won}</div>
-              <div className="mt-1 text-[10px] font-medium text-slate-500">{orgStats.win_rate}% win rate</div>
-            </div>
-            <div>
-              <div className="text-[20px] leading-none font-black tracking-[-0.04em] text-slate-900">{orgStats.deals}</div>
-              <div className="mt-1 text-[10px] font-medium text-slate-500">Total Deal Closing</div>
-            </div>
-            <div>
-              <div className="text-[20px] leading-none font-black tracking-[-0.04em] text-slate-900">Rp{Number(orgStats.revenue || 0).toLocaleString("id-ID")}</div>
-              <div className="mt-1 text-[10px] font-medium text-slate-500">Total Revenue</div>
-            </div>
-          </div>
-        </Card>
-      )}
 
       {/* Layout 3 kolom niru struktur referensi "Cortex" (Analytics / CRM
           Sidebar / Upcoming Tasks) - datanya Nexto asli, warnanya ngikutin

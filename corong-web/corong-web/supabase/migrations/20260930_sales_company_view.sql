@@ -1,0 +1,10 @@
+-- Kartu "Performa Perusahaan" di Dashboard buat sales_rep Enterprise
+-- (30 Sep 2026, permintaan calon klien "Sales bisa lihat dashboard
+-- perusahaan secara umum").
+-- RPC get_sales_company_view(): semua anggota org Enterprise boleh panggil.
+-- Balikin: month, company {revenue, deals, target = jumlah sales_targets
+-- bulan ini}, me {revenue, deals, target, forecast}, trend (revenue
+-- perusahaan 6 bulan). Gak ada angka per sales lain.
+--
+-- Sudah diterapkan ke project cewggulyfshnbebcpyui via migration
+-- "sales_company_view". Definisi lengkap: pg_get_functiondef.
