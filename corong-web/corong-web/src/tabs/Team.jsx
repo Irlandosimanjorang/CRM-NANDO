@@ -65,9 +65,34 @@ function daysSince(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
 
+// Warna avatar per anggota (stabil per user_id) - gaya sama kayak TeamLeaderboard.
+const AVATAR_BG = ["bg-orange-500", "bg-violet-500", "bg-sky-500", "bg-emerald-500", "bg-rose-500", "bg-amber-500"];
+function avatarBg(uid) {
+  let h = 0;
+  for (const ch of String(uid)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_BG[h % AVATAR_BG.length];
+}
+function initialsOf(name) {
+  const parts = String(name || "?").trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+}
+
+const CARD = "rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]";
+
+// Status aktivitas terakhir -> pill berwarna (hijau aktif, kuning mulai
+// jarang, merah gak aktif / belum pernah).
+function lastActivityPill(m) {
+  const idle = daysSince(m.last_activity_at);
+  if (idle == null) return { text: "Belum ada aktivitas", cls: "bg-rose-50 text-rose-600 ring-rose-100" };
+  if (idle === 0) return { text: "Aktif hari ini", cls: "bg-emerald-50 text-emerald-700 ring-emerald-100" };
+  if (idle < INACTIVE_DAYS) return { text: `${idle} hari lalu`, cls: "bg-slate-50 text-slate-600 ring-slate-200" };
+  return { text: `${idle} hari gak aktif`, cls: "bg-amber-50 text-amber-700 ring-amber-200" };
+}
+
 export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage }) {
   const [range, setRange] = useState("week");
   const [data, setData] = useState(null);
+  const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -77,6 +102,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
     setLoading(true);
     setErr("");
     setReloadKey((k) => k + 1);
+    db.getTeamContracts().then(setContracts).catch(() => setContracts([]));
     db.getTeamActivity(from, to)
       .then(setData)
       .catch((e) => setErr(e.message || "Gagal memuat rekap aktivitas"))
@@ -86,7 +112,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
 
   const members = data?.members || [];
   const nameOf = Object.fromEntries(members.map((m) => [m.user_id, m.name]));
-  const inactive = members.filter((m) => m.role === "sales_rep" && (m.last_activity_at == null || daysSince(m.last_activity_at) >= INACTIVE_DAYS));
+  const openLeadById = (id) => { const l = (leads || []).find((x) => x.id === id); if (l) onOpenLead?.(l); };
+  const rangeLabel = RANGES.find((r) => r.key === range)?.label || "";
 
   const COLS = [
     { key: "visits", label: "Kunjungan" },
@@ -95,23 +122,46 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
     { key: "stage_moves", label: "Pindah tahap" },
     { key: "deals", label: "Deal" },
   ];
+  const maxOf = Object.fromEntries(COLS.map((c) => [c.key, Math.max(1, ...members.map((m) => Number(m[c.key]) || 0))]));
+
+  // ---- Denyut Team: angka kunci + daftar yang perlu perhatian.
+  const dealValue = members.reduce((s, m) => s + Number(m.deal_value || 0), 0);
+  const activeCount = members.filter((m) => COLS.some((c) => Number(m[c.key]) > 0)).length;
+  const running = contracts.filter((c) => Number(c.paid) < Number(c.contract));
+  const remaining = running.reduce((s, c) => s + Number(c.contract) - Number(c.paid), 0);
+  const attention = [
+    ...members
+      .filter((m) => m.role === "sales_rep" && (m.last_activity_at == null || daysSince(m.last_activity_at) >= INACTIVE_DAYS))
+      .map((m) => ({ key: "idle-" + m.user_id, tone: "amber", title: m.name, text: m.last_activity_at ? `gak ada aktivitas ${daysSince(m.last_activity_at)} hari` : "belum pernah ada aktivitas" })),
+    ...running
+      .filter((c) => Number(c.overdue) > 0)
+      .map((c) => ({ key: "late-" + c.lead_id, tone: "rose", title: c.lead_name, text: `telat bayar ${fmtJt(c.overdue)}`, leadId: c.lead_id })),
+    ...running
+      .filter((c) => !(Number(c.overdue) > 0) && c.days_left != null && c.days_left >= 0 && c.days_left <= 3 && !c.next_invoiced)
+      .map((c) => ({ key: "due-" + c.lead_id, tone: "sky", title: c.lead_name, text: `${c.next_label || "termin"} jatuh tempo ${c.days_left === 0 ? "hari ini" : `${c.days_left} hari lagi`}, belum ditagih`, leadId: c.lead_id })),
+  ];
+  const TONE = {
+    amber: "bg-amber-400/10 text-amber-200 ring-amber-300/20",
+    rose: "bg-rose-500/15 text-rose-200 ring-rose-300/25",
+    sky: "bg-sky-400/10 text-sky-200 ring-sky-300/20",
+  };
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Team</h1>
-          <p className="text-[12.5px] text-slate-500">Rekap aktivitas tiap sales dan performa team - khusus owner/manager.</p>
+          <div className="text-[10px] font-bold uppercase tracking-[.18em] text-orange-500">Khusus owner & manager</div>
+          <h1 className="mt-1 text-[26px] font-black leading-none tracking-[-0.04em] text-slate-900">Team</h1>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
+          <div className="flex rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
             {RANGES.map((r) => (
-              <button key={r.key} onClick={() => setRange(r.key)} className={`rounded-[10px] px-3 py-1.5 text-[12px] font-medium transition-colors ${range === r.key ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"}`}>
+              <button key={r.key} onClick={() => setRange(r.key)} className={`rounded-xl px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${range === r.key ? "bg-slate-950 text-white" : "text-slate-500 hover:text-slate-900"}`}>
                 {r.label}
               </button>
             ))}
           </div>
-          <button onClick={load} disabled={loading} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:text-slate-800 disabled:opacity-50" title="Muat ulang" aria-label="Muat ulang">
+          <button onClick={load} disabled={loading} className="rounded-2xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm hover:text-slate-900 disabled:opacity-50" title="Muat ulang" aria-label="Muat ulang">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
@@ -119,71 +169,104 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
 
       {err && <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{err}</div>}
 
-      {inactive.length > 0 && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <AlertTriangle size={17} className="mt-0.5 shrink-0 text-amber-600" />
-          <div className="text-[12.5px] text-amber-900">
-            <b>Perlu dicek:</b>{" "}
-            {inactive.map((m, i) => (
-              <span key={m.user_id}>
-                {i > 0 && ", "}
-                {m.name} ({m.last_activity_at ? `gak ada aktivitas ${daysSince(m.last_activity_at)} hari` : "belum pernah ada aktivitas"})
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="rounded-3xl border border-slate-200 bg-white p-6">
-        <div className="mb-4 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-50 text-orange-500"><Activity size={17} /></div>
+      {/* DENYUT TEAM - satu-satunya kartu gelap di tab ini: ringkasan yang
+          dibaca manager pertama kali. */}
+      <section className="overflow-hidden rounded-[28px] border border-slate-800 bg-slate-950 text-white shadow-[0_24px_60px_-34px_rgba(15,23,42,.8)]">
+        <div className="grid gap-6 p-6 lg:grid-cols-[1.35fr_1fr] bg-[radial-gradient(circle_at_12%_0%,rgba(249,115,22,.22),transparent_38%),radial-gradient(circle_at_95%_100%,rgba(109,93,252,.3),transparent_40%)]">
           <div>
-            <div className="text-sm font-bold text-slate-800">Rekap Aktivitas</div>
-            <div className="text-[10.5px] text-slate-400">{RANGES.find((r) => r.key === range)?.label} · dihitung per orang yang ngerjain</div>
+            <div className="text-[10px] font-bold uppercase tracking-[.18em] text-orange-300">Denyut team · {rangeLabel}</div>
+            <div className="mt-4 grid grid-cols-3 gap-4">
+              <div>
+                <div className="text-[26px] font-black leading-none tracking-[-0.04em] tabular-nums">{fmtJt(dealValue)}</div>
+                <div className="mt-1.5 text-[11px] text-slate-400">Deal masuk</div>
+              </div>
+              <div>
+                <div className="text-[26px] font-black leading-none tracking-[-0.04em] tabular-nums">{activeCount}<span className="text-slate-500">/{members.length}</span></div>
+                <div className="mt-1.5 text-[11px] text-slate-400">Anggota aktif</div>
+              </div>
+              <div>
+                <div className="text-[26px] font-black leading-none tracking-[-0.04em] tabular-nums text-emerald-300">{fmtJt(remaining)}</div>
+                <div className="mt-1.5 text-[11px] text-slate-400">Belum masuk dari {running.length} proyek</div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center gap-2 text-[12px] font-semibold text-white">
+              <AlertTriangle size={14} className={attention.length ? "text-amber-300" : "text-emerald-300"} />
+              {attention.length ? `Perlu perhatian (${attention.length})` : "Semua aman"}
+            </div>
+            {attention.length === 0 ? (
+              <p className="mt-2 text-[11.5px] text-slate-400">Gak ada sales yang lagi pasif dan gak ada termin yang telat atau mepet jatuh tempo.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {attention.slice(0, 5).map((a) => (
+                  <li key={a.key}>
+                    <button onClick={() => a.leadId && openLeadById(a.leadId)} className={`w-full rounded-xl px-3 py-2 text-left text-[11.5px] ring-1 ${TONE[a.tone]} ${a.leadId ? "hover:bg-white/10" : "cursor-default"}`}>
+                      <b className="text-white">{a.title}</b> <span>{a.text}</span>
+                    </button>
+                  </li>
+                ))}
+                {attention.length > 5 && <li className="text-[11px] text-slate-400">+{attention.length - 5} lagi</li>}
+              </ul>
+            )}
           </div>
         </div>
+      </section>
 
-        {loading && !data ? (
-          <div className="py-10 text-center"><Loader2 size={18} className="mx-auto animate-spin text-slate-400" /></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-[12.5px]">
-              <thead>
-                <tr className="border-b border-slate-100 text-left text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">
-                  <th className="py-2 pr-3 font-semibold">Anggota</th>
-                  {COLS.map((c) => <th key={c.key} className="px-2 py-2 text-right font-semibold">{c.label}</th>)}
-                  <th className="py-2 pl-3 text-right font-semibold">Aktivitas terakhir</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {members.map((m) => {
-                  const idle = daysSince(m.last_activity_at);
-                  const warn = m.role === "sales_rep" && (idle == null || idle >= INACTIVE_DAYS);
-                  return (
-                    <tr key={m.user_id}>
-                      <td className="py-3 pr-3">
-                        <div className="font-semibold text-slate-800">{m.name}</div>
-                        <div className="text-[10.5px] text-slate-400">{ROLE_LABEL[m.role] || m.role}</div>
-                      </td>
-                      {COLS.map((c) => (
-                        <td key={c.key} className={`px-2 py-3 text-right tabular-nums ${m[c.key] > 0 ? "font-semibold text-slate-800" : "text-slate-300"}`}>{m[c.key]}</td>
-                      ))}
-                      <td className={`py-3 pl-3 text-right text-[11.5px] ${warn ? "font-semibold text-amber-600" : "text-slate-500"}`}>
-                        {m.last_activity_at ? (idle === 0 ? "Hari ini" : `${idle} hari lalu`) : "Belum ada"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <p className="mt-3 text-[10.5px] text-slate-400">"Pindah tahap" & "Deal" dihitung dari perubahan tahap lead yang tercatat mulai 30 Sep 2026.</p>
+      <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
+        {/* REKAP AKTIVITAS - baris per anggota, bar kecil = dibanding
+            anggota lain (terpanjang = paling banyak di team). */}
+        <section className={CARD}>
+          <div className="mb-5 flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-50 text-orange-500"><Activity size={17} /></div>
+            <div>
+              <div className="text-sm font-bold text-slate-800">Rekap Aktivitas</div>
+              <div className="text-[10.5px] text-slate-400">{rangeLabel} · per orang yang ngerjain · bar = dibanding anggota lain</div>
+            </div>
           </div>
-        )}
+
+          {loading && !data ? (
+            <div className="py-10 text-center"><Loader2 size={18} className="mx-auto animate-spin text-slate-400" /></div>
+          ) : (
+            <div className="space-y-3">
+              {members.map((m) => {
+                const pill = lastActivityPill(m);
+                return (
+                  <div key={m.user_id} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13.5px] font-bold text-slate-900">{m.name}</div>
+                        <div className="text-[10.5px] text-slate-400">{ROLE_LABEL[m.role] || m.role}</div>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ring-1 ${pill.cls}`}>{pill.text}</span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-5 gap-2">
+                      {COLS.map((c) => {
+                        const v = Number(m[c.key]) || 0;
+                        return (
+                          <div key={c.key} className="min-w-0">
+                            <div className={`text-[17px] font-black leading-none tabular-nums ${v > 0 ? "text-slate-900" : "text-slate-300"}`}>{v}</div>
+                            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200/70">
+                              <div className="h-full rounded-full bg-orange-500" style={{ width: `${Math.round((v / maxOf[c.key]) * 100)}%` }} />
+                            </div>
+                            <div className="mt-1 truncate text-[10px] text-slate-500">{c.label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-[10.5px] text-slate-400">"Pindah tahap" & "Deal" dihitung dari perubahan tahap lead yang tercatat mulai 30 Sep 2026.</p>
+            </div>
+          )}
+        </section>
+
+        <TargetsCard members={members} reloadKey={reloadKey} />
       </div>
 
-      <TargetsCard members={members} reloadKey={reloadKey} />
-
-      <PaymentsCard nameOf={nameOf} reloadKey={reloadKey} onOpenLead={(id) => { const l = (leads || []).find((x) => x.id === id); if (l) onOpenLead?.(l); }} />
+      <PaymentsCard nameOf={nameOf} rows={contracts} onOpenLead={openLeadById} />
 
       <ActivityTimeline nameOf={nameOf} reloadKey={reloadKey} />
 
@@ -227,7 +310,7 @@ function ActivityTimeline({ nameOf, reloadKey }) {
   const showExamples = !loading && feed.length === 0 && days.every((d) => d.count === 0);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+    <div className="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <div className="text-sm font-bold text-slate-800">Aktivitas 7 Hari Terakhir</div>
         <div className="text-[10.5px] text-slate-400">Klik tanggal buat liat aktivitas di hari itu</div>
@@ -351,7 +434,7 @@ function TargetsCard({ members, reloadKey }) {
   const noValue = (rows || []).reduce((s, r) => s + (r.open_without_value || 0), 0);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+    <div className="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-sm font-bold text-slate-800">Target & Forecast</div>
@@ -413,11 +496,8 @@ function TargetsCard({ members, reloadKey }) {
 // Kontrak & Pembayaran per proyek (lead yang punya termin). Tab "Berjalan" =
 // proyek yang uangnya belum masuk semua, "Selesai" = sudah lunas 100%. Kotak
 // total ngikutin tab yang dipilih.
-function PaymentsCard({ nameOf, reloadKey, onOpenLead }) {
-  const [rows, setRows] = useState(null);
+function PaymentsCard({ nameOf, rows, onOpenLead }) {
   const [view, setView] = useState("running");
-  useEffect(() => { db.getTeamContracts().then(setRows).catch(() => setRows([])); }, [reloadKey]);
-  if (rows === null) return null;
 
   const running = rows.filter((r) => Number(r.paid) < Number(r.contract));
   const done = rows.filter((r) => Number(r.paid) >= Number(r.contract));
@@ -434,7 +514,7 @@ function PaymentsCard({ nameOf, reloadKey, onOpenLead }) {
   ];
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+    <div className="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-sm font-bold text-slate-800">Kontrak & Pembayaran</div>

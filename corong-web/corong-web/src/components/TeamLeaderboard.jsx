@@ -173,7 +173,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
   const hasAnyRevenue = maxRevenue > 0;
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+    <div className="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]">
       <div className="mb-5 flex items-center gap-2.5">
         <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
           <Trophy size={17} />
