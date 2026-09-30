@@ -80,7 +80,7 @@ export default function CompanyPerformanceCard() {
           <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">Performa perusahaan</h2>
           <p className="mt-0.5 text-[11.5px] text-slate-500">Seluruh team, {monthLabel}</p>
         </div>
-        <span className="text-[10.5px] text-slate-400">Rincian per sales hanya dapat dilihat manager</span>
+        <span className="text-[10.5px] text-slate-500">Rincian per sales hanya dapat dilihat manager</span>
       </div>
 
       <div className="mt-4 grid gap-px overflow-hidden rounded-inner border border-slate-100 bg-slate-100 md:grid-cols-3">
@@ -93,10 +93,10 @@ export default function CompanyPerformanceCard() {
           ) : (
             <div className="mt-3">
               <div className="font-display text-[24px] font-bold leading-none tracking-[-0.04em] tabular-nums text-ink">{fmtJt(company.revenue)}</div>
-              <div className="mt-1 text-[11px] text-slate-400">Revenue bulan ini · target belum ditetapkan manager</div>
+              <div className="mt-1 text-[11px] text-slate-500">Revenue bulan ini · target belum ditetapkan manager</div>
             </div>
           )}
-          <div className="mt-auto pt-2 text-center text-[10.5px] text-slate-400">{company.deals} deal closing bulan ini</div>
+          <div className="mt-auto pt-2 text-center text-[10.5px] text-slate-500">{company.deals} deal closing bulan ini</div>
         </Col>
 
         <Col title="Kontribusi Anda">
@@ -109,7 +109,7 @@ export default function CompanyPerformanceCard() {
           <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-200/70">
             <div className="h-full rounded-full bg-brand motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${share}%` }} />
           </div>
-          <div className="mt-1.5 flex justify-between text-[10px] text-slate-400">
+          <div className="mt-1.5 flex justify-between text-[10px] text-slate-500">
             <span>Deal Anda: {me.deals}</span>
             <span>Anggota lain: {Math.max(0, Number(company.deals) - Number(me.deals))}</span>
           </div>
@@ -120,7 +120,7 @@ export default function CompanyPerformanceCard() {
             <div className="mt-2 flex flex-col items-center text-center">
               <Gauge pct={myPct} forecastPct={myProjected} color="#10b981" soft="#a7f3d0" />
               <div className="text-[12px] tabular-nums text-slate-600"><b className="text-slate-900">{fmtJt(me.revenue)}</b> / {fmtJt(me.target)}</div>
-              <div className="mt-0.5 text-[10.5px] tabular-nums text-slate-400">Forecast pipeline {fmtJt(me.forecast)}</div>
+              <div className="mt-0.5 text-[10.5px] tabular-nums text-slate-500">Forecast pipeline {fmtJt(me.forecast)}</div>
             </div>
           ) : (
             <div className="mt-3 text-[11.5px] text-slate-500">Target Anda bulan ini belum ditetapkan manager. Forecast pipeline Anda: <b className="text-slate-800">{fmtJt(me.forecast)}</b></div>
@@ -137,7 +137,7 @@ export default function CompanyPerformanceCard() {
               const v = Number(t.revenue);
               return (
                 <div key={t.month} className="flex flex-col items-center" title={fmtJt(v)}>
-                  <span className={`text-[9.5px] tabular-nums ${cur ? "font-bold text-orange-600" : "text-slate-400"}`}>{v > 0 ? fmtJt(v).replace("Rp", "") : "-"}</span>
+                  <span className={`text-[9.5px] tabular-nums ${cur ? "font-bold text-orange-600" : "text-slate-500"}`}>{v > 0 ? fmtJt(v).replace("Rp", "") : "-"}</span>
                   <div className="mt-1 flex h-14 w-full items-end justify-center">
                     <div className={`w-3/5 max-w-[28px] rounded-t-md ${cur ? "bg-brand" : v ? "bg-brand-line" : "bg-slate-100"}`} style={{ height: `${v > 0 ? Math.max(8, Math.round((v / maxTrend) * 100)) : 4}%` }} />
                   </div>

@@ -28,7 +28,7 @@ export function PanelHeader({ title, meta, action, onAction, right, className = 
   );
 }
 
-const TONE_TEXT = { ink: "text-ink", brand: "text-brand-strong", good: "text-emerald-600", warn: "text-amber-600", bad: "text-rose-600", muted: "text-slate-400" };
+const TONE_TEXT = { ink: "text-ink", brand: "text-brand-strong", good: "text-emerald-600", warn: "text-amber-600", bad: "text-rose-600", muted: "text-slate-500" };
 
 // Satu angka + label + keterangan. Dipakai di dalam StatRow.
 export function Stat({ value, label, hint, tone = "ink", className = "" }) {
@@ -36,7 +36,7 @@ export function Stat({ value, label, hint, tone = "ink", className = "" }) {
     <div className={cn("min-w-0", className)}>
       <div className={cn("font-display text-[26px] font-bold leading-none tracking-[-0.04em] tabular-nums", TONE_TEXT[tone])}>{value}</div>
       <div className="mt-2 text-[12px] font-semibold text-slate-700">{label}</div>
-      {hint && <div className="mt-0.5 truncate text-[11px] text-slate-400">{hint}</div>}
+      {hint && <div className="mt-0.5 truncate text-[11px] text-slate-500">{hint}</div>}
     </div>
   );
 }

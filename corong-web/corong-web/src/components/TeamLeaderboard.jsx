@@ -55,13 +55,13 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <div className="text-sm font-bold text-slate-800">{title}</div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600" aria-label="Tutup">
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-600" aria-label="Tutup">
             <X size={17} />
           </button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {items.length === 0 ? (
-            <div className="px-3 py-6 text-center text-[12px] text-slate-400">Belum ada data.</div>
+            <div className="px-3 py-6 text-center text-[12px] text-slate-500">Belum ada data.</div>
           ) : (
             items.map((it) => {
               const clickable = !!it.leadId;
@@ -76,7 +76,7 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
                 >
                   <div className="min-w-0">
                     <div className="truncate text-[12.5px] font-semibold text-slate-700">{it.primary}</div>
-                    {it.secondary && <div className="mt-0.5 truncate text-[11px] text-slate-400">{it.secondary}</div>}
+                    {it.secondary && <div className="mt-0.5 truncate text-[11px] text-slate-500">{it.secondary}</div>}
                   </div>
                   {clickable && <ChevronRight size={15} className="shrink-0 text-slate-300" />}
                 </Tag>
@@ -198,7 +198,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
                   <div className="truncate text-[13px] font-semibold text-slate-800">{r.name}</div>
                   <div className={`shrink-0 text-[13px] font-bold ${r.revenue > 0 ? "text-slate-800" : "text-slate-300"}`}>{fmtRp(r.revenue)}</div>
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-400">
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-500">
                   <button onClick={() => setPreview({ title: `Lead - ${r.name}`, items: r.leadItems })} className="underline decoration-dotted underline-offset-2 hover:text-slate-600">
                     {r.leadCount} lead
                   </button>
@@ -250,7 +250,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
               <div key={r.key} className="flex items-center justify-between gap-3 rounded-inner bg-slate-50 px-3.5 py-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[12.5px] font-semibold text-slate-700">{r.name}</div>
-                  <div className="text-[10.5px] text-slate-400">Revenue {fmtRp(r.revenue)}</div>
+                  <div className="text-[10.5px] text-slate-500">Revenue {fmtRp(r.revenue)}</div>
                 </div>
                 {editingRate === r.uid ? (
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -264,7 +264,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
                       onKeyDown={(e) => e.key === "Enter" && saveRate(r.uid)}
                       className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-[12.5px] focus:outline-none focus:border-orange-500"
                     />
-                    <span className="text-[12px] text-slate-400">%</span>
+                    <span className="text-[12px] text-slate-500">%</span>
                     <button onClick={() => saveRate(r.uid)} disabled={rateBusy} className="rounded-lg bg-emerald-600 p-1.5 text-white hover:bg-emerald-700 disabled:opacity-50">
                       {rateBusy ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                     </button>
@@ -273,7 +273,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
                   <button onClick={() => startEditRate(r.uid, r.commissionRate)} className="flex shrink-0 items-center gap-3 text-right hover:opacity-70">
                     <div>
                       <div className="text-[13px] font-bold text-slate-800">{fmtRp(r.commissionAmount)}</div>
-                      <div className="text-[10.5px] text-slate-400">{r.commissionRate}% rate</div>
+                      <div className="text-[10.5px] text-slate-500">{r.commissionRate}% rate</div>
                     </div>
                     <Pencil size={13} className="text-slate-300" />
                   </button>

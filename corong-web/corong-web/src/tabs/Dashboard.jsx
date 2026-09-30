@@ -349,7 +349,7 @@ export default function Dashboard({
             <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
               <div>
                 <div className="text-[12px] font-semibold text-slate-700">Skor kualitas memori</div>
-                <div className="text-[11px] text-slate-400">Dinilai AI dari kelengkapan data lead</div>
+                <div className="text-[11px] text-slate-500">Dinilai AI dari kelengkapan data lead</div>
               </div>
               {typeof memoryScore === "number" ? (
                 <span className="flex items-baseline gap-1.5">
@@ -357,7 +357,7 @@ export default function Dashboard({
                     "font-display text-[22px] font-bold leading-none tabular-nums",
                     memoryScore >= 70 ? "text-emerald-600" : memoryScore >= 40 ? "text-amber-600" : "text-rose-600"
                   )}>{memoryScore}%</span>
-                  {memoryLabel && <span className="text-[11px] font-semibold text-slate-400">{memoryLabel}</span>}
+                  {memoryLabel && <span className="text-[11px] font-semibold text-slate-500">{memoryLabel}</span>}
                 </span>
               ) : (
                 <Pill>Belum dinilai</Pill>
@@ -379,7 +379,7 @@ export default function Dashboard({
                         <div className="min-w-0 text-[12.5px] font-semibold leading-snug text-slate-800 line-clamp-2">{item.title}</div>
                         <Pill tone={TASK_TONE[item.tag] || "neutral"}>{item.tag}</Pill>
                       </div>
-                      <div className="mt-0.5 truncate text-[11px] text-slate-400">{item.sub}</div>
+                      <div className="mt-0.5 truncate text-[11px] text-slate-500">{item.sub}</div>
                     </button>
                   </li>
                 ))}
@@ -399,7 +399,7 @@ export default function Dashboard({
                       <div className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[11px] font-bold shrink-0">{(l.name || "?").slice(0, 2).toUpperCase()}</div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[12.5px] font-semibold text-slate-800">{l.name}</div>
-                        <div className="truncate text-[11px] text-slate-400">{l.key_person || l.city || "-"}</div>
+                        <div className="truncate text-[11px] text-slate-500">{l.key_person || l.city || "-"}</div>
                       </div>
                       <Pill tone={active ? "good" : "neutral"}>{active ? "Aktif" : "Lead"}</Pill>
                     </button>
@@ -437,7 +437,7 @@ export default function Dashboard({
         </Panel>
       )}
 
-      <p className="pb-2 text-center text-[11.5px] text-slate-400">"Discipline in follow-up creates freedom in revenue." - Nexto</p>
+      <p className="pb-2 text-center text-[11.5px] text-slate-500">"Discipline in follow-up creates freedom in revenue." - Nexto</p>
     </div>
   );
 }

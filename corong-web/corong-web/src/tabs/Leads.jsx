@@ -234,6 +234,24 @@ function initials(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
+// "Hot" (BUG FIX 30 Sep 2026): sebelumnya dihitung dari priority === "hot",
+// padahal app nyimpen priority "high/medium/low" dan gak ada form yang
+// ngisinya - semua lead priority-nya kosong, jadi chip "Hot" selalu 0 dan
+// ikon api gak pernah muncul. Sekarang: lead di tahap yang namanya ada
+// "hot" (mis. "Hot Lead"); kalau pipeline gak punya tahap itu, tahap normal
+// terakhir sebelum deal (paling dekat closing). Priority high/hot lama
+// tetep dihitung.
+function hotStageKeys(stages) {
+  const named = stages.filter((s) => s.type === "normal" && /hot/i.test(`${s.label} ${s.key}`)).map((s) => s.key);
+  if (named.length) return named;
+  const normal = stages.filter((s) => s.type === "normal");
+  return normal.length > 1 ? [normal[normal.length - 1].key] : [];
+}
+function isHotLead(lead, hotKeys) {
+  const p = String(lead.priority || "").toLowerCase();
+  return p === "hot" || p === "high" || hotKeys.includes(lead.stage_key);
+}
+
 function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign }) {
   // Progress bar mulai dari 0% terus animasi jalan ke posisi asli begitu
   // kartu ini muncul di layar - kesan "hidup", bukan langsung nongol jadi.
@@ -280,9 +298,9 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <div className="font-display font-bold text-ink text-[15px] leading-snug tracking-[-0.02em] truncate">{c.name}</div>
-              {c.priority === "high" && <Flame size={14} className="text-orange-500 shrink-0" fill="currentColor" />}
+              {isHotLead(c, hotStageKeys(stages)) && <Flame size={14} className="text-orange-500 shrink-0" fill="currentColor" aria-label="Hot" />}
             </div>
-            <div className="text-[12.5px] text-slate-400 mt-0.5 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
+            <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             {c.verified ? <ShieldCheck size={18} className="text-emerald-500" /> : <ShieldAlert size={18} className="text-slate-300" />}
@@ -301,7 +319,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: sm.hex }} />
               {sm.label}
             </span>
-            <span className="text-[11px] text-slate-400 shrink-0">Tahap {stageNumber} dari {Math.max(stages.length, 1)}</span>
+            <span className="text-[11px] text-slate-500 shrink-0">Tahap {stageNumber} dari {Math.max(stages.length, 1)}</span>
           </div>
           <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
             <div className="h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${barReady ? progressPercent : 0}%`, background: sm.hex }} />
@@ -311,18 +329,18 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
         {/* KONTAK / PRODUK */}
         <div className="mt-4 flex items-stretch gap-4">
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] text-slate-400">{c.phone ? "Telepon" : "Key person"}</div>
+            <div className="text-[11px] text-slate-500">{c.phone ? "Telepon" : "Key person"}</div>
             <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.phone || c.key_person || "-"}</div>
           </div>
           <div className="w-px bg-slate-100" />
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] text-slate-400">{productLabel || "Produk"}</div>
+            <div className="text-[11px] text-slate-500">{productLabel || "Produk"}</div>
             <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.product || "-"}</div>
           </div>
         </div>
 
         {c.email && (
-          <div className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-400 truncate">
+          <div className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-500 truncate">
             <Mail size={12} className="shrink-0" />
             <span className="truncate">{c.email}</span>
           </div>
@@ -331,8 +349,8 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
         {/* NEXT ACTION - hal yang paling penting di kartu ini. Urgensi kontak
             ditandai titik + teks berwarna (bukan garis aksen di tepi kartu). */}
         <div className="mt-4 rounded-inner bg-slate-50 px-3 py-2.5">
-          <div className="text-[11px] font-semibold text-slate-400">Langkah berikutnya</div>
-          <div className={`mt-0.5 text-[13px] font-medium line-clamp-2 ${c.next_action ? "text-slate-800" : "text-slate-400"}`}>{c.next_action || "Belum ada rencana tindak lanjut"}</div>
+          <div className="text-[11px] font-semibold text-slate-500">Langkah berikutnya</div>
+          <div className={`mt-0.5 text-[13px] font-medium line-clamp-2 ${c.next_action ? "text-slate-800" : "text-slate-500"}`}>{c.next_action || "Belum ada rencana tindak lanjut"}</div>
           <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium" style={{ color: urgency.text }}>
             <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: urgency.stripe }} />
             {urgency.note}
@@ -383,10 +401,10 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
           )}
 
           <div className="ml-auto flex items-center gap-0.5">
-            <button onClick={() => onEdit(c)} className="p-2 rounded-lg text-slate-400 hover:text-ink hover:bg-slate-100" title="Edit lead" aria-label="Edit lead">
+            <button onClick={() => onEdit(c)} className="p-2 rounded-lg text-slate-500 hover:text-ink hover:bg-slate-100" title="Edit lead" aria-label="Edit lead">
               <Pencil size={15} />
             </button>
-            <button onClick={() => onDelete(c.id)} className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" title="Hapus lead" aria-label="Hapus lead">
+            <button onClick={() => onDelete(c.id)} className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50" title="Hapus lead" aria-label="Hapus lead">
               <Trash2 size={15} />
             </button>
           </div>
@@ -398,7 +416,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
           className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border border-dashed border-slate-300 bg-white rounded-inner px-3 py-2 hover:border-brand-line hover:bg-brand-soft hover:text-brand-strong transition-colors"
           title="Update progress harian"
         >
-          <ClipboardList size={13} className="shrink-0 text-slate-400" />
+          <ClipboardList size={13} className="shrink-0 text-slate-500" />
           <span className="truncate">{c.progressLog?.[0] ? c.progressLog[0].text : "Update progress hari ini…"}</span>
         </button>
       </div>
@@ -423,7 +441,7 @@ function MiniKpi({ icon: Icon, label, value, active, onClick, iconClass = "text-
     >
       <Icon size={13} className={active ? "text-white/80" : iconClass} />
       {label}
-      <span className={`tabular-nums ${active ? "text-white/70" : "text-slate-400"}`}>{value}</span>
+      <span className={`tabular-nums ${active ? "text-white/70" : "text-slate-500"}`}>{value}</span>
     </button>
   );
 }
@@ -739,13 +757,10 @@ export default function Leads({
           )
       ).length;
 
+    const hotKeys = hotStageKeys(stages);
     const hot =
       kpiBase.filter(
-        (lead) =>
-          String(
-            lead.priority || ""
-          ).toLowerCase() ===
-          "hot"
+        (lead) => isHotLead(lead, hotKeys)
       ).length;
 
     const won =
@@ -790,6 +805,7 @@ export default function Leads({
     () => stages.filter((s) => s.type === "won").map((s) => s.key),
     [stages]
   );
+  const kpiHotStageKeys = useMemo(() => hotStageKeys(stages), [stages]);
 
   const filtered =
     useMemo(
@@ -807,7 +823,7 @@ export default function Leads({
           if (fKpi === "active" && !kpiActiveStageKeys.includes(c.stage_key)) {
             return false;
           }
-          if (fKpi === "hot" && String(c.priority || "").toLowerCase() !== "hot") {
+          if (fKpi === "hot" && !isHotLead(c, kpiHotStageKeys)) {
             return false;
           }
           if (fKpi === "won" && !kpiWonStageKeys.includes(c.stage_key)) {
@@ -893,6 +909,7 @@ export default function Leads({
         fKpi,
         kpiActiveStageKeys,
         kpiWonStageKeys,
+        kpiHotStageKeys,
       ]
     );
 
@@ -1418,7 +1435,7 @@ export default function Leads({
 
         <MiniKpi
           icon={UserX}
-          label="Belum dihubungi"
+          label="Tanpa kontak"
           value={kpi.noContact}
           iconClass="text-rose-500"
           active={fKpi === "noContact"}
@@ -1440,7 +1457,7 @@ export default function Leads({
 
             <Search
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
             />
 
             <input
@@ -1666,7 +1683,7 @@ export default function Leads({
           </button>
 
 
-          <span className="text-[12px] text-slate-400 self-center ml-auto tabular-nums">
+          <span className="text-[12px] text-slate-500 self-center ml-auto tabular-nums">
 
             {filtered.length}
             {" dari "}
@@ -1808,7 +1825,7 @@ export default function Leads({
 
                   <span
                     key={`dots-${idx}`}
-                    className="px-1.5 text-slate-400 text-sm"
+                    className="px-1.5 text-slate-500 text-sm"
                   >
                     …
                   </span>
@@ -1863,7 +1880,7 @@ export default function Leads({
           </button>
 
 
-          <span className="text-xs text-slate-400 ml-2">
+          <span className="text-xs text-slate-500 ml-2">
 
             Halaman{" "}
             {page}/
@@ -1999,7 +2016,7 @@ export default function Leads({
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-base flex items-center gap-2"><LinkIcon size={16} className="text-orange-500" /> Generate Lead dari Link</h3>
               {!linkBusy && (
-                <button onClick={() => setShowLinkGen(false)} className="text-slate-400 hover:text-slate-700" aria-label="Tutup"><X size={18} /></button>
+                <button onClick={() => setShowLinkGen(false)} className="text-slate-500 hover:text-slate-700" aria-label="Tutup"><X size={18} /></button>
               )}
             </div>
             <p className="text-xs text-slate-500 mb-3">Paste link website, profil Instagram bisnis, atau listing Google Maps calon customer - AI baca isinya & bikinin draft lead-nya buat direview.</p>

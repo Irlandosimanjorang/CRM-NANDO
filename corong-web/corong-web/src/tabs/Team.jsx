@@ -125,7 +125,7 @@ function Segmented({ options, value, onChange, dark }) {
   return (
     <div className={`flex rounded-inner border p-1 ${dark ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}>
       {options.map(([k, l]) => (
-        <button key={k} onClick={() => onChange(k)} className={`rounded-[9px] px-3 py-1.5 text-[12px] font-semibold transition-colors ${value === k ? (dark ? "bg-white text-slate-950" : "bg-slate-950 text-white") : (dark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-900")}`}>{l}</button>
+        <button key={k} onClick={() => onChange(k)} className={`rounded-[9px] px-3 py-1.5 text-[12px] font-semibold transition-colors ${value === k ? (dark ? "bg-white text-slate-950" : "bg-slate-950 text-white") : (dark ? "text-slate-500 hover:text-white" : "text-slate-500 hover:text-slate-900")}`}>{l}</button>
       ))}
     </div>
   );
@@ -238,7 +238,7 @@ function DayBars({ days, selected, onSelect }) {
             <div className="mt-1 flex h-20 w-full items-end justify-center">
               <div className={`w-3/5 max-w-[26px] rounded-t-lg motion-safe:transition-all motion-safe:duration-500 ${active ? "bg-brand" : d.count ? "bg-brand-line group-hover:bg-orange-300" : "bg-slate-100"}`} style={{ height: `${h}%` }} />
             </div>
-            <span className={"mt-1.5 text-[10px] text-slate-400"}>{d.day === t ? "Hari ini" : HARI[dt.getUTCDay()]}</span>
+            <span className={"mt-1.5 text-[10px] text-slate-500"}>{d.day === t ? "Hari ini" : HARI[dt.getUTCDay()]}</span>
             <span className={`text-[13px] font-bold leading-tight ${active ? "text-white" : "text-slate-700"}`}>{dt.getUTCDate()}</span>
           </button>
         );
@@ -405,7 +405,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[13.5px] font-bold text-ink">{m.name}</div>
-                        <div className="text-[11px] text-slate-400">{ROLE_LABEL[m.role] || m.role} · <span className={`font-semibold ${st.cls}`}>{st.text}</span></div>
+                        <div className="text-[11px] text-slate-500">{ROLE_LABEL[m.role] || m.role} · <span className={`font-semibold ${st.cls}`}>{st.text}</span></div>
                       </div>
                       <Ring pct={score} />
                     </div>
@@ -428,7 +428,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
               })}
             </div>
           )}
-          <p className="mt-3 text-[11px] text-slate-400">"Pindah tahap" & "Deal" dihitung dari perubahan tahap lead yang tercatat sejak 30 Sep 2026.</p>
+          <p className="mt-3 text-[11px] text-slate-500">"Pindah tahap" & "Deal" dihitung dari perubahan tahap lead yang tercatat sejak 30 Sep 2026.</p>
         </section>
 
         <TargetsCard api={api} members={members} reloadKey={reloadKey} />
@@ -451,7 +451,7 @@ function MemberTable({ members, maxOf, totalOf, maxTotal }) {
     <div className="-mx-1 overflow-x-auto">
       <table className="w-full min-w-[560px] text-[12.5px]">
         <thead>
-          <tr className="border-b border-slate-100 text-left text-[11px] text-slate-400">
+          <tr className="border-b border-slate-100 text-left text-[11px] text-slate-500">
             <th className="py-2 pl-1 pr-3 font-semibold">Anggota</th>
             {COLS.map((c) => <th key={c.key} className="px-2 py-2 text-right font-semibold">{c.label}</th>)}
             <th className="py-2 pl-2 pr-1 text-right font-semibold">Skor</th>
@@ -520,7 +520,7 @@ function ActivityTimeline({ api, nameOf, days, daysLoaded, reloadKey }) {
       {selected && (<>
       <div className="mb-3 mt-5 flex items-baseline justify-between gap-2 border-t border-slate-100 pt-4">
         <div className="text-[13px] font-bold capitalize text-slate-800">{selLabel}</div>
-        {sel && <div className="text-[11px] tabular-nums text-slate-400">{sel.count} aktivitas</div>}
+        {sel && <div className="text-[11px] tabular-nums text-slate-500">{sel.count} aktivitas</div>}
       </div>
 
       {loading ? (
@@ -543,7 +543,7 @@ function ActivityTimeline({ api, nameOf, days, daysLoaded, reloadKey }) {
                         {e.detail && e.kind === "stage" && <span className="text-slate-500"> ({e.detail})</span>}
                       </div>
                       {e.kind === "note" && <div className="mt-0.5 text-[11.5px] text-slate-500">{e.detail}</div>}
-                      <div className="mt-0.5 text-[10.5px] text-slate-400">{e.when}</div>
+                      <div className="mt-0.5 text-[10.5px] text-slate-500">{e.when}</div>
                     </div>
                   </li>
                 );
@@ -551,7 +551,7 @@ function ActivityTimeline({ api, nameOf, days, daysLoaded, reloadKey }) {
             </ul>
           </div>
         ) : (
-          <div className="py-6 text-center text-[12px] text-slate-400">Tidak ada aktivitas pada tanggal ini.</div>
+          <div className="py-6 text-center text-[12px] text-slate-500">Tidak ada aktivitas pada tanggal ini.</div>
         )
       ) : (
         <ol className="relative space-y-3 before:absolute before:bottom-2 before:left-4 before:top-2 before:w-px before:bg-slate-100">
@@ -567,7 +567,7 @@ function ActivityTimeline({ api, nameOf, days, daysLoaded, reloadKey }) {
                     {INLINE_DETAIL.has(e.kind) && e.detail && <span className="text-slate-500"> ({e.detail})</span>}
                   </div>
                   {!INLINE_DETAIL.has(e.kind) && e.detail && <div className="mt-0.5 line-clamp-2 text-[11.5px] text-slate-500">{e.detail}</div>}
-                  <div className="mt-0.5 text-[10.5px] text-slate-400">{new Date(e.at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</div>
+                  <div className="mt-0.5 text-[10.5px] text-slate-500">{new Date(e.at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</div>
                 </div>
               </li>
             );
@@ -635,8 +635,8 @@ function TargetsCard({ api, members, reloadKey }) {
         <div className="grid grid-cols-2 gap-4">{[0, 1].map((i) => <Skeleton key={i} className="h-40" />)}</div>
       ) : (
         <>
-          {members.length > COMPACT_AT ? (
-            // Daftar ringkas (> COMPACT_AT anggota): satu baris per sales,
+          {members.length > COMPACT_AT || members.length % 2 === 1 ? (
+            // Daftar ringkas (> COMPACT_AT anggota, atau jumlah ganjil biar gak ada gauge sendirian di baris): satu baris per sales,
             // diurutkan dari persen tercapai tertinggi.
             <ul className="divide-y divide-slate-100">
               {[...members]
@@ -670,9 +670,9 @@ function TargetsCard({ api, members, reloadKey }) {
                       <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
                       <div className="min-w-0 truncate text-left text-[12px] font-bold text-slate-800">{m.name}</div>
                     </div>
-                    {r.target > 0 ? <Gauge pct={pct} forecastPct={projected} /> : <div className="flex h-[70px] items-center text-[11px] text-slate-400">Belum ada target</div>}
+                    {r.target > 0 ? <Gauge pct={pct} forecastPct={projected} /> : <div className="flex h-[70px] items-center text-[11px] text-slate-500">Belum ada target</div>}
                     {editor(m, r, false)}
-                    <div className="mt-1 text-[11px] tabular-nums text-slate-400">Forecast {fmtJt(r.forecast)}</div>
+                    <div className="mt-1 text-[11px] tabular-nums text-slate-500">Forecast {fmtJt(r.forecast)}</div>
                   </div>
                 );
               })}
@@ -682,7 +682,7 @@ function TargetsCard({ api, members, reloadKey }) {
             <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-brand" />Tercapai</span>
             <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-brand-line" />Jika forecast closing</span>
           </div>
-          {noValue > 0 && <p className="mt-2 text-[10.5px] text-slate-400">{noValue} lead aktif belum memiliki nilai proyek - lengkapi di detail lead agar forecast akurat.</p>}
+          {noValue > 0 && <p className="mt-2 text-[10.5px] text-slate-500">{noValue} lead aktif belum memiliki nilai proyek - lengkapi di detail lead agar forecast akurat.</p>}
         </>
       )}
     </section>
@@ -704,7 +704,7 @@ function PaymentsCard({ nameOf, rows, loading, onOpenLead }) {
     { label: "Nilai kontrak", hint: "Total nilai proyek yang sudah deal", value: contract, cls: "text-slate-900", dot: "bg-slate-300" },
     { label: "Sudah ditagih", hint: "Invoice yang sudah dikirim ke klien", value: invoiced, cls: "text-sky-700", dot: "bg-sky-400" },
     { label: "Sudah masuk", hint: "Uang yang sudah diterima (Cash In)", value: paid, cls: "text-emerald-700", dot: "bg-emerald-500" },
-    { label: "Telat dibayar", hint: "Lewat jatuh tempo, belum dibayar", value: overdue, cls: overdue > 0 ? "text-rose-600" : "text-slate-400", dot: overdue > 0 ? "bg-rose-500" : "bg-slate-200" },
+    { label: "Telat dibayar", hint: "Lewat jatuh tempo, belum dibayar", value: overdue, cls: overdue > 0 ? "text-rose-600" : "text-slate-500", dot: overdue > 0 ? "bg-rose-500" : "bg-slate-200" },
   ];
 
   return (
@@ -723,7 +723,7 @@ function PaymentsCard({ nameOf, rows, loading, onOpenLead }) {
               <div key={t.label} className="bg-white px-4 py-3">
                 <div className={`font-display text-[17px] font-bold tabular-nums ${t.cls}`}>{fmtJt(t.value)}</div>
                 <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-600"><span className={`h-2 w-2 rounded-full ${t.dot}`} />{t.label}</div>
-                <div className="text-[10px] leading-snug text-slate-400">{t.hint}</div>
+                <div className="text-[10px] leading-snug text-slate-500">{t.hint}</div>
               </div>
             ))}
           </div>
@@ -746,11 +746,11 @@ function PaymentsCard({ nameOf, rows, loading, onOpenLead }) {
 
           <div className="mt-5 overflow-x-auto">
             {list.length === 0 ? (
-              <p className="text-[12px] text-slate-400">{view === "running" ? "Semua proyek sudah lunas." : "Belum ada proyek yang lunas 100%."}</p>
+              <p className="text-[12px] text-slate-500">{view === "running" ? "Semua proyek sudah lunas." : "Belum ada proyek yang lunas 100%."}</p>
             ) : (
               <table className="w-full min-w-[640px] text-[12.5px]">
                 <thead>
-                  <tr className="border-b border-slate-100 text-left text-[11px] font-semibold text-slate-400">
+                  <tr className="border-b border-slate-100 text-left text-[11px] font-semibold text-slate-500">
                     <th className="py-2 pr-3 font-semibold">Proyek</th>
                     <th className="px-2 py-2 text-right font-semibold">Nilai kontrak</th>
                     <th className="px-2 py-2 text-right font-semibold">Sudah masuk</th>
@@ -766,17 +766,17 @@ function PaymentsCard({ nameOf, rows, loading, onOpenLead }) {
                       <tr key={r.lead_id} onClick={() => onOpenLead(r.lead_id)} className="cursor-pointer transition-colors hover:bg-slate-50/80">
                         <td className="py-3 pr-3">
                           <div className="font-semibold text-slate-800">{r.lead_name}</div>
-                          <div className="text-[10.5px] text-slate-400">{nameOf[r.user_id] || "-"} · {r.terms_paid}/{r.terms} termin lunas</div>
+                          <div className="text-[10.5px] text-slate-500">{nameOf[r.user_id] || "-"} · {r.terms_paid}/{r.terms} termin lunas</div>
                           <StackBar contract={r.contract} invoiced={r.invoiced} paid={r.paid} overdue={r.overdue} className="mt-1.5 h-1.5 w-40" />
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums text-slate-700">{fmtJt(r.contract)}</td>
-                        <td className="px-2 py-3 text-right tabular-nums font-semibold text-emerald-700">{fmtJt(r.paid)} <span className="text-[10.5px] font-normal text-slate-400">({pct}%)</span></td>
+                        <td className="px-2 py-3 text-right tabular-nums font-semibold text-emerald-700">{fmtJt(r.paid)} <span className="text-[10.5px] font-normal text-slate-500">({pct}%)</span></td>
                         <td className={`px-2 py-3 text-right tabular-nums font-semibold ${Number(r.overdue) > 0 ? "text-rose-600" : "text-slate-800"}`}>{fmtJt(Number(r.contract) - Number(r.paid))}</td>
                         <td className="py-3 pl-3">
                           {view === "running" && r.next_label != null ? (
                             <>
                               <div className="text-slate-700">{r.next_label || "Termin"}</div>
-                              <div className={`text-[10.5px] font-semibold ${late ? "text-rose-600" : r.days_left != null && r.days_left <= 3 ? "text-amber-600" : "text-slate-400"}`}>
+                              <div className={`text-[10.5px] font-semibold ${late ? "text-rose-600" : r.days_left != null && r.days_left <= 3 ? "text-amber-600" : "text-slate-500"}`}>
                                 {r.days_left == null ? "belum ada jatuh tempo" : late ? `Telat ${-r.days_left} hari` : r.days_left === 0 ? "Jatuh tempo hari ini" : `${r.days_left} hari lagi`}
                                 {r.next_invoiced ? " · sudah ditagih" : " · belum ditagih"}
                               </div>
