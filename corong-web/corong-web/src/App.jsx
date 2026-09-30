@@ -44,6 +44,7 @@ const AdminDashboard = lazy(() => import("./tabs/AdminDashboard"));
 const Team = lazy(() => import("./tabs/Team"));
 import LeadModal from "./components/LeadModal";
 import IndustryPicker from "./components/IndustryPicker";
+import TeamLockedScreen from "./components/TeamLockedScreen";
 import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
@@ -547,6 +548,12 @@ export default function App() {
   if (mfa.checking) return <Splash />;
   if (mfa.needed && !mfa.verified) {
     return <MfaVerifyScreen onVerified={() => setMfa((m) => ({ ...m, verified: true, needed: false }))} onCancel={() => supabase.auth.signOut()} />;
+  }
+
+  // Paket Enterprise team berakhir -> anggota selain owner dikunci (owner
+  // tetap masuk untuk memperpanjang). Di database kuncinya lewat my_org_ids().
+  if (!loading && org && myRole && myRole !== "owner" && org.owner_user_id !== session.user.id && org.plan !== "enterprise") {
+    return <TeamLockedScreen orgName={org.name} onReload={() => window.location.reload()} onLogout={() => supabase.auth.signOut()} />;
   }
 
   // Org baru yang belum pernah milih industri bisnisnya - tampilin picker dulu
