@@ -7,6 +7,10 @@
 //
 // Pola rate-limit/tier-gate/caching diambil dari draft-followup (edge
 // function lain di project ini) biar konsisten.
+//
+// Audit Enterprise (30 Sep 2026): kuota dikembalikan (release) kalau AI
+// gagal - sebelumnya 1 jatah kepotong walau user gak dapet hasil. Teks yang
+// tampil ke user (error & isi ringkasan) pakai bahasa baku.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -25,11 +29,13 @@ function wibMonthStartUTC(d = new Date()) {
   return new Date(Date.UTC(wibNow.getUTCFullYear(), wibNow.getUTCMonth(), 1, 0, 0, 0) - WIB_OFFSET_MS);
 }
 
-async function checkRateLimitPerUserMonthly(admin, userId, functionName, maxCalls) {
+// Balikin id reservasi kuota (buat di-release kalau gagal), atau null kalau
+// kuota habis / error.
+async function reserveMonthlyCall(admin, userId, functionName, maxCalls) {
   const windowStart = wibMonthStartUTC().toISOString();
   const { data, error } = await admin.rpc("reserve_edge_function_call", { p_user_id: userId, p_function_name: functionName, p_window_start: windowStart, p_max_calls: maxCalls });
-  if (error) { console.error("[summarize-lead-needs] reserve_edge_function_call gagal:", error); return false; }
-  return !!data;
+  if (error) { console.error("[summarize-lead-needs] reserve_edge_function_call gagal:", error); return null; }
+  return data || null;
 }
 
 const INDUSTRY_CONTEXT = {
@@ -50,6 +56,15 @@ Deno.serve(async (req) => {
   };
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
+  let admin = null;
+  let reservationId = null;
+  const releaseQuota = async () => {
+    if (admin && reservationId) {
+      try { await admin.rpc("release_edge_function_call", { p_id: reservationId }); } catch (_) { /* jangan sampai release gagal bikin error baru */ }
+      reservationId = null;
+    }
+  };
+
   try {
     const { lead_id } = await req.json();
     if (!lead_id) return new Response(JSON.stringify({ error: "lead_id wajib diisi" }), { status: 400, headers: cors });
@@ -65,23 +80,23 @@ Deno.serve(async (req) => {
     const { data: orgRow } = memberRow ? await supabase.from("organizations").select("plan, industry").eq("id", memberRow.org_id).maybeSingle() : { data: null };
     const isEnterprise = orgRow?.plan === "enterprise";
     if (!isEnterprise) {
-      return new Response(JSON.stringify({ error: "Ringkasan Kebutuhan (AI) itu fitur khusus paket Enterprise. Upgrade dulu di tab Pengaturan Nexto ya." }), { status: 403, headers: cors });
+      return new Response(JSON.stringify({ error: "Ringkasan Kebutuhan (AI) tersedia untuk paket Enterprise. Silakan upgrade melalui tab Pengaturan." }), { status: 403, headers: cors });
     }
 
     // RLS otomatis nge-filter, cuma bisa akses lead punya org sendiri (dan
     // buat sales_rep, cuma lead yang di-assign ke dia - leads_select_access).
     const { data: lead, error: leadErr } = await supabase.from("leads").select("*, progress_notes(id, note_date, text)").eq("id", lead_id).single();
-    if (leadErr || !lead) return new Response(JSON.stringify({ error: "Lead gak ketemu" }), { status: 404, headers: cors });
+    if (leadErr || !lead) return new Response(JSON.stringify({ error: "Lead tidak ditemukan" }), { status: 404, headers: cors });
 
     const notes = (lead.progress_notes || []).slice().sort((a, b) => (a.note_date < b.note_date ? -1 : 1));
     if (notes.length === 0) {
-      return new Response(JSON.stringify({ error: "Belum ada catatan progress/notulen buat lead ini. Tambahin dulu catatan kunjungan/meeting-nya biar AI bisa nyimpulin kebutuhannya." }), { status: 400, headers: cors });
+      return new Response(JSON.stringify({ error: "Belum ada catatan progress/notulen untuk lead ini. Tambahkan catatan kunjungan atau meeting terlebih dahulu agar AI dapat menyimpulkan kebutuhannya." }), { status: 400, headers: cors });
     }
 
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const rateLimitOk = await checkRateLimitPerUserMonthly(admin, userData.user.id, "summarize-lead-needs", MONTHLY_LIMIT);
-    if (!rateLimitOk) {
-      return new Response(JSON.stringify({ error: `Kuota Ringkasan Kebutuhan (AI) (${MONTHLY_LIMIT}x/bulan) udah kepake. Coba lagi bulan depan.` }), { status: 429, headers: cors });
+    admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    reservationId = await reserveMonthlyCall(admin, userData.user.id, "summarize-lead-needs", MONTHLY_LIMIT);
+    if (!reservationId) {
+      return new Response(JSON.stringify({ error: `Kuota Ringkasan Kebutuhan (AI) (${MONTHLY_LIMIT}x/bulan) sudah terpakai. Silakan coba lagi bulan depan.` }), { status: 429, headers: cors });
     }
 
     // Batesin ke 20 catatan terbaru biar prompt gak kegedean - kalau lead-nya
@@ -110,22 +125,25 @@ ${notesForPrompt}
 Baca semua catatan di atas, lalu simpulkan:
 1. Kebutuhan konkret apa aja yang keliatan dari klien ini (produk/layanan/scope spesifik yang dia butuhin) - bukan cuma "butuh produk kita" doang, tapi detail spesifik yang kesebut/tersirat di catatan (misal: "butuh sistem CRM buat 5 sales", bukan cuma "butuh software").
 2. Kenapa dia butuh itu (alasan/masalah bisnis yang melatarbelakangi, kalau kesebut).
-3. Ada sinyal soal budget/anggaran gak (disebut nominal/range, atau "gak ada budget khusus", atau emang gak ada info sama sekali).
+3. Ada sinyal soal budget/anggaran gak (disebut nominal/range, atau "tidak ada budget khusus", atau memang tidak ada info sama sekali).
 4. Seberapa urgent (ada tenggat waktu/target tertentu yang kesebut, atau nggak).${hasCatalog ? `
 5. Produk/layanan dari KATALOG KITA di atas yang paling cocok buat kebutuhan klien ini (maks 3, urut dari paling cocok), masing-masing dengan alasan singkat yang nyambungin ke kebutuhan spesifik di catatan. Nama produk WAJIB persis sama kayak di katalog - JANGAN rekomendasiin produk yang gak ada di katalog. Kalau gak ada yang cocok, kosongin array-nya.` : ""}
 
-ATURAN PENTING: JANGAN mengarang detail yang gak ada atau gak tersirat jelas di catatan. Kalau suatu poin gak ada informasinya sama sekali, bilang terus terang "gak ada info di catatan" - jangan ditebak-tebak atau dihalusin biar keliatan lengkap.
+ATURAN PENTING: JANGAN mengarang detail yang gak ada atau gak tersirat jelas di catatan. Kalau suatu poin gak ada informasinya sama sekali, tulis terus terang "Tidak ada info di catatan" - jangan ditebak-tebak atau dihalusin biar keliatan lengkap.
 
 Balas HANYA dengan JSON object, tanpa markdown, persis format ini:
-{"summary":"ringkasan kebutuhan klien dalam 2-4 kalimat, bahasa natural","needs":["poin kebutuhan spesifik 1","poin kebutuhan spesifik 2"],"budget_signal":"deskripsi singkat sinyal budget, atau 'Gak ada info di catatan'","urgency":"Tinggi/Sedang/Rendah/Gak jelas - beserta alasan singkat"${hasCatalog ? `,"product_recommendations":[{"product":"nama persis dari katalog","reason":"alasan singkat 1 kalimat"}]` : ""}}
-Tulis dalam Bahasa Indonesia yang natural.`;
+{"summary":"ringkasan kebutuhan klien dalam 2-4 kalimat","needs":["poin kebutuhan spesifik 1","poin kebutuhan spesifik 2"],"budget_signal":"deskripsi singkat sinyal budget, atau 'Tidak ada info di catatan'","urgency":"Tinggi/Sedang/Rendah/Tidak jelas - beserta alasan singkat"${hasCatalog ? `,"product_recommendations":[{"product":"nama persis dari katalog","reason":"alasan singkat 1 kalimat"}]` : ""}}
+Tulis dalam Bahasa Indonesia baku yang profesional (sapa pembaca dengan "Anda" kalau perlu, jangan pakai bahasa gaul seperti "gak", "udah", "banget").`;
 
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 1200, thinking: { type: "between_tools" }, output_config: { effort: "medium" }, messages: [{ role: "user", content: prompt }] }),
     });
-    if (!resp.ok) return new Response(JSON.stringify({ error: "AI gagal bikin ringkasan" }), { status: 500, headers: cors });
+    if (!resp.ok) {
+      await releaseQuota();
+      return new Response(JSON.stringify({ error: "AI gagal membuat ringkasan. Kuota Anda tidak terpakai, silakan coba lagi." }), { status: 500, headers: cors });
+    }
     const dat = await resp.json();
     const t = (dat.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
     let obj = {};
@@ -133,13 +151,16 @@ Tulis dalam Bahasa Indonesia yang natural.`;
     const a = x.indexOf("{"); const e = x.lastIndexOf("}");
     if (a !== -1 && e !== -1) { try { obj = JSON.parse(x.slice(a, e + 1)); } catch (_) {} }
 
-    if (!obj.summary) return new Response(JSON.stringify({ error: "AI gagal bikin ringkasan, coba lagi" }), { status: 500, headers: cors });
+    if (!obj.summary) {
+      await releaseQuota();
+      return new Response(JSON.stringify({ error: "AI gagal membuat ringkasan. Kuota Anda tidak terpakai, silakan coba lagi." }), { status: 500, headers: cors });
+    }
 
     const cleanText = (s) => (s || "").replace(/�/g, "").replace(/ {2,}/g, " ");
     obj.summary = cleanText(obj.summary);
     obj.needs = Array.isArray(obj.needs) ? obj.needs.map(cleanText).filter(Boolean) : [];
-    obj.budget_signal = cleanText(obj.budget_signal || "Gak ada info di catatan");
-    obj.urgency = cleanText(obj.urgency || "Gak jelas");
+    obj.budget_signal = cleanText(obj.budget_signal || "Tidak ada info di catatan");
+    obj.urgency = cleanText(obj.urgency || "Tidak jelas");
     // Buang rekomendasi yang namanya gak ada di katalog (jaga-jaga AI ngarang).
     const catalogNames = new Map(catalogProducts.map((p) => [p.name.trim().toLowerCase(), p.name]));
     obj.product_recommendations = (Array.isArray(obj.product_recommendations) ? obj.product_recommendations : [])
@@ -162,6 +183,7 @@ Tulis dalam Bahasa Indonesia yang natural.`;
 
     return new Response(JSON.stringify({ ...obj, has_catalog: hasCatalog, based_on_notes_count: notes.length }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
+    await releaseQuota();
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
   }
 });

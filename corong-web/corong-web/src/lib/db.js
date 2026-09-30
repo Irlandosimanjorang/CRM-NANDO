@@ -845,9 +845,21 @@ export async function upsertLead(lead) {
   return saved;
 }
 
+// BUG FIX (30 Sep 2026, audit Enterprise): trigger
+// protect_leads_softdelete_enterprise diam-diam MEMBATALKAN soft delete dari
+// sales_rep org Enterprise (harus lewat approval owner/manager). Dulu
+// pemanggil gak tau - UI bilang sukses padahal lead gak kehapus. Sekarang
+// dicek hasilnya dan dilempar error yang jelas.
 export async function deleteLead(id) {
-  const { error } = await supabase.from("leads").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+  const { data, error } = await supabase
+    .from("leads")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("id, deleted_at");
   if (error) throw error;
+  if (!data?.length || !data[0].deleted_at) {
+    throw new Error("Lead tidak dapat dihapus langsung. Penghapusan lead memerlukan persetujuan owner/manager.");
+  }
 }
 
 export async function getDeletedLeads() {

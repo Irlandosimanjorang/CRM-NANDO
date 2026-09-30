@@ -60,7 +60,7 @@ function renderHtml(orgName, range, r) {
       ${tile("Uang masuk (Cash In)", rp(r.cash_in), "#047857")}
       ${tile("Termin telat", String((r.overdue || []).length), (r.overdue || []).length ? "#e11d48" : "#94a3b8")}
     </tr></table>
-    ${inactive.length ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;font-size:13px;color:#92400e;margin-bottom:16px;"><b>Perlu dicek:</b> ${inactive.map((m) => esc(m.name)).join(", ")} - gak ada aktivitas ${INACTIVE_DAYS}+ hari.</div>` : ""}
+    ${inactive.length ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;font-size:13px;color:#92400e;margin-bottom:16px;"><b>Perlu dicek:</b> ${inactive.map((m) => esc(m.name)).join(", ")} - tidak ada aktivitas ${INACTIVE_DAYS}+ hari.</div>` : ""}
     <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:16px;">
       <div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:6px;">Aktivitas tiap anggota</div>
       <table style="width:100%;border-collapse:collapse;">

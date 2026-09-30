@@ -52,7 +52,7 @@ const FIELD_LABELS = {
 const darkInput = "w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/10 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-orange-400/50 focus:bg-white/[0.06] transition-colors";
 const darkLabel = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
 
-export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, onSaved }) {
+export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, onSaved, isEnterprise = false, canManage = false }) {
   const [stage, setStage] = useState("idle"); // idle | recording | processing | review | error
   const [seconds, setSeconds] = useState(0);
   const [processingStep, setProcessingStep] = useState("uploading"); // uploading | transcribing
@@ -262,8 +262,17 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         if (progressNote.trim()) await db.addProgress(saved.id, progressNote.trim());
       } else if (action === "delete_lead") {
         if (!lead) throw new Error("Pilih lead-nya dulu.");
-        if (!window.confirm(`Yakin mau hapus lead "${lead.name}"? (masuk Recycle Bin, masih bisa dipulihin nanti)`)) { setBusy(false); return; }
-        await db.deleteLead(lead.id);
+        // Approval-gate Enterprise (BUG FIX 30 Sep 2026): sales_rep gak boleh
+        // hapus langsung - kirim permintaan ke owner/manager, sama kayak
+        // tombol hapus di kartu Leads & detail lead.
+        if (isEnterprise && !canManage) {
+          if (!window.confirm(`Kirim permintaan hapus lead "${lead.name}" ke owner/manager?`)) { setBusy(false); return; }
+          await db.requestApproval("delete_lead", { lead_id: lead.id, lead_name: lead.name || "" });
+          alert("Permintaan hapus dikirim. Lead akan dihapus setelah disetujui owner/manager.");
+        } else {
+          if (!window.confirm(`Hapus lead "${lead.name}"? Lead masuk Recycle Bin dan masih bisa dipulihkan.`)) { setBusy(false); return; }
+          await db.deleteLead(lead.id);
+        }
       } else if (action === "send_email") {
         if (!lead) throw new Error("Pilih lead-nya dulu.");
         const existing = (leads || []).find((l) => l.id === lead.id) || {};
