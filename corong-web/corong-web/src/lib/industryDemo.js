@@ -67,9 +67,9 @@ const DEMO = {
   },
   corporate_consultant: {
     leads: [
-      { name: "PT Mitra Logistik", category: "Konsultan HR & Organisasi", key_person: "Budi Santoso", title: "HR Director", product: "Assessment 40 supervisor", city: "Jakarta", agenda: "Presentasi proposal assessment", next: "Kirim revisi proposal & timeline" },
-      { name: "PT Bank Sejahtera", category: "Konsultan Strategi & Manajemen", key_person: "Sari Wulandari", title: "CEO", product: "Review strategi bisnis 2027", city: "Jakarta", agenda: "Kickoff meeting", next: "Kirim draft SPK" },
-      { name: "PT Arta Graha Konstruksi", category: "Konsultan Pajak", key_person: "Ahmad Fauzi", title: "CFO", product: "Audit & perencanaan pajak", city: "Surabaya" },
+      { name: "PT Mitra Logistik", category: "Logistik & Transportasi", key_person: "Budi Santoso", title: "HR Director", product: "Assessment 40 supervisor", city: "Jakarta", agenda: "Presentasi proposal assessment", next: "Kirim revisi proposal & timeline" },
+      { name: "PT Bank Sejahtera", category: "Perbankan & Keuangan", key_person: "Sari Wulandari", title: "CEO", product: "Review strategi bisnis 2027", city: "Jakarta", agenda: "Kickoff meeting", next: "Kirim draft SPK" },
+      { name: "PT Arta Graha Konstruksi", category: "Properti & Konstruksi", key_person: "Ahmad Fauzi", title: "CFO", product: "Audit & perencanaan pajak", city: "Surabaya" },
     ],
     deals: [{ value: 120000000, product: "Assessment 40 supervisor" }, { value: 85000000, product: "Audit & perencanaan pajak" }],
     competitor: { name: "Konsultan Kompetitor Prima", background: "Firma konsultan menengah di Jakarta", product: "Assessment & training SDM", notes: "Harga lebih murah, tim senior terbatas", usage: { company: "PT ABC Nusantara", product: "Assessment manajerial", price: "Rp2,5 jt/peserta", quantity: "30 peserta" } },

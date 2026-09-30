@@ -29,7 +29,7 @@ const INDUSTRY_CATEGORIES = {
   b2b_general: { label: "B2B / distributor umum", categories: ["Bahan Baku", "Barang Jadi", "Jasa", "Peralatan", "Lainnya"] },
   insurance: { label: "asuransi / financial services", categories: ["Asuransi Jiwa", "Asuransi Kesehatan", "Asuransi Umum", "Asuransi Pendidikan", "Investasi", "Lainnya"] },
   retail_fmcg: { label: "retail / FMCG", categories: ["Makanan & Minuman", "Perawatan Diri", "Rumah Tangga", "Elektronik Ringan", "Lainnya"] },
-  corporate_consultant: { label: "corporate consultant (jasa berbasis project)", categories: ["Konsultan Strategi & Manajemen", "Konsultan Hukum", "Konsultan Pajak", "Konsultan HR & Organisasi", "Konsultan Keuangan & Audit", "Konsultan IT/Digital Transformation", "Lainnya"] },
+  corporate_consultant: { label: "corporate consultant (jasa berbasis project) - kategori = SEKTOR INDUSTRI perusahaan klien, bukan jenis jasa konsultannya", categories: ["Manufaktur", "Perbankan & Keuangan", "Retail & FMCG", "Teknologi & Telekomunikasi", "Kesehatan & Farmasi", "Energi & Pertambangan", "Properti & Konstruksi", "Logistik & Transportasi", "Pendidikan", "Hospitality & F&B", "Lainnya"] },
 };
 const MAX_CALLS_PER_MONTH = 4;
 
@@ -88,17 +88,20 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .eq("category", "Lainnya");
 
-    const candidates = (leads || []).filter((l) => (l.product && l.product.trim()) || (l.background && l.background.trim())).slice(0, 40);
+    // Nama lead ikut dipakai (1 Okt 2026): di Corporate Consultant kategori =
+    // sektor klien, dan sektornya sering cuma kelihatan dari nama perusahaan
+    // (misal "PT Bank ...").
+    const candidates = (leads || []).filter((l) => (l.product && l.product.trim()) || (l.background && l.background.trim()) || (l.name && l.name.trim())).slice(0, 40);
     if (candidates.length === 0) {
       await releaseQuota(); // gak ada yang dianalisis, jangan potong kuota
       return json({ suggestions: [] });
     }
 
     const prompt = `Kamu klasifikasi kategori lead untuk CRM sales di bisnis ${ind.label}. Kategori yang tersedia: ${CATEGORIES.filter((c) => c !== "Lainnya").join(" | ")}.
-Untuk tiap lead di bawah, tentukan kategori paling cocok berdasarkan produk/background. Kalau memang tidak jelas/tidak cocok satupun, biarkan "Lainnya". Nama kategori WAJIB persis sama dengan daftar di atas.
+Untuk tiap lead di bawah, tentukan kategori paling cocok berdasarkan nama, produk, dan background. Kalau memang tidak jelas/tidak cocok satupun, biarkan "Lainnya". Nama kategori WAJIB persis sama dengan daftar di atas.
 Balas HANYA JSON array, tanpa markdown: [{"id":"...","suggested":"nama kategori atau 'Lainnya'"}]
 Data lead:
-${JSON.stringify(candidates.map((c) => ({ id: c.id, product: c.product || "", background: (c.background || "").slice(0, 200) })))}`;
+${JSON.stringify(candidates.map((c) => ({ id: c.id, name: c.name || "", product: c.product || "", background: (c.background || "").slice(0, 200) })))}`;
 
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

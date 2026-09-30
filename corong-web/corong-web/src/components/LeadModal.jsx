@@ -503,7 +503,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           )}
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Kategori">
+            <Field label={getFieldLabel(industry, "category", "Kategori")}>
               <select
                 className={inp}
                 value={customCategory ? "Lainnya" : (f.category || categories[0])}

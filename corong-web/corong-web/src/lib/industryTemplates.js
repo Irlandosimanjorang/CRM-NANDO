@@ -254,12 +254,17 @@ export const INDUSTRY_TEMPLATES = {
     fieldLabels: {
       name: "Nama perusahaan klien",
       name_short: "Klien",
+      category: "Sektor industri klien",
       product: "Scope jasa/project",
       company_type: "Skala perusahaan",
       key_person_title: "Jabatan (decision maker)",
       quantity: "Nilai kontrak/SPK (Rp)",
     },
-    categories: ["Konsultan Strategi & Manajemen", "Konsultan Hukum", "Konsultan Pajak", "Konsultan HR & Organisasi", "Konsultan Keuangan & Audit", "Konsultan IT/Digital Transformation", "Lainnya"],
+    // Kategori = sektor industri KLIEN (1 Okt 2026, masukan Nando). Dulu isinya
+    // jenis jasa konsultan itu sendiri - gak cocok, karena yang dikategorikan
+    // adalah perusahaan kliennya. Tipe klien (Startup/Korporat/BUMN) sudah
+    // ada di "Skala perusahaan", jadi gak diulang di sini.
+    categories: ["Manufaktur", "Perbankan & Keuangan", "Retail & FMCG", "Teknologi & Telekomunikasi", "Kesehatan & Farmasi", "Energi & Pertambangan", "Properti & Konstruksi", "Logistik & Transportasi", "Pendidikan", "Hospitality & F&B", "Lainnya"],
     companyTypeOptions: [
       { v: "", label: "—" }, { v: "Startup", label: "Startup" }, { v: "UMKM", label: "UMKM" }, { v: "Korporat", label: "Korporat / Enterprise" }, { v: "BUMN/Pemerintah", label: "BUMN / Instansi Pemerintah" },
     ],
