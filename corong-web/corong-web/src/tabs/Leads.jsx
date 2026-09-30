@@ -269,18 +269,17 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
   return (
     <div
       onClick={() => onEdit(c)}
-      className="rounded-2xl bg-white cursor-pointer overflow-hidden transition-all hover:shadow-[0_10px_30px_-16px_rgba(15,23,42,0.3)]"
-      style={{ border: "1.5px solid #f97316" }}
+      className="rounded-panel border border-slate-200/80 bg-white cursor-pointer overflow-hidden transition-colors hover:border-slate-300"
     >
       <div className="p-4 sm:p-5">
         {/* HEADER */}
         <div className="flex items-start gap-3">
-          <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-white font-extrabold text-[13px] shrink-0" style={{ background: avatarColor(c.name) }}>
+          <div className="w-[38px] h-[38px] rounded-inner flex items-center justify-center text-white font-bold text-[13px] shrink-0" style={{ background: avatarColor(c.name) }}>
             {initials(c.name)}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <div className="font-bold text-slate-900 text-[17px] leading-snug tracking-tight truncate">{c.name}</div>
+              <div className="font-display font-bold text-ink text-[15px] leading-snug tracking-[-0.02em] truncate">{c.name}</div>
               {c.priority === "high" && <Flame size={14} className="text-orange-500 shrink-0" fill="currentColor" />}
             </div>
             <div className="text-[12.5px] text-slate-400 mt-0.5 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
@@ -313,12 +312,12 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
         <div className="mt-4 flex items-stretch gap-4">
           <div className="flex-1 min-w-0">
             <div className="text-[11px] text-slate-400">{c.phone ? "Telepon" : "Key person"}</div>
-            <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.phone || c.key_person || "—"}</div>
+            <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.phone || c.key_person || "-"}</div>
           </div>
           <div className="w-px bg-slate-100" />
           <div className="flex-1 min-w-0">
             <div className="text-[11px] text-slate-400">{productLabel || "Produk"}</div>
-            <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.product || "—"}</div>
+            <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.product || "-"}</div>
           </div>
         </div>
 
@@ -329,34 +328,39 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
           </div>
         )}
 
-        {/* NEXT ACTION - satu momen yang paling ditonjolkan di kartu ini */}
-        <div className="mt-4 pl-3 border-l-2 border-orange-400">
-          <div className="text-[13px] font-medium text-slate-800 line-clamp-2">{c.next_action || "Belum ada rencana tindak lanjut"}</div>
-          <div className="text-[11px] mt-1 font-medium" style={{ color: urgency.text }}>{urgency.note}</div>
+        {/* NEXT ACTION - hal yang paling penting di kartu ini. Urgensi kontak
+            ditandai titik + teks berwarna (bukan garis aksen di tepi kartu). */}
+        <div className="mt-4 rounded-inner bg-slate-50 px-3 py-2.5">
+          <div className="text-[11px] font-semibold text-slate-400">Langkah berikutnya</div>
+          <div className={`mt-0.5 text-[13px] font-medium line-clamp-2 ${c.next_action ? "text-slate-800" : "text-slate-400"}`}>{c.next_action || "Belum ada rencana tindak lanjut"}</div>
+          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium" style={{ color: urgency.text }}>
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: urgency.stripe }} />
+            {urgency.note}
+          </div>
         </div>
 
         {/* FOOTER ACTIONS */}
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {c.phone && (
             wa ? (
-              <a href={wa} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone}>
-                <Phone size={13} />
+              <a href={wa} target="_blank" rel="noreferrer" className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone} aria-label="Chat WhatsApp">
+                <Phone size={15} />
               </a>
             ) : (
-              <span className="p-1.5 text-slate-300" title={c.phone}>
-                <Phone size={13} />
+              <span className="p-2 text-slate-300" title={c.phone}>
+                <Phone size={15} />
               </span>
             )
           )}
 
           {c.email && (
-            <a href={`mailto:${c.email}`} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50" title={c.email}>
-              <Mail size={13} />
+            <a href={`mailto:${c.email}`} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50" title={c.email} aria-label="Kirim email">
+              <Mail size={15} />
             </a>
           )}
 
-          <button onClick={(e) => onDraft(c, e.currentTarget.getBoundingClientRect())} className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50" title="Draft follow-up (AI)">
-            <Sparkles size={13} />
+          <button onClick={(e) => onDraft(c, e.currentTarget.getBoundingClientRect())} className="p-2 rounded-lg text-ai hover:bg-ai-soft" title="Draft follow-up (AI)" aria-label="Draft follow-up (AI)">
+            <Sparkles size={15} />
           </button>
 
           {/* Reassign - owner ATAU manager yang liat ini, biar bisa mindahin
@@ -379,11 +383,11 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
           )}
 
           <div className="ml-auto flex items-center gap-0.5">
-            <button onClick={() => onEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50" title="Edit lead">
-              <Pencil size={13} />
+            <button onClick={() => onEdit(c)} className="p-2 rounded-lg text-slate-400 hover:text-ink hover:bg-slate-100" title="Edit lead" aria-label="Edit lead">
+              <Pencil size={15} />
             </button>
-            <button onClick={() => onDelete(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" title="Hapus lead">
-              <Trash2 size={13} />
+            <button onClick={() => onDelete(c.id)} className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" title="Hapus lead" aria-label="Hapus lead">
+              <Trash2 size={15} />
             </button>
           </div>
         </div>
@@ -391,7 +395,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
         {/* PROGRESS UPDATE */}
         <button
           onClick={(e) => { e.stopPropagation(); onProgress(c); }}
-          className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border-2 border-l-[3px] border-slate-200 border-l-orange-400 bg-slate-50 rounded-xl px-3 py-2 hover:border-orange-300 hover:border-l-orange-500 hover:text-orange-700 hover:bg-orange-50/60 transition-colors"
+          className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border border-dashed border-slate-300 bg-white rounded-inner px-3 py-2 hover:border-brand-line hover:bg-brand-soft hover:text-brand-strong transition-colors"
           title="Update progress harian"
         >
           <ClipboardList size={13} className="shrink-0 text-slate-400" />
@@ -407,66 +411,19 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
    COMPACT KPI CARD
 ========================================================= */
 
-function MiniKpi({
-  icon: Icon,
-  label,
-  value,
-  active,
-  onClick,
-  iconClass = "text-slate-500",
-}) {
+// Chip filter cepat (30 Sep 2026, aturan desain docs/DESIGN.md) - sebelumnya
+// tombol 32px dengan label 7px huruf besar yang hampir gak kebaca.
+function MiniKpi({ icon: Icon, label, value, active, onClick, iconClass = "text-slate-500" }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`
-        w-full
-        h-[32px]
-        px-2
-        rounded-md
-        border
-        text-left
-        transition-all
-        duration-150
-        ${
-          active
-            ? "bg-slate-900 border-slate-900 text-white shadow-sm"
-            : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
-        }
-      `}
+      aria-pressed={!!active}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${active ? "border-ink bg-ink text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-ink"}`}
     >
-      <div className="flex items-center gap-1.5 h-full">
-        <Icon
-          size={11}
-          className={active ? "text-white" : iconClass}
-        />
-
-        <div className="min-w-0 flex items-center gap-1">
-          <span
-            className={`
-              text-[7px]
-              uppercase
-              tracking-wider
-              font-semibold
-              truncate
-              ${active ? "text-slate-400" : "text-slate-400"}
-            `}
-          >
-            {label}
-          </span>
-
-          <span
-            className={`
-              text-xs
-              leading-none
-              font-bold
-              ${active ? "text-white" : "text-slate-900"}
-            `}
-          >
-            {value}
-          </span>
-        </div>
-      </div>
+      <Icon size={13} className={active ? "text-white/80" : iconClass} />
+      {label}
+      <span className={`tabular-nums ${active ? "text-white/70" : "text-slate-400"}`}>{value}</span>
     </button>
   );
 }
@@ -1410,11 +1367,11 @@ export default function Leads({
           COMPACT KPI ROW
       ===================================================== */}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 mb-1">
+      <div className="mb-3 flex flex-wrap gap-2">
 
         <MiniKpi
           icon={Users}
-          label="Total Leads"
+          label="Semua"
           value={kpi.total}
           active={
             !q &&
@@ -1430,7 +1387,7 @@ export default function Leads({
 
         <MiniKpi
           icon={Activity}
-          label="Active"
+          label="Aktif"
           value={kpi.active}
           iconClass="text-blue-500"
           active={fKpi === "active"}
@@ -1452,7 +1409,7 @@ export default function Leads({
 
         <MiniKpi
           icon={Trophy}
-          label="Won"
+          label="Menang"
           value={kpi.won}
           iconClass="text-emerald-500"
           active={fKpi === "won"}
@@ -1461,7 +1418,7 @@ export default function Leads({
 
         <MiniKpi
           icon={UserX}
-          label="No Contact"
+          label="Belum dihubungi"
           value={kpi.noContact}
           iconClass="text-rose-500"
           active={fKpi === "noContact"}
@@ -1475,7 +1432,7 @@ export default function Leads({
           HEADER / SEARCH
       ===================================================== */}
 
-      <div className="sticky top-14 md:top-0 z-20 bg-slate-50 pt-0.5 pb-2">
+      <div className="md:sticky md:top-0 z-20 bg-slate-50 pt-0.5 pb-3">
 
         <div className="flex flex-wrap gap-2 items-center mb-2">
 
@@ -1483,7 +1440,7 @@ export default function Leads({
 
             <Search
               size={14}
-              className="absolute left-2.5 top-2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
             />
 
             <input
@@ -1494,7 +1451,8 @@ export default function Leads({
                 )
               }
               placeholder="Cari nama / kota / PIC / produk / progress…"
-              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
+              aria-label="Cari lead"
+              className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-200 rounded-inner bg-white focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
             />
 
           </div>
@@ -1507,7 +1465,7 @@ export default function Leads({
                 e.target.value
               )
             }
-            className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"
+            className="text-[13px] border border-slate-200 rounded-inner px-2.5 py-2 bg-white text-slate-700"
           >
 
             <option value="">
@@ -1536,7 +1494,7 @@ export default function Leads({
                   e.target.value
                 )
               }
-              className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"
+              className="text-[13px] border border-slate-200 rounded-inner px-2.5 py-2 bg-white text-slate-700"
             >
 
               <option value="">
@@ -1570,7 +1528,7 @@ export default function Leads({
                   e.target.value
                 )
               }
-              className="text-sm border border-slate-300 rounded-xl px-2 py-1.5 bg-white"
+              className="text-[13px] border border-slate-200 rounded-inner px-2.5 py-2 bg-white text-slate-700"
             >
 
               <option value="">
@@ -1599,12 +1557,12 @@ export default function Leads({
                 blank()
               )
             }
-            className="flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white text-xs px-2.5 py-1 rounded-lg font-medium shadow-sm shadow-orange-600/20"
+            className="flex items-center gap-1.5 bg-brand-strong hover:bg-orange-700 text-white text-[13px] px-3.5 py-2 rounded-inner font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           >
 
-            <Plus size={12} />
+            <Plus size={14} />
 
-            Lead
+            Tambah lead
 
           </button>
 
@@ -1613,10 +1571,11 @@ export default function Leads({
 
         <div className="flex flex-wrap gap-2">
 
-          <label className="text-xs flex items-center gap-1.5 border border-emerald-300 text-emerald-700 rounded-lg px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
+          <label className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink cursor-pointer">
 
             <FileSpreadsheet
-              size={12}
+              size={13}
+              className="text-emerald-600"
             />
 
             {busy
@@ -1649,10 +1608,10 @@ export default function Leads({
             }
             title={
               isEnterprise && !canManage && exportApproval?.status === "pending"
-                ? "Nunggu approval owner/manager"
+                ? "Menunggu persetujuan owner/manager"
                 : undefined
             }
-            className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
+            className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
           >
 
             <Download
@@ -1660,7 +1619,7 @@ export default function Leads({
             />
 
             {isEnterprise && !canManage && exportApproval?.status === "pending"
-              ? "Export (nunggu approval)"
+              ? "Export (menunggu persetujuan)"
               : "Export"}
 
           </button>
@@ -1682,12 +1641,12 @@ export default function Leads({
               setShowDup(true);
               saveOpenModal("dupcheck", {});
             }}
-            className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
+            className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
           >
 
             {myLevel < 1 ? <Lock size={12} /> : <Copy size={12} />}
 
-            Cek Duplikat
+            Cek duplikat
 
           </button>
 
@@ -1700,18 +1659,19 @@ export default function Leads({
               setLinkErr("");
               setShowLinkGen(true);
             }}
-            className="text-xs flex items-center gap-1.5 border border-slate-300 rounded-lg px-2.5 py-1 bg-white hover:bg-slate-50"
+            className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
           >
             {myLevel < 1 ? <Lock size={12} /> : <LinkIcon size={12} />}
-            Generate dari Link
+            Generate dari link
           </button>
 
 
-          <span className="text-xs text-slate-400 self-center ml-auto">
+          <span className="text-[12px] text-slate-400 self-center ml-auto tabular-nums">
 
             {filtered.length}
-            {" / "}
+            {" dari "}
             {leads.length}
+            {" lead"}
 
           </span>
 
@@ -1725,13 +1685,7 @@ export default function Leads({
       ===================================================== */}
 
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 rounded-[28px] p-3 sm:p-4"
-        style={{
-          background: "#fafbfc",
-          backgroundImage:
-            "radial-gradient(rgba(15,23,42,0.045) 1px, transparent 1px)",
-          backgroundSize: "18px 18px",
-        }}
+        className="mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
         {pageItems.map((c) => (
           <LeadCard
@@ -1753,9 +1707,13 @@ export default function Leads({
         ))}
 
         {filtered.length === 0 && (
-          <div className="col-span-full p-8 text-center text-sm text-slate-400 bg-white border border-dashed border-slate-200 rounded-3xl">
-            Belum ada lead yang cocok.
-            Import Excel atau tambah manual.
+          <div className="col-span-full rounded-panel border border-dashed border-slate-200 bg-white p-8 text-center">
+            <p className="text-[13px] text-slate-500">{leads.length ? "Tidak ada lead yang cocok dengan filter ini." : "Belum ada lead. Tambahkan manual atau import dari Excel/CSV."}</p>
+            {leads.length ? (
+              <button onClick={clearFilters} className="mt-2 text-[12.5px] font-semibold text-brand-strong hover:text-orange-800">Hapus filter</button>
+            ) : (
+              <button onClick={() => setEdit(blank())} className="mt-2 text-[12.5px] font-semibold text-brand-strong hover:text-orange-800">Tambah lead</button>
+            )}
           </div>
         )}
       </div>
