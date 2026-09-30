@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Activity, MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail, Target, Wallet, CalendarDays, CheckCircle2 } from "lucide-react";
+import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail, CheckCircle2 } from "lucide-react";
 import * as db from "../lib/db";
 import TeamLeaderboard from "../components/TeamLeaderboard";
+import { PanelHeader } from "../ui";
 
 // Tab "Team" (30 Sep 2026, permintaan Nando dari calon klien Enterprise yang
 // minta "preview dashboard rekap aktivitas manager"). Khusus owner/manager
@@ -12,6 +13,11 @@ import TeamLeaderboard from "../components/TeamLeaderboard";
 // timeline, aksen warna per bagian, skeleton loading. Semua grafik digambar
 // pake SVG sendiri (tanpa library). Animasi mati otomatis kalau user nyalain
 // "kurangi gerakan" (prefers-reduced-motion).
+//
+// Disesuaikan dengan aturan desain docs/DESIGN.md (30 Sep 2026): tanpa
+// gradasi dua warna, tanpa ikon di judul panel, count-up cuma di Denyut
+// Team. Kalau anggota > COMPACT_AT, Rekap & Target otomatis jadi daftar
+// ringkas biar gak memanjang.
 
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 const INACTIVE_DAYS = 3;
@@ -35,18 +41,18 @@ const RANGES = [
 
 const KIND = {
   visit: { icon: MapPin, color: "text-sky-600 bg-sky-50", verb: "check-in di" },
-  note: { icon: NotebookPen, color: "text-violet-600 bg-violet-50", verb: "menulis catatan di" },
+  note: { icon: NotebookPen, color: "text-slate-700 bg-slate-100", verb: "menulis catatan di" },
   stage: { icon: ArrowRightLeft, color: "text-amber-600 bg-amber-50", verb: "memindahkan tahap" },
   lead: { icon: UserPlus, color: "text-emerald-600 bg-emerald-50", verb: "menambahkan lead" },
   lead_deleted: { icon: Trash2, color: "text-rose-600 bg-rose-50", verb: "menghapus lead" },
   lead_restored: { icon: RotateCcw, color: "text-teal-600 bg-teal-50", verb: "memulihkan lead" },
-  lead_edited: { icon: PencilLine, color: "text-slate-600 bg-slate-100", verb: "mengubah data" },
+  lead_edited: { icon: PencilLine, color: "text-slate-500 bg-slate-50", verb: "mengubah data" },
   visit_scheduled: { icon: CalendarPlus, color: "text-sky-600 bg-sky-50", verb: "menjadwalkan visit ke" },
   visit_cancelled: { icon: CalendarX, color: "text-orange-600 bg-orange-50", verb: "membatalkan visit ke" },
   deal: { icon: Trophy, color: "text-emerald-700 bg-emerald-50", verb: "mencatat deal" },
   email: { icon: Mail, color: "text-blue-600 bg-blue-50", verb: "mengirim email ke" },
-  ai_draft: { icon: Sparkles, color: "text-fuchsia-600 bg-fuchsia-50", verb: "membuat draft AI untuk" },
-  needs_summary: { icon: Sparkles, color: "text-fuchsia-600 bg-fuchsia-50", verb: "membuat Ringkasan Kebutuhan untuk" },
+  ai_draft: { icon: Sparkles, color: "text-ai bg-ai-soft", verb: "membuat draft AI untuk" },
+  needs_summary: { icon: Sparkles, color: "text-ai bg-ai-soft", verb: "membuat Ringkasan Kebutuhan untuk" },
 };
 const INLINE_DETAIL = new Set(["stage", "visit_scheduled", "deal", "ai_draft", "lead_deleted"]);
 
@@ -108,45 +114,25 @@ function activityStatus(m) {
   return { dot: "bg-amber-400", text: `${idle} hari tidak aktif`, cls: "text-amber-600" };
 }
 
-const CARD = "rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-[0_14px_40px_-30px_rgba(15,23,42,.32)]";
-const TONES = {
-  orange: "bg-orange-50 text-orange-500",
-  violet: "bg-violet-50 text-violet-500",
-  emerald: "bg-emerald-50 text-emerald-600",
-  sky: "bg-sky-50 text-sky-600",
-};
+const CARD = "rounded-panel border border-slate-200/80 bg-white p-5 sm:p-6";
+const COMPACT_AT = 4;
 
 const prefersReducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 // ---------- Primitif visual (SVG sendiri) ----------
 
-function SectionHead({ icon: Icon, tone, title, sub, right }) {
-  return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div className="flex items-center gap-2.5">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-2xl ${TONES[tone]}`}><Icon size={17} /></div>
-        <div>
-          <div className="text-sm font-bold text-slate-800">{title}</div>
-          {sub && <div className="text-[10.5px] text-slate-400">{sub}</div>}
-        </div>
-      </div>
-      {right}
-    </div>
-  );
-}
-
 function Segmented({ options, value, onChange, dark }) {
   return (
-    <div className={`flex rounded-2xl border p-1 ${dark ? "border-white/10 bg-white/5" : "border-slate-200 bg-white shadow-sm"}`}>
+    <div className={`flex rounded-inner border p-1 ${dark ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}>
       {options.map(([k, l]) => (
-        <button key={k} onClick={() => onChange(k)} className={`rounded-xl px-3 py-1.5 text-[12px] font-semibold transition-colors ${value === k ? (dark ? "bg-white text-slate-950" : "bg-slate-950 text-white") : (dark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-900")}`}>{l}</button>
+        <button key={k} onClick={() => onChange(k)} className={`rounded-[9px] px-3 py-1.5 text-[12px] font-semibold transition-colors ${value === k ? (dark ? "bg-white text-slate-950" : "bg-slate-950 text-white") : (dark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-900")}`}>{l}</button>
       ))}
     </div>
   );
 }
 
 function Skeleton({ className = "" }) {
-  return <div className={`rounded-xl bg-slate-100 motion-safe:animate-pulse ${className}`} />;
+  return <div className={`rounded-inner bg-slate-100 motion-safe:animate-pulse ${className}`} />;
 }
 
 // Angka "menghitung naik" sekali tiap nilainya berubah.
@@ -169,7 +155,7 @@ function CountUp({ value, format = (v) => Math.round(v).toLocaleString("id-ID") 
   return <>{format(shown)}</>;
 }
 
-// Kurva aktivitas 7 hari (area oranye -> violet).
+// Kurva aktivitas 7 hari (oranye, isian memudar).
 function Sparkline({ values, width = 300, height = 64 }) {
   const id = useId().replace(/:/g, "");
   if (!values.length) return null;
@@ -182,12 +168,11 @@ function Sparkline({ values, width = 300, height = 64 }) {
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-16 w-full overflow-visible" preserveAspectRatio="none" aria-hidden="true">
       <defs>
-        <linearGradient id={`s${id}`} x1="0" x2="1"><stop offset="0" stopColor="#fb923c" /><stop offset="1" stopColor="#a78bfa" /></linearGradient>
-        <linearGradient id={`a${id}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f97316" stopOpacity=".35" /><stop offset="1" stopColor="#6d5dfc" stopOpacity="0" /></linearGradient>
+        <linearGradient id={`a${id}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f97316" stopOpacity=".35" /><stop offset="1" stopColor="#f97316" stopOpacity="0" /></linearGradient>
       </defs>
       <path d={area} fill={`url(#a${id})`} />
-      <path d={line} fill="none" stroke={`url(#s${id})`} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      <circle cx={last[0]} cy={last[1]} r="4" fill="#a78bfa" stroke="#0b1020" strokeWidth="2" />
+      <path d={line} fill="none" stroke="#fb923c" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      <circle cx={last[0]} cy={last[1]} r="4" fill="#fb923c" stroke="#0b1020" strokeWidth="2" />
     </svg>
   );
 }
@@ -202,7 +187,7 @@ function Ring({ pct, size = 46 }) {
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth="5" />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f97316" strokeWidth="5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - p / 100)} className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700" />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black tabular-nums text-slate-800">{p}</div>
+      <div className={`absolute inset-0 flex items-center justify-center font-display font-bold tabular-nums text-slate-800 ${size < 40 ? "text-[10px]" : "text-[11px]"}`}>{p}</div>
     </div>
   );
 }
@@ -217,7 +202,7 @@ function Gauge({ pct, forecastPct }) {
       <path d={arc} fill="none" stroke="#f1f5f9" strokeWidth="10" strokeLinecap="round" />
       <path d={arc} fill="none" stroke="#fed7aa" strokeWidth="10" strokeLinecap="round" strokeDasharray={len} strokeDashoffset={len * (1 - clamp(forecastPct) / 100)} />
       <path d={arc} fill="none" stroke="#f97316" strokeWidth="10" strokeLinecap="round" strokeDasharray={len} strokeDashoffset={len * (1 - clamp(pct) / 100)} className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700" />
-      <text x="60" y="56" textAnchor="middle" className="fill-slate-900" style={{ fontSize: 20, fontWeight: 900 }}>{Math.max(0, pct || 0)}%</text>
+      <text x="60" y="56" textAnchor="middle" className="fill-slate-900" style={{ fontSize: 20, fontWeight: 700, fontFamily: "Sora, sans-serif" }}>{Math.max(0, pct || 0)}%</text>
     </svg>
   );
 }
@@ -248,10 +233,10 @@ function DayBars({ days, selected, onSelect }) {
         const active = d.day === selected;
         const h = d.count > 0 ? Math.max(10, Math.round((d.count / max) * 100)) : 4;
         return (
-          <button key={d.day} onClick={() => onSelect(d.day)} className={`group flex flex-col items-center rounded-2xl px-1 pb-2 pt-2 transition-colors ${active ? "bg-slate-950" : "hover:bg-slate-50"}`} aria-pressed={active}>
+          <button key={d.day} onClick={() => onSelect(d.day)} className={`group flex flex-col items-center rounded-inner px-1 pb-2 pt-2 transition-colors ${active ? "bg-slate-950" : "hover:bg-slate-50"}`} aria-pressed={active}>
             <span className={`text-[11px] font-bold tabular-nums ${active ? "text-orange-300" : d.count ? "text-slate-700" : "text-slate-300"}`}>{d.count}</span>
             <div className="mt-1 flex h-20 w-full items-end justify-center">
-              <div className={`w-3/5 max-w-[26px] rounded-t-lg motion-safe:transition-all motion-safe:duration-500 ${active ? "bg-gradient-to-t from-orange-500 to-violet-400" : d.count ? "bg-orange-200 group-hover:bg-orange-300" : "bg-slate-100"}`} style={{ height: `${h}%` }} />
+              <div className={`w-3/5 max-w-[26px] rounded-t-lg motion-safe:transition-all motion-safe:duration-500 ${active ? "bg-brand" : d.count ? "bg-brand-line group-hover:bg-orange-300" : "bg-slate-100"}`} style={{ height: `${h}%` }} />
             </div>
             <span className={"mt-1.5 text-[10px] text-slate-400"}>{d.day === t ? "Hari ini" : HARI[dt.getUTCDay()]}</span>
             <span className={`text-[13px] font-bold leading-tight ${active ? "text-white" : "text-slate-700"}`}>{dt.getUTCDate()}</span>
@@ -328,37 +313,38 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[.18em] text-orange-500">Khusus owner & manager</div>
-          <h1 className="mt-1 text-[26px] font-black leading-none tracking-[-0.04em] text-slate-900">Team</h1>
+          <h1 className="mt-1 text-[28px] font-bold leading-none tracking-[-0.04em] text-ink">Team</h1>
         </div>
         <div className="flex items-center gap-2">
           <Segmented options={RANGES.map((r) => [r.key, r.label])} value={range} onChange={setRange} />
-          <button onClick={load} disabled={loading} className="rounded-2xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm hover:text-slate-900 disabled:opacity-50" title="Muat ulang" aria-label="Muat ulang">
+          <button onClick={load} disabled={loading} className="rounded-inner border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-slate-900 disabled:opacity-50" title="Muat ulang" aria-label="Muat ulang">
             <RefreshCw size={14} className={loading ? "motion-safe:animate-spin" : ""} />
           </button>
         </div>
       </div>
 
-      {err && <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{err}</div>}
+      {err && <div className="rounded-inner bg-rose-50 px-4 py-3 text-sm text-rose-700">{err}</div>}
 
       {/* DENYUT TEAM - satu-satunya kartu gelap di tab ini. */}
-      <section className="overflow-hidden rounded-[28px] border border-slate-800 bg-slate-950 text-white shadow-[0_24px_60px_-34px_rgba(15,23,42,.8)]">
-        <div className="grid gap-6 p-6 lg:grid-cols-[1.4fr_1fr] bg-[radial-gradient(circle_at_12%_0%,rgba(249,115,22,.24),transparent_38%),radial-gradient(circle_at_95%_100%,rgba(109,93,252,.32),transparent_42%)]">
+      <section className="overflow-hidden rounded-panel border border-slate-800 bg-slate-950 text-white">
+        <div className="grid gap-6 p-6 lg:grid-cols-[1.4fr_1fr] bg-[radial-gradient(circle_at_10%_0%,rgba(249,115,22,.22),transparent_42%)]">
           <div className="min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-[.18em] text-orange-300">Denyut team · {rangeLabel}</div>
+            <h2 className="text-[15px] font-bold tracking-[-0.02em]">Denyut team</h2>
+            <p className="mt-0.5 text-[11.5px] text-slate-400">{rangeLabel}</p>
             {loading && !data ? (
               <div className="mt-4 grid grid-cols-3 gap-4">{[0, 1, 2].map((i) => <div key={i} className="h-12 rounded-xl bg-white/10 motion-safe:animate-pulse" />)}</div>
             ) : (
               <div className="mt-4 grid grid-cols-3 gap-4">
                 <div>
-                  <div className="text-[26px] font-black leading-none tracking-[-0.04em] tabular-nums"><CountUp value={dealValue} format={fmtJt} /></div>
+                  <div className="text-[26px] font-display font-bold leading-none tracking-[-0.04em] tabular-nums"><CountUp value={dealValue} format={fmtJt} /></div>
                   <div className="mt-1.5 text-[11px] text-slate-400">Deal masuk</div>
                 </div>
                 <div>
-                  <div className="text-[26px] font-black leading-none tracking-[-0.04em] tabular-nums"><CountUp value={activeCount} /><span className="text-slate-500">/{members.length}</span></div>
+                  <div className="text-[26px] font-display font-bold leading-none tracking-[-0.04em] tabular-nums"><CountUp value={activeCount} /><span className="text-slate-500">/{members.length}</span></div>
                   <div className="mt-1.5 text-[11px] text-slate-400">Anggota aktif</div>
                 </div>
                 <div>
-                  <div className="text-[26px] font-black leading-none tracking-[-0.04em] tabular-nums text-emerald-300"><CountUp value={remaining} format={fmtJt} /></div>
+                  <div className="text-[26px] font-display font-bold leading-none tracking-[-0.04em] tabular-nums text-emerald-300"><CountUp value={remaining} format={fmtJt} /></div>
                   <div className="mt-1.5 text-[11px] text-slate-400">Belum masuk dari {running.length} proyek</div>
                 </div>
               </div>
@@ -374,7 +360,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-inner border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center gap-2 text-[12px] font-semibold text-white">
               {attention.length ? <AlertTriangle size={14} className="text-amber-300" /> : <CheckCircle2 size={14} className="text-emerald-300" />}
               {attention.length ? `Perlu perhatian (${attention.length})` : "Semua aman"}
@@ -385,7 +371,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
               <ul className="mt-3 space-y-2">
                 {attention.slice(0, 5).map((a) => (
                   <li key={a.key}>
-                    <button onClick={() => a.leadId && openLeadById(a.leadId)} className={`w-full rounded-xl px-3 py-2 text-left text-[11.5px] ring-1 transition-colors ${ATT_TONE[a.tone]} ${a.leadId ? "hover:bg-white/10" : "cursor-default"}`}>
+                    <button onClick={() => a.leadId && openLeadById(a.leadId)} className={`w-full rounded-[10px] px-3 py-2 text-left text-[11.5px] ring-1 transition-colors ${ATT_TONE[a.tone]} ${a.leadId ? "hover:bg-white/10" : "cursor-default"}`}>
                       <b className="text-white">{a.title}</b> <span>{a.text}</span>
                     </button>
                   </li>
@@ -397,40 +383,42 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
         {/* REKAP AKTIVITAS */}
         <section className={CARD}>
-          <SectionHead icon={Activity} tone="orange" title="Rekap Aktivitas" sub={`${rangeLabel} · cincin = skor aktivitas dibandingkan anggota lain`} />
+          <PanelHeader className="mb-5" title="Rekap aktivitas" meta={`${rangeLabel} · cincin = skor aktivitas dibandingkan anggota lain`} />
           {loading && !data ? (
-            <div className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-[118px] rounded-2xl" />)}</div>
+            <div className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-[92px]" />)}</div>
+          ) : members.length > COMPACT_AT ? (
+            <MemberTable members={members} maxOf={maxOf} totalOf={totalOf} maxTotal={maxTotal} />
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-slate-100">
               {members.map((m) => {
                 const st = activityStatus(m);
                 const score = Math.round((totalOf(m) / maxTotal) * 100);
                 return (
-                  <div key={m.user_id} className="rounded-2xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/80 p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-[0_12px_30px_-20px_rgba(249,115,22,.55)] motion-reduce:transform-none">
+                  <div key={m.user_id} className="py-4 first:pt-0">
                     <div className="flex items-center gap-3">
                       <div className="relative shrink-0">
                         <div className={`flex h-10 w-10 items-center justify-center rounded-full text-[12px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
                         <span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${st.dot}`} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[13.5px] font-bold text-slate-900">{m.name}</div>
-                        <div className="text-[10.5px] text-slate-400">{ROLE_LABEL[m.role] || m.role} · <span className={`font-semibold ${st.cls}`}>{st.text}</span></div>
+                        <div className="truncate text-[13.5px] font-bold text-ink">{m.name}</div>
+                        <div className="text-[11px] text-slate-400">{ROLE_LABEL[m.role] || m.role} · <span className={`font-semibold ${st.cls}`}>{st.text}</span></div>
                       </div>
                       <Ring pct={score} />
                     </div>
-                    <div className="mt-3 grid grid-cols-5 gap-2">
+                    <div className="mt-3 grid grid-cols-5 gap-3">
                       {COLS.map((c) => {
                         const v = Number(m[c.key]) || 0;
                         return (
                           <div key={c.key} className="min-w-0">
-                            <div className={`text-[17px] font-black leading-none tabular-nums ${v > 0 ? "text-slate-900" : "text-slate-300"}`}>{v}</div>
-                            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200/70">
-                              <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-orange-500 motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${Math.round((v / maxOf[c.key]) * 100)}%` }} />
+                            <div className={`font-display text-[17px] font-bold leading-none tabular-nums ${v > 0 ? "text-ink" : "text-slate-300"}`}>{v}</div>
+                            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">
+                              <div className="h-full rounded-full bg-brand motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${Math.round((v / maxOf[c.key]) * 100)}%` }} />
                             </div>
-                            <div className="mt-1 truncate text-[10px] text-slate-500">{c.label}</div>
+                            <div className="mt-1 truncate text-[10.5px] text-slate-500">{c.label}</div>
                           </div>
                         );
                       })}
@@ -438,9 +426,9 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
                   </div>
                 );
               })}
-              <p className="text-[10.5px] text-slate-400">"Pindah tahap" & "Deal" dihitung dari perubahan tahap lead yang tercatat sejak 30 Sep 2026.</p>
             </div>
           )}
+          <p className="mt-3 text-[11px] text-slate-400">"Pindah tahap" & "Deal" dihitung dari perubahan tahap lead yang tercatat sejak 30 Sep 2026.</p>
         </section>
 
         <TargetsCard api={api} members={members} reloadKey={reloadKey} />
@@ -451,6 +439,53 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />
+    </div>
+  );
+}
+
+// Rekap ringkas (> COMPACT_AT anggota): satu baris per orang, urut dari yang
+// paling aktif. Angka tertinggi tiap kolom ditebalkan.
+function MemberTable({ members, maxOf, totalOf, maxTotal }) {
+  const sorted = [...members].sort((a, b) => totalOf(b) - totalOf(a));
+  return (
+    <div className="-mx-1 overflow-x-auto">
+      <table className="w-full min-w-[560px] text-[12.5px]">
+        <thead>
+          <tr className="border-b border-slate-100 text-left text-[11px] text-slate-400">
+            <th className="py-2 pl-1 pr-3 font-semibold">Anggota</th>
+            {COLS.map((c) => <th key={c.key} className="px-2 py-2 text-right font-semibold">{c.label}</th>)}
+            <th className="py-2 pl-2 pr-1 text-right font-semibold">Skor</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {sorted.map((m) => {
+            const st = activityStatus(m);
+            const score = Math.round((totalOf(m) / maxTotal) * 100);
+            return (
+              <tr key={m.user_id}>
+                <td className="py-2.5 pl-1 pr-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative shrink-0">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full text-[10.5px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
+                      <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${st.dot}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold text-ink">{m.name}</div>
+                      <div className={`truncate text-[11px] ${st.cls}`}>{st.text}</div>
+                    </div>
+                  </div>
+                </td>
+                {COLS.map((c) => {
+                  const v = Number(m[c.key]) || 0;
+                  const top = v > 0 && v === maxOf[c.key];
+                  return <td key={c.key} className={`px-2 py-2.5 text-right tabular-nums ${v === 0 ? "text-slate-300" : top ? "font-bold text-ink" : "text-slate-700"}`}>{v}</td>;
+                })}
+                <td className="py-2.5 pl-2 pr-1"><div className="flex justify-end"><Ring pct={score} size={34} /></div></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -479,8 +514,8 @@ function ActivityTimeline({ api, nameOf, days, daysLoaded, reloadKey }) {
 
   return (
     <section className={CARD}>
-      <SectionHead icon={CalendarDays} tone="sky" title="Aktivitas 7 Hari Terakhir" sub="Klik batang untuk melihat aktivitas pada tanggal tersebut" />
-      {!daysLoaded ? <Skeleton className="h-36 rounded-2xl" /> : days.length === 0 ? <p className="text-[12px] text-slate-500">Timeline belum dapat dimuat. Klik tombol muat ulang di kanan atas.</p> : <DayBars days={days} selected={selected} onSelect={setSelected} />}
+      <PanelHeader className="mb-5" title="Aktivitas 7 hari terakhir" meta="Klik batang untuk melihat aktivitas pada tanggal tersebut" />
+      {!daysLoaded ? <Skeleton className="h-36" /> : days.length === 0 ? <p className="text-[12px] text-slate-500">Timeline belum dapat dimuat. Klik tombol muat ulang di kanan atas.</p> : <DayBars days={days} selected={selected} onSelect={setSelected} />}
 
       {selected && (<>
       <div className="mb-3 mt-5 flex items-baseline justify-between gap-2 border-t border-slate-100 pt-4">
@@ -568,49 +603,84 @@ function TargetsCard({ api, members, reloadKey }) {
   const monthLabel = new Date(month + "T00:00:00Z").toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" });
   const noValue = (rows || []).reduce((s, r) => s + (r.open_without_value || 0), 0);
 
+  const calc = (m) => {
+    const r = byId[m.user_id] || { target: 0, achieved: 0, forecast: 0, pipeline: 0 };
+    const pct = r.target > 0 ? Math.round((r.achieved / r.target) * 100) : 0;
+    const projected = r.target > 0 ? Math.round(((Number(r.achieved) + Number(r.forecast)) / r.target) * 100) : 0;
+    return { r, pct, projected };
+  };
+
+  // Angka "tercapai / target" yang bisa diklik buat ubah target.
+  const editor = (m, r, compact) => editing === m.user_id ? (
+    <div className={`mt-1 flex w-full gap-1.5 ${compact ? "flex-row" : "flex-col"}`}>
+      <input autoFocus inputMode="numeric" aria-label={`Target ${m.name}`} className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-1 text-[12px]" placeholder="Target (Rp)" value={input}
+        onChange={(e) => setInput(e.target.value.replace(/[^\d]/g, "") ? Number(e.target.value.replace(/[^\d]/g, "")).toLocaleString("id-ID") : "")}
+        onKeyDown={(e) => { if (e.key === "Enter") save(m.user_id); if (e.key === "Escape") setEditing(null); }} />
+      <div className="flex shrink-0 gap-1.5">
+        <button disabled={busy} onClick={() => save(m.user_id)} className="flex-1 rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-50">Simpan</button>
+        <button onClick={() => setEditing(null)} className="flex-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] text-slate-500">Batal</button>
+      </div>
+    </div>
+  ) : (
+    <button onClick={() => { setEditing(m.user_id); setInput(r.target ? Number(r.target).toLocaleString("id-ID") : ""); }} className={`${compact ? "text-[11px]" : "mt-0.5 text-[12px]"} tabular-nums text-slate-600 hover:text-brand-strong`}>
+      <b className="text-ink">{fmtJt(r.achieved)}</b> / {r.target > 0 ? fmtJt(r.target) : <span className="underline decoration-dotted">set target</span>}
+    </button>
+  );
+
   return (
     <section className={CARD}>
-      <SectionHead icon={Target} tone="violet" title="Target & Forecast" sub={`${monthLabel} · klik angka target untuk mengubah`}
+      <PanelHeader className="mb-5" title="Target & forecast" meta={`${monthLabel} · klik angka target untuk mengubah`}
         right={<Segmented options={[[monthStartIso(0), "Bulan ini"], [monthStartIso(1), "Bulan depan"]]} value={month} onChange={setMonth} />} />
       {rows === null ? (
-        <div className="grid grid-cols-2 gap-4">{[0, 1].map((i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div>
+        <div className="grid grid-cols-2 gap-4">{[0, 1].map((i) => <Skeleton key={i} className="h-40" />)}</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3">
-            {members.map((m) => {
-              const r = byId[m.user_id] || { target: 0, achieved: 0, forecast: 0, pipeline: 0 };
-              const pct = r.target > 0 ? Math.round((r.achieved / r.target) * 100) : 0;
-              const projected = r.target > 0 ? Math.round(((Number(r.achieved) + Number(r.forecast)) / r.target) * 100) : 0;
-              return (
-                <div key={m.user_id} className="flex flex-col items-center rounded-2xl border border-slate-100 bg-gradient-to-b from-white to-violet-50/40 p-3 text-center">
-                  <div className="flex w-full items-center gap-2">
-                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
-                    <div className="min-w-0 truncate text-left text-[12px] font-bold text-slate-800">{m.name}</div>
-                  </div>
-                  {r.target > 0 ? <Gauge pct={pct} forecastPct={projected} /> : <div className="flex h-[70px] items-center text-[11px] text-slate-400">Belum ada target</div>}
-                  {editing === m.user_id ? (
-                    <div className="mt-1 flex w-full flex-col gap-1.5">
-                      <input autoFocus inputMode="numeric" className="w-full rounded-lg border border-slate-300 px-2 py-1 text-[12px]" placeholder="Target (Rp)" value={input}
-                        onChange={(e) => setInput(e.target.value.replace(/[^\d]/g, "") ? Number(e.target.value.replace(/[^\d]/g, "")).toLocaleString("id-ID") : "")}
-                        onKeyDown={(e) => { if (e.key === "Enter") save(m.user_id); if (e.key === "Escape") setEditing(null); }} />
-                      <div className="flex gap-1.5">
-                        <button disabled={busy} onClick={() => save(m.user_id)} className="flex-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50">Simpan</button>
-                        <button onClick={() => setEditing(null)} className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] text-slate-500">Batal</button>
-                      </div>
+          {members.length > COMPACT_AT ? (
+            // Daftar ringkas (> COMPACT_AT anggota): satu baris per sales,
+            // diurutkan dari persen tercapai tertinggi.
+            <ul className="divide-y divide-slate-100">
+              {[...members]
+                .map((m) => ({ m, ...calc(m) }))
+                .sort((a, b) => b.pct - a.pct)
+                .map(({ m, r, pct, projected }) => (
+                  <li key={m.user_id} className="py-2.5 first:pt-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
+                      <div className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-slate-800">{m.name}</div>
+                      <span className="font-display text-[13px] font-bold tabular-nums text-ink">{r.target > 0 ? `${pct}%` : "-"}</span>
                     </div>
-                  ) : (
-                    <button onClick={() => { setEditing(m.user_id); setInput(r.target ? Number(r.target).toLocaleString("id-ID") : ""); }} className="mt-0.5 text-[12px] tabular-nums text-slate-600 hover:text-violet-600">
-                      <b className="text-slate-900">{fmtJt(r.achieved)}</b> / {r.target > 0 ? fmtJt(r.target) : <span className="underline decoration-dotted">set target</span>}
-                    </button>
-                  )}
-                  <div className="mt-1 text-[10.5px] tabular-nums text-slate-400">Forecast {fmtJt(r.forecast)}</div>
-                </div>
-              );
-            })}
-          </div>
+                    <div className="relative mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="absolute inset-y-0 left-0 rounded-full bg-brand-line" style={{ width: `${Math.min(100, projected)}%` }} />
+                      <div className="absolute inset-y-0 left-0 rounded-full bg-brand motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${Math.min(100, pct)}%` }} />
+                    </div>
+                    <div className="mt-1 flex items-start justify-between gap-2 text-[11px] tabular-nums text-slate-500">
+                      <div className="min-w-0 flex-1">{editor(m, r, true)}</div>
+                      <span className="shrink-0">Forecast {fmtJt(r.forecast)}</span>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {members.map((m) => {
+                const { r, pct, projected } = calc(m);
+                return (
+                  <div key={m.user_id} className="flex flex-col items-center rounded-inner border border-slate-100 p-3 text-center">
+                    <div className="flex w-full items-center gap-2">
+                      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
+                      <div className="min-w-0 truncate text-left text-[12px] font-bold text-slate-800">{m.name}</div>
+                    </div>
+                    {r.target > 0 ? <Gauge pct={pct} forecastPct={projected} /> : <div className="flex h-[70px] items-center text-[11px] text-slate-400">Belum ada target</div>}
+                    {editor(m, r, false)}
+                    <div className="mt-1 text-[11px] tabular-nums text-slate-400">Forecast {fmtJt(r.forecast)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] text-slate-500">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-orange-500" />Tercapai</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-orange-200" />Jika forecast closing</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-brand" />Tercapai</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-full bg-brand-line" />Jika forecast closing</span>
           </div>
           {noValue > 0 && <p className="mt-2 text-[10.5px] text-slate-400">{noValue} lead aktif belum memiliki nilai proyek - lengkapi di detail lead agar forecast akurat.</p>}
         </>
@@ -639,19 +709,19 @@ function PaymentsCard({ nameOf, rows, loading, onOpenLead }) {
 
   return (
     <section className={CARD}>
-      <SectionHead icon={Wallet} tone="emerald" title="Kontrak & Pembayaran" sub="Booking → Revenue → Cash In · dari termin di tiap lead"
+      <PanelHeader className="mb-5" title="Kontrak & pembayaran" meta="Booking → Revenue → Cash In · dari termin di tiap lead"
         right={<Segmented options={[["running", `Berjalan (${running.length})`], ["done", `Selesai (${done.length})`]]} value={view} onChange={setView} />} />
 
       {loading ? (
-        <div className="space-y-3"><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div><Skeleton className="h-3" /></div>
+        <div className="space-y-3"><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}</div><Skeleton className="h-3" /></div>
       ) : rows.length === 0 ? (
         <p className="text-[12px] text-slate-500">Belum ada kontrak. Buka detail lead yang sudah deal, isi <b>Nilai proyek</b>, lalu catat termin pembayarannya di bagian <b>Kontrak & Termin Pembayaran</b>.</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-inner border border-slate-100 bg-slate-100 sm:grid-cols-4">
             {tiles.map((t) => (
-              <div key={t.label} className="rounded-2xl border border-slate-100 bg-slate-50/70 px-3.5 py-3">
-                <div className={`text-[16px] font-black tabular-nums ${t.cls}`}><CountUp value={t.value} format={fmtJt} /></div>
+              <div key={t.label} className="bg-white px-4 py-3">
+                <div className={`font-display text-[17px] font-bold tabular-nums ${t.cls}`}>{fmtJt(t.value)}</div>
                 <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-600"><span className={`h-2 w-2 rounded-full ${t.dot}`} />{t.label}</div>
                 <div className="text-[10px] leading-snug text-slate-400">{t.hint}</div>
               </div>
@@ -659,10 +729,10 @@ function PaymentsCard({ nameOf, rows, loading, onOpenLead }) {
           </div>
 
           {contract > 0 && (
-            <div className="mt-5 rounded-2xl bg-slate-50/70 p-4">
+            <div className="mt-5 border-t border-slate-100 pt-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2 text-[12px] text-slate-600">
                 <span><b className="text-emerald-700">{fmtJt(paid)}</b> dari {fmtJt(contract)} sudah masuk</span>
-                <span className="text-[18px] font-black tabular-nums text-slate-900">{pctIn}%</span>
+                <span className="text-[18px] font-display font-bold tabular-nums text-slate-900">{pctIn}%</span>
               </div>
               <StackBar contract={contract} invoiced={invoiced} paid={paid} overdue={overdue} className="mt-2 h-3.5" />
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] text-slate-500">
@@ -680,7 +750,7 @@ function PaymentsCard({ nameOf, rows, loading, onOpenLead }) {
             ) : (
               <table className="w-full min-w-[640px] text-[12.5px]">
                 <thead>
-                  <tr className="border-b border-slate-100 text-left text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">
+                  <tr className="border-b border-slate-100 text-left text-[11px] font-semibold text-slate-400">
                     <th className="py-2 pr-3 font-semibold">Proyek</th>
                     <th className="px-2 py-2 text-right font-semibold">Nilai kontrak</th>
                     <th className="px-2 py-2 text-right font-semibold">Sudah masuk</th>
