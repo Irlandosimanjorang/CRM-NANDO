@@ -90,7 +90,7 @@ const ADMIN_NAV_ITEM = { key: "adminops", label: "Command Center", short: "AI Op
 // Tab "Tim" (30 Sep 2026) - cuma nempel buat owner/manager org Enterprise,
 // disisipin setelah "Visit & Follow-up". Rekap aktivitas-nya dijaga ulang di
 // RPC get_team_activity (server nolak selain owner/manager Enterprise).
-const TEAM_NAV_ITEM = { key: "team", label: "Tim", short: "Tim", icon: UserCheck };
+const TEAM_NAV_ITEM = { key: "team", label: "Team", short: "Team", icon: UserCheck };
 
 // ---- COST/BUG FIX (5 Sep 2026) ----
 // SEMUA tab sekarang selalu di-mount (gak pernah di-unmount pas pindah tab),

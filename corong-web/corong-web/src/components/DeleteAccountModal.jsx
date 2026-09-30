@@ -49,7 +49,7 @@ export default function DeleteAccountModal({ isOwner, otherMemberCount, orgName,
 
         {blockedByOtherMembers ? (
           <div className="text-sm text-slate-600 bg-amber-50 border border-amber-200 rounded-2xl p-3.5">
-            Kamu owner tim <b>{orgName || "ini"}</b> yang masih punya <b>{otherMemberCount} anggota lain</b>. Keluarin dulu semua anggota lain (tab Pengaturan &rarr; Tim) sebelum bisa hapus akun - biar mereka gak kehilangan akses tiba-tiba tanpa sepengetahuan mereka.
+            Kamu owner team <b>{orgName || "ini"}</b> yang masih punya <b>{otherMemberCount} anggota lain</b>. Keluarin dulu semua anggota lain (tab Pengaturan &rarr; Team) sebelum bisa hapus akun - biar mereka gak kehilangan akses tiba-tiba tanpa sepengetahuan mereka.
           </div>
         ) : isOwner ? (
           <>
@@ -68,7 +68,7 @@ export default function DeleteAccountModal({ isOwner, otherMemberCount, orgName,
           </>
         ) : (
           <p className="text-sm text-slate-600 mb-1">
-            Kamu bakal keluar dari tim <b>{orgName || "ini"}</b> dan akunmu dihapus permanen. Data tim (leads, dst) <b>TIDAK ikut terhapus</b> - anggota lain tetep bisa akses seperti biasa.
+            Kamu bakal keluar dari team <b>{orgName || "ini"}</b> dan akunmu dihapus permanen. Data team (leads, dst) <b>TIDAK ikut terhapus</b> - anggota lain tetep bisa akses seperti biasa.
           </p>
         )}
 

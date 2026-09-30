@@ -529,7 +529,7 @@ function GpsCheckinLocked() {
       <span className="w-8 h-8 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
       <div className="text-sm">
         <div className="font-medium text-violet-900">GPS Check-in itu fitur Enterprise</div>
-        <div className="text-xs text-violet-700 mt-0.5">Buat tracking kunjungan tim sales secara real-time. Upgrade ke Enterprise buat pake fitur ini.</div>
+        <div className="text-xs text-violet-700 mt-0.5">Buat tracking kunjungan team sales secara real-time. Upgrade ke Enterprise buat pake fitur ini.</div>
       </div>
     </div>
   );

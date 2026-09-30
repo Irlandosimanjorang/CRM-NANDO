@@ -50,7 +50,7 @@ function useSecurityPoints(tr) {
     { icon: Lock, text: tr("API key terpisah dari password login Anda - Grok Bot gak pernah tau password Anda.", "The API key is separate from your login password - Grok Bot never knows your password.") },
     { icon: ShieldCheck, text: tr("Setiap key discope ke akun Anda sendiri - gak bisa nyentuh data organisasi lain.", "Every key is scoped to your own account - it can never touch another organization's data.") },
     { icon: Check, text: tr("Bisa dicabut kapan aja dari Pengaturan - Grok Bot langsung kehilangan akses saat itu juga.", "Revoke it anytime from Settings - Grok Bot loses access instantly.") },
-    { icon: ListChecks, text: tr("Cuma 7 aksi spesifik yang di-expose - gak ada akses generik ke billing atau anggota tim.", "Only 7 specific actions are exposed - no generic access to billing or team members.") },
+    { icon: ListChecks, text: tr("Cuma 7 aksi spesifik yang di-expose - gak ada akses generik ke billing atau anggota team.", "Only 7 specific actions are exposed - no generic access to billing or team members.") },
   ];
 }
 

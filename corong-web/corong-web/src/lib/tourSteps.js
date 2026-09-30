@@ -33,10 +33,10 @@ export function buildTourSteps({ myLevel, isEnterprise, previousLevel }) {
   // di atas file ini) - Assign Leads ke tab Leads, GPS Check-in ke Visit &
   // Follow-up, Kelola Tim ke Settings, Komisi Tim ke Deal.
   const ENTERPRISE_EXTRA = {
-    leads: " Enterprise: Assign & filter leads per anggota tim, plus approval-gate buat hapus lead & export data.",
-    visitfollowup: " Enterprise: GPS Check-in - tracking kunjungan tim secara real-time.",
-    settings: " Enterprise: kelola Tim, undang anggota via kode invite, & atur role (Owner/Manager/Sales Rep).",
-    deal: " Enterprise: Sistem Komisi Tim (atur % per anggota, otomatis dihitung) & Laporan Performa Tim.",
+    leads: " Enterprise: Assign & filter leads per anggota team, plus approval-gate buat hapus lead & export data.",
+    visitfollowup: " Enterprise: GPS Check-in - tracking kunjungan team secara real-time.",
+    settings: " Enterprise: kelola Team, undang anggota via kode invite, & atur role (Owner/Manager/Sales Rep).",
+    deal: " Enterprise: Sistem Komisi Team (atur % per anggota, otomatis dihitung) & Laporan Performa Team.",
   };
   return TOUR_STEPS
     .filter((s) => s.minLevel <= myLevel)

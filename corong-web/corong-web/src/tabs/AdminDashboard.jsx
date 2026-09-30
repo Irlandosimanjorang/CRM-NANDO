@@ -354,7 +354,7 @@ function ContentDraftsPanel({ drafts, onReviewed }) {
 
 const TIER_LABEL = { standard: "Standard", professional: "Professional", enterprise: "Enterprise", internal: "Internal" };
 const WINDOW_LABEL = { day: "hari", month: "bulan", week: "minggu", none: "" };
-const SCOPE_LABEL = { user: "akun", org: "tim", platform: "platform" };
+const SCOPE_LABEL = { user: "akun", org: "team", platform: "platform" };
 const USAGE_STATUS_STYLE = {
   ok: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
   warning: "bg-amber-500/15 text-amber-300 border-amber-500/30",
@@ -418,7 +418,7 @@ function AiAccountsUsagePanel({ features, accounts }) {
   const [openKey, setOpenKey] = useState(null);
   const meteredFeatures = features.filter((f) => f.metered);
   if (!accounts || accounts.length === 0) {
-    return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun tim (organization_members kosong).</div>;
+    return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun team (organization_members kosong).</div>;
   }
   // Kolom "Akun" dibuat STICKY (nempel di kiri pas di-scroll horizontal) -
   // sebelumnya kalau tabelnya lebih lebar dari panel (makin banyak fitur AI
@@ -433,7 +433,7 @@ function AiAccountsUsagePanel({ features, accounts }) {
   })).filter((sec) => sec.accounts.length > 0);
 
   if (sections.length === 0) {
-    return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun berbayar (semua akun tim masih Free).</div>;
+    return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun berbayar (semua akun team masih Free).</div>;
   }
 
   return (

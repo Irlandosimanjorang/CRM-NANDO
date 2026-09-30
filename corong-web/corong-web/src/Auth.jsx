@@ -398,7 +398,7 @@ const SECURITY_FEATURES = [
     icon: Radar,
     title: { id: "Dipantau AI 24 Jam", en: "Monitored by AI 24/7" },
     desc: {
-      id: "Sistem internal kami ngecek kesehatan & keamanan platform tiap beberapa jam sepanjang hari, dan langsung notif tim kami kalau ada yang janggal — bukan nunggu ada yang lapor duluan.",
+      id: "Sistem internal kami ngecek kesehatan & keamanan platform tiap beberapa jam sepanjang hari, dan langsung notif team kami kalau ada yang janggal — bukan nunggu ada yang lapor duluan.",
       en: "Our internal system checks the platform's health & security every few hours around the clock, and instantly alerts our team if anything looks off — not waiting for someone to report it.",
     },
   },
@@ -489,15 +489,15 @@ export const PROFESSIONAL_FEATURES = [
 
 export const ENTERPRISE_FEATURES = [
   { id: "Semua fitur Professional", en: "Everything in Professional" },
-  { id: "GPS Check-in (tracking kunjungan tim real-time)", en: "GPS Check-in (real-time team visit tracking)" },
+  { id: "GPS Check-in (tracking kunjungan team real-time)", en: "GPS Check-in (real-time team visit tracking)" },
   { id: "Ringkasan Kebutuhan Klien (AI simpulin kebutuhan prospek dari notulen), 15x/bulan", en: "Client Needs Summary (AI distills prospect needs from meeting notes), 15x/month" },
   { id: "Katalog Produk & Layanan - AI rekomendasiin produk yang cocok buat tiap prospek", en: "Product & Service Catalog - AI recommends the right product for each prospect" },
-  { id: "4 anggota tim dalam satu organisasi", en: "4 team members in one organization" },
+  { id: "4 anggota team dalam satu organisasi", en: "4 team members in one organization" },
   { id: "Role-based visibility (Owner/Manager/Sales Rep)", en: "Role-based visibility (Owner/Manager/Sales Rep)" },
-  { id: "Assign & filter leads per anggota tim", en: "Assign & filter leads per team member" },
-  { id: "Tab Tim: rekap aktivitas tiap sales (kunjungan, notulen, pindah tahap) + leaderboard revenue & win rate", en: "Team tab: per-rep activity recap (visits, notes, stage moves) + revenue & win-rate leaderboard" },
-  { id: "Sistem Komisi Tim (atur % per anggota, otomatis dihitung)", en: "Team Commission System (set % per member, calculated automatically)" },
-  { id: "Undang anggota tim via kode invite", en: "Invite team members via invite code" },
+  { id: "Assign & filter leads per anggota team", en: "Assign & filter leads per team member" },
+  { id: "Tab Team: rekap aktivitas tiap sales (kunjungan, notulen, pindah tahap) + leaderboard revenue & win rate", en: "Team tab: per-rep activity recap (visits, notes, stage moves) + revenue & win-rate leaderboard" },
+  { id: "Sistem Komisi Team (atur % per anggota, otomatis dihitung)", en: "Team Commission System (set % per member, calculated automatically)" },
+  { id: "Undang anggota team via kode invite", en: "Invite team members via invite code" },
   { id: "Approval-gate: hapus lead & export data butuh persetujuan owner/manager", en: "Approval gate: deleting leads & exporting data needs owner/manager sign-off" },
   { id: "Prioritas support", en: "Priority support" },
 ];
@@ -3158,7 +3158,7 @@ export default function Auth() {
                 </div>
 
                 <div className="relative mt-1 text-[10px] text-slate-400">
-                  {tr("AI Sales Engine penuh — solo, tapi kerja kayak ada tim", "Full AI Sales Engine — solo, but working like you have a team")}
+                  {tr("AI Sales Engine penuh — solo, tapi kerja kayak ada team", "Full AI Sales Engine — solo, but working like you have a team")}
                 </div>
                 <div className="relative mt-1 text-[10px] text-orange-300/70">
                   {tr("Makin lama dipakai, makin ngerti pola closing bisnis Anda", "The longer you use it, the better it understands your business's closing patterns")}
@@ -3202,7 +3202,7 @@ export default function Auth() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
                       <span className="relative inline-flex h-full w-full rounded-full bg-violet-400" />
                     </span>
-                    {tr("AI Engine + Tim", "AI Engine + Team")}
+                    {tr("AI Engine + Team", "AI Engine + Team")}
                   </div>
 
                   <div className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300">
@@ -3223,7 +3223,7 @@ export default function Auth() {
 
                   <div className="mt-1 text-[10px] text-slate-400">
                     {tr(
-                      <>Untuk 4 orang (≈{PRICING.enterprise.perPerson}/orang) — tim sales dengan visibilitas penuh</>,
+                      <>Untuk 4 orang (≈{PRICING.enterprise.perPerson}/orang) — team sales dengan visibilitas penuh</>,
                       <>For 4 people (≈{PRICING.enterprise.perPerson}/person) — a sales team with full visibility</>
                     )}
                   </div>
@@ -3237,10 +3237,10 @@ export default function Auth() {
                       nyala (amber kesannya "warning", ketauan kurang pas
                       buat CTA upsell premium - direvisi 9 Sep 2026). */}
                   <button
-                    onClick={() => window.__nextoOpenSasaChat?.("Saya butuh tim lebih dari 4 orang, ada opsi harga khusus?")}
+                    onClick={() => window.__nextoOpenSasaChat?.("Saya butuh team lebih dari 4 orang, ada opsi harga khusus?")}
                     className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 px-3 py-1.5 text-[10px] font-semibold text-violet-200 transition hover:border-violet-400/50 hover:text-white"
                   >
-                    {tr("Butuh tim lebih dari 4 orang? Hubungi kami", "Need a team of more than 4? Contact us")}
+                    {tr("Butuh team lebih dari 4 orang? Hubungi kami", "Need a team of more than 4? Contact us")}
                   </button>
 
                   <div className="mt-3">

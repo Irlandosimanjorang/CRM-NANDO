@@ -354,7 +354,7 @@ export default function Dashboard({
       {isEnterprise && !canManage && orgStats && (
         <Card className="p-4">
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-slate-900">Performa Perusahaan (Semua Tim)</h2>
+            <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-slate-900">Performa Perusahaan (Semua Team)</h2>
             <span className="text-[10px] font-medium text-slate-400">Rincian per sales cuma bisa dilihat manager</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -538,8 +538,8 @@ export default function Dashboard({
         <button onClick={() => onGo?.("team")} className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 flex items-center gap-3 text-left hover:border-orange-300 transition-colors">
           <Trophy size={18} className="text-amber-500 shrink-0" />
           <div className="flex-1">
-            <div className="text-sm font-bold text-slate-800">Rekap Aktivitas & Performa Tim</div>
-            <div className="text-[11px] text-slate-400">Kunjungan, notulen, pindah tahap, dan peringkat revenue tiap sales - buka tab Tim</div>
+            <div className="text-sm font-bold text-slate-800">Rekap Aktivitas & Performa Team</div>
+            <div className="text-[11px] text-slate-400">Kunjungan, notulen, pindah tahap, dan peringkat revenue tiap sales - buka tab Team</div>
           </div>
           <span className="text-[12px] font-semibold text-orange-600">Buka &rarr;</span>
         </button>

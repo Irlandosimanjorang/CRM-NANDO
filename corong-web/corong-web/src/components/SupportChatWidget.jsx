@@ -53,7 +53,7 @@ const QUICK_REPLIES = [
   { label: "Berapa harga paketnya?", text: "Berapa harga paket-paket Nexto?" },
   { label: "Fitur apa aja yang ada?", text: "Fitur apa aja yang ada di Nexto?" },
   { label: "Gimana cara mulai?", text: "Gimana cara mulai pakai Nexto?" },
-  { label: "Mau ngobrol sama tim manusia", human: true },
+  { label: "Mau ngobrol sama team manusia", human: true },
 ];
 
 export default function SupportChatWidget({ supportWaNumber, insideApp }) {
@@ -120,7 +120,7 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
   const sendHumanHandoff = () => {
     setMessages((m) => [
       ...m,
-      { role: "user", content: "Mau ngobrol sama tim manusia" },
+      { role: "user", content: "Mau ngobrol sama team manusia" },
       { role: "assistant", content: HUMAN_HANDOFF_MARKER },
     ]);
   };
@@ -171,7 +171,7 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 {m.content === HUMAN_HANDOFF_MARKER ? (
                   <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white/[0.06] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-slate-200">
-                    Oke, ini jalan langsung ke tim Nexto - biasanya balas lebih cepat lewat WhatsApp:
+                    Oke, ini jalan langsung ke team Nexto - biasanya balas lebih cepat lewat WhatsApp:
                     {waLink && (
                       <a
                         href={waLink}
@@ -179,7 +179,7 @@ export default function SupportChatWidget({ supportWaNumber, insideApp }) {
                         rel="noreferrer"
                         className="mt-2 flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-1.5 text-[11.5px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/25"
                       >
-                        Chat WhatsApp Tim <ExternalLink size={11} />
+                        Chat WhatsApp Team <ExternalLink size={11} />
                       </a>
                     )}
                   </div>

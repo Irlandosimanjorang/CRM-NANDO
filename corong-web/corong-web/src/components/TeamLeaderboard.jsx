@@ -179,7 +179,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
           <Trophy size={17} />
         </div>
         <div>
-          <div className="text-sm font-bold text-slate-800">Performa Tim</div>
+          <div className="text-sm font-bold text-slate-800">Performa Team</div>
           <div className="text-[10.5px] text-slate-400">Peringkat berdasarkan total revenue closing</div>
         </div>
       </div>
@@ -251,7 +251,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
               <Percent size={16} />
             </div>
             <div>
-              <div className="text-sm font-bold text-slate-800">Komisi Tim</div>
+              <div className="text-sm font-bold text-slate-800">Komisi Team</div>
               <div className="text-[10.5px] text-slate-400">% dari total revenue closing (all-time) - atur rate tiap anggota</div>
             </div>
           </div>
@@ -292,7 +292,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
             ))}
           </div>
           <div className="mt-3 flex items-center justify-between rounded-2xl bg-emerald-50 px-3.5 py-2.5">
-            <span className="text-[12.5px] font-semibold text-emerald-800">Total komisi tim</span>
+            <span className="text-[12.5px] font-semibold text-emerald-800">Total komisi team</span>
             <span className="text-[13px] font-bold text-emerald-800">{fmtRp(rows.reduce((sum, r) => sum + r.commissionAmount, 0))}</span>
           </div>
         </div>

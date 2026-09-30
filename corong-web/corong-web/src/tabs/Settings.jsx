@@ -260,7 +260,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   };
 
   const removeMember = async (id, name) => {
-    if (!window.confirm(`Keluarin ${name || "anggota ini"} dari tim?`)) return;
+    if (!window.confirm(`Keluarin ${name || "anggota ini"} dari team?`)) return;
     try { await db.removeMember(id); loadOrg(); }
     catch (e) { alert("Gagal: " + e.message); }
   };
@@ -290,7 +290,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     setJoinBusy(true); setJoinMsg("");
     try {
       const res = await db.redeemInviteCode(joinCode.trim());
-      setJoinMsg(`✅ Berhasil gabung ke ${res.org_name}. Refresh halaman buat lihat data tim.`);
+      setJoinMsg(`✅ Berhasil gabung ke ${res.org_name}. Refresh halaman buat lihat data team.`);
       setJoinCode("");
       loadOrg();
       onChanged();
@@ -520,7 +520,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         {/* Judul & teks kartu ini beda buat Enterprise (tim beneran, banyak
             anggota) vs plan lain (akun pribadi, cuma dia sendiri) - biar gak
             kesan ada "tim"/"anggota" padahal cuma 1 orang. */}
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Users size={15} className="text-violet-500" /> {isEnterprise ? "Tim" : "Akun"}</h3>
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Users size={15} className="text-violet-500" /> {isEnterprise ? "Team" : "Akun"}</h3>
         {orgLoading ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : (
@@ -620,7 +620,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                     <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
                   ) : inviteCode ? (
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                      <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota tim, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
+                      <p className="text-xs text-slate-600 mb-2">Kasih kode ini ke anggota team, suruh masukin di bagian "Punya kode undangan?" di bawah:</p>
                       <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-sm">
                         <span className="flex-1 tracking-wider">{inviteCode}</span>
                         <button onClick={() => copyToClipboard(inviteCode, "invite")} className={copiedKey === "invite" ? "text-emerald-600" : "text-slate-400 hover:text-slate-700"} title="Salin kode">
@@ -642,7 +642,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                     </div>
                   )
                 ) : (
-                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise buat bisa undang anggota tim.</p>
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise buat bisa undang anggota team.</p>
                 )}
 
                 {/* Kotak "Punya kode undangan?" ini sekarang keliatan buat SEMUA
@@ -672,7 +672,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       {canManage && isEnterprise && pendingApprovals.length > 0 && (
         <div className="bg-white border border-amber-200 rounded-[28px] p-4">
           <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><ShieldAlert size={15} className="text-amber-500" /> Permintaan Approval</h3>
-          <p className="text-xs text-slate-400 mb-3">Sales rep butuh persetujuan buat hapus lead atau export data tim.</p>
+          <p className="text-xs text-slate-400 mb-3">Sales rep butuh persetujuan buat hapus lead atau export data team.</p>
           <div className="space-y-2">
             {pendingApprovals.map((r) => (
               <div key={r.id} className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
@@ -896,7 +896,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                 <li>Grok Bot bakal nambahin sebagai connector - tunggu sampai statusnya "connected".</li>
                 <li>Tes dengan suruh Grok Bot: "cek pipeline stats gua" atau "list lead yang overdue".</li>
               </ol>
-              <p className="text-[11px] text-slate-400 mt-2">Tiap user generate & pasang key-nya sendiri-sendiri - bukan sekali pasang buat semua anggota tim.</p>
+              <p className="text-[11px] text-slate-400 mt-2">Tiap user generate & pasang key-nya sendiri-sendiri - bukan sekali pasang buat semua anggota team.</p>
             </div>
           </>
         )}

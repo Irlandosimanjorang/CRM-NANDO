@@ -368,7 +368,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => onReassign(c.id, e.target.value)}
               className="text-[11px] border border-slate-200 rounded-lg px-1.5 py-1 bg-white text-slate-500 max-w-[110px]"
-              title="Pindahkan lead ke anggota tim lain"
+              title="Pindahkan lead ke anggota team lain"
             >
               {members.map((m) => (
                 <option key={m.user_id} value={m.user_id}>
