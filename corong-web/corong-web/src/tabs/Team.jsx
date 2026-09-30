@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, Loader2, RefreshCw } from "lucide-react";
+import { Activity, MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, Loader2, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail } from "lucide-react";
 import * as db from "../lib/db";
 import TeamLeaderboard from "../components/TeamLeaderboard";
 
@@ -36,7 +36,18 @@ const KIND = {
   note: { icon: NotebookPen, color: "text-violet-600 bg-violet-50", verb: "nulis catatan di" },
   stage: { icon: ArrowRightLeft, color: "text-amber-600 bg-amber-50", verb: "mindahin tahap" },
   lead: { icon: UserPlus, color: "text-emerald-600 bg-emerald-50", verb: "nambah lead" },
+  lead_deleted: { icon: Trash2, color: "text-rose-600 bg-rose-50", verb: "menghapus lead" },
+  lead_restored: { icon: RotateCcw, color: "text-teal-600 bg-teal-50", verb: "memulihkan lead" },
+  lead_edited: { icon: PencilLine, color: "text-slate-600 bg-slate-100", verb: "mengubah data" },
+  visit_scheduled: { icon: CalendarPlus, color: "text-sky-600 bg-sky-50", verb: "menjadwalkan visit ke" },
+  visit_cancelled: { icon: CalendarX, color: "text-orange-600 bg-orange-50", verb: "membatalkan visit ke" },
+  deal: { icon: Trophy, color: "text-emerald-700 bg-emerald-50", verb: "input deal" },
+  email: { icon: Mail, color: "text-blue-600 bg-blue-50", verb: "kirim email ke" },
+  ai_draft: { icon: Sparkles, color: "text-fuchsia-600 bg-fuchsia-50", verb: "bikin draft AI buat" },
+  needs_summary: { icon: Sparkles, color: "text-fuchsia-600 bg-fuchsia-50", verb: "bikin Ringkasan Kebutuhan" },
 };
+// Detail yang ditampilin nempel di kalimat (dalam kurung) vs di baris kedua.
+const INLINE_DETAIL = new Set(["stage", "visit_scheduled", "deal", "ai_draft", "lead_deleted"]);
 
 // Contoh yang ditampilin (transparan + label "Contoh") kalau timeline kosong,
 // biar manager langsung ngerti isinya nanti apa. Gak pernah disimpen ke DB.
@@ -54,24 +65,18 @@ function daysSince(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
 
-function fmtWhen(iso) {
-  const d = new Date(iso);
-  const sameDay = new Date(d.getTime() + WIB_OFFSET_MS).toISOString().slice(0, 10) === new Date(Date.now() + WIB_OFFSET_MS).toISOString().slice(0, 10);
-  return sameDay
-    ? d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + ", " + d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-}
-
 export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage }) {
   const [range, setRange] = useState("week");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   const load = () => {
     const { from, to } = rangeFor(range);
     setLoading(true);
     setErr("");
+    setReloadKey((k) => k + 1);
     db.getTeamActivity(from, to)
       .then(setData)
       .catch((e) => setErr(e.message || "Gagal memuat rekap aktivitas"))
@@ -186,62 +191,129 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         )}
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6">
-        <div className="mb-4 text-sm font-bold text-slate-800">Aktivitas Terbaru</div>
-        {(data?.feed || []).length === 0 ? (
-          loading ? (
-            <div className="py-6 text-center text-[12px] text-slate-400">Memuat…</div>
-          ) : (
-            <div>
-              <p className="text-[12px] text-slate-500">
-                Belum ada aktivitas di rentang ini. Nanti di sini muncul otomatis setiap anggota tim check-in GPS, nulis catatan/notulen, nambah lead, atau mindahin tahap lead - kayak contoh di bawah.
-              </p>
-              <ul className="mt-4 space-y-3 opacity-50" aria-label="Contoh tampilan">
-                {EMPTY_EXAMPLES.map((e, i) => {
-                  const k = KIND[e.kind];
-                  const I = k.icon;
-                  return (
-                    <li key={i} className="flex gap-3">
-                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${k.color}`}><I size={14} /></span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[12.5px] text-slate-700">
-                          <span className="mr-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-slate-500">Contoh</span>
-                          <b className="text-slate-900">{e.who}</b> {k.verb} <b className="text-slate-900">{e.lead}</b>
-                          {e.detail && e.kind === "stage" && <span className="text-slate-500"> ({e.detail})</span>}
-                        </div>
-                        {e.kind === "note" && <div className="mt-0.5 text-[11.5px] text-slate-500">{e.detail}</div>}
-                        <div className="mt-0.5 text-[10.5px] text-slate-400">{e.when}</div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )
-        ) : (
-          <ul className="space-y-3">
-            {data.feed.map((e, i) => {
-              const k = KIND[e.kind] || KIND.note;
-              const I = k.icon;
-              return (
-                <li key={i} className="flex gap-3">
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${k.color}`}><I size={14} /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[12.5px] text-slate-700">
-                      <b className="text-slate-900">{nameOf[e.user_id] || "Anggota"}</b> {k.verb} <b className="text-slate-900">{e.lead_name || "-"}</b>
-                      {e.kind === "stage" && e.detail && <span className="text-slate-500"> ({e.detail})</span>}
-                    </div>
-                    {e.kind === "note" && e.detail && <div className="mt-0.5 line-clamp-2 text-[11.5px] text-slate-500">{e.detail}</div>}
-                    <div className="mt-0.5 text-[10.5px] text-slate-400">{fmtWhen(e.at)}</div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      <ActivityTimeline nameOf={nameOf} reloadKey={reloadKey} />
 
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />
+    </div>
+  );
+}
+
+const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+function dayBounds(isoDay) {
+  const [y, m, d] = isoDay.split("-").map(Number);
+  const from = new Date(Date.UTC(y, m - 1, d) - WIB_OFFSET_MS);
+  return { from, to: new Date(from.getTime() + 86400000) };
+}
+
+// Timeline 7 hari (30 Sep 2026, permintaan Nando): strip 7 tanggal terakhir
+// (kalender WIB) + jumlah aktivitas tiap hari, klik tanggal -> daftar semua
+// aktivitas tim di hari itu.
+function ActivityTimeline({ nameOf, reloadKey }) {
+  const [days, setDays] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [feed, setFeed] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    db.getTeamActivityDays(7)
+      .then((d) => { setDays(d); setSelected((cur) => (cur && d.some((x) => x.day === cur) ? cur : d[d.length - 1]?.day || null)); })
+      .catch(() => { setDays([]); setLoading(false); });
+  }, [reloadKey]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const { from, to } = dayBounds(selected);
+    setLoading(true);
+    db.getTeamFeed(from, to, 200).then(setFeed).catch(() => setFeed([])).finally(() => setLoading(false));
+  }, [selected, reloadKey]);
+
+  const todayIso = new Date(Date.now() + WIB_OFFSET_MS).toISOString().slice(0, 10);
+  const sel = days.find((d) => d.day === selected);
+  const selLabel = selected ? new Date(selected + "T00:00:00Z").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }) : "";
+  const showExamples = !loading && feed.length === 0 && days.every((d) => d.count === 0);
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <div className="text-sm font-bold text-slate-800">Aktivitas 7 Hari Terakhir</div>
+        <div className="text-[10.5px] text-slate-400">Klik tanggal buat liat aktivitas di hari itu</div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1.5">
+        {days.map((d) => {
+          const dt = new Date(d.day + "T00:00:00Z");
+          const active = d.day === selected;
+          return (
+            <button
+              key={d.day}
+              onClick={() => setSelected(d.day)}
+              className={`flex flex-col items-center rounded-2xl border px-1 py-2 transition-colors ${active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-orange-300"}`}
+            >
+              <span className={`text-[10px] font-medium ${active ? "text-slate-300" : "text-slate-400"}`}>{d.day === todayIso ? "Hari ini" : HARI[dt.getUTCDay()]}</span>
+              <span className="text-[15px] font-bold leading-tight">{dt.getUTCDate()}</span>
+              <span className={`mt-1 min-w-[22px] rounded-full px-1.5 text-[10px] font-semibold tabular-nums ${d.count > 0 ? (active ? "bg-orange-500 text-white" : "bg-orange-100 text-orange-700") : (active ? "bg-white/15 text-slate-300" : "bg-slate-100 text-slate-400")}`}>{d.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mb-3 mt-5 text-[12px] font-semibold text-slate-600">
+        {selLabel}{sel ? ` · ${sel.count} aktivitas` : ""}
+      </div>
+
+      {loading ? (
+        <div className="py-6 text-center"><Loader2 size={16} className="mx-auto animate-spin text-slate-400" /></div>
+      ) : feed.length === 0 ? (
+        showExamples ? (
+          <div>
+            <p className="text-[12px] text-slate-500">
+              Belum ada aktivitas. Nanti di sini muncul otomatis setiap anggota tim check-in GPS, nulis catatan, nambah/edit/hapus lead, jadwalin visit, mindahin tahap, input deal, atau kirim email - kayak contoh di bawah.
+            </p>
+            <ul className="mt-4 space-y-3 opacity-50" aria-label="Contoh tampilan">
+              {EMPTY_EXAMPLES.map((e, i) => {
+                const k = KIND[e.kind];
+                const I = k.icon;
+                return (
+                  <li key={i} className="flex gap-3">
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${k.color}`}><I size={14} /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12.5px] text-slate-700">
+                        <span className="mr-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-slate-500">Contoh</span>
+                        <b className="text-slate-900">{e.who}</b> {k.verb} <b className="text-slate-900">{e.lead}</b>
+                        {e.detail && e.kind === "stage" && <span className="text-slate-500"> ({e.detail})</span>}
+                      </div>
+                      {e.kind === "note" && <div className="mt-0.5 text-[11.5px] text-slate-500">{e.detail}</div>}
+                      <div className="mt-0.5 text-[10.5px] text-slate-400">{e.when}</div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <div className="py-6 text-center text-[12px] text-slate-400">Gak ada aktivitas di tanggal ini.</div>
+        )
+      ) : (
+        <ul className="space-y-3">
+          {feed.map((e, i) => {
+            const k = KIND[e.kind] || KIND.note;
+            const I = k.icon;
+            return (
+              <li key={i} className="flex gap-3">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${k.color}`}><I size={14} /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12.5px] text-slate-700">
+                    <b className="text-slate-900">{nameOf[e.user_id] || "Anggota"}</b> {k.verb} <b className="text-slate-900">{e.lead_name || "-"}</b>
+                    {INLINE_DETAIL.has(e.kind) && e.detail && <span className="text-slate-500"> ({e.detail})</span>}
+                  </div>
+                  {!INLINE_DETAIL.has(e.kind) && e.detail && <div className="mt-0.5 line-clamp-2 text-[11.5px] text-slate-500">{e.detail}</div>}
+                  <div className="mt-0.5 text-[10.5px] text-slate-400">{new Date(e.at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

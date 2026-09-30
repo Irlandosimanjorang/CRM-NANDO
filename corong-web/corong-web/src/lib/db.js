@@ -74,6 +74,20 @@ export async function getTeamActivity(from, to) {
   return data || { members: [], feed: [] };
 }
 
+// Timeline aktivitas tim per rentang (dipake buat 1 hari yang diklik di strip
+// 7 hari) + jumlah aktivitas per hari (kalender WIB). Sama, khusus
+// owner/manager Enterprise - dicek ulang di RPC.
+export async function getTeamFeed(from, to, limit = 200) {
+  const { data, error } = await supabase.rpc("get_team_feed", { p_from: from.toISOString(), p_to: to.toISOString(), p_limit: limit });
+  if (error) throw error;
+  return data || [];
+}
+export async function getTeamActivityDays(days = 7) {
+  const { data, error } = await supabase.rpc("get_team_activity_days", { p_days: days });
+  if (error) throw error;
+  return data || [];
+}
+
 export async function getOrgMembers() {
   const { data, error } = await supabase.functions.invoke("get-org-members");
   if (error) throw error;
