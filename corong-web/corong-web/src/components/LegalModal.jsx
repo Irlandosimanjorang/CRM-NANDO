@@ -42,7 +42,7 @@ function Section({ title, children }) {
 function TosContent() {
   return (
     <>
-      <p className="text-[11px] text-slate-400 mb-5">Terakhir diperbarui: 5 September 2026</p>
+      <p className="text-[11px] text-slate-400 mb-5">Terakhir diperbarui: 30 September 2026</p>
 
       <Section title="1. Penerimaan Ketentuan">
         <p>Dengan mendaftar dan menggunakan Nexto ("Layanan"), Anda setuju terikat dengan Ketentuan Layanan ini. Kalau Anda tidak setuju, mohon untuk tidak menggunakan Layanan.</p>
@@ -82,7 +82,7 @@ function TosContent() {
       </Section>
 
       <Section title="9. Force Majeure">
-        <p>Nexto tidak bertanggung jawab atas keterlambatan atau kegagalan menjalankan kewajiban dalam Ketentuan ini yang disebabkan oleh keadaan di luar kendali wajar kami, termasuk namun tidak terbatas pada: bencana alam, kebakaran, gangguan/pemadaman internet atau listrik berskala luas, perang, kerusuhan, pandemi, perubahan regulasi pemerintah, serta gangguan atau penghentian layanan dari penyedia infrastruktur pihak ketiga yang kami gunakan (termasuk namun tidak terbatas pada Supabase, Vercel, Anthropic, OpenAI, Mayar, atau Telegram) yang berada di luar kendali kami.</p>
+        <p>Nexto tidak bertanggung jawab atas keterlambatan atau kegagalan menjalankan kewajiban dalam Ketentuan ini yang disebabkan oleh keadaan di luar kendali wajar kami, termasuk namun tidak terbatas pada: bencana alam, kebakaran, gangguan/pemadaman internet atau listrik berskala luas, perang, kerusuhan, pandemi, perubahan regulasi pemerintah, serta gangguan atau penghentian layanan dari penyedia infrastruktur pihak ketiga yang kami gunakan (termasuk namun tidak terbatas pada Supabase, Vercel, Anthropic, OpenAI, Mayar, atau Resend) yang berada di luar kendali kami.</p>
       </Section>
 
       <Section title="10. Penghentian Layanan">
@@ -107,14 +107,14 @@ function TosContent() {
 function PrivacyContent() {
   return (
     <>
-      <p className="text-[11px] text-slate-400 mb-5">Terakhir diperbarui: 9 September 2026</p>
+      <p className="text-[11px] text-slate-400 mb-5">Terakhir diperbarui: 30 September 2026</p>
 
       <Section title="1. Data yang Kami Kumpulkan">
         <p><b>Data akun:</b> email, nama, jabatan, foto profil.</p>
         <p><b>Data CRM yang Anda input:</b> nama lead/perusahaan, kontak, catatan progress, data deal, data kompetitor.</p>
         <p><b>Data lokasi:</b> koordinat GPS, hanya jika Anda secara aktif menggunakan fitur check-in kunjungan.</p>
         <p><b>Data audio:</b> rekaman suara, hanya jika Anda menggunakan fitur voice note atau rekam meeting (diproses untuk transkripsi, tidak disimpan permanen dalam bentuk audio kecuali Anda simpan sendiri).</p>
-        <p><b>Data Telegram:</b> jika Anda menghubungkan akun Telegram, kami menyimpan chat ID dan riwayat percakapan dengan asisten AI untuk keperluan fungsi bot.</p>
+        <p><b>Data rekaman suara (NEX Pro):</b> rekaman suara yang Anda kirim lewat NEX Pro diubah menjadi teks untuk dicatat ke data lead Anda, lalu file audionya dihapus dari server kami setelah diproses.</p>
         <p><b>Data chat widget landing page:</b> jika Anda ngobrol dengan asisten AI kami (SASA) di website sebelum mendaftar, percakapan Anda disimpan secara anonim (ditandai kode sesi acak di browser Anda, bukan identitas Anda) untuk keperluan menjawab pertanyaan & meningkatkan kualitas jawaban. Kalau pertanyaan Anda perlu ditindaklanjuti manual oleh tim kami, dan Anda memberikan email/nomor WhatsApp dalam percakapan tersebut, kontak itu kami gunakan untuk menghubungi Anda kembali.</p>
       </Section>
 
@@ -132,7 +132,7 @@ function PrivacyContent() {
       </Section>
 
       <Section title="5. Layanan Pihak Ketiga Lain">
-        <p>Kami menggunakan penyedia infrastruktur berikut yang turut memproses data Anda: <b>Supabase</b> (database & autentikasi), <b>Vercel</b> (hosting), <b>Resend</b> (pengiriman email), <b>Mayar</b> (pemrosesan pembayaran), <b>Telegram</b> (jika Anda menghubungkan bot), dan <b>Google Calendar</b> (jika Anda mengaktifkan sinkronisasi kalender, memerlukan izin OAuth terpisah dari Anda).</p>
+        <p>Kami menggunakan penyedia infrastruktur berikut yang turut memproses data Anda: <b>Supabase</b> (database & autentikasi), <b>Vercel</b> (hosting), <b>Resend</b> (pengiriman email), <b>Mayar</b> (pemrosesan pembayaran), dan <b>Google Calendar</b> (jika Anda mengaktifkan sinkronisasi kalender, memerlukan izin OAuth terpisah dari Anda).</p>
       </Section>
 
       <Section title="6. Transfer Data ke Luar Negeri">

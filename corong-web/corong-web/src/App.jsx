@@ -501,11 +501,19 @@ export default function App() {
     if (loading || onboardingCheckedRef.current || !session) return;
     if (settings?.onboarding_level_seen === undefined) return;
     onboardingCheckedRef.current = true;
-    const steps = buildTourSteps({ myLevel, isEnterprise, previousLevel: settings.onboarding_level_seen });
+    let steps = buildTourSteps({ myLevel, isEnterprise, canManage, previousLevel: settings.onboarding_level_seen });
+    // Tab Team baru ada 30 Sep 2026 - owner/manager Enterprise yang udah
+    // pernah selesai tur tetep dapet 1 step susulan buat tab ini (sekali).
+    if (steps.length === 0 && isEnterprise && canManage) {
+      let seen = true;
+      try { seen = localStorage.getItem("nexto_tour_team_seen") === "1"; } catch (_) {}
+      if (!seen) steps = buildTourSteps({ myLevel, isEnterprise, canManage, previousLevel: null }).filter((s) => s.key === "team");
+    }
     if (steps.length > 0) setTourSteps(steps);
-  }, [loading, settings, session, myLevel, isEnterprise]);
+  }, [loading, settings, session, myLevel, isEnterprise, canManage]);
   const finishTour = async () => {
     setTourSteps(null);
+    try { localStorage.setItem("nexto_tour_team_seen", "1"); } catch (_) {}
     try { await db.markOnboardingLevelSeen(myLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
   };
 

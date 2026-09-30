@@ -20,6 +20,7 @@ export const TOUR_STEPS = [
   { key: "settings", minLevel: 1, title: "Pengaturan", desc: "Profil, dan sinkron otomatis jadwal visit ke Google Calendar." },
   { key: "generateleads", minLevel: 2, title: "Generate Leads", desc: "AI nyari calon customer baru otomatis sesuai industri & lokasi kamu - tinggal generate, langsung dapet daftar lead siap di-follow-up." },
   { key: "deal", minLevel: 2, title: "Deal", desc: "Leaderboard revenue & win rate, plus Pipeline Review otomatis buat nunjukin deal mana yang butuh perhatian sebelum keburu dingin." },
+  { key: "team", minLevel: 2, managerEnterpriseOnly: true, title: "Team", desc: "Khusus owner/manager Enterprise: rekap aktivitas tiap sales (kunjungan, notulen, lead baru, pindah tahap, deal), tanda sales yang lagi gak aktif, timeline 7 hari yang bisa diklik per tanggal, plus Performa & Komisi Team." },
   { key: "kompetitor", minLevel: 2, title: "Kompetitor", desc: "Catat & analisa data kompetitor - harga, kekuatan, kelemahan - biar strategi penawaran kamu lebih tajam." },
 ];
 
@@ -27,7 +28,7 @@ export const TOUR_STEPS = [
 // SEKARANG, terus (kalau ada) buang step yang levelnya udah kebuka SEBELUM
 // upgrade terakhir (previousLevel) - itu yang bikin tur susulan pas upgrade
 // cuma nunjukin tab yang BARU kebuka, gak ngulang tab lama.
-export function buildTourSteps({ myLevel, isEnterprise, previousLevel }) {
+export function buildTourSteps({ myLevel, isEnterprise, canManage, previousLevel }) {
   // Fitur Enterprise ditempel ke tab yang PALING nyambung ke fungsinya
   // (bukan bikin step/tab baru - Enterprise gak nambah tab, lihat komentar
   // di atas file ini) - Assign Leads ke tab Leads, GPS Check-in ke Visit &
@@ -36,10 +37,11 @@ export function buildTourSteps({ myLevel, isEnterprise, previousLevel }) {
     leads: " Enterprise: Assign & filter leads per anggota team, plus approval-gate buat hapus lead & export data.",
     visitfollowup: " Enterprise: GPS Check-in - tracking kunjungan team secara real-time.",
     settings: " Enterprise: kelola Team, undang anggota via kode invite, & atur role (Owner/Manager/Sales Rep).",
-    deal: " Enterprise: Sistem Komisi Team (atur % per anggota, otomatis dihitung) & Laporan Performa Team.",
+    deal: " Enterprise: Performa & Komisi Team sekarang ada di tab Team.",
   };
   return TOUR_STEPS
     .filter((s) => s.minLevel <= myLevel)
+    .filter((s) => !s.managerEnterpriseOnly || (isEnterprise && canManage))
     .filter((s) => previousLevel == null || s.minLevel > previousLevel)
     .map((s) => (isEnterprise && ENTERPRISE_EXTRA[s.key] ? { ...s, desc: s.desc + ENTERPRISE_EXTRA[s.key] } : s));
 }
