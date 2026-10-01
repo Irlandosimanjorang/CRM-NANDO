@@ -4,7 +4,7 @@ import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, Chev
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
-import { getFieldLabel, getQuantityUnits } from "../lib/industryTemplates";
+import { getFieldLabel, getQuantityUnits, getDealProductTypes } from "../lib/industryTemplates";
 
 // Label satuan dari daftar satuan industri; fallback ke kode mentah.
 const unitLabel = (units, v) => ((units || []).find((u) => u.v === v)?.label || v || "").toLowerCase();
@@ -47,8 +47,18 @@ function clearDraft() {
   try { localStorage.removeItem(DRAFT_KEY); } catch {}
 }
 
-function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
+const CUSTOM_PRODUCT = "__custom__";
+
+function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSaved }) {
   const productLabel = getFieldLabel(industry, "product", "Produk");
+  // Pilihan "Produk" = daftar bawaan industri + isian sendiri yang pernah
+  // dipakai di deal sebelumnya (biar gak ngetik ulang).
+  const baseProductTypes = getDealProductTypes(industry);
+  const productTypes = useMemo(() => {
+    if (!baseProductTypes) return null;
+    const used = (dealTransactions || []).map((t) => (t.product_type || "").trim()).filter(Boolean);
+    return [...new Set([...baseProductTypes, ...used])];
+  }, [baseProductTypes, dealTransactions]);
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
   const units = getQuantityUnits(industry);
   const wonStages = stages.filter((s) => s.type === "won");
@@ -61,13 +71,15 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
   const [tonnage, setTonnage] = useState(draft?.tonnage || "");
   const [tonnageUnit, setTonnageUnit] = useState(() => (units || []).some((u) => u.v === draft?.tonnageUnit) ? draft.tonnageUnit : units?.[0]?.v || "");
   const [valueDigits, setValueDigits] = useState(draft?.valueDigits || "");
+  const [productType, setProductType] = useState(draft?.productType || "");
+  const [customProduct, setCustomProduct] = useState(!!draft?.customProduct);
   const [busy, setBusy] = useState(false);
   const hadDraft = !!draft?.sel;
 
   useEffect(() => {
-    const data = { sel, stageKey, date, chemical, tonnage, tonnageUnit, valueDigits, savedAt: Date.now() };
+    const data = { sel, stageKey, date, chemical, tonnage, tonnageUnit, valueDigits, productType, customProduct, savedAt: Date.now() };
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch {}
-  }, [sel, stageKey, date, chemical, tonnage, tonnageUnit, valueDigits]);
+  }, [sel, stageKey, date, chemical, tonnage, tonnageUnit, valueDigits, productType, customProduct]);
 
   const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
   const pick = (c) => {
@@ -75,7 +87,7 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
     // Sengaja field-field ini dikosongin (bukan diisi dari deal lead sebelumnya) -
     // ini transaksi BARU, bukan nimpa transaksi lama.
     setChemical(""); setTonnage(""); setTonnageUnit(units?.[0]?.v || "");
-    setValueDigits("");
+    setValueDigits(""); setProductType(""); setCustomProduct(false);
     setDate(todayISO());
   };
   const onValueChange = (e) => {
@@ -90,7 +102,7 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
       // transaksi baru - bukan nimpa nilai deal_value/deal_date yang lama, biar
       // repeat order/transaksi berkali-kali ke perusahaan yang sama tetap kehitung semua.
       await db.upsertLead({ ...sel, stage_key: stageKey });
-      await db.addDealTransaction({ lead_id: sel.id, lead_name: sel.name, deal_date: date, deal_value: Number(valueDigits) || 0, tonnage: Number(tonnage) || 0, tonnage_unit: tonnageUnit, chemical });
+      await db.addDealTransaction({ lead_id: sel.id, lead_name: sel.name, deal_date: date, deal_value: Number(valueDigits) || 0, tonnage: Number(tonnage) || 0, tonnage_unit: tonnageUnit, chemical, product_type: productTypes ? productType : null });
       clearDraft();
       onSaved();
     } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
@@ -124,6 +136,25 @@ function AddDealModal({ leads, stages, industry, onClose, onSaved }) {
               <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal deal</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">{productLabel}</span><input className={inp} value={chemical} onChange={(e) => setChemical(e.target.value)} /></label>
             </div>
+            {productTypes && (
+              <div className="mb-3">
+                <label className="block"><span className="text-xs font-medium text-slate-500">Produk</span>
+                  <select
+                    className={inp}
+                    value={customProduct ? CUSTOM_PRODUCT : productType}
+                    onChange={(e) => {
+                      if (e.target.value === CUSTOM_PRODUCT) { setCustomProduct(true); setProductType(""); }
+                      else { setCustomProduct(false); setProductType(e.target.value); }
+                    }}
+                  >
+                    <option value="">Pilih produk</option>
+                    {productTypes.map((p) => <option key={p} value={p}>{p}</option>)}
+                    <option value={CUSTOM_PRODUCT}>Lainnya (tulis sendiri)</option>
+                  </select>
+                </label>
+                {customProduct && <input autoFocus className={inp} placeholder="Nama produk" value={productType} onChange={(e) => setProductType(e.target.value)} maxLength={60} />}
+              </div>
+            )}
             {units && <div className="grid grid-cols-3 gap-3">
               <label className="block col-span-2"><span className="text-xs font-medium text-slate-500">{quantityLabel}</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">Satuan</span>
@@ -274,7 +305,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                       <td className="px-3 py-2">{sm ? <span className="text-[11px] border rounded-full px-2 py-0.5" style={chipStyle(sm.hex)}>{sm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
                       <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{lead?.sales_owner || "—"}</td>
                       <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.deal_date ? fmtDate(latest.deal_date) : "—"}</td>
-                      <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.chemical || "—"}</td>
+                      <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.product_type && <span className="mr-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">{latest.product_type}</span>}{latest.chemical || (latest.product_type ? "" : "—")}</td>
                       {units && <td className="hidden sm:table-cell px-3 py-2 text-xs font-mono text-slate-700">{latest.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${unitLabel(units, latest.tonnage_unit)}` : "••••••") : "—"}</td>}
                       <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{groupTotalRp ? (rpRevealed ? fmtRp(groupTotalRp) : "••••••") : "—"}</td>
                     </tr>
@@ -286,7 +317,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                         <td className="px-3 py-1.5"></td>
                         <td className="hidden sm:table-cell px-3 py-1.5"></td>
                         <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.deal_date ? fmtDate(t.deal_date) : "—"}</td>
-                        <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.chemical || "—"}</td>
+                        <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.product_type && <span className="mr-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">{t.product_type}</span>}{t.chemical || (t.product_type ? "" : "—")}</td>
                         {units && <td className="hidden sm:table-cell px-3 py-1.5 font-mono text-slate-600">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : "••••••") : "—"}</td>}
                         <td className="px-3 py-1.5 font-mono text-emerald-700 font-semibold">
                           <div className="flex items-center justify-between gap-2">
@@ -303,7 +334,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
           </div>
         </>
       )}
-      {add && <AddDealModal leads={leads} stages={stages} industry={industry} onClose={() => { setAdd(false); clearOpenModal("deal"); }} onSaved={() => { setAdd(false); clearOpenModal("deal"); onChanged(); }} />}
+      {add && <AddDealModal leads={leads} stages={stages} industry={industry} dealTransactions={dealTransactions} onClose={() => { setAdd(false); clearOpenModal("deal"); }} onSaved={() => { setAdd(false); clearOpenModal("deal"); onChanged(); }} />}
     </div>
   );
 }

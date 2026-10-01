@@ -231,6 +231,9 @@ export const INDUSTRY_TEMPLATES = {
     key: "corporate_consultant",
     catalogExample: "Misal: Konsultan HR & training untuk perusahaan 100+ karyawan di Jabodetabek.",
     quantityUnits: null, // "Nilai kontrak/SPK (Rp)" = uang, sama dengan Total Rp
+    // Pilihan "Produk" di form Tambah Deal (1 Okt 2026, permintaan Nando).
+    // User tetap bisa isi sendiri di luar daftar ini.
+    dealProductTypes: ["Rise", "In House Training", "Public Class", "Coaching Mentoring"],
     label: "Corporate Consultant",
     description: "Konsultan/kontraktor jasa berbasis project buat perusahaan (SPK/kontrak kerja)",
     // Pipeline & penamaan PERSIS dari masukan calon klien (bisnis project-based:
@@ -312,6 +315,12 @@ export function getCompanyTypeOptions(industryKey) {
 // Satuan kolom jumlah di tab Deal (30 Sep 2026, audit istilah per industri -
 // sebelumnya satuannya selalu "Ton/Kg" & total selalu "ton" di semua industri).
 // Balikin null kalau industri ini gak butuh kolom jumlah (jumlahnya berupa uang).
+// Daftar pilihan "Produk" di form deal, atau null kalau industri ini gak
+// pakai kolom itu.
+export function getDealProductTypes(industryKey) {
+  return getIndustryTemplate(industryKey).dealProductTypes || null;
+}
+
 export function getQuantityUnits(industryKey) {
   const tpl = getIndustryTemplate(industryKey);
   return tpl.quantityUnits === undefined ? INDUSTRY_TEMPLATES[DEFAULT_INDUSTRY].quantityUnits : tpl.quantityUnits;

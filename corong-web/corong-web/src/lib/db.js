@@ -1234,13 +1234,14 @@ export async function getDealTransactions() {
   return data || [];
 }
 
-export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical }) {
+export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("deal_transactions").insert({
     user_id: uid, org_id: orgId, lead_id, lead_name, deal_date: deal_date || null,
     deal_value: Number(deal_value) || 0, tonnage: Number(tonnage) || 0,
     tonnage_unit: tonnage_unit || "ton", chemical: chemical || "",
+    product_type: product_type?.trim() || null,
   }).select().single();
   if (error) throw error;
   return data;
