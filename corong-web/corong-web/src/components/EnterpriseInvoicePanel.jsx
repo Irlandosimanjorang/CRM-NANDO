@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MAYAR_PAYMENT_LINK } from "../lib/plans";
 
-// Invoice langganan Nexto Enterprise (2 Okt 2026, permintaan Nando) - khusus
+// Invoice langganan Nexto (2 Okt 2026, permintaan Nando) - khusus
 // admin platform, ditaruh di Command Center. Ketik nama perusahaan klien:
 // kalau cocok dengan organisasi Enterprise di Nexto, owner & jumlah anggota
 // terisi otomatis. Harga per orang mengikuti harga yang berlaku (early bird
@@ -9,9 +9,19 @@ import { MAYAR_PAYMENT_LINK } from "../lib/plans";
 // dokumen cetak -> "Simpan sebagai PDF" dari dialog cetak browser.
 
 const EARLY_BIRD_DEADLINE = new Date("2026-10-15T23:59:59+07:00"); // sama dengan Auth.jsx
-const PRICE_PER_SEAT = () => (new Date() < EARLY_BIRD_DEADLINE ? 249000 : 279000);
-const DEFAULT_SEATS = 4; // paket Enterprise standar = 4 anggota
 const PROFILE_KEY = "nexto-invoice-seller";
+
+// Paket yang bisa dipilih (2 Okt 2026). Harga per pengguna/bulan mengikuti
+// PRICING_EARLY_BIRD / PRICING_NORMAL di Auth.jsx - kalau harga di sana
+// berubah, samakan di sini. "custom" = isi deskripsi & harga sendiri.
+const PLANS = {
+  standard: { label: "Standard", item: "Langganan Nexto Standard", unit: "pengguna", early: 59000, normal: 89000, minSeats: 1 },
+  professional: { label: "Professional", item: "Langganan Nexto Professional", unit: "pengguna", early: 229000, normal: 249000, minSeats: 1 },
+  enterprise: { label: "Enterprise", item: "Langganan Nexto Enterprise", unit: "anggota tim", early: 249000, normal: 279000, minSeats: 4 },
+  custom: { label: "Custom", item: "", unit: "pengguna", early: 0, normal: 0, minSeats: 1 },
+};
+const priceOf = (plan) => (new Date() < EARLY_BIRD_DEADLINE ? PLANS[plan].early : PLANS[plan].normal);
+const DEFAULT_LINKS = { standard: MAYAR_PAYMENT_LINK, professional: MAYAR_PAYMENT_LINK, enterprise: MAYAR_PAYMENT_LINK, custom: MAYAR_PAYMENT_LINK };
 
 const rp = (n) => "Rp" + Math.round(Number(n) || 0).toLocaleString("id-ID");
 const isoDay = (d) => new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10);
@@ -31,10 +41,12 @@ function invoiceNumber(dateIso) {
 }
 
 function loadProfile() {
+  const base = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", links: DEFAULT_LINKS };
   try {
-    return { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", ...JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") };
+    const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
+    return { ...base, ...saved, links: { ...DEFAULT_LINKS, ...(saved.links || {}) } };
   } catch (_) {
-    return { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "" };
+    return base;
   }
 }
 
@@ -106,16 +118,16 @@ export function buildInvoiceHtml(inv, seller) {
   <table>
     <thead><tr><th>DESKRIPSI</th><th class="num">JUMLAH</th><th class="num">HARGA</th><th class="num">SUBTOTAL</th></tr></thead>
     <tbody><tr>
-      <td><strong>Langganan Nexto Enterprise</strong><div class="muted">${inv.seats} anggota tim · ${inv.months} bulan · AI Sales CRM</div></td>
+      <td><strong>${esc(inv.item)}</strong><div class="muted">${inv.seats} ${esc(inv.unit)} · ${inv.months} bulan${inv.plan !== "custom" ? " · AI Sales CRM" : ""}</div></td>
       <td class="num">${inv.seats} × ${inv.months} bln</td>
-      <td class="num">${rp(inv.pricePerSeat)}<div class="muted">per anggota/bulan</div></td>
+      <td class="num">${rp(inv.pricePerSeat)}<div class="muted">per ${esc(inv.unit)}/bulan</div></td>
       <td class="num">${rp(total)}</td>
     </tr></tbody>
   </table>
   <div class="total"><div><span>Total</span><span>${rp(total)}</span></div></div>
   <div class="pay">
     <div class="label">CARA PEMBAYARAN</div>
-    <p><strong>Pembayaran online:</strong> <a href="${MAYAR_PAYMENT_LINK}">${MAYAR_PAYMENT_LINK}</a></p>
+    ${inv.payLink ? `<p><strong>Pembayaran online:</strong> <a href="${esc(inv.payLink)}">${esc(inv.payLink)}</a></p>` : ""}
     ${bank}
     <p class="muted">Cantumkan nomor invoice ${esc(inv.number)} pada berita pembayaran.</p>
   </div>
@@ -128,13 +140,14 @@ const field = "w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py
 const lbl = "mb-1 block text-[11px] font-semibold text-slate-400";
 
 export default function EnterpriseInvoicePanel({ users = [] }) {
-  // Organisasi Enterprise dari direktori user (owner + jumlah anggota).
+  // Klien berbayar dari direktori user, per organisasi (paket, owner, jumlah anggota).
   const orgs = useMemo(() => {
     const map = new Map();
     for (const u of users || []) {
-      if (u.plan !== "enterprise" || !u.org_name) continue;
-      const o = map.get(u.org_name) || { name: u.org_name, members: 0, owner: null };
+      if (!u.org_name || !PLANS[u.plan]) continue;
+      const o = map.get(u.org_name) || { name: u.org_name, plan: u.plan, members: 0, owner: null };
       o.members += 1;
+      if (u.plan === "enterprise") o.plan = "enterprise";
       if (u.role === "owner") o.owner = u;
       map.set(u.org_name, o);
     }
@@ -145,9 +158,11 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const [company, setCompany] = useState("");
   const [contact, setContact] = useState("");
   const [email, setEmail] = useState("");
-  const [seats, setSeats] = useState(DEFAULT_SEATS);
+  const [plan, setPlan] = useState("enterprise");
+  const [customItem, setCustomItem] = useState("");
+  const [seats, setSeats] = useState(PLANS.enterprise.minSeats);
   const [months, setMonths] = useState(1);
-  const [pricePerSeat, setPricePerSeat] = useState(PRICE_PER_SEAT());
+  const [pricePerSeat, setPricePerSeat] = useState(priceOf("enterprise"));
   const [date, setDate] = useState(today);
   const [start, setStart] = useState(today);
   const [dueDays, setDueDays] = useState(7);
@@ -158,18 +173,37 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
 
   // Nama perusahaan cocok dengan organisasi Enterprise -> isi otomatis.
   const matched = orgs.find((o) => o.name.toLowerCase() === company.trim().toLowerCase()) || null;
+
+  // Ganti paket -> harga & jumlah minimum ikut paket (tetap bisa diubah manual).
+  const choosePlan = (next, members = 0) => {
+    setPlan(next);
+    if (next !== "custom") setPricePerSeat(priceOf(next));
+    setSeats((cur) => {
+      if (members) return Math.max(PLANS[next].minSeats, members);
+      if (next === "custom") return Math.max(1, Number(cur) || 1);
+      return PLANS[next].minSeats;
+    });
+  };
+
   useEffect(() => {
     if (!matched) return;
     setContact(matched.owner?.display_name || "");
     setEmail(matched.owner?.email || "");
-    setSeats(Math.max(DEFAULT_SEATS, matched.members));
+    choosePlan(matched.plan, matched.members);
   }, [matched?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(seller)); } catch (_) {}
   }, [seller]);
 
+  const payLink = (seller.links || DEFAULT_LINKS)[plan] || "";
+  const setPayLink = (v) => setSeller((s) => ({ ...s, links: { ...(s.links || DEFAULT_LINKS), [plan]: v } }));
+
   const inv = {
+    plan,
+    item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item,
+    unit: PLANS[plan].unit,
+    payLink: payLink.trim(),
     number: invoiceNumber(date),
     company: company.trim() || "Nama perusahaan",
     contact: contact.trim(),
@@ -202,15 +236,31 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
           <input id="inv-company" list="inv-orgs" className={field} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ketik nama perusahaan klien" autoComplete="off" />
           <datalist id="inv-orgs">{orgs.map((o) => <option key={o.name} value={o.name} />)}</datalist>
           <p className="mt-1 text-[11px] text-slate-500">
-            {matched ? `Klien Enterprise ditemukan: ${matched.members} anggota terdaftar, data owner terisi otomatis.` : orgs.length ? `${orgs.length} organisasi Enterprise tersedia di daftar saran.` : "Belum ada organisasi Enterprise - isi data secara manual."}
+            {matched ? `Klien ${PLANS[matched.plan].label} ditemukan: ${matched.members} anggota terdaftar, paket & data owner terisi otomatis.` : orgs.length ? `${orgs.length} klien berbayar tersedia di daftar saran.` : "Belum ada klien berbayar - isi data secara manual."}
           </p>
+        </div>
+        <div>
+          <label className={lbl} htmlFor="inv-plan">Paket</label>
+          <select id="inv-plan" className={field} value={plan} onChange={(e) => choosePlan(e.target.value)}>
+            {Object.entries(PLANS).map(([k, p]) => (
+              <option key={k} value={k}>{k === "custom" ? "Custom (isi sendiri)" : `${p.label} - ${rp(priceOf(k))}/${p.unit}/bulan${p.minSeats > 1 ? `, min. ${p.minSeats}` : ""}`}</option>
+            ))}
+          </select>
+        </div>
+        {plan === "custom" && (
+          <div><label className={lbl}>Deskripsi layanan</label><input className={field} value={customItem} onChange={(e) => setCustomItem(e.target.value)} placeholder="Misal: Nexto Enterprise + onboarding tim" /></div>
+        )}
+        <div>
+          <label className={lbl}>Link pembayaran paket {PLANS[plan].label}</label>
+          <input className={field} value={payLink} onChange={(e) => setPayLink(e.target.value)} placeholder="https://..." />
+          <p className="mt-1 text-[11px] text-slate-500">Diingat per paket. Kosongkan jika pembayaran hanya lewat transfer bank.</p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><label className={lbl}>Nama PIC</label><input className={field} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Nama penanggung jawab" /></div>
           <div><label className={lbl}>Email</label><input className={field} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@perusahaan.com" /></div>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <div><label className={lbl}>Anggota</label><input type="number" min="1" className={field} value={seats} onChange={(e) => setSeats(e.target.value)} /></div>
+          <div><label className={lbl}>Jumlah {PLANS[plan].unit}</label><input type="number" min={PLANS[plan].minSeats} className={field} value={seats} onChange={(e) => setSeats(e.target.value)} /></div>
           <div>
             <label className={lbl}>Periode</label>
             <select className={field} value={months} onChange={(e) => setMonths(e.target.value)}>
@@ -220,7 +270,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
               <option value={12}>12 bulan</option>
             </select>
           </div>
-          <div><label className={lbl}>Harga/anggota</label><input type="number" min="0" step="1000" className={field} value={pricePerSeat} onChange={(e) => setPricePerSeat(e.target.value)} /></div>
+          <div><label className={lbl}>Harga/{PLANS[plan].unit === "anggota tim" ? "anggota" : "pengguna"}</label><input type="number" min="0" step="1000" className={field} value={pricePerSeat} onChange={(e) => setPricePerSeat(e.target.value)} /></div>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div><label className={lbl}>Tanggal invoice</label><input type="date" className={field} value={date} onChange={(e) => setDate(e.target.value)} /></div>
