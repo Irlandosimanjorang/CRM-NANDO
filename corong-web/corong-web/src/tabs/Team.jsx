@@ -254,7 +254,7 @@ function DayBars({ days, selected, onSelect }) {
 
 // ---------- Tab Team ----------
 
-export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage }) {
+export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage, onChanged }) {
   const api = db;
   const [range, setRange] = useState("week");
   const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
@@ -445,6 +445,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         <TargetsCard api={api} members={members} reloadKey={reloadKey} />
       </div>
 
+      {members.length > 0 && <IdleLeadsCard leads={leads} stages={stages} members={members} onOpenLead={onOpenLead} onChanged={onChanged} />}
+
       <PaymentsCard nameOf={nameOf} rows={contracts} loading={loading && !data} onOpenLead={openLeadById} />
 
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
@@ -462,6 +464,122 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         />
       )}
     </div>
+  );
+}
+
+// Lead terbengkalai per anggota (2 Okt 2026, permintaan Nando): lead aktif
+// (bukan menang/kalah, tidak sedang "ditunggu") yang lebih dari IDLE_DAYS
+// hari tanpa catatan progress maupun kontak. Owner/manager bisa langsung
+// memindahkannya ke anggota lain - per lead atau sekaligus semuanya.
+const IDLE_DAYS = 14;
+
+function idleDaysOf(lead) {
+  const notes = lead.progress_notes || [];
+  const lastNote = notes.reduce((max, n) => (n.note_date && n.note_date > max ? n.note_date : max), "");
+  const candidates = [lead.last_contact, lastNote, lead.created_at].filter(Boolean).map((v) => new Date(v).getTime()).filter((t) => !isNaN(t));
+  if (!candidates.length) return null;
+  return Math.floor((Date.now() - Math.max(...candidates)) / 86400000);
+}
+
+function IdleLeadsCard({ leads, stages, members, onOpenLead, onChanged }) {
+  const [openId, setOpenId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [bulkTo, setBulkTo] = useState({});
+
+  const closedKeys = new Set((stages || []).filter((s) => s.type === "won" || s.type === "lost").map((s) => s.key));
+  const stageLabel = Object.fromEntries((stages || []).map((s) => [s.key, s.label]));
+  const today = new Date(Date.now() + WIB_OFFSET_MS).toISOString().slice(0, 10);
+
+  const idleByMember = new Map();
+  for (const l of leads || []) {
+    if (closedKeys.has(l.stage_key)) continue;
+    if (l.wait_until && String(l.wait_until) >= today) continue;
+    const days = idleDaysOf(l);
+    if (days === null || days <= IDLE_DAYS) continue;
+    const owner = l.assigned_to || l.user_id;
+    if (!idleByMember.has(owner)) idleByMember.set(owner, []);
+    idleByMember.get(owner).push({ ...l, _idle: days });
+  }
+  const rows = members
+    .map((m) => ({ m, items: (idleByMember.get(m.user_id) || []).sort((a, b) => b._idle - a._idle) }))
+    .filter((r) => r.items.length > 0)
+    .sort((a, b) => b.items.length - a.items.length);
+  const total = rows.reduce((s, r) => s + r.items.length, 0);
+
+  const move = async (ids, toUid) => {
+    if (!toUid || !ids.length) return;
+    const toName = members.find((m) => m.user_id === toUid)?.name || "anggota lain";
+    if (ids.length > 1 && !window.confirm(`Pindahkan ${ids.length} lead ke ${toName}?`)) return;
+    setBusy(true);
+    try {
+      for (const id of ids) await db.updateLeadAssignee(id, toUid);
+      onChanged?.();
+    } catch (e) {
+      alert("Gagal memindahkan lead: " + e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className={CARD}>
+      <PanelHeader className="mb-4" title="Lead terbengkalai" meta={`Lead aktif tanpa progress lebih dari ${IDLE_DAYS} hari${total ? ` · ${total} lead` : ""}`} />
+      {rows.length === 0 ? (
+        <p className="text-[13px] text-slate-500">Tidak ada lead terbengkalai. Semua lead aktif mendapat progress dalam {IDLE_DAYS} hari terakhir.</p>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {rows.map(({ m, items }) => {
+            const open = openId === m.user_id;
+            const others = members.filter((x) => x.user_id !== m.user_id);
+            return (
+              <div key={m.user_id} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13.5px] font-bold text-ink">{m.name}</div>
+                    <div className="text-[11.5px] text-slate-500">{ROLE_LABEL[m.role] || m.role} · <span className="font-semibold text-amber-700">{items.length} lead terbengkalai</span> · terlama {items[0]._idle} hari</div>
+                  </div>
+                  <button onClick={() => setOpenId(open ? null : m.user_id)} className="rounded-inner border border-slate-200 px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50" aria-expanded={open}>
+                    {open ? "Tutup" : "Lihat"}
+                  </button>
+                </div>
+
+                {open && (
+                  <div className="mt-3 rounded-inner border border-slate-200">
+                    {others.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2 text-[12px]">
+                        <span className="text-slate-600">Pindahkan semua ({items.length}) ke</span>
+                        <select value={bulkTo[m.user_id] || ""} onChange={(e) => setBulkTo((b) => ({ ...b, [m.user_id]: e.target.value }))} className="rounded-inner border border-slate-300 bg-white px-2 py-1 text-[12px]">
+                          <option value="">Pilih anggota</option>
+                          {others.map((o) => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}
+                        </select>
+                        <button disabled={busy || !bulkTo[m.user_id]} onClick={() => move(items.map((i) => i.id), bulkTo[m.user_id])} className="rounded-inner bg-ink px-3 py-1 font-semibold text-white hover:bg-slate-800 disabled:opacity-40">Pindahkan</button>
+                      </div>
+                    )}
+                    <ul className="max-h-[360px] divide-y divide-slate-100 overflow-y-auto">
+                      {items.map((l) => (
+                        <li key={l.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <button onClick={() => onOpenLead?.(l)} className="max-w-full truncate text-left text-[13px] font-semibold text-ink hover:text-brand hover:underline">{l.name}</button>
+                            <div className="text-[11px] text-slate-500">{stageLabel[l.stage_key] || l.stage_key || "-"} · <span className="font-semibold text-amber-700">{l._idle} hari</span> tanpa progress</div>
+                          </div>
+                          {others.length > 0 && (
+                            <select value="" disabled={busy} onChange={(e) => move([l.id], e.target.value)} className="rounded-inner border border-slate-300 bg-white px-2 py-1 text-[12px] text-slate-700" aria-label={`Pindahkan ${l.name}`}>
+                              <option value="">Pindahkan ke…</option>
+                              {others.map((o) => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}
+                            </select>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -24,7 +24,8 @@ const demo = getIndustryDemo(ind, stages);
 const ent = role !== "free";
 // lead "aneh": field kosong/null, tahap gak dikenal, nomor ganda - data nyata sering begini
 const weird = { id: "w1", name: "Lead Data Minim", stage_key: "tahap_hilang", phone: "0812-1111-2222, 021-555", email: null, city: null, category: null, product: null, created_at: null, last_contact: null, next_action: null, progress_notes: null, assigned_to: "u2" };
-const leads = [...demo.leads.map((l, i) => ({ ...l, assigned_to: i % 2 ? "u2" : "u1" })), weird];
+// Sebagian lead dibuat 40 hari lalu tanpa progress -> muncul di "Lead terbengkalai".
+const leads = [...demo.leads.map((l, i) => ({ ...l, assigned_to: i % 2 ? "u2" : "u1", created_at: new Date(Date.now() - (i % 2 ? 2 : 40) * 86400000).toISOString() })), weird];
 window.__M = {
   org: { id: "o1", name: "PT Uji", owner_user_id: role === "sales" ? "u9" : "u1", plan: ent ? "enterprise" : null, member_limit: ent ? 4 : 1, industry: ind, custom_field_labels: {} },
   settings: { plan: ent ? null : null }, role: role === "sales" ? "sales_rep" : "owner",
