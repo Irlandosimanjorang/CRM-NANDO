@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Smoke test Nexto</title>
+<style>body{font:14px system-ui;margin:24px;color:#0f172a}.ok{color:#047857}.bad{color:#be123c}pre{white-space:pre-wrap;font-size:12px}</style></head>
+<body>
+<h1>Smoke test semua tab</h1>
+<p>Render setiap tab di 7 industri × 3 jenis user (owner Enterprise, sales Enterprise, Free) pakai data contoh. Gagal = crash saat tampil.</p>
+<p id="status">Menjalankan…</p><pre id="out"></pre>
+<script>
+// Alat tes (1 Okt 2026), dibuat setelah 2 crash lolos ke produksi.
+// Jalankan: npm run smoke  -> browser terbuka di halaman ini.
+const inds = ["pvc_chemical","automotive","property","b2b_general","insurance","retail_fmcg","corporate_consultant"];
+const roles = ["owner","sales","free"];
+const tabs = ["dashboard","leads","generate","deal","visit","team","kompetitor","nex","advisor","industrydemo","settings","leadmodal","leadmodal_weird"];
+const run = (ind, role, tab) => new Promise((res) => {
+  const f = document.createElement("iframe");
+  f.style.cssText = "width:1200px;height:900px;position:absolute;left:-5000px";
+  f.src = `/scripts/smoke/smoke.html?ind=${ind}&role=${role}&tab=${tab}`;
+  f.onload = () => setTimeout(() => { let r; try { r = f.contentWindow.__done(); } catch (e) { r = { errors: ["harness: " + e.message], textLen: 0 }; } f.remove(); res(r); }, 1500);
+  document.body.appendChild(f);
+});
+(async () => {
+  const fails = []; let n = 0; const total = inds.length * roles.length * tabs.length;
+  for (const ind of inds) for (const role of roles) for (const tab of tabs) {
+    const r = await run(ind, role, tab); n++;
+    if (r.errors.length || r.textLen < 20) fails.push(`${ind} / ${role} / ${tab}\n  ${[...new Set(r.errors)].join("\n  ")}`);
+    document.getElementById("status").textContent = `${n}/${total} - gagal: ${fails.length}`;
+  }
+  const s = document.getElementById("status");
+  s.className = fails.length ? "bad" : "ok";
+  s.textContent = fails.length ? `SELESAI - ${fails.length} dari ${total} GAGAL` : `SELESAI - semua ${total} lolos`;
+  document.getElementById("out").textContent = fails.join("\n\n");
+  window.__result = { total, fails };
+})();
+</script>
+</body></html>
