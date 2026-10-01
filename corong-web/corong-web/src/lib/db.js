@@ -926,6 +926,15 @@ export async function cancelVisit(leadId) {
 // mindahin lead yang keupload sales_rep A ke sales_rep B, karena RLS
 // (leads_role_access) bikin sales_rep cuma bisa liat lead yang assigned_to
 // dirinya sendiri.
+// Ubah beberapa lead sekaligus (2 Okt 2026) - dipakai aksi massal di panel
+// "Lead terbengkalai" (pindahkan, jeda sampai tanggal, tandai lost).
+// RLS leads tetap berlaku: owner/manager boleh, sales hanya lead miliknya.
+export async function updateLeadsBulk(ids, patch) {
+  if (!ids?.length) return;
+  const { error } = await supabase.from("leads").update(patch).in("id", ids);
+  if (error) throw error;
+}
+
 export async function updateLeadAssignee(id, assigned_to) {
   const { error } = await supabase.from("leads").update({ assigned_to }).eq("id", id);
   if (error) throw error;

@@ -977,7 +977,7 @@ export default function App() {
                   rekam meeting, dst) yang lagi jalan di tab manapun GAK KEPUTUS
                   cuma gara-gara user pindah tab pas nungguin. ---- */}
               <div style={{ display: effectiveTab === "dashboard" ? "block" : "none" }}>
-                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} />
+                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} myUid={session?.user?.id} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
                 <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />

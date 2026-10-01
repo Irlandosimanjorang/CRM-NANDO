@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail, CheckCircle2, X } from "lucide-react";
+import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail, CheckCircle2, X, ChevronDown } from "lucide-react";
 import * as db from "../lib/db";
 import TeamLeaderboard from "../components/TeamLeaderboard";
 import { PanelHeader } from "../ui";
 import { isThinNote } from "../lib/noteQuality";
+import { IDLE_DAYS, SEVERITY, collectIdleLeads, countBySeverity } from "../lib/idleLeads";
+import { chipStyle } from "../lib/helpers";
 
 // Tab "Team" (30 Sep 2026, permintaan Nando dari calon klien Enterprise yang
 // minta "preview dashboard rekap aktivitas manager"). Khusus owner/manager
@@ -467,117 +469,163 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
   );
 }
 
-// Lead terbengkalai per anggota (2 Okt 2026, permintaan Nando): lead aktif
-// (bukan menang/kalah, tidak sedang "ditunggu") yang lebih dari IDLE_DAYS
-// hari tanpa catatan progress maupun kontak. Owner/manager bisa langsung
-// memindahkannya ke anggota lain - per lead atau sekaligus semuanya.
-const IDLE_DAYS = 14;
-
-function idleDaysOf(lead) {
-  const notes = lead.progress_notes || [];
-  const lastNote = notes.reduce((max, n) => (n.note_date && n.note_date > max ? n.note_date : max), "");
-  const candidates = [lead.last_contact, lastNote, lead.created_at].filter(Boolean).map((v) => new Date(v).getTime()).filter((t) => !isNaN(t));
-  if (!candidates.length) return null;
-  return Math.floor((Date.now() - Math.max(...candidates)) / 86400000);
-}
-
+// Lead terbengkalai per anggota (2 Okt 2026, permintaan Nando). Logika di
+// lib/idleLeads.js (sama dengan kartu di Dashboard). Dua tampilan:
+// "Terhenti" (pernah ada progress lalu berhenti) & "Belum dihubungi" (belum
+// pernah disentuh, biasanya hasil import yang belum dibagikan). Warna =
+// tingkat keparahan (15–30 / 31–60 / >60 hari). Aksi massal lewat checkbox:
+// pindahkan ke anggota lain, jeda sampai tanggal, atau tandai lost.
 function IdleLeadsCard({ leads, stages, members, onOpenLead, onChanged }) {
+  const [view, setView] = useState("stalled");
   const [openId, setOpenId] = useState(null);
+  const [picked, setPicked] = useState(() => new Set());
+  const [pauseDate, setPauseDate] = useState("");
   const [busy, setBusy] = useState(false);
-  const [bulkTo, setBulkTo] = useState({});
 
-  const closedKeys = new Set((stages || []).filter((s) => s.type === "won" || s.type === "lost").map((s) => s.key));
-  const stageLabel = Object.fromEntries((stages || []).map((s) => [s.key, s.label]));
-  const today = new Date(Date.now() + WIB_OFFSET_MS).toISOString().slice(0, 10);
+  const all = collectIdleLeads(leads, stages);
+  const stalled = all.filter((l) => l._touched);
+  const untouched = all.filter((l) => !l._touched);
+  const items = view === "stalled" ? stalled : untouched;
+  const sevCount = countBySeverity(items);
+  const stageMeta = Object.fromEntries((stages || []).map((s) => [s.key, s]));
+  const lostStage = (stages || []).find((s) => s.type === "lost");
 
-  const idleByMember = new Map();
-  for (const l of leads || []) {
-    if (closedKeys.has(l.stage_key)) continue;
-    if (l.wait_until && String(l.wait_until) >= today) continue;
-    const days = idleDaysOf(l);
-    if (days === null || days <= IDLE_DAYS) continue;
+  const byMember = new Map();
+  for (const l of items) {
     const owner = l.assigned_to || l.user_id;
-    if (!idleByMember.has(owner)) idleByMember.set(owner, []);
-    idleByMember.get(owner).push({ ...l, _idle: days });
+    if (!byMember.has(owner)) byMember.set(owner, []);
+    byMember.get(owner).push(l);
   }
   const rows = members
-    .map((m) => ({ m, items: (idleByMember.get(m.user_id) || []).sort((a, b) => b._idle - a._idle) }))
-    .filter((r) => r.items.length > 0)
-    .sort((a, b) => b.items.length - a.items.length);
-  const total = rows.reduce((s, r) => s + r.items.length, 0);
+    .map((m) => ({ m, list: byMember.get(m.user_id) || [] }))
+    .filter((r) => r.list.length > 0)
+    .sort((a, b) => b.list.length - a.list.length);
 
-  const move = async (ids, toUid) => {
-    if (!toUid || !ids.length) return;
-    const toName = members.find((m) => m.user_id === toUid)?.name || "anggota lain";
-    if (ids.length > 1 && !window.confirm(`Pindahkan ${ids.length} lead ke ${toName}?`)) return;
+  const switchView = (v) => { setView(v); setOpenId(null); setPicked(new Set()); };
+  const toggleOpen = (uid) => { setOpenId((cur) => (cur === uid ? null : uid)); setPicked(new Set()); };
+  const togglePick = (id) => setPicked((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  const run = async (label, patch) => {
+    const ids = [...picked];
+    if (!ids.length) { alert("Pilih minimal satu lead terlebih dahulu."); return; }
+    if (!window.confirm(`${label} ${ids.length} lead?`)) return;
     setBusy(true);
     try {
-      for (const id of ids) await db.updateLeadAssignee(id, toUid);
+      await db.updateLeadsBulk(ids, patch);
+      setPicked(new Set());
       onChanged?.();
     } catch (e) {
-      alert("Gagal memindahkan lead: " + e.message);
+      alert("Gagal memperbarui lead: " + e.message);
     } finally {
       setBusy(false);
     }
   };
 
+  const total = stalled.length + untouched.length;
+
   return (
     <section className={CARD}>
-      <PanelHeader className="mb-4" title="Lead terbengkalai" meta={`Lead aktif tanpa progress lebih dari ${IDLE_DAYS} hari${total ? ` · ${total} lead` : ""}`} />
-      {rows.length === 0 ? (
-        <p className="text-[13px] text-slate-500">Tidak ada lead terbengkalai. Semua lead aktif mendapat progress dalam {IDLE_DAYS} hari terakhir.</p>
-      ) : (
-        <div className="divide-y divide-slate-100">
-          {rows.map(({ m, items }) => {
-            const open = openId === m.user_id;
-            const others = members.filter((x) => x.user_id !== m.user_id);
-            return (
-              <div key={m.user_id} className="py-3 first:pt-0 last:pb-0">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13.5px] font-bold text-ink">{m.name}</div>
-                    <div className="text-[11.5px] text-slate-500">{ROLE_LABEL[m.role] || m.role} · <span className="font-semibold text-amber-700">{items.length} lead terbengkalai</span> · terlama {items[0]._idle} hari</div>
-                  </div>
-                  <button onClick={() => setOpenId(open ? null : m.user_id)} className="rounded-inner border border-slate-200 px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50" aria-expanded={open}>
-                    {open ? "Tutup" : "Lihat"}
-                  </button>
-                </div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <PanelHeader className="mb-0" title="Lead terbengkalai" meta={`Lead aktif tanpa progress lebih dari ${IDLE_DAYS} hari`} />
+        {total > 0 && (
+          <div className="flex rounded-inner border border-slate-200 p-0.5 text-[12px]" role="tablist">
+            {[["stalled", "Terhenti", stalled.length], ["untouched", "Belum dihubungi", untouched.length]].map(([k, label, n]) => (
+              <button key={k} role="tab" aria-selected={view === k} onClick={() => switchView(k)} className={`rounded-[9px] px-3 py-1.5 font-semibold ${view === k ? "bg-ink text-white" : "text-slate-600 hover:bg-slate-50"}`}>
+                {label} <span className="tabular-nums">{n}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
-                {open && (
-                  <div className="mt-3 rounded-inner border border-slate-200">
-                    {others.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2 text-[12px]">
-                        <span className="text-slate-600">Pindahkan semua ({items.length}) ke</span>
-                        <select value={bulkTo[m.user_id] || ""} onChange={(e) => setBulkTo((b) => ({ ...b, [m.user_id]: e.target.value }))} className="rounded-inner border border-slate-300 bg-white px-2 py-1 text-[12px]">
-                          <option value="">Pilih anggota</option>
-                          {others.map((o) => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}
-                        </select>
-                        <button disabled={busy || !bulkTo[m.user_id]} onClick={() => move(items.map((i) => i.id), bulkTo[m.user_id])} className="rounded-inner bg-ink px-3 py-1 font-semibold text-white hover:bg-slate-800 disabled:opacity-40">Pindahkan</button>
-                      </div>
-                    )}
-                    <ul className="max-h-[360px] divide-y divide-slate-100 overflow-y-auto">
-                      {items.map((l) => (
-                        <li key={l.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-                          <div className="min-w-0 flex-1">
-                            <button onClick={() => onOpenLead?.(l)} className="max-w-full truncate text-left text-[13px] font-semibold text-ink hover:text-brand hover:underline">{l.name}</button>
-                            <div className="text-[11px] text-slate-500">{stageLabel[l.stage_key] || l.stage_key || "-"} · <span className="font-semibold text-amber-700">{l._idle} hari</span> tanpa progress</div>
-                          </div>
-                          {others.length > 0 && (
-                            <select value="" disabled={busy} onChange={(e) => move([l.id], e.target.value)} className="rounded-inner border border-slate-300 bg-white px-2 py-1 text-[12px] text-slate-700" aria-label={`Pindahkan ${l.name}`}>
-                              <option value="">Pindahkan ke…</option>
-                              {others.map((o) => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}
-                            </select>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+      {total === 0 ? (
+        <p className="text-[13px] text-slate-500">Tidak ada lead terbengkalai. Semua lead aktif mendapat progress dalam {IDLE_DAYS} hari terakhir.</p>
+      ) : items.length === 0 ? (
+        <p className="text-[13px] text-slate-500">{view === "stalled" ? "Tidak ada lead yang progresnya terhenti." : "Semua lead sudah pernah dihubungi."}</p>
+      ) : (
+        <>
+          <p className="mb-3 text-[12px] text-slate-500">
+            {view === "stalled"
+              ? "Pernah ada progress lalu berhenti - perlu ditindaklanjuti atau dipindahkan."
+              : "Belum pernah dihubungi sama sekali - bagikan ke sales atau mulai hubungi."}
+          </p>
+          <div className="mb-4 grid grid-cols-3 gap-2">
+            {SEVERITY.map((s) => (
+              <div key={s.key} className={`rounded-inner px-3 py-2 ${s.tile}`}>
+                <div className="font-display text-[18px] font-bold leading-none tabular-nums">{sevCount[s.key]}</div>
+                <div className={`mt-1 text-[11px] ${s.tileSub}`}>{s.label}</div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+
+          <div className="divide-y divide-slate-100 border-t border-slate-100">
+            {rows.map(({ m, list }) => {
+              const open = openId === m.user_id;
+              const sc = countBySeverity(list);
+              const others = members.filter((x) => x.user_id !== m.user_id);
+              const allPicked = list.length > 0 && list.every((l) => picked.has(l.id));
+              return (
+                <div key={m.user_id} className="py-3">
+                  <button onClick={() => toggleOpen(m.user_id)} aria-expanded={open} className="flex w-full items-center gap-3 rounded-inner text-left hover:bg-slate-50/70">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${avatarBg(m.user_id)}`}>{initialsOf(m.name)}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13.5px] font-bold text-ink">
+                        {m.name}
+                        {view === "untouched" && m.role === "owner" && <span className="ml-1.5 text-[11px] font-medium text-slate-500">belum dibagikan ke sales</span>}
+                      </div>
+                      <div className="mt-1.5 flex h-1.5 max-w-[240px] overflow-hidden rounded-full bg-slate-100">
+                        {SEVERITY.map((s) => sc[s.key] > 0 && <span key={s.key} className={s.bar} style={{ width: `${(sc[s.key] / list.length) * 100}%` }} />)}
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-[12.5px] font-semibold tabular-nums text-slate-700">{list.length} lead</span>
+                    <ChevronDown size={16} className={`shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {open && (
+                    <div className="mt-3 overflow-hidden rounded-inner border border-slate-200">
+                      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2 text-[12px] text-slate-600">
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" checked={allPicked} onChange={() => setPicked(allPicked ? new Set() : new Set(list.map((l) => l.id)))} aria-label="Pilih semua" />
+                          <span className="tabular-nums">{picked.size} dipilih</span>
+                        </label>
+                        <span className="flex-1" />
+                        {others.length > 0 && (
+                          <select value="" disabled={busy} onChange={(e) => { const to = e.target.value; const name = members.find((x) => x.user_id === to)?.name; if (to) run(`Pindahkan ke ${name}`, { assigned_to: to }); }} className="rounded-inner border border-slate-300 bg-white px-2 py-1 text-[12px] text-slate-700" aria-label="Pindahkan lead terpilih">
+                            <option value="">Pindahkan ke…</option>
+                            {others.map((o) => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}
+                          </select>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <input type="date" value={pauseDate} min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)} onChange={(e) => setPauseDate(e.target.value)} className="rounded-inner border border-slate-300 bg-white px-2 py-[3px] text-[12px]" aria-label="Jeda sampai tanggal" />
+                          <button disabled={busy} onClick={() => { if (!pauseDate) { alert("Pilih tanggal jeda terlebih dahulu."); return; } run(`Jeda sampai ${pauseDate} untuk`, { wait_until: pauseDate }); }} className="rounded-inner border border-slate-300 bg-white px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-100">Jeda</button>
+                        </span>
+                        {lostStage && (
+                          <button disabled={busy} onClick={() => run(`Tandai ${lostStage.label}`, { stage_key: lostStage.key, outcome: { result: "lost", reason_category: "Lainnya", reason: `Ditandai ${lostStage.label} dari panel Lead terbengkalai (tidak ada progress lebih dari ${IDLE_DAYS} hari).`, ai_generated: false, recorded_at: new Date().toISOString() } })} className="rounded-inner border border-rose-200 bg-white px-2.5 py-1 font-semibold text-rose-700 hover:bg-rose-50">Tandai {lostStage.label}</button>
+                        )}
+                      </div>
+                      <ul className="max-h-[420px] divide-y divide-slate-100 overflow-y-auto">
+                        {list.map((l) => {
+                          const st = stageMeta[l.stage_key];
+                          return (
+                            <li key={l.id} className="flex items-center gap-3 px-3 py-2.5">
+                              <input type="checkbox" checked={picked.has(l.id)} onChange={() => togglePick(l.id)} aria-label={`Pilih ${l.name}`} />
+                              <div className="min-w-0 flex-1">
+                                <button onClick={() => onOpenLead?.(l)} className="max-w-full truncate text-left text-[13px] font-semibold text-ink hover:text-brand hover:underline">{l.name}</button>
+                                <div className="truncate text-[11.5px] text-slate-500">{l._lastNote ? `Terakhir: ${l._lastNote}` : "Belum pernah dihubungi"}</div>
+                              </div>
+                              {st && <span className="hidden shrink-0 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold sm:inline" style={chipStyle(st.hex)}>{st.label}</span>}
+                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold tabular-nums ${l._sev.badge}`}>{l._idle} hari</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </section>
   );

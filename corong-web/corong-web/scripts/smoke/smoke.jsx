@@ -25,7 +25,7 @@ const ent = role !== "free";
 // lead "aneh": field kosong/null, tahap gak dikenal, nomor ganda - data nyata sering begini
 const weird = { id: "w1", name: "Lead Data Minim", stage_key: "tahap_hilang", phone: "0812-1111-2222, 021-555", email: null, city: null, category: null, product: null, created_at: null, last_contact: null, next_action: null, progress_notes: null, assigned_to: "u2" };
 // Sebagian lead dibuat 40 hari lalu tanpa progress -> muncul di "Lead terbengkalai".
-const leads = [...demo.leads.map((l, i) => ({ ...l, assigned_to: i % 2 ? "u2" : "u1", created_at: new Date(Date.now() - (i % 2 ? 2 : 40) * 86400000).toISOString() })), weird];
+const leads = [...demo.leads.map((l, i) => ({ ...l, assigned_to: i % 2 ? "u2" : "u1", created_at: new Date(Date.now() - (i % 2 ? 2 : 80) * 86400000).toISOString(), progress_notes: i === 0 ? [{ id: "pn1", note_date: new Date(Date.now() - 35 * 86400000).toISOString().slice(0, 10), text: "Minta revisi proposal dan jadwal ulang presentasi." }] : [] })), weird];
 window.__M = {
   org: { id: "o1", name: "PT Uji", owner_user_id: role === "sales" ? "u9" : "u1", plan: ent ? "enterprise" : null, member_limit: ent ? 4 : 1, industry: ind, custom_field_labels: {} },
   settings: { plan: ent ? null : null }, role: role === "sales" ? "sales_rep" : "owner",
@@ -35,7 +35,7 @@ window.__M = {
 const canManage = role !== "sales", myLevel = ent ? 2 : 0;
 const noop = () => {};
 const views = {
-  dashboard: <Dashboard leads={leads} stages={stages} dealTransactions={demo.deals} settings={{}} onGo={noop} onOpenLead={noop} myLevel={myLevel} onChanged={noop} isEnterprise={ent} canManage={canManage} />,
+  dashboard: <Dashboard myUid="u1" leads={leads} stages={stages} dealTransactions={demo.deals} settings={{}} onGo={noop} onOpenLead={noop} myLevel={myLevel} onChanged={noop} isEnterprise={ent} canManage={canManage} />,
   leads: <Leads leads={leads} stages={stages} settings={{}} industry={ind} customFieldLabels={{}} myLevel={myLevel} onChanged={noop} canManage={canManage} isEnterprise={ent} />,
   generate: <GenerateLeads stages={stages} industry={ind} onChanged={noop} onNotify={noop} />,
   deal: <Deal leads={leads} stages={stages} dealTransactions={demo.deals} industry={ind} onEdit={noop} onChanged={noop} />,
