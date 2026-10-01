@@ -84,6 +84,23 @@ export async function getTeamFeed(from, to, limit = 200) {
   if (error) throw error;
   return data || [];
 }
+// Catatan progress satu anggota di rentang waktu, beserta nama lead-nya
+// (2 Okt 2026) - dipakai jendela "Lead di-update" di tab Team. RLS
+// progress_notes: owner/manager bisa membaca catatan seluruh org.
+export async function getMemberNotes(userId, from, to) {
+  const { data, error } = await supabase
+    .from("progress_notes")
+    .select("id, lead_id, text, created_at, leads(name)")
+    .eq("user_id", userId)
+    .gte("created_at", from.toISOString())
+    .lt("created_at", to.toISOString())
+    .not("text", "ilike", "Check-in GPS terverifikasi%")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  return data || [];
+}
+
 export async function getTeamActivityDays(days = 7) {
   const { data, error } = await supabase.rpc("get_team_activity_days", { p_days: days });
   if (error) throw error;

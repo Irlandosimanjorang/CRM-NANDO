@@ -12,7 +12,8 @@ const SPECIAL = {
   getLeadGenCooldown: "({ canGenerate: true, usedThisMonth: 1, quotaMax: 4, nextAvailableAt: null })",
   getCheckinCooldown: "({ canCheckIn: true, usedThisMonth: 2, quotaMax: 50, nextAvailableAt: null })",
   getEnrichProgress: "[]",
-  getTeamActivity: "({ members: [{ user_id: 'u1', role: 'owner', name: 'Nando', visits: 1, notes: 5, leads_updated: 3, new_leads: 4, stage_moves: 1, deals: 0, deal_value: 0, last_activity_at: new Date().toISOString() }, { user_id: 'u2', role: 'sales_rep', name: 'Budi', visits: 2, notes: 3, leads_updated: 3, new_leads: 2, stage_moves: 3, deals: 1, deal_value: 50000000, last_activity_at: new Date(Date.now() - 86400000).toISOString() }], feed: [] })",
+  getMemberNotes: "([{ id: 'n1', lead_id: 'a', text: 'HRD minta proposal assessment 40 supervisor, kirim minggu ini.', created_at: new Date().toISOString(), leads: { name: 'PT Mitra Logistik' } }, { id: 'n2', lead_id: 'a', text: 'ok', created_at: new Date(Date.now() - 3600000).toISOString(), leads: { name: 'PT Mitra Logistik' } }, { id: 'n3', lead_id: 'b', text: 'Sudah dihubungi.', created_at: new Date(Date.now() - 7200000).toISOString(), leads: { name: 'PT Bank Sejahtera' } }])",
+  getTeamActivity: "({ members: [{ user_id: 'u1', role: 'owner', name: 'Nando', visits: 1, notes: 5, notes_thin: 2, leads_updated: 3, new_leads: 4, stage_moves: 1, deals: 0, deal_value: 0, last_activity_at: new Date().toISOString() }, { user_id: 'u2', role: 'sales_rep', name: 'Budi', visits: 2, notes: 3, leads_updated: 3, new_leads: 2, stage_moves: 3, deals: 1, deal_value: 50000000, last_activity_at: new Date(Date.now() - 86400000).toISOString() }], feed: [] })",
 };
 let out = "// AUTO-GENERATED oleh gen-mockdb.cjs - jangan diedit manual.\n";
 for (const n of names) {

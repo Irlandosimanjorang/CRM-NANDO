@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail, CheckCircle2 } from "lucide-react";
+import { createPortal } from "react-dom";
+import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail, CheckCircle2, X } from "lucide-react";
 import * as db from "../lib/db";
 import TeamLeaderboard from "../components/TeamLeaderboard";
 import { PanelHeader } from "../ui";
+import { isThinNote } from "../lib/noteQuality";
 
 // Tab "Team" (30 Sep 2026, permintaan Nando dari calon klien Enterprise yang
 // minta "preview dashboard rekap aktivitas manager"). Khusus owner/manager
@@ -69,7 +71,8 @@ const COLS = [
   { key: "visits", label: "Kunjungan" },
   // Jumlah LEAD berbeda yang diberi catatan progress (2 Okt 2026) - lebih
   // jujur dari jumlah catatan (5 catatan di 1 lead = tetap 1 lead).
-  { key: "leads_updated", label: "Lead di-update", hint: (m) => `${Number(m.notes) || 0} catatan` },
+  // Klik angkanya untuk melihat daftar lead & isi catatannya (MemberNotesModal).
+  { key: "leads_updated", label: "Lead di-update", clickable: true, hint: (m) => `${Number(m.notes) || 0} catatan${Number(m.notes_thin) > 0 ? ` · ${m.notes_thin} terlalu singkat` : ""}`, hintWarn: (m) => Number(m.notes_thin) > 0 },
   { key: "new_leads", label: "Lead baru" },
   { key: "stage_moves", label: "Pindah tahap" },
   { key: "deals", label: "Deal" },
@@ -254,6 +257,7 @@ function DayBars({ days, selected, onSelect }) {
 export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage }) {
   const api = db;
   const [range, setRange] = useState("week");
+  const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
   const [data, setData] = useState(null);
   const [contracts, setContracts] = useState([]);
   const [daysRaw, setDays] = useState(null); // null = belum dimuat
@@ -392,7 +396,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
           {loading && !data ? (
             <div className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-[92px]" />)}</div>
           ) : members.length > COMPACT_AT ? (
-            <MemberTable members={members} maxOf={maxOf} totalOf={totalOf} maxTotal={maxTotal} />
+            <MemberTable members={members} maxOf={maxOf} totalOf={totalOf} maxTotal={maxTotal} onOpenNotes={setNotesFor} />
           ) : (
             <div className="divide-y divide-slate-100">
               {members.map((m) => {
@@ -416,12 +420,16 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
                         const v = Number(m[c.key]) || 0;
                         return (
                           <div key={c.key} className="min-w-0">
-                            <div className={`font-display text-[17px] font-bold leading-none tabular-nums ${v > 0 ? "text-ink" : "text-slate-300"}`}>{v}</div>
+                            {c.clickable && v > 0 ? (
+                              <button onClick={() => setNotesFor(m)} title="Lihat daftar lead & catatannya" className="font-display text-[17px] font-bold leading-none tabular-nums text-ink underline decoration-slate-300 decoration-dotted underline-offset-4 hover:text-brand hover:decoration-brand">{v}</button>
+                            ) : (
+                              <div className={`font-display text-[17px] font-bold leading-none tabular-nums ${v > 0 ? "text-ink" : "text-slate-300"}`}>{v}</div>
+                            )}
                             <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">
                               <div className="h-full rounded-full bg-brand motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${Math.round((v / maxOf[c.key]) * 100)}%` }} />
                             </div>
                             <div className="mt-1 truncate text-[10.5px] text-slate-500">{c.label}</div>
-                            {c.hint && <div className="truncate text-[10px] text-slate-500">{c.hint(m)}</div>}
+                            {c.hint && <div title={c.hint(m)} className={`truncate text-[10px] ${c.hintWarn?.(m) ? "font-semibold text-amber-700" : "text-slate-500"}`}>{c.hint(m)}</div>}
                           </div>
                         );
                       })}
@@ -442,13 +450,24 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />
+
+      {notesFor && (
+        <MemberNotesModal
+          api={api}
+          member={notesFor}
+          range={rangeFor(range)}
+          rangeLabel={rangeLabel}
+          onClose={() => setNotesFor(null)}
+          onOpenLead={(id) => { setNotesFor(null); openLeadById(id); }}
+        />
+      )}
     </div>
   );
 }
 
 // Rekap ringkas (> COMPACT_AT anggota): satu baris per orang, urut dari yang
 // paling aktif. Angka tertinggi tiap kolom ditebalkan.
-function MemberTable({ members, maxOf, totalOf, maxTotal }) {
+function MemberTable({ members, maxOf, totalOf, maxTotal, onOpenNotes }) {
   const sorted = [...members].sort((a, b) => totalOf(b) - totalOf(a));
   return (
     <div className="-mx-1 overflow-x-auto">
@@ -481,7 +500,13 @@ function MemberTable({ members, maxOf, totalOf, maxTotal }) {
                 {COLS.map((c) => {
                   const v = Number(m[c.key]) || 0;
                   const top = v > 0 && v === maxOf[c.key];
-                  return <td key={c.key} title={c.hint ? c.hint(m) : undefined} className={`px-2 py-2.5 text-right tabular-nums ${v === 0 ? "text-slate-300" : top ? "font-bold text-ink" : "text-slate-700"}`}>{v}</td>;
+                  const cls = `px-2 py-2.5 text-right tabular-nums ${v === 0 ? "text-slate-300" : top ? "font-bold text-ink" : "text-slate-700"}`;
+                  return (
+                    <td key={c.key} title={c.hint ? c.hint(m) : undefined} className={cls}>
+                      {c.clickable && v > 0 ? <button onClick={() => onOpenNotes(m)} className="underline decoration-slate-300 decoration-dotted underline-offset-4 hover:text-brand">{v}</button> : v}
+                      {c.hintWarn?.(m) && <span className="ml-1 text-[10px] font-semibold text-amber-700">({m.notes_thin} singkat)</span>}
+                    </td>
+                  );
                 })}
                 <td className="py-2.5 pl-2 pr-1"><div className="flex justify-end"><Ring pct={score} size={34} /></div></td>
               </tr>
@@ -490,6 +515,97 @@ function MemberTable({ members, maxOf, totalOf, maxTotal }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+// Daftar lead yang di-update satu anggota pada periode yang dipilih, beserta
+// isi catatannya (2 Okt 2026). Catatan yang terlalu singkat/generik ditandai
+// (aturan di lib/noteQuality.js) supaya owner bisa menilai kualitasnya.
+function MemberNotesModal({ api, member, range, rangeLabel, onClose, onOpenLead }) {
+  const [notes, setNotes] = useState(null);
+  const [err, setErr] = useState("");
+  const fromMs = range.from.getTime();
+  const toMs = range.to.getTime();
+  useEffect(() => {
+    api.getMemberNotes(member.user_id, new Date(fromMs), new Date(toMs))
+      .then(setNotes)
+      .catch((e) => setErr(e.message || "Gagal memuat catatan"));
+  }, [api, member.user_id, fromMs, toMs]);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Kelompokkan per lead, urut dari catatan terbaru.
+  const groups = [];
+  const byLead = new Map();
+  for (const n of notes || []) {
+    let g = byLead.get(n.lead_id);
+    if (!g) { g = { leadId: n.lead_id, name: n.leads?.name || "Lead terhapus", items: [] }; byLead.set(n.lead_id, g); groups.push(g); }
+    g.items.push(n);
+  }
+  const thinCount = (notes || []).filter((n) => isThinNote(n.text)).length;
+  const sameDay = toMs - fromMs <= 86400000 + 60000;
+  const when = (iso) => {
+    const d = new Date(iso);
+    const time = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    return sameDay ? time : `${d.toLocaleDateString("id-ID", { day: "numeric", month: "short" })}, ${time}`;
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 pb-28 md:pb-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={`Lead yang di-update ${member.name}`} className="my-8 w-full max-w-xl rounded-panel bg-white p-5 shadow-float" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-bold text-ink">Lead yang di-update {member.name}</h2>
+            <p className="mt-0.5 text-[12px] text-slate-500">
+              {rangeLabel}
+              {notes && ` · ${groups.length} lead · ${notes.length} catatan`}
+              {thinCount > 0 && <span className="font-semibold text-amber-700"> · {thinCount} terlalu singkat</span>}
+            </p>
+          </div>
+          <button onClick={onClose} className="shrink-0 rounded-inner p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Tutup"><X size={18} /></button>
+        </div>
+
+        <div className="mt-4">
+          {err ? (
+            <p className="text-[13px] text-rose-600">{err}</p>
+          ) : notes === null ? (
+            <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>
+          ) : groups.length === 0 ? (
+            <p className="text-[13px] text-slate-500">Belum ada catatan progress pada periode ini.</p>
+          ) : (
+            <ul className="space-y-3">
+              {groups.map((g) => (
+                <li key={g.leadId} className="rounded-inner border border-slate-200 p-3">
+                  <button onClick={() => onOpenLead(g.leadId)} className="text-left text-[13.5px] font-bold text-ink hover:text-brand hover:underline">{g.name}</button>
+                  <ul className="mt-2 space-y-2">
+                    {g.items.map((n) => {
+                      const thin = isThinNote(n.text);
+                      return (
+                        <li key={n.id} className="flex gap-3">
+                          <span className="w-[74px] shrink-0 pt-0.5 text-[11px] tabular-nums text-slate-500">{when(n.created_at)}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-slate-700">{n.text}</p>
+                            {thin && <span className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10.5px] font-semibold text-amber-800">Terlalu singkat</span>}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {thinCount > 0 && (
+          <p className="mt-4 text-[11px] text-slate-500">"Terlalu singkat" = kurang dari 15 karakter atau hanya berisi frasa umum seperti "ok", "follow up", atau "sudah dihubungi".</p>
+        )}
+      </div>
+    </div>,
+    document.body
   );
 }
 
