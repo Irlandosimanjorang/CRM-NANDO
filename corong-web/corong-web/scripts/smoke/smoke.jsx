@@ -15,6 +15,7 @@ import Advisor from "../../src/tabs/Advisor";
 import IndustryDemo from "../../src/tabs/IndustryDemo";
 import Team from "../../src/tabs/Team";
 import LeadModal from "../../src/components/LeadModal";
+import EnterpriseInvoicePanel from "../../src/components/EnterpriseInvoicePanel";
 
 const q = new URLSearchParams(location.search);
 const ind = q.get("ind"), role = q.get("role"), tab = q.get("tab");
@@ -46,6 +47,7 @@ const views = {
   advisor: <Advisor leads={leads} stages={stages} onOpen={noop} dummy={!ent} demoRecs={demo.advisorRecs} />,
   industrydemo: <IndustryDemo />,
   settings: <Settings settings={{}} stages={stages} leads={leads} onChanged={noop} userEmail="uji@example.com" locked={false} />,
+  invoice: <div style={{ background: "#05070c", padding: 24 }}><EnterpriseInvoicePanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }, { plan: "free", org_name: "Org Free", role: "owner" }]} /></div>,
   leadmodal: <LeadModal lead={leads[0]} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
   leadmodal_weird: <LeadModal lead={weird} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
 };

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2, Users, Globe } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2, Users, Globe, FileText } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
+import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
 
 // Dashboard admin platform - versi "mission control" - CUMA keliatan buat
 // email admin (dicek di App.jsx + server-side di admin-status/admin-trigger).
@@ -1243,6 +1244,26 @@ export default function AdminDashboard() {
       statLabel: "KUNJUNGAN HARI INI",
       statValue: status?.traffic?.visits_today ?? 0,
       content: <TrafficPanel data={status?.traffic} />,
+    },
+    {
+      // INVOICE (2 Okt 2026, permintaan Nando) - buat invoice langganan
+      // Nexto untuk klien Enterprise: ketik nama perusahaan, sisanya terisi
+      // otomatis dari data organisasi. Tanpa PPN.
+      key: "invoice",
+      title: "INVOICE",
+      subtitle: "Tagihan Enterprise",
+      icon: FileText,
+      accentColor: "#a78bfa",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(167,139,250,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "buat invoice dari nama perusahaan",
+      wide: true,
+      blurb: `${new Set((status?.users_overview?.list || []).filter((u) => u.plan === "enterprise" && u.org_name).map((u) => u.org_name)).size} klien Enterprise aktif.`,
+      statLabel: "KLIEN ENTERPRISE",
+      statValue: new Set((status?.users_overview?.list || []).filter((u) => u.plan === "enterprise" && u.org_name).map((u) => u.org_name)).size,
+      content: <EnterpriseInvoicePanel users={status?.users_overview?.list} />,
     },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
