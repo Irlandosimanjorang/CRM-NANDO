@@ -529,10 +529,22 @@ function IdleLeadsCard({ leads, stages, members, onOpenLead, onChanged }) {
         <PanelHeader className="mb-0" title="Lead terbengkalai" meta={`Lead aktif tanpa progress lebih dari ${IDLE_DAYS} hari`} />
         {total > 0 && (
           <div className="flex rounded-inner border border-slate-200 p-0.5 text-[12px]" role="tablist">
-            {[["stalled", "Terhenti", stalled.length], ["untouched", "Belum dihubungi", untouched.length]].map(([k, label, n]) => (
-              <button key={k} role="tab" aria-selected={view === k} onClick={() => switchView(k)} className={`rounded-[9px] px-3 py-1.5 font-semibold ${view === k ? "bg-ink text-white" : "text-slate-600 hover:bg-slate-50"}`}>
-                {label} <span className="tabular-nums">{n}</span>
-              </button>
+            {/* Penjelasan singkat muncul di atas tombol saat kursor diarahkan
+                (atau tombol difokus/ditekan di HP). */}
+            {[
+              ["stalled", "Terhenti", "Lead yang pernah ada progress, lalu berhenti lebih dari 14 hari. Perlu ditindaklanjuti atau dipindahkan."],
+              ["untouched", "Belum dihubungi", "Lead yang belum pernah dihubungi sama sekali, biasanya hasil import yang belum dibagikan ke sales."],
+            ].map(([k, label, tip]) => (
+              <div key={k} className="group relative">
+                <button role="tab" aria-selected={view === k} aria-describedby={`idle-tip-${k}`} onClick={() => switchView(k)} className={`rounded-[9px] px-3 py-1.5 font-semibold ${view === k ? "bg-ink text-white" : "text-slate-600 hover:bg-slate-50"}`}>
+                  {label}
+                </button>
+                {/* Rata kiri di HP (tombol pindah ke kiri), rata kanan di layar lebar (tombol di tepi kanan panel) - supaya tidak terpotong. Panah tetap di tengah tombol. */}
+                <div id={`idle-tip-${k}`} role="tooltip" className="pointer-events-none invisible absolute bottom-full left-0 z-20 mb-2 w-56 rounded-inner bg-ink sm:left-auto sm:right-0 px-3 py-2 text-[11.5px] font-normal leading-snug text-white opacity-0 shadow-float transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                  {tip}
+                </div>
+                <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-20 mb-[-2px] -translate-x-1/2 border-[5px] border-transparent border-t-ink opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100" />
+              </div>
             ))}
           </div>
         )}
