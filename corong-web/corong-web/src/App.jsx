@@ -1,8 +1,8 @@
-import { useEffect, useState, useMemo, useRef, lazy, Suspense } from "react";
+import { useEffect, useState, useMemo, useRef, lazy, Suspense, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
-import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPos } from "./lib/uiPersist";
+import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPos, saveActiveTab, getActiveTab } from "./lib/uiPersist";
 import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
 import { getIndustryDemo } from "./lib/industryDemo";
 import Auth from "./Auth";
@@ -168,8 +168,11 @@ export default function App() {
         }
       }
     } catch {}
-    return "dashboard";
+    // Tab terakhir yang dibuka (2 Okt 2026) - setelah Chrome ditutup atau tab
+    // dibuang browser, kembali ke tab itu, bukan selalu Dashboard.
+    return getActiveTab() || "dashboard";
   });
+  useEffect(() => { saveActiveTab(tab); }, [tab]);
   // Tab mana aja yang UDAH PERNAH dibuka minimal sekali - dipake bareng
   // React.lazy() di atas biar tab yang belum pernah disentuh beneran gak
   // nge-fetch chunk-nya sama sekali (bukan cuma disembunyiin CSS kayak yang
@@ -241,29 +244,59 @@ export default function App() {
   // Diinget PER TAB (sessionStorage, otomatis ke-hapus kalau tab BENERAN
   // ditutup) - discroll dikit aja langsung ke-simpen (throttle via rAF),
   // dipulihin abis konten tab-nya beres di-render/loading kelar.
+  // Selama posisi lama sedang dipulihkan, scroll yang terjadi (termasuk yang
+  // "kepotong" karena halaman belum setinggi itu) JANGAN disimpan - kalau
+  // disimpan, posisi asli ketimpa angka kecil dan berikutnya selalu ke atas.
+  const restoringScrollRef = useRef(false);
+  // Dipasang SEBELUM browser menggambar ulang (layout effect): saat pindah
+  // tab, halaman bisa memendek dan browser menggeser scroll - geseran itu
+  // jangan sampai tercatat sebagai posisi tab yang lama.
+  useLayoutEffect(() => { restoringScrollRef.current = true; }, [tab]);
   useEffect(() => {
     let raf = null;
+    let pendingY = 0;
     const onScroll = () => {
+      if (restoringScrollRef.current) return;
+      pendingY = window.scrollY;
       if (raf) return;
-      raf = requestAnimationFrame(() => { saveScrollPos(tab, window.scrollY); raf = null; });
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        if (!restoringScrollRef.current) saveScrollPos(tab, pendingY);
+      });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
   }, [tab]);
 
   useEffect(() => {
     if (loading) return;
     const y = getScrollPos(tab);
-    if (y <= 0) return;
-    // Konten tiap tab (chart Dashboard, tabel Leads, dst) sering masih
-    // NAMBAH TINGGI abis `loading` App-level ini kelar (masing-masing tab
-    // punya loading state internal sendiri) - sekali coba scrollTo doang
-    // gampang ke-CLAMP ke tinggi halaman yang masih pendek saat itu. Coba
-    // beberapa kali dalam ~1.2 detik biar kena momen yang kontennya udah
-    // cukup tinggi.
-    const attempts = [0, 60, 150, 300, 500, 800, 1200];
-    const timers = attempts.map((ms) => setTimeout(() => window.scrollTo(0, y), ms));
-    return () => timers.forEach(clearTimeout);
+    // Tab yang belum punya posisi tersimpan dibuka dari atas.
+    if (y <= 0) {
+      window.scrollTo(0, 0);
+      const r1 = requestAnimationFrame(() => { restoringScrollRef.current = false; });
+      return () => cancelAnimationFrame(r1);
+    }
+    // Konten tiap tab (chart Dashboard, data tab Team, dst) masih NAMBAH
+    // TINGGI setelah loading App-level selesai - tab Team bisa butuh beberapa
+    // detik. Coba terus tiap 150ms sampai posisinya tercapai (maks 8 detik),
+    // dan berhenti begitu user sendiri menggulir/mengetik.
+    restoringScrollRef.current = true;
+    const started = Date.now();
+    let timer = null;
+    const stop = () => {
+      restoringScrollRef.current = false;
+      clearTimeout(timer);
+      ["wheel", "touchstart", "keydown", "mousedown"].forEach((ev) => window.removeEventListener(ev, stop));
+    };
+    ["wheel", "touchstart", "keydown", "mousedown"].forEach((ev) => window.addEventListener(ev, stop, { passive: true }));
+    const tick = () => {
+      window.scrollTo(0, y);
+      if (Math.abs(window.scrollY - y) < 4 || Date.now() - started > 8000) { stop(); return; }
+      timer = setTimeout(tick, 150);
+    };
+    tick();
+    return stop;
   }, [tab, loading]);
 
   // ---- TOAST STATE - lihat komentar di komponen Toast di atas ----
@@ -377,9 +410,17 @@ export default function App() {
   // cuma nampilin peringatan) sampe kode 2FA-nya beneran diverifikasi -
   // kalau enggak, 2FA yang di-setup di Settings cuma jadi hiasan doang.
   const [mfa, setMfa] = useState({ checking: true, needed: false, verified: false });
+  // Supabase memperbarui sesi tiap kali tab browser kembali fokus. Dulu itu
+  // memasang checking=true -> seluruh app diganti Splash -> semua tab
+  // di-mount ulang & posisi scroll balik ke atas. Sekarang layar loading
+  // cuma dipakai pada pengecekan PERTAMA untuk user itu; berikutnya dicek
+  // diam-diam di belakang.
+  const mfaCheckedFor = useRef(null);
   useEffect(() => {
-    if (!session) { setMfa({ checking: false, needed: false, verified: false }); return; }
-    setMfa((m) => ({ ...m, checking: true }));
+    if (!session) { mfaCheckedFor.current = null; setMfa({ checking: false, needed: false, verified: false }); return; }
+    const firstCheck = mfaCheckedFor.current !== session.user.id;
+    mfaCheckedFor.current = session.user.id;
+    if (firstCheck) setMfa((m) => ({ ...m, checking: true }));
     supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data, error }) => {
       if (error) { setMfa({ checking: false, needed: false, verified: false }); return; }
       const needsStep = data.nextLevel === "aal2" && data.currentLevel !== "aal2";
@@ -468,6 +509,16 @@ export default function App() {
   // jadi dipindah ke atas SINI, sebelum satu pun early return.
   const isEnterprise = org?.plan === "enterprise";
   const canManage = !!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager";
+  // Tab terakhir yang diingat bisa saja sudah tidak tersedia untuk akun ini
+  // (mis. Team setelah bukan owner/manager lagi) - kembalikan ke Dashboard.
+  useEffect(() => {
+    if (loading || !org) return;
+    const allowed = new Set([...NAV.map((n) => n.key), "advisor", "industridemo"]);
+    if (isEnterprise && canManage) allowed.add(TEAM_NAV_ITEM.key);
+    if (settings?.is_platform_admin) allowed.add(ADMIN_NAV_ITEM.key);
+    if (!allowed.has(tab)) setTab("dashboard");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, org, isEnterprise, canManage, settings?.is_platform_admin]);
   const [orgMembers, setOrgMembers] = useState([]);
   useEffect(() => {
     if (!canManage) { setOrgMembers([]); return; }

@@ -55,14 +55,33 @@ export function getOpenModal(expectedKind) {
 }
 
 // ---- SCROLL POSITION per tab ----
-// sessionStorage (bukan localStorage) SENGAJA dipilih - otomatis ke-hapus
-// begitu tab BENERAN ditutup (bukan cuma di-discard/reload paksa browser),
-// jadi gak akan nyangkut nunjukin posisi scroll dari berhari-hari lalu kalau
-// user buka Nexto lagi di sesi baru.
+// localStorage (2 Okt 2026, permintaan Nando) - dulu sessionStorage, jadi
+// posisi hilang begitu Chrome ditutup. Sekarang tetap diingat sampai
+// KEEP_MS (7 hari), lewat dari itu dianggap basi dan mulai dari atas.
 const SCROLL_PREFIX = "nexto-scroll-";
+const KEEP_MS = 7 * 24 * 60 * 60 * 1000;
 export function saveScrollPos(tabKey, y) {
-  try { sessionStorage.setItem(SCROLL_PREFIX + tabKey, String(y)); } catch (_) {}
+  try { localStorage.setItem(SCROLL_PREFIX + tabKey, JSON.stringify({ y: Math.round(y), at: Date.now() })); } catch (_) {}
 }
 export function getScrollPos(tabKey) {
-  try { return Number(sessionStorage.getItem(SCROLL_PREFIX + tabKey) || 0); } catch (_) { return 0; }
+  try {
+    const v = JSON.parse(localStorage.getItem(SCROLL_PREFIX + tabKey) || "null");
+    if (!v || Date.now() - (v.at || 0) > KEEP_MS) return 0;
+    return Number(v.y) || 0;
+  } catch (_) { return 0; }
+}
+
+// ---- TAB AKTIF ----
+// Diingat supaya setelah Chrome ditutup / tab dibuang browser, Nexto kembali
+// ke tab terakhir (bukan selalu Dashboard).
+const TAB_KEY = "nexto-active-tab";
+export function saveActiveTab(tabKey) {
+  try { localStorage.setItem(TAB_KEY, JSON.stringify({ tab: tabKey, at: Date.now() })); } catch (_) {}
+}
+export function getActiveTab() {
+  try {
+    const v = JSON.parse(localStorage.getItem(TAB_KEY) || "null");
+    if (!v || Date.now() - (v.at || 0) > KEEP_MS) return null;
+    return typeof v.tab === "string" ? v.tab : null;
+  } catch (_) { return null; }
 }
