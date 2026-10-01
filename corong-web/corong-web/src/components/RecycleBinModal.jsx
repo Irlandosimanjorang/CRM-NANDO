@@ -27,7 +27,7 @@ export default function RecycleBinModal({ onClose, onChanged }) {
   };
 
   const purge = async (id, name) => {
-    if (!window.confirm(`Hapus PERMANEN "${name}"? Ini gak bisa dibalikin lagi selamanya.`)) return;
+    if (!window.confirm(`Hapus PERMANEN "${name}"? Tindakan ini tidak dapat dibatalkan.`)) return;
     setBusyId(id);
     try { await db.permanentlyDeleteLead(id); await load(); }
     catch (e) { alert("Gagal hapus: " + e.message); }
@@ -37,7 +37,7 @@ export default function RecycleBinModal({ onClose, onChanged }) {
   const [purgingAll, setPurgingAll] = useState(false);
   const purgeAll = async () => {
     if (!items || items.length === 0) return;
-    if (!window.confirm(`Hapus PERMANEN semua ${items.length} lead di Recycle Bin? Ini gak bisa dibalikin lagi selamanya.`)) return;
+    if (!window.confirm(`Hapus PERMANEN semua ${items.length} lead di Recycle Bin? Tindakan ini tidak dapat dibatalkan.`)) return;
     setPurgingAll(true);
     try {
       await Promise.all(items.map((l) => db.permanentlyDeleteLead(l.id)));
@@ -54,7 +54,7 @@ export default function RecycleBinModal({ onClose, onChanged }) {
         <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="font-bold text-lg flex items-center gap-2"><Trash2 size={18} className="text-slate-400" /> Recycle Bin</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Lead yang kehapus masih bisa dibalikin dari sini.</p>
+            <p className="text-xs text-slate-400 mt-0.5">Lead yang terhapus masih dapat dipulihkan dari sini.</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {items && items.length > 0 && (

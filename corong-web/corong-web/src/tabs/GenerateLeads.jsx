@@ -130,7 +130,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
     stopEnrichPolling();
     setBusy(false);
     setEnrichProgress(null);
-    const successMsg = `✅ Ketemu ${count} calon lead baru, kontaknya udah dilengkapi - cek daftar di bawah.`;
+    const successMsg = `✅ Ketemu ${count} calon lead baru, kontaknya sudah dilengkapi - periksa daftar di bawah.`;
     setMsg(successMsg);
     onNotify?.(`Generate Leads selesai — ${successMsg.replace("✅ ", "")}`, "success");
     load(true);
@@ -260,7 +260,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       const res = await db.enrichGeneratedLead(gl.id);
       setResults((prev) => prev.map((r) => (r.id === gl.id ? { ...r, ...res.lead } : r)));
       const found = [res.lead.phone && !gl.phone && "telepon", res.lead.email && !gl.email && "email", res.lead.key_person && res.lead.key_person !== gl.key_person && "PIC"].filter(Boolean);
-      setEnrichMsg((m) => ({ ...m, [gl.id]: found.length ? `Ketemu ${found.join(", ")} baru.` : "Gak ada kontak publik tambahan yang bisa diverifikasi." }));
+      setEnrichMsg((m) => ({ ...m, [gl.id]: found.length ? `Ketemu ${found.join(", ")} baru.` : "Tidak ada kontak publik tambahan yang dapat diverifikasi." }));
     } catch (e) {
       setEnrichMsg((m) => ({ ...m, [gl.id]: "Gagal: " + e.message }));
     } finally {
@@ -276,27 +276,27 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight">Generate Leads</h1>
-          <button onClick={() => setShowInfo((v) => !v)} className="shrink-0 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors" title="Gimana cara AI cari lead?">
+          <button onClick={() => setShowInfo((v) => !v)} className="shrink-0 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors" title="Bagaimana AI mencari lead?">
             <Info size={14} />
           </button>
         </div>
-        <p className="text-sm text-slate-500 mt-1">AI cari calon CUSTOMER buat produk Anda — bukan cuma perusahaan sejenis. Provinsi/kota opsional (kosongin buat cari se-Indonesia, atau isi nama kota buat hasil yang lebih lokal), kolom lain wajib diisi biar AI ngarahin ke pembeli potensial yang paling akurat. Maks 10 lead per generate (kontaknya langsung dilengkapi otomatis), 4x sebulan.</p>
+        <p className="text-sm text-slate-500 mt-1">AI mencari calon CUSTOMER untuk produk Anda — bukan sekadar perusahaan sejenis. Provinsi/kota opsional (kosongkan untuk mencari di seluruh Indonesia, atau isi nama kota untuk hasil yang lebih lokal); kolom lain wajib diisi agar AI mengarah ke pembeli potensial yang paling akurat. Maks 10 lead per generate (kontak langsung dilengkapi otomatis), 4x sebulan.</p>
 
         {showInfo && (
           <div className="mt-3 bg-orange-50/60 border border-orange-100 rounded-2xl p-4 relative">
             <button onClick={() => setShowInfo(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            <div className="text-sm font-bold text-slate-800 mb-2 pr-6">Gimana cara AI-nya nyari lead?</div>
+            <div className="text-sm font-bold text-slate-800 mb-2 pr-6">Bagaimana AI mencari lead?</div>
             <ul className="space-y-1.5 text-xs text-slate-600 list-disc list-inside">
               <li><b>Cari dari 4 sumber publik</b>: Google Maps, cuplikan LinkedIn (company page & profil, bukan buka halamannya), Instagram/TikTok bisnis, dan direktori resmi (Kemenperin, dst).</li>
-              <li><b>Diarahin ke calon PEMBELI</b>, bukan sesama penjual — kalau Anda isi "barang yang dijual", AI khusus nyari perusahaan yang kemungkinan BUTUH BELI itu, bukan kompetitor.</li>
-              <li><b>Ngerti kalau customer-nya individu</b> (misal Asuransi, Property, Automotive) — AI gak nyari data pribadi orang, tapi nyari organisasi PERANTARA (HRD perusahaan, komunitas, koperasi) yang punya akses ke banyak calon individu sekaligus.</li>
-              <li><b>Belajar dari deal yang udah closing</b> — kalau Anda udah punya lead yang statusnya "Menang" di pipeline, AI jadiin itu contoh "ideal customer" biar hasil generate makin mirip yang beneran closing.</li>
-              <li><b>Cari sinyal lagi berkembang</b> — lowongan kerja baru, buka cabang, ekspansi — biar diprioritasin ke yang lagi butuh, bukan yang stagnan.</li>
-              <li><b>Otomatis skip yang udah ada</b> di daftar lead Anda, biar gak muncul dobel buang-buang kuota.</li>
-              <li><b>Kalau hasilnya kesikit</b> (kebanyakan kena skip karena dobel), AI otomatis coba nyari lagi 1x dengan sudut pencarian yang beda.</li>
-              <li><b>Tiap lead dikasih skor 3 komponen</b> (match industri, kelengkapan kontak, sinyal butuh beli) + skor keseluruhan, diurutin dari yang paling tinggi.</li>
-              <li><b>Kontak dilengkapi otomatis</b> - abis perusahaannya ketemu, AI langsung buka website resmi tiap perusahaan buat verifikasi website, cari telepon & email (kontak bisnis PIC kalau dipublikasikan, kalau gak ada kontak kantor/HR/umum), dan cek PIC-nya masih kerja di situ atau udah pindah.</li>
-              <li>AI dilarang keras <b>ngarang data</b> — kalau info kayak nama PIC gak ketemu di sumber publik, dikosongin aja, bukan ditebak.</li>
+              <li><b>Diarahkan ke calon PEMBELI</b>, bukan sesama penjual — jika Anda mengisi "barang yang dijual", AI khusus mencari perusahaan yang kemungkinan PERLU MEMBELI barang tersebut, bukan kompetitor.</li>
+              <li><b>Memahami jika customer-nya individu</b> (misal Asuransi, Property, Automotive) — AI tidak mencari data pribadi, melainkan organisasi PERANTARA (HRD perusahaan, komunitas, koperasi) yang memiliki akses ke banyak calon individu sekaligus.</li>
+              <li><b>Belajar dari deal yang sudah closing</b> — jika Anda sudah memiliki lead berstatus "Menang" di pipeline, AI menjadikannya contoh "ideal customer" agar hasil generate semakin mirip dengan yang benar-benar closing.</li>
+              <li><b>Cari sinyal lagi berkembang</b> — lowongan kerja baru, pembukaan cabang, ekspansi — agar diprioritaskan ke yang sedang membutuhkan, bukan yang stagnan.</li>
+              <li><b>Otomatis melewati yang sudah ada</b> di daftar lead Anda, agar tidak muncul ganda dan membuang kuota.</li>
+              <li><b>Kalau hasilnya kesikit</b> (sebagian besar terlewati karena ganda), AI otomatis mencoba mencari lagi 1x dengan sudut pencarian berbeda.</li>
+              <li><b>Tiap lead dikasih skor 3 komponen</b> (kecocokan industri, kelengkapan kontak, sinyal kebutuhan membeli) + skor keseluruhan, diurutkan dari yang tertinggi.</li>
+              <li><b>Kontak dilengkapi otomatis</b> - setelah perusahaan ditemukan, AI langsung membuka website resmi setiap perusahaan untuk memverifikasi website, mencari telepon & email (kontak bisnis PIC jika dipublikasikan; jika tidak ada, kontak kantor/HR/umum), dan memeriksa apakah PIC masih bekerja di sana atau sudah pindah.</li>
+              <li>AI dilarang keras <b>ngarang data</b> — jika informasi seperti nama PIC tidak ditemukan di sumber publik, kolom dikosongkan, bukan ditebak.</li>
             </ul>
           </div>
         )}
@@ -316,7 +316,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         {!cooldown.canGenerate ? (
           <div className="flex items-center gap-2.5 text-sm text-amber-700 bg-amber-50 rounded-2xl p-4">
             <Clock size={18} className="shrink-0" />
-            <span>Kuota 4x/bulan udah kepake — bisa lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
+            <span>Kuota 4x/bulan sudah terpakai — dapat digunakan lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
           </div>
         ) : (
           <div className="space-y-3">
@@ -330,7 +330,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                 <input required className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder={`misal: ${example.keyword}`} value={keyword} onChange={(e) => setKeyword(e.target.value)} />
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Provinsi/Kota (opsional - kosongin buat cari se-Indonesia)</span>
+                <span className="text-xs font-medium text-slate-500">Provinsi/Kota (opsional - kosongkan untuk mencari di seluruh Indonesia)</span>
                 <input className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" placeholder="misal: Jawa Timur, atau Surabaya" value={province} onChange={(e) => setProvince(e.target.value)} />
               </label>
               <label className="block">
@@ -347,10 +347,10 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                 </select>
               </label>
               <label className="block sm:col-span-2">
-                <span className="text-xs font-medium text-slate-500">Target pembeli (opsional - kosongin biar Nexto yang nentuin)</span>
+                <span className="text-xs font-medium text-slate-500">Target pembeli (opsional - kosongkan agar Nexto yang menentukan)</span>
                 <select className="w-full mt-1 px-3 py-2 text-sm text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={targetType} onChange={(e) => setTargetType(e.target.value)}>
-                  <option value="">Biar Nexto yang nentuin</option>
-                  <option value="company">Perusahaan/organisasi (B2B) - beli buat operasional/produksi mereka</option>
+                  <option value="">Biarkan Nexto yang menentukan</option>
+                  <option value="company">Perusahaan/organisasi (B2B) - membeli untuk operasional/produksi mereka</option>
                   <option value="individual">Individu/perorangan - Nexto cari organisasi perantara (HRD, komunitas, agen), bukan data pribadi orang</option>
                 </select>
               </label>
@@ -358,8 +358,8 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
             <button onClick={generate} disabled={busy || !productSold.trim() || !keyword.trim() || !targetRole.trim()} className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-5 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5">
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} {busy
                 ? (enrichProgress
-                  ? `Lagi lengkapin kontak (${enrichProgress.done}/${enrichProgress.total})… bebas pindah tab, nanti ada notif`
-                  : "Lagi nyari perusahaan (total ±3-4 menit)… bebas pindah tab, nanti ada notif")
+                  ? `Sedang melengkapi kontak (${enrichProgress.done}/${enrichProgress.total})… bebas pindah tab, nanti ada notif`
+                  : "Sedang mencari perusahaan (total ±3-4 menit)… Anda bebas pindah tab, nanti ada notifikasi")
                 : "Generate 10 Leads"}
             </button>
           </div>
@@ -372,7 +372,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         {loadingResults ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : results.length === 0 ? (
-          <div className="text-sm text-slate-400 rounded-panel p-8 text-center border border-white/5" style={{ background: "#05060b" }}>Belum ada hasil. Klik "Generate Leads" buat mulai nyari.</div>
+          <div className="text-sm text-slate-400 rounded-panel p-8 text-center border border-white/5" style={{ background: "#05060b" }}>Belum ada hasil. Klik "Generate Leads" untuk mulai mencari.</div>
         ) : (
           <div className="rounded-panel p-4 sm:p-6 space-y-3" style={{ background: "#05060b", backgroundImage: "radial-gradient(60% 40% at 20% 0%, rgba(99,102,241,0.10), transparent 70%)" }}>
             {(() => {
@@ -404,7 +404,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                     >
                       <ChevronDown size={15} className={`shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
                       <span className="text-[12.5px] font-bold text-slate-200">{batch.headerLabel}</span>
-                      <span className="text-[11px] text-slate-500">· {batch.items.length} hasil{importedCount > 0 ? `, ${importedCount} udah di-import` : ""}</span>
+                      <span className="text-[11px] text-slate-500">· {batch.items.length} hasil{importedCount > 0 ? `, ${importedCount} sudah di-import` : ""}</span>
                       {bi === 0 && <span className="ml-1 text-[10px] font-bold uppercase tracking-wide text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5">Terbaru</span>}
                     </button>
                     {isOpen && (

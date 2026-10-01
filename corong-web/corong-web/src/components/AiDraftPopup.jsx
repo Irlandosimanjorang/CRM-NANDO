@@ -130,12 +130,12 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
         <div className="p-4 overflow-y-auto" style={{ maxHeight: 400 }}>
           {!isProfessional && (
             <p className="text-[10px] text-violet-700 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-1.5 mb-2.5 flex items-center gap-1.5">
-              <Lock size={11} className="shrink-0" /> Draft Follow-up (AI) itu fitur Professional ke atas. Upgrade dulu di tab Pengaturan ya.
+              <Lock size={11} className="shrink-0" /> Draft Follow-up (AI) tersedia untuk paket Professional ke atas. Silakan upgrade di tab Pengaturan.
             </p>
           )}
           {wasCached && (
             <p className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5 mb-2.5">
-              Draft yang udah pernah dibuat sebelumnya (gak generate ulang).
+              Draft yang sudah pernah dibuat sebelumnya (tidak dibuat ulang).
             </p>
           )}
           <div className="grid grid-cols-2 gap-2">
@@ -156,7 +156,7 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
                 <button onClick={copyWa} className="text-xs border border-slate-300 rounded-lg py-2 hover:bg-slate-50 flex items-center justify-center gap-1.5"><Copy size={12} /> {waCopied ? "Tersalin!" : "Salin"}</button>
                 <button onClick={openWa} disabled={!waLink(lead.phone)} className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg py-2 flex items-center justify-center gap-1.5"><MessageCircle size={12} /> Buka di WA</button>
               </div>
-              {!waLink(lead.phone) && <p className="text-[10px] text-amber-700">Nomor telepon belum diisi/gak valid.</p>}
+              {!waLink(lead.phone) && <p className="text-[10px] text-amber-700">Nomor telepon belum diisi atau tidak valid.</p>}
             </div>
           )}
 

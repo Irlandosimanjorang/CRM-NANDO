@@ -1,8 +1,3 @@
-export const CATEGORIES = [
-  "Resin & Compound", "Pipa & Fitting", "Kabel Listrik", "Flooring / Sheet / Film",
-  "Roofing / Ceiling / Profil", "Kulit Sintetis & Vinyl", "Selang Fleksibel",
-  "Packaging & Botol", "Produk Konstruksi", "Lainnya",
-];
 
 export const COMPANY_TYPES = [
   { v: "", label: "—" }, { v: "Manufacturer", label: "Manufacturer" },

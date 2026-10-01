@@ -32,7 +32,7 @@ export default function PreviewLock({ locked, minLevel = 2, children }) {
           Sekarang overlay cuma bungkus `children` doang di div terpisah,
           gak perlu nebak-nebak tinggi apapun lagi. */}
       <div className="mb-3 bg-slate-800 text-white text-xs rounded-2xl px-4 py-2.5 flex items-center justify-between gap-2 flex-wrap">
-        <span className="flex items-center gap-2"><Lock size={13} className="shrink-0" /> Mode lihat-lihat doang - upgrade ke {tierLabel} buat bisa nambah/ubah data di sini.</span>
+        <span className="flex items-center gap-2"><Lock size={13} className="shrink-0" /> Mode pratinjau - upgrade ke {tierLabel} untuk dapat menambah/mengubah data di sini.</span>
         <a
           href={MAYAR_PAYMENT_LINK}
           target="_blank"
@@ -44,7 +44,7 @@ export default function PreviewLock({ locked, minLevel = 2, children }) {
       </div>
       <div className="relative">
         <div
-          onClick={() => alert(`Ini fitur ${tierLabel} bro - upgrade dulu (${tierPrice}) buat bisa pake fiturnya.`)}
+          onClick={() => alert(`Ini fitur ${tierLabel} - silakan upgrade terlebih dahulu (${tierPrice}) untuk menggunakan fitur ini.`)}
           className="absolute inset-0 z-20 cursor-pointer"
         />
         {/* GATE FIX (audit 16 Sep 2026): overlay di atas cuma nangkep KLIK

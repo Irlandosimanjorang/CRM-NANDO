@@ -95,7 +95,7 @@ function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSa
     setValueDigits(digits);
   };
   const save = async () => {
-    if (!sel) { alert("Pilih company dulu."); return; }
+    if (!sel) { alert("Pilih perusahaan terlebih dahulu."); return; }
     setBusy(true);
     try {
       // Update tahap lead-nya (misal jadi "Deal/Menang"), TAPI catetnya sebagai
@@ -124,7 +124,7 @@ function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSa
                 <Search size={15} className="absolute left-2.5 top-3.5 text-slate-400" />
                 <input autoFocus className="w-full mt-1 pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
                 {matches.length > 0 && <div className="mt-1 border border-slate-200 rounded-xl bg-white shadow-sm max-h-52 overflow-y-auto">{matches.map((c) => <div key={c.id} onClick={() => pick(c)} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0"><div className="font-medium">{c.name}</div><div className="text-[11px] text-slate-400">{[c.city, c.category].filter(Boolean).join(" · ")}</div></div>)}</div>}
-                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan dulu di tab Leads.</p>}
+                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan terlebih dahulu di tab Leads.</p>}
               </div>
             )}
           </div>

@@ -528,7 +528,7 @@ export async function draftFollowup(leadId, channel) {
   if (error) {
     let specificMsg = null;
     try { specificMsg = (await error.context.json())?.error; } catch (_) {}
-    throw new Error(specificMsg || error.message || "Gagal bikin draft");
+    throw new Error(specificMsg || error.message || "Gagal membuat draft");
   }
   if (data?.error) throw new Error(data.error);
   return data;
@@ -542,7 +542,7 @@ export async function summarizeLeadNeeds(leadId) {
   if (error) {
     let specificMsg = null;
     try { specificMsg = (await error.context.json())?.error; } catch (_) {}
-    throw new Error(specificMsg || error.message || "Gagal bikin ringkasan kebutuhan");
+    throw new Error(specificMsg || error.message || "Gagal membuat ringkasan kebutuhan");
   }
   if (data?.error) throw new Error(data.error);
   return data;
@@ -668,7 +668,7 @@ export async function flagHealthIssue(check_key, label, detail) {
   if (error) {
     let specificMsg = null;
     try { specificMsg = (await error.context.json())?.error; } catch (_) {}
-    throw new Error(specificMsg || error.message || "Gagal nandain sinyal");
+    throw new Error(specificMsg || error.message || "Gagal menandai sinyal");
   }
   if (data?.error) throw new Error(data.error);
   return data;
@@ -691,7 +691,7 @@ export async function guessOutcomeReason(leadId, result) {
   if (error) {
     let specificMsg = null;
     try { specificMsg = (await error.context.json())?.error; } catch (_) {}
-    throw new Error(specificMsg || error.message || "Gagal nebak alasan");
+    throw new Error(specificMsg || error.message || "Gagal menebak alasan");
   }
   if (data?.error) throw new Error(data.error);
   return data;
@@ -705,7 +705,7 @@ export async function suggestVisitPoints(leadId) {
   if (error) {
     let specificMsg = null;
     try { specificMsg = (await error.context.json())?.error; } catch (_) {}
-    throw new Error(specificMsg || error.message || "Gagal nyiapin poin diskusi");
+    throw new Error(specificMsg || error.message || "Gagal menyiapkan poin diskusi");
   }
   if (data?.error) throw new Error(data.error);
   return data.points;
@@ -899,7 +899,7 @@ export async function cancelVisit(leadId) {
   if (error) {
     let specificMsg = null;
     try { specificMsg = (await error.context.json())?.error; } catch (_) {}
-    throw new Error(specificMsg || error.message || "Gagal batalin visit");
+    throw new Error(specificMsg || error.message || "Gagal membatalkan visit");
   }
   if (data?.error) throw new Error(data.error);
   return data;
@@ -1030,7 +1030,7 @@ export async function checkIn({ lead_id, lead_name, latitude, longitude, distanc
   const orgId = await getMyOrgId();
   const usedThisMonth = await countCheckinsThisMonth(uid);
   if (usedThisMonth >= CHECKIN_QUOTA_MAX) {
-    throw new Error(`Kuota check-in GPS bulan ini udah abis (maks ${CHECKIN_QUOTA_MAX}x/bulan per user). Bisa lagi awal bulan depan.`);
+    throw new Error(`Kuota check-in GPS bulan ini sudah habis (maks ${CHECKIN_QUOTA_MAX}x/bulan per user). Bisa lagi awal bulan depan.`);
   }
   const { data, error } = await supabase
     .from("visit_checkins")
@@ -1307,7 +1307,7 @@ export async function upsertCompetitor(comp) {
   let delQuery = supabase.from("competitor_usages").delete().eq("competitor_id", compId);
   if (newIds.length) delQuery = delQuery.not("id", "in", `(${newIds.join(",")})`);
   const { error: delErr } = await delQuery;
-  if (delErr) console.error("Gagal beresin baris usage lama (data yang baru tetep aman kesimpen):", delErr);
+  if (delErr) console.error("Gagal membersihkan baris usage lama (data baru tetap tersimpan aman):", delErr);
   return compId;
 }
 export async function deleteCompetitor(id) {

@@ -38,7 +38,7 @@ function saveHistory(messages) {
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(messages)); } catch (_) {}
 }
 
-const GREETING = "Halo! Aku SASA, asisten Nexto. Ada yang mau ditanyain soal harga, fitur, atau cara mulai?";
+const GREETING = "Halo! Saya SASA, asisten Nexto. Ada yang ingin ditanyakan seputar harga, fitur, atau cara memulai?";
 
 // Marker khusus buat 1 bubble balasan - render tombol WA langsung, BUKAN
 // jawaban dari AI. Dipake pas visitor klik chip "Ngobrol sama tim manusia"
@@ -51,8 +51,8 @@ const HUMAN_HANDOFF_MARKER = "__HUMAN_HANDOFF__";
 // beneran. Isinya kombinasi FAQ paling umum + 1 jalan pintas ke manusia.
 const QUICK_REPLIES = [
   { label: "Berapa harga paketnya?", text: "Berapa harga paket-paket Nexto?" },
-  { label: "Fitur apa aja yang ada?", text: "Fitur apa aja yang ada di Nexto?" },
-  { label: "Gimana cara mulai?", text: "Gimana cara mulai pakai Nexto?" },
+  { label: "Fitur apa saja yang tersedia?", text: "Fitur apa saja yang tersedia di Nexto?" },
+  { label: "Bagaimana cara memulai?", text: "Bagaimana cara mulai menggunakan Nexto?" },
   { label: "Mau ngobrol sama team manusia", human: true },
 ];
 

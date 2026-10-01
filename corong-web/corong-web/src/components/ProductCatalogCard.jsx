@@ -88,8 +88,8 @@ export default function ProductCatalogCard({ canManage, industry }) {
     <div className="bg-white border border-slate-100 rounded-panel p-4">
       <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Package size={15} className="text-orange-500" /> Produk & Layanan Perusahaan</h3>
       <p className="text-xs text-slate-500 mb-3">
-        Dibaca AI di 4 fitur: <b className="font-semibold text-slate-600">Ringkasan Kebutuhan</b> (rekomendasi produk yang cocok ke tiap prospek), <b className="font-semibold text-slate-600">Draft Follow-up</b> (pesan WA/email nyebut produk yang relevan), <b className="font-semibold text-slate-600">Generate Leads</b> (nyari perusahaan yang butuh produk Anda) dan <b className="font-semibold text-slate-600">Daily Digest</b> (saran harian nyebut produk yang pas ditawarin). Makin jelas "cocok untuk siapa", makin tepat hasilnya.
-        {!canManage && " Cuma owner/manager yang bisa ubah."}
+        Dibaca AI di 4 fitur: <b className="font-semibold text-slate-600">Ringkasan Kebutuhan</b> (rekomendasi produk yang cocok ke tiap prospek), <b className="font-semibold text-slate-600">Draft Follow-up</b> (pesan WA/email nyebut produk yang relevan), <b className="font-semibold text-slate-600">Generate Leads</b> (mencari perusahaan yang membutuhkan produk Anda) dan <b className="font-semibold text-slate-600">Daily Digest</b> (saran harian menyebut produk yang tepat untuk ditawarkan). Semakin jelas "cocok untuk siapa", semakin tepat hasilnya.
+        {!canManage && " Hanya owner/manager yang dapat mengubah."}
       </p>
 
       {loading ? (
@@ -136,7 +136,7 @@ export default function ProductCatalogCard({ canManage, industry }) {
                         <span className="text-[11px] text-emerald-700 flex items-center gap-1"><CheckCircle2 size={12} /> Tersimpan</span>
                       ) : (
                         <>
-                          {noName && <span className="text-[11px] text-slate-400">Isi nama produk dulu</span>}
+                          {noName && <span className="text-[11px] text-slate-400">Isi nama produk terlebih dahulu</span>}
                           <button onClick={() => saveItem(i)} disabled={!!busyKey || noName} className={saveBtn}>
                             {busyKey === `item-${i}` ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Simpan
                           </button>
@@ -148,7 +148,7 @@ export default function ProductCatalogCard({ canManage, industry }) {
               );
             })}
             {products.length === 0 && (
-              <p className="text-xs text-slate-400">Belum ada produk. {canManage ? "Tambahin minimal 1 biar AI bisa kasih rekomendasi." : ""}</p>
+              <p className="text-xs text-slate-400">Belum ada produk. {canManage ? "Tambahkan minimal 1 agar AI dapat memberikan rekomendasi." : ""}</p>
             )}
           </div>
 

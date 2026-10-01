@@ -313,7 +313,7 @@ export default function App() {
             if (!s?.community_display_name) await db.saveMyProfile({ name: googleName });
           }
         }
-      } catch (e) { console.error("Gagal nerapin data profil dari signup:", e); }
+      } catch (e) { console.error("Gagal menerapkan data profil dari pendaftaran:", e); }
 
       setOrg(myOrg);
       let [st, se, ls, comp, dt, role] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions(), db.getMyRole()]);
@@ -502,7 +502,7 @@ export default function App() {
   const finishTour = async () => {
     setTourSteps(null);
     try { localStorage.setItem("nexto_tour_team_seen", "1"); } catch (_) {}
-    try { await db.markOnboardingLevelSeen(myLevel); } catch (e) { console.error("Gagal nyimpen status tur:", e); }
+    try { await db.markOnboardingLevelSeen(myLevel); } catch (e) { console.error("Gagal menyimpan status tur:", e); }
   };
 
   // NEX Pro (21 Sep 2026, permintaan Nando) - histori pendekatan yang
@@ -536,7 +536,7 @@ export default function App() {
     const viaQuickvoiceLink = params.get("quickvoice") === "1";
     if (!isStandaloneHomeScreenApp && !viaQuickvoiceLink) return;
     if (myLevel >= 1) setQuickVoiceOpen(true);
-    else if (viaQuickvoiceLink) alert("NEX Pro (voice) itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan Nexto.");
+    else if (viaQuickvoiceLink) alert("NEX Pro (voice) tersedia untuk paket Standard ke atas. Silakan upgrade di tab Pengaturan Nexto.");
   }, [loading, session, myLevel]);
 
   // Hook WAJIB di atas semua `return` lebih awal di bawah (Splash/Auth/2FA/
@@ -947,7 +947,7 @@ export default function App() {
                     </div>
                     <div className="mt-0.5 text-[10px] leading-4 text-slate-500">
                       {intendedTierLabel
-                        ? `Akunmu udah jadi - tinggal selesaiin pembayaran ${intendedTierLabel}. Pastikan pakai email yang sama persis (${session?.user?.email || "email akun ini"}) pas bayar di Mayar.`
+                        ? `Akun Anda sudah dibuat - tinggal selesaikan pembayaran ${intendedTierLabel}. Pastikan pakai email yang sama persis (${session?.user?.email || "email akun ini"}) saat membayar di Mayar.`
                         : "Dashboard, Leads, & Komunitas aktif. Upgrade untuk membuka AI, Deal, Visit, Calendar, dan automation."}
                     </div>
                   </div>
@@ -960,7 +960,7 @@ export default function App() {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <div className="text-[10px] text-orange-800/80">Punya kode Enterprise?</div>
                   <div className="flex flex-1 gap-2 sm:max-w-md">
-                    <input className="min-w-0 flex-1 rounded-xl border border-orange-200 bg-white px-3 py-2 text-[10px] uppercase text-slate-800 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10" placeholder="MASUKIN KODE" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
+                    <input className="min-w-0 flex-1 rounded-xl border border-orange-200 bg-white px-3 py-2 text-[10px] uppercase text-slate-800 outline-none placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10" placeholder="MASUKKAN KODE" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
                     <button onClick={joinWithCode} disabled={joinBusy} className="rounded-xl bg-orange-600 px-3.5 text-[10px] font-semibold text-white hover:bg-orange-700 disabled:opacity-60">{joinBusy ? "..." : "Gabung"}</button>
                   </div>
                   {joinMsg && <p className={`text-[10px] ${joinMsg.startsWith("Gagal") ? "text-rose-600" : "text-emerald-700"}`}>{joinMsg}</p>}
@@ -1154,7 +1154,7 @@ function IndustryDemoSwitcher({ org, onSwitched }) {
       <button
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 hover:bg-white/[0.12] rounded-full px-1.5 py-0.5 truncate max-w-full transition-colors"
-        title="Mode demo - khusus admin, ganti industri buat pitching"
+        title="Mode demo - khusus admin, ganti industri untuk presentasi"
       >
         {current ? getIndustryTemplate(current).label : "Pilih industri"}
         <span className="text-slate-400">▾</span>
@@ -1484,7 +1484,7 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
       const { data: factors, error: listErr } = await supabase.auth.mfa.listFactors();
       if (listErr) throw listErr;
       const factor = (factors?.totp || []).find((f) => f.status === "verified");
-      if (!factor) throw new Error("Gak ketemu 2FA yang aktif.");
+      if (!factor) throw new Error("2FA yang aktif tidak ditemukan.");
       const { data: challenge, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: factor.id });
       if (challengeErr) throw challengeErr;
       const { error: verifyErr } = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId: challenge.id, code });
@@ -1498,7 +1498,7 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
   };
 
   const verifyRecovery = async () => {
-    if (!code.trim()) { setErr("Masukin kode recovery-nya (format XXXX-XXXX)."); return; }
+    if (!code.trim()) { setErr("Masukkan kode recovery Anda (format XXXX-XXXX)."); return; }
     setBusy(true); setErr("");
     try {
       const { data, error } = await supabase.functions.invoke("mfa-recovery", { body: { action: "verify", code: code.trim() } });
@@ -1523,7 +1523,7 @@ function MfaVerifyScreen({ onVerified, onCancel }) {
           <ShieldCheck size={22} className="mx-auto text-orange-600 mb-2" />
           <h1 className="text-lg font-bold">Verifikasi 2FA</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {mode === "totp" ? "Masukin kode 6 digit dari app authenticator Anda." : "Masukin salah satu kode recovery yang Anda simpan pas aktifin 2FA."}
+            {mode === "totp" ? "Masukkan kode 6 digit dari aplikasi authenticator Anda." : "Masukkan salah satu kode recovery yang Anda simpan saat mengaktifkan 2FA."}
           </p>
         </div>
         {mode === "totp" ? (

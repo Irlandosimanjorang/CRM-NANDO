@@ -41,13 +41,15 @@ const DEMO_TEAM = [
 ];
 
 const DEMO_RECOMMENDATIONS = [
-  "PT Sinar Abadi Plastik udah 4 hari gak di-follow up padahal lagi di tahap Negosiasi - kirim penawaran final hari ini.",
-  "CV Karya Plastindo nanya soal termin pembayaran minggu lalu, belum dijawab - ini yang paling mendesak.",
-  "3 lead baru dari Generate Leads AI minggu ini cocok banget sama profil PT Elang Duta Asia yang udah closing.",
+  "PT Sinar Abadi Plastik sudah 4 hari belum di-follow-up padahal sedang di tahap Negosiasi - kirim penawaran final hari ini.",
+  "CV Karya Plastindo menanyakan termin pembayaran minggu lalu, belum dijawab - ini yang paling mendesak.",
+  "3 lead baru dari Generate Leads AI minggu ini sangat cocok dengan profil PT Elang Duta Asia yang sudah closing.",
 ];
 
 function demoAlert(action) {
-  alert(`${action}\n\nIni demo publik - gak ada data yang beneran tersimpan di sini. Daftar gratis di nexto.site buat pakai fitur ini beneran.`);
+  alert(`${action}
+
+Ini demo publik - tidak ada data yang benar-benar tersimpan di sini. Daftar gratis di nexto.site untuk menggunakan fitur ini sepenuhnya.`);
 }
 
 function fmtRupiah(n) {
@@ -157,7 +159,7 @@ function LeadsTab() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{DEMO_LEADS.length} leads contoh - klik tombol apa aja buat lihat cara kerjanya</p>
+        <p className="text-sm text-slate-500">{DEMO_LEADS.length} leads contoh - klik tombol apa saja untuk melihat cara kerjanya</p>
         <button onClick={() => demoAlert("Tambah lead baru")} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold px-4 py-2 rounded-xl">
           <Plus size={16} /> Tambah Lead
         </button>
@@ -180,9 +182,9 @@ const DEMO_ACTIVITY = [
 ];
 const DEMO_FEED = [
   { who: "Budi Santoso", icon: MapPin, color: "text-sky-600 bg-sky-50", text: "check-in di", lead: "PT Mitra Logistik Nusantara", when: "10:15" },
-  { who: "Sari Wulandari", icon: ArrowRight, color: "text-amber-600 bg-amber-50", text: "mindahin tahap", lead: "PT Bank Sejahtera Makmur", extra: "(Hot Lead → Booking)", when: "09:40" },
+  { who: "Sari Wulandari", icon: ArrowRight, color: "text-amber-600 bg-amber-50", text: "memindahkan tahap", lead: "PT Bank Sejahtera Makmur", extra: "(Hot Lead → Booking)", when: "09:40" },
   { who: "Budi Santoso", icon: Pencil, color: "text-violet-600 bg-violet-50", text: "nulis catatan di", lead: "PT Mitra Logistik Nusantara", note: "HRD butuh assessment 40 supervisor sebelum Q1, minta proposal minggu ini.", when: "Kemarin, 16:20" },
-  { who: "Andi Pratama", icon: Plus, color: "text-emerald-600 bg-emerald-50", text: "nambah lead", lead: "PT Arta Graha Konstruksi", when: "Kemarin, 11:05" },
+  { who: "Andi Pratama", icon: Plus, color: "text-emerald-600 bg-emerald-50", text: "menambah lead", lead: "PT Arta Graha Konstruksi", when: "Kemarin, 11:05" },
 ];
 
 function TeamTab() {
@@ -193,7 +195,7 @@ function TeamTab() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xl font-bold text-slate-900">Team</p>
-          <p className="text-sm text-slate-500">Rekap aktivitas tiap sales - cuma keliatan buat owner/manager.</p>
+          <p className="text-sm text-slate-500">Rekap aktivitas setiap sales - hanya terlihat oleh owner/manager.</p>
         </div>
         <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
           {[["today", "Hari ini"], ["week", "Minggu ini"], ["month", "Bulan ini"]].map(([k, l]) => (
@@ -202,7 +204,7 @@ function TeamTab() {
         </div>
       </div>
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        <b>Perlu dicek:</b> Dewi Lestari (gak ada aktivitas 5 hari)
+        <b>Perlu dicek:</b> Dewi Lestari (tidak ada aktivitas 5 hari)
       </div>
       <div className="rounded-2xl bg-white border border-slate-200 p-5">
         <div className="flex items-center gap-2 mb-4">
@@ -297,8 +299,8 @@ function AiTab() {
           <p className="text-sm font-semibold text-slate-300">NEX Pro - update lead pakai suara</p>
         </div>
         <div className="grid gap-2.5">
-          <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-orange-600 px-3.5 py-2.5 text-sm">"Tadi ketemu Pak Budi di Sinar Abadi, minta penawaran 2 ton, visit lagi Kamis."</div>
-          <div className="mr-auto max-w-[85%] rounded-2xl rounded-bl-sm bg-white/10 px-3.5 py-2.5 text-sm text-slate-200">Siap: catatan progress masuk ke PT Sinar Abadi Plastik dan visit dijadwalkan Kamis. Cek dulu sebelum disimpan?</div>
+          <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-orange-600 px-3.5 py-2.5 text-sm">"Tadi bertemu Pak Budi di Sinar Abadi, minta penawaran 2 ton, visit lagi Kamis."</div>
+          <div className="mr-auto max-w-[85%] rounded-2xl rounded-bl-sm bg-white/10 px-3.5 py-2.5 text-sm text-slate-200">Siap: catatan progress masuk ke PT Sinar Abadi Plastik dan visit dijadwalkan Kamis. Periksa terlebih dahulu sebelum disimpan?</div>
         </div>
         <button onClick={() => demoAlert("NEX Pro (voice note)")} className="mt-4 text-sm font-semibold text-emerald-400">Coba rekam sendiri &rarr;</button>
       </div>
@@ -390,7 +392,7 @@ export default function PublicDemo() {
       <div className="flex-1 min-w-0">
         {bannerOpen && (
           <div className="bg-orange-600 text-white text-sm px-5 py-2.5 flex items-center justify-between gap-3">
-            <p className="font-medium">Ini demo publik dengan data contoh - gak ada yang tersimpan beneran.</p>
+            <p className="font-medium">Ini demo publik dengan data contoh - tidak ada yang benar-benar tersimpan.</p>
             <div className="flex items-center gap-3 shrink-0">
               <a href="/" className="font-semibold underline">Daftar gratis</a>
               <button onClick={() => setBannerOpen(false)}><X size={16} /></button>

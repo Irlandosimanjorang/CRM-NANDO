@@ -235,7 +235,7 @@ export const INDUSTRY_TEMPLATES = {
     // User tetap bisa isi sendiri di luar daftar ini.
     dealProductTypes: ["Riset", "In House Training", "Public Class", "Coaching Mentoring"],
     label: "Corporate Consultant",
-    description: "Konsultan/kontraktor jasa berbasis project buat perusahaan (SPK/kontrak kerja)",
+    description: "Konsultan/kontraktor jasa berbasis project untuk perusahaan (SPK/kontrak kerja)",
     // Pipeline & penamaan PERSIS dari masukan calon klien (bisnis project-based:
     // konsultasi/jasa yang berakhir dengan SPK/kontrak kerja, bukan sekadar
     // retainer bulanan) - BUKAN istilah generik konsultan yang gua karang

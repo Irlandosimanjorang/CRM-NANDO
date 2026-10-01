@@ -67,13 +67,13 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
           <>
             {mode === "checkin" ? (
               <p className="text-sm text-slate-600 mt-2">
-                Anda kedeteksi di <b>{locationLabel}</b>, sekitar <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi Anda beneran ada di lokasi ini sekarang, baru lanjut lampirin foto.
+                Anda kedeteksi di <b>{locationLabel}</b>, sekitar <b>{distance}m</b> dari titik lokasi tersimpan <b>"{lead.name}"</b> - masih dalam radius yang diijinkan ({CHECKIN_RADIUS_M}m). Konfirmasi bahwa Anda benar-benar berada di lokasi ini sekarang, lalu lanjutkan melampirkan foto.
               </p>
             ) : (
               <p className="text-sm text-slate-600 mt-2">
-                Nexto bakal nyimpen alamat berikut sebagai lokasi <b>"{lead.name}"</b> buat verifikasi kunjungan berikutnya:
+                Nexto akan menyimpan alamat berikut sebagai lokasi <b>"{lead.name}"</b> untuk verifikasi kunjungan berikutnya:
                 <br /><b>{locationLabel}</b>
-                <br />Kalau alamat di atas belum sampe nama jalan/gang (data peta di area ini emang belum lengkap), gapapa - titik GPS presisinya tetep kesimpen buat verifikasi kunjungan berikutnya. Pastikan Anda beneran lagi di lokasi customer ini sebelum lanjut.
+                <br />Jika alamat di atas belum sampai nama jalan/gang (data peta di area ini memang belum lengkap), tidak masalah - titik GPS yang presisi tetap tersimpan untuk verifikasi kunjungan berikutnya. Pastikan Anda benar-benar sedang berada di lokasi customer ini sebelum melanjutkan.
               </p>
             )}
             {accLabel && (
@@ -174,7 +174,7 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
   const retake = () => { setPhoto(null); setPreview(null); };
 
   const confirm = async () => {
-    if (!photo) { alert("Foto wajib dilampirin buat check-in."); return; }
+    if (!photo) { alert("Foto wajib dilampirkan untuk check-in."); return; }
     setBusy(true);
     try {
       setBusyLabel("Ngupload foto…");
@@ -185,7 +185,7 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
       // gagal diproses (API down dst), fail-OPEN (tetep lanjut) - jangan
       // sampe check-in beneran keblokir gara-gara layanan verifikasi lagi
       // bermasalah, itu bukan salah user.
-      setBusyLabel("Ngecek fotonya…");
+      setBusyLabel("Memeriksa foto…");
       const verify = await db.verifySelfiePhoto(photo_url).catch((e) => {
         console.error("Verifikasi foto gagal (fail-open):", e);
         return { isSelfie: true };
@@ -212,7 +212,7 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
           <h3 className="font-bold text-base">Foto Bukti Check-in</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Wajib selfie langsung dari kamera buat "{pending.leadName}" - foto bakal dicek AI, pastiin keliatan wajah Anda. Gak bisa pilih foto dari galeri.</p>
+        <p className="text-xs text-slate-500 mb-4">Wajib selfie langsung dari kamera untuk "{pending.leadName}" - foto akan diperiksa AI, pastikan wajah Anda terlihat. Foto dari galeri tidak dapat dipilih.</p>
         {preview ? (
           <div className="relative">
             <img src={preview} alt="" className="w-full h-48 object-cover rounded-2xl border border-slate-200" />
@@ -334,7 +334,7 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   };
 
   const askCheckIn = (lead, distance) => {
-    if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini udah abis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
+    if (quota && !quota.canCheckIn) { alert(`Kuota check-in GPS Anda bulan ini sudah habis (maks ${quota.quotaMax}x/bulan). Bisa lagi awal bulan depan.`); return; }
     if (!gpsReady) { alert(`Sinyal GPS belum cukup presisi (dibutuhkan ±${CHECKIN_ACCURACY_M}m atau kurang). Tunggu sebentar atau pindah ke dekat jendela/tempat terbuka.`); return; }
     const reqId = ++geoReqIdRef.current;
     setLocationConfirm({ mode: "checkin", lead, distance, scanning: true, address: null, coords: myPos, accuracy: myPos.accuracy });
@@ -450,9 +450,9 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
                 <div className="font-medium text-sm truncate">{c.name}</div>
                 <div className="text-[11px] text-slate-400 mt-0.5">
                   {!hasCoords ? "Belum ada titik lokasi tersimpan"
-                    : !myPos ? "Nyari posisi Anda…"
+                    : !myPos ? "Mencari posisi Anda…"
                     : !gpsReady ? `Menyempurnakan sinyal GPS (±${Math.round(myPos.accuracy)}m)…`
-                    : canCheckIn ? "Anda udah di lokasi ✓"
+                    : canCheckIn ? "Anda sudah di lokasi ✓"
                     : `${distance >= 1000 ? (distance / 1000).toFixed(1) + " km" : distance + " m"} lagi`}
                 </div>
               </div>
@@ -466,7 +466,7 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
                   <button
                     onClick={() => askSavePin(c)}
                     disabled={checkingIn === c.id || (quota && !quota.canCheckIn)}
-                    title={quota && !quota.canCheckIn ? `Kuota check-in bulan ini abis (maks ${quota.quotaMax}x)` : undefined}
+                    title={quota && !quota.canCheckIn ? `Kuota check-in bulan ini habis (maks ${quota.quotaMax}x)` : undefined}
                     className="text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60"
                   >
                     <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Simpan Lokasi Ini"}
@@ -475,7 +475,7 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
                   <button
                     onClick={() => askCheckIn(c, distance)}
                     disabled={!canCheckIn || checkingIn === c.id || (quota && !quota.canCheckIn)}
-                    title={quota && !quota.canCheckIn ? `Kuota check-in bulan ini abis (maks ${quota.quotaMax}x)` : undefined}
+                    title={quota && !quota.canCheckIn ? `Kuota check-in bulan ini habis (maks ${quota.quotaMax}x)` : undefined}
                     className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors ${canCheckIn && !(quota && !quota.canCheckIn) ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-slate-100 text-slate-400"}`}
                   >
                     <MapPin size={13} /> {checkingIn === c.id ? "Menyimpan…" : "Saya Sudah Sampai"}
@@ -524,7 +524,7 @@ function GpsCheckinLocked() {
       <span className="w-8 h-8 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
       <div className="text-sm">
         <div className="font-medium text-violet-900">GPS Check-in itu fitur Enterprise</div>
-        <div className="text-xs text-violet-700 mt-0.5">Buat tracking kunjungan team sales secara real-time. Upgrade ke Enterprise buat pake fitur ini.</div>
+        <div className="text-xs text-violet-700 mt-0.5">Untuk memantau kunjungan team sales secara real-time. Upgrade ke Enterprise untuk menggunakan fitur ini.</div>
       </div>
     </div>
   );
@@ -665,7 +665,7 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
   const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
   const pick = (c) => { setSel(c); setQ(""); setMeet(c.visit_meet || c.key_person || ""); setAgenda(c.visit_agenda || ""); if (c.visit_date) setDate(c.visit_date); setSuggestedPoints(null); setSuggestError(""); setAppliedPoints({}); };
   const save = async () => {
-    if (!sel) { alert("Pilih company dulu."); return; }
+    if (!sel) { alert("Pilih perusahaan terlebih dahulu."); return; }
     setBusy(true);
     try { await db.upsertLead({ ...sel, visit_date: date, visit_meet: meet, visit_agenda: agenda }); onSaved(); }
     catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
@@ -677,10 +677,10 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
   // cancelVisit di db.js). Cuma muncul kalau sel emang punya visit_date
   // ke-set (bukan lagi bikin visit baru dari nol).
   const cancelThisVisit = async () => {
-    if (!sel || !window.confirm(`Batalin jadwal visit ke "${sel.name}"? Event di Google Calendar (kalau ada) ikut kehapus.`)) return;
+    if (!sel || !window.confirm(`Batalkan jadwal visit ke "${sel.name}"? Event di Google Calendar (jika ada) ikut terhapus.`)) return;
     setBusy(true);
     try { await db.cancelVisit(sel.id); onSaved(); }
-    catch (e) { alert("Gagal batalin visit: " + e.message); setBusy(false); }
+    catch (e) { alert("Gagal membatalkan visit: " + e.message); setBusy(false); }
   };
   // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
   // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
@@ -698,14 +698,14 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
                 <Search size={15} className="absolute left-2.5 top-3.5 text-slate-400" />
                 <input autoFocus className="w-full mt-1 pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
                 {matches.length > 0 && <div className="mt-1 border border-slate-200 rounded-xl bg-white shadow-sm max-h-52 overflow-y-auto">{matches.map((c) => <div key={c.id} onClick={() => pick(c)} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0"><div className="font-medium">{c.name}</div><div className="text-[11px] text-slate-400">{[c.city, c.category].filter(Boolean).join(" · ")}</div></div>)}</div>}
-                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan dulu di tab Leads.</p>}
+                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan terlebih dahulu di tab Leads.</p>}
               </div>
             )}
           </div>
           <div className={sel ? "" : "opacity-40 pointer-events-none"}>
             <div className="grid grid-cols-2 gap-3">
               <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal visit</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
-              <label className="block"><span className="text-xs font-medium text-slate-500">Ketemu siapa</span><input className={inp} value={meet} onChange={(e) => setMeet(e.target.value)} placeholder="mis. Bu Rina (purchasing)" /></label>
+              <label className="block"><span className="text-xs font-medium text-slate-500">Bertemu siapa</span><input className={inp} value={meet} onChange={(e) => setMeet(e.target.value)} placeholder="mis. Bu Rina (purchasing)" /></label>
             </div>
             <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Agenda</span><textarea className={inp} rows={2} value={agenda} onChange={(e) => setAgenda(e.target.value)} placeholder="mau bahas apa" /></label>
 
@@ -720,7 +720,7 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
                   className="text-[11px] font-medium text-violet-700 hover:underline disabled:opacity-50 flex items-center gap-1"
                 >
                   {suggesting ? <Loader2 size={11} className="animate-spin" /> : !canMeetingPrep ? <Lock size={11} /> : <Sparkles size={11} />}
-                  {suggesting ? "Nyiapin..." : !canMeetingPrep ? "Standard" : "Siapin Poin"}
+                  {suggesting ? "Nyiapin..." : !canMeetingPrep ? "Standard" : "Siapkan Poin"}
                 </button>
               </div>
               {suggestError && <p className="mt-2 text-[11px] text-rose-500">{suggestError}</p>}
@@ -874,7 +874,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel, industry }
       <TodayVisitsCard leads={leads} onChanged={onChanged} onEdit={onEdit} isEnterprise={isEnterprise} />
 
       {visits.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana aja.</div>
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarCheck size={32} className="mx-auto text-slate-300 mb-3" />Belum ada visit. Klik "Tambah visit" atau isi "Visit date" di lead mana saja.</div>
       ) : view === "calendar" ? (
         <MonthCalendar leads={leads} onEdit={openVisitDetail} month={month} setMonth={setMonth} />
       ) : (
@@ -921,12 +921,12 @@ function FollowupView({ leads, onEdit, onChanged }) {
   const todo = useMemo(() => leads.filter((c) => c.next_action && c.next_action.trim()), [leads]);
   const done = async (id) => {
     try { await db.upsertLead({ ...leads.find((l) => l.id === id), next_action: "" }); onChanged(); }
-    catch (e) { alert("Gagal nandain selesai: " + e.message); }
+    catch (e) { alert("Gagal menandai selesai: " + e.message); }
   };
 
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-3">Semua lead yang punya "Next action". Klik nama buat buka, ✓ buat tandai selesai.</p>
+      <p className="text-sm text-slate-500 mb-3">Semua lead yang memiliki "Next action". Klik nama untuk membuka, ✓ untuk menandai selesai.</p>
       {todo.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><CalendarClock size={32} className="mx-auto text-slate-300 mb-3" />Belum ada next action. Buka lead → isi kolom "Next action".</div>
       ) : (

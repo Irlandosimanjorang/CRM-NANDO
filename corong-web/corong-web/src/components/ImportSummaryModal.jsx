@@ -49,7 +49,7 @@ export default function ImportSummaryModal({ summary, onClose }) {
               {imported.map((l, i) => (
                 <div key={i} className="flex items-center justify-between text-xs bg-slate-50 rounded-lg px-2.5 py-1.5">
                   <span className="truncate">{l.name}</span>
-                  {l.hasNote && <span title="Catatan dari Excel ikut kesimpen sebagai progress note" className="shrink-0 ml-2 text-slate-400"><StickyNote size={12} /></span>}
+                  {l.hasNote && <span title="Catatan dari Excel ikut tersimpan sebagai progress note" className="shrink-0 ml-2 text-slate-400"><StickyNote size={12} /></span>}
                 </div>
               ))}
             </div>
@@ -69,7 +69,7 @@ export default function ImportSummaryModal({ summary, onClose }) {
                       jadi 1 teks doang, bikin akun BARU yang CRM-nya masih
                       kosong keliatan aneh pas ada baris "udah ada di CRM". */}
                   <span className="text-amber-500">
-                    {" "}→ {d.source === "existing" ? "udah ada di CRM" : "duplikat di file yang sama"}
+                    {" "}→ {d.source === "existing" ? "sudah ada di CRM" : "duplikat di file yang sama"}
                     {d.matchedName && d.matchedName.toLowerCase() !== d.name.toLowerCase() && ` ("${d.matchedName}")`}
                   </span>
                 </div>
@@ -79,7 +79,7 @@ export default function ImportSummaryModal({ summary, onClose }) {
         )}
 
         {imported.length === 0 && duplicates.length === 0 && (
-          <p className="text-sm text-slate-400 py-6 text-center">Ga ada baris yang diproses.</p>
+          <p className="text-sm text-slate-400 py-6 text-center">Tidak ada baris yang diproses.</p>
         )}
 
         <div className="mt-4"><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 w-full">Tutup</button></div>

@@ -84,7 +84,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
   }, [tab, catSuggestions, catChecked, staleChecked]);
 
   const applyStale = async () => {
-    if (!lostStage) { alert("Ga ada tahap bertipe 'Lost' di pengaturan pipeline Anda."); return; }
+    if (!lostStage) { alert("Tidak ada tahap bertipe 'Lost' di pengaturan pipeline Anda."); return; }
     const ids = staleLeads.filter((l) => staleChecked[l.id]).map((l) => l.id);
     if (ids.length === 0) return;
     setStaleBusy(true);
@@ -106,10 +106,10 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
     <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={handleClose}>
       <div className="bg-white rounded-panel shadow-2xl w-full max-w-2xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-bold text-lg flex items-center gap-2"><Sparkles size={18} className="text-orange-500" /> Rapihin Data</h2>
+          <h2 className="font-bold text-lg flex items-center gap-2"><Sparkles size={18} className="text-orange-500" /> Rapikan Data</h2>
           <button onClick={handleClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
         </div>
-        <p className="text-sm text-slate-500 mb-4">Semua perubahan tetap butuh persetujuan Anda — ga ada yang dieksekusi otomatis.</p>
+        <p className="text-sm text-slate-500 mb-4">Semua perubahan tetap memerlukan persetujuan Anda — tidak ada yang dijalankan otomatis.</p>
 
         <div className="flex gap-2 mb-4 border-b border-slate-200">
           <button onClick={() => setTab("kategori")} className={`text-sm px-3 py-2 border-b-2 -mb-px ${tab === "kategori" ? "border-orange-600 text-orange-600 font-medium" : "border-transparent text-slate-500"}`}>Kategori</button>
@@ -122,13 +122,13 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
             {catSuggestions === null ? (
               <div className="text-center py-8">
                 <Tag size={28} className="mx-auto text-slate-300 mb-3" />
-                <p className="text-sm text-slate-500 mb-3">Scan lead berkategori "Lainnya" buat cari saran kategori yang lebih spesifik.</p>
+                <p className="text-sm text-slate-500 mb-3">Pindai lead berkategori "Lainnya" untuk mencari saran kategori yang lebih spesifik.</p>
                 <button onClick={scanCategories} disabled={catLoading} className="text-sm bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-xl px-4 py-2 font-medium inline-flex items-center gap-1.5">
                   {catLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Scan sekarang
                 </button>
               </div>
             ) : catSuggestions.length === 0 ? (
-              <p className="text-sm text-slate-400 py-8 text-center">Ga ada saran baru. Semua lead "Lainnya" udah dicek atau ga ada info cukup. 👍</p>
+              <p className="text-sm text-slate-400 py-8 text-center">Tidak ada saran baru. Semua lead "Lainnya" sudah diperiksa atau informasinya belum cukup.</p>
             ) : (
               <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
                 {catSuggestions.map((s) => (
@@ -151,7 +151,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
               <p className="text-sm text-slate-400 py-8 text-center">Semua lead aktif masih ada kontak dalam 90 hari terakhir. 👍</p>
             ) : (
               <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5 flex items-start gap-1.5"><AlertTriangle size={13} className="mt-0.5 shrink-0" /> {staleLeads.length} lead ga ada kontak 90+ hari. Centang yang mau ditandai "Lost".</p>
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-2.5 flex items-start gap-1.5"><AlertTriangle size={13} className="mt-0.5 shrink-0" /> {staleLeads.length} lead tidak dihubungi 90+ hari. Centang yang ingin ditandai "Lost".</p>
                 {staleLeads.map((l) => (
                   <label key={l.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3 cursor-pointer hover:bg-slate-50">
                     <input type="checkbox" checked={!!staleChecked[l.id]} onChange={(e) => setStaleChecked((p) => ({ ...p, [l.id]: e.target.checked }))} className="w-4 h-4 accent-orange-600" />
@@ -172,7 +172,7 @@ export default function DataCleanupModal({ leads, stages, onClose, onChanged }) 
               <p className="text-sm text-slate-400 py-8 text-center">Semua lead aktif punya data kota & telepon lengkap. 👍</p>
             ) : (
               <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-                <p className="text-xs text-slate-500 mb-2">Ga bisa diisi otomatis (biar ga ada data ngarang) — ini daftar buat Anda lengkapin manual:</p>
+                <p className="text-xs text-slate-500 mb-2">Tidak dapat diisi otomatis (agar tidak ada data karangan) — berikut daftar untuk Anda lengkapi secara manual:</p>
                 {incompleteLeads.map((l) => (
                   <div key={l.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-3">
                     <Phone size={14} className="text-slate-300 shrink-0" />

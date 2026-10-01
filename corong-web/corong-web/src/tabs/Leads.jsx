@@ -1069,7 +1069,7 @@ export default function Leads({
     }
 
     if (toInsert.length === 0 && duplicates.length === 0) {
-      alert("Ga ada baris kebaca. Pastikan ada data nama perusahaan/lead.");
+      alert("Tidak ada baris yang terbaca. Pastikan ada data nama perusahaan/lead.");
       return;
     }
 
@@ -1092,7 +1092,7 @@ export default function Leads({
       const chunk = withNotes.slice(i, i + 20);
       await Promise.all(
         chunk.map((p) =>
-          db.addProgress(p.id, p.notes.trim()).catch((e) => console.error("Gagal simpan note import buat", p.name, e))
+          db.addProgress(p.id, p.notes.trim()).catch((e) => console.error("Gagal menyimpan catatan import untuk", p.name, e))
         )
       );
     }
@@ -1143,7 +1143,7 @@ export default function Leads({
       }
 
       if (rawRows.length === 0) {
-        alert("File-nya kosong, ga ada data sama sekali yang kebaca.");
+        alert("File kosong, tidak ada data yang terbaca sama sekali.");
         return;
       }
 
@@ -1168,12 +1168,12 @@ export default function Leads({
             guessedDataStartRow = 0;
           }
         } catch (aiErr) {
-          console.error("Smart import AI gagal nebak:", aiErr);
+          console.error("Smart import AI gagal menebak:", aiErr);
           // Sebelumnya diem-diem aja jatuh ke pemetaan manual tanpa bilang
           // apa-apa - user gak pernah tau KENAPA (misal jatah Smart Import
           // udah abis). Sekarang dikasih tau alasannya lewat notif, baru
           // lanjut ke pemetaan manual biar proses import-nya tetep jalan.
-          alert(aiErr.message || "Smart Import AI gagal diproses, silakan petain kolom manual.");
+          alert(aiErr.message || "Smart Import AI gagal diproses, silakan petakan kolom secara manual.");
           guessedMapping = {};
           guessedDataStartRow = 0;
         }
@@ -1249,7 +1249,7 @@ export default function Leads({
 
     if (overflow.length > 0) {
       alert(
-        `Maks 5 kolom custom per organisasi, slotnya udah penuh semua. Kolom ini gak kebagian slot: ${overflow.join(", ")}.\n\nCoba pakai nama yang SAMA PERSIS dengan salah satu custom field yang udah ada, atau abaikan kolom itu dulu.`
+        `Maks 5 kolom custom per organisasi dan semua slot sudah terpakai. Kolom ini tidak mendapat slot: ${overflow.join(", ")}. Gunakan nama yang SAMA PERSIS dengan salah satu custom field yang sudah ada, atau lewati kolom tersebut.`
       );
       return;
     }
@@ -1339,7 +1339,7 @@ export default function Leads({
     try {
       const row = await db.requestApproval("export_leads");
       setExportApproval(row);
-      alert("Permintaan export dikirim. Nunggu di-approve owner/manager dulu.");
+      alert("Permintaan export dikirim. Menunggu persetujuan owner/manager.");
     } catch (e) { alert("Gagal kirim permintaan: " + e.message); }
   };
 
@@ -1360,7 +1360,7 @@ export default function Leads({
         if (!window.confirm(`Kirim permintaan hapus lead "${lead?.name || "ini"}" ke owner/manager?`)) return;
         try {
           await db.requestApproval("delete_lead", { lead_id: id, lead_name: lead?.name || "" });
-          alert("Permintaan hapus dikirim. Nunggu di-approve owner/manager dulu.");
+          alert("Permintaan hapus dikirim. Menunggu persetujuan owner/manager.");
         } catch (e) { alert("Gagal kirim permintaan: " + e.message); }
         return;
       }
@@ -1661,7 +1661,7 @@ export default function Leads({
               // browser (gak manggil AI/backend apapun), jadi gate-nya
               // cukup di sini doang.
               if (myLevel < 1) {
-                alert("Deteksi Duplikat itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan ya.");
+                alert("Deteksi Duplikat tersedia untuk paket Standard ke atas. Silakan upgrade di tab Pengaturan.");
                 return;
               }
               setShowDup(true);
@@ -1679,7 +1679,7 @@ export default function Leads({
           <button
             onClick={() => {
               if (myLevel < 1) {
-                alert("Generate Lead dari Link itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan ya.");
+                alert("Generate Lead dari Link tersedia untuk paket Standard ke atas. Silakan upgrade di tab Pengaturan.");
                 return;
               }
               setLinkErr("");
@@ -2028,7 +2028,7 @@ export default function Leads({
                 <button onClick={() => setShowLinkGen(false)} className="text-slate-500 hover:text-slate-700" aria-label="Tutup"><X size={18} /></button>
               )}
             </div>
-            <p className="text-xs text-slate-500 mb-3">Paste link website, profil Instagram bisnis, atau listing Google Maps calon customer - AI baca isinya & bikinin draft lead-nya buat direview.</p>
+            <p className="text-xs text-slate-500 mb-3">Tempel link website, profil Instagram bisnis, atau listing Google Maps calon customer - AI membaca isinya & menyiapkan draft lead untuk Anda tinjau.</p>
             <input
               autoFocus
               className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"

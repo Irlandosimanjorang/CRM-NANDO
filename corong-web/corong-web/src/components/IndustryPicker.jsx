@@ -40,7 +40,7 @@ export default function IndustryPicker({ onSelect, busy, onLogout }) {
           <NextoRobotHead size={48} />
           <h1 className="text-white text-2xl font-bold mt-4">Industri bisnis Anda apa?</h1>
           <p className="text-slate-400 text-sm mt-2 max-w-md">
-            Nexto bakal nyiapin pipeline & istilah yang sesuai. Bisa diubah lagi kapan aja lewat Pengaturan.
+            Nexto akan menyiapkan pipeline & istilah yang sesuai. Dapat diubah kapan saja melalui Pengaturan.
           </p>
         </div>
 

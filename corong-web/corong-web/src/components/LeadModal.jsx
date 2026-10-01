@@ -143,7 +143,7 @@ function fillTemplate(str, lead) {
   return str.replace(/\{\{nama\}\}/g, lead.name || "perusahaan Anda").replace(/\{\{pic\}\}/g, lead.key_person || "Bapak/Ibu");
 }
 
-const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Gak ada budget", "Gak ada kebutuhan", "Kualitas/spek", "Respons lambat", "Lainnya"];
+const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Tidak ada anggaran", "Tidak ada kebutuhan", "Kualitas/spek", "Respons lambat", "Lainnya"];
 
 // myLevel: 0=Free, 1=Standard, 2=Professional+ (dikirim dari App.jsx) -
 // dipake buat ngunci tombol AI yang backend-nya udah di-gate Professional
@@ -194,7 +194,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   }, [lead.id]);
   const generateNeedsSummary = async () => {
     if (!lead.id) return;
-    if (!isEnterprise) { alert("Fitur \"Ringkasan Kebutuhan (AI)\" itu khusus paket Enterprise. Upgrade dulu di tab Pengaturan."); return; }
+    if (!isEnterprise) { alert("Fitur \"Ringkasan Kebutuhan (AI)\" tersedia khusus paket Enterprise. Silakan upgrade di tab Pengaturan."); return; }
     setNeedsSummaryBusy(true);
     setNeedsSummaryErr("");
     try {
@@ -223,14 +223,14 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
 
   const guessOutcome = async () => {
     if (!lead.id) return;
-    if (!isProfessional) { alert("Fitur \"biarin AI nebak\" itu khusus paket Professional ke atas. Isi manual aja dulu ya, atau upgrade di tab Pengaturan."); return; }
+    if (!isProfessional) { alert("Fitur \"tebak dengan AI\" tersedia untuk paket Professional ke atas. Silakan isi manual terlebih dahulu, atau upgrade di tab Pengaturan."); return; }
     setOutcomeGuessing(true);
     try {
       const res = await db.guessOutcomeReason(lead.id, outcomeResult);
       setOutcomeCategory(res.reason_category || "");
       setOutcomeReason(res.reason || "");
     } catch (e) {
-      alert("Gagal nebak: " + e.message);
+      alert("Gagal menebak: " + e.message);
     } finally {
       setOutcomeGuessing(false);
     }
@@ -373,7 +373,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
       setBusy(true);
       try {
         await db.requestApproval("delete_lead", { lead_id: lead.id, lead_name: lead.name || "" });
-        alert("Permintaan hapus dikirim. Nunggu di-approve owner/manager dulu.");
+        alert("Permintaan hapus dikirim. Menunggu persetujuan owner/manager.");
         onClose();
       } catch (e) { alert("Gagal kirim permintaan: " + e.message); }
       finally { setBusy(false); }
@@ -386,7 +386,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   };
 
   const addProg = async () => {
-    if (!newProg.trim() || !lead.id) { if (!lead.id) alert("Simpan lead-nya dulu sebelum catat progress."); return; }
+    if (!newProg.trim() || !lead.id) { if (!lead.id) alert("Simpan lead terlebih dahulu sebelum mencatat progress."); return; }
     const p = await db.addProgress(lead.id, newProg.trim());
     setLog([p, ...log]); setNewProg("");
   };
@@ -492,12 +492,12 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                     </div>
                   )}
                   {needsSummary.has_catalog === false && (
-                    <p className="mt-2 text-[10px] text-slate-500">Isi katalog di Pengaturan → Produk & Layanan Perusahaan biar AI bisa rekomendasiin produk yang cocok.</p>
+                    <p className="mt-2 text-[10px] text-slate-500">Isi katalog di Pengaturan → Produk & Layanan Perusahaan agar AI dapat merekomendasikan produk yang cocok.</p>
                   )}
-                  <p className="mt-2 text-[10px] text-slate-400">Disimpulkan dari {needsSummary.based_on_notes_count || 0} catatan progress - AI dilarang ngarang, kalau gak ada info di catatan bakal bilang terus terang.</p>
+                  <p className="mt-2 text-[10px] text-slate-400">Disimpulkan dari {needsSummary.based_on_notes_count || 0} catatan progress - AI tidak mengarang; jika informasi tidak ada di catatan, AI akan menyampaikannya dengan jelas.</p>
                 </>
               ) : (
-                !needsSummaryErr && <p className="mt-2 text-[11px] text-slate-500">{!isEnterprise ? "Fitur khusus paket Enterprise. " : ""}Belum ada ringkasan. Klik "Simpulkan dari notulen" buat baca semua catatan progress lead ini dan nyimpulin kebutuhan kliennya.</p>
+                !needsSummaryErr && <p className="mt-2 text-[11px] text-slate-500">{!isEnterprise ? "Fitur khusus paket Enterprise. " : ""}Belum ada ringkasan. Klik "Simpulkan dari notulen" untuk membaca semua catatan progress lead ini dan menyimpulkan kebutuhan kliennya.</p>
               )}
             </div>
           )}
@@ -553,7 +553,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 </select>
               </Field>
               <Field label="Detail (opsional)">
-                <textarea className={inp + " min-h-[70px]"} value={outcomeReason} onChange={(e) => setOutcomeReason(e.target.value)} placeholder="Ceritain singkat kenapa..." />
+                <textarea className={inp + " min-h-[70px]"} value={outcomeReason} onChange={(e) => setOutcomeReason(e.target.value)} placeholder="Ceritakan singkat alasannya..." />
               </Field>
               <button
                 onClick={guessOutcome}
@@ -562,9 +562,9 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 className="text-xs border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 rounded-lg px-3 py-1.5 font-medium flex items-center gap-1.5"
               >
                 {outcomeGuessing ? <Loader2 size={12} className="animate-spin" /> : !isProfessional ? <Lock size={12} /> : <Sparkles size={12} />}
-                {!isProfessional ? "Biarin AI nebak (Professional)" : "Biarin AI nebak dari progress notes"}
+                {!isProfessional ? "Tebak dengan AI (Professional)" : "Tebak dengan AI dari progress notes"}
               </button>
-              <p className="text-[10px] text-slate-400">Kesimpen sebagai "Outcome Memory" - NEX AI Advisor bakal belajar pola ini buat rekomendasi lead lain ke depannya.</p>
+              <p className="text-[10px] text-slate-400">Tersimpan sebagai "Outcome Memory" - NEX AI Advisor akan mempelajari pola ini untuk rekomendasi lead lain ke depannya.</p>
             </div>
           )}
           <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
@@ -575,7 +575,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <input
                 className={inp}
                 inputMode="numeric"
-                placeholder="Mis. 120.000.000 - dipakai buat forecast di tab Team"
+                placeholder="Mis. 120.000.000 - dipakai untuk forecast di tab Team"
                 value={Number(f.deal_value) ? Number(f.deal_value).toLocaleString("id-ID") : ""}
                 onChange={(e) => set("deal_value", Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
               />
@@ -616,14 +616,14 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs">
                   <div className="font-semibold text-slate-600 flex items-center gap-1.5"><MapPin size={13} /> Titik lokasi GPS</div>
-                  <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan pas Anda lagi di lokasi"}</div>
+                  <div className="text-slate-400 mt-0.5">{f.latitude ? `Tersimpan (${Number(f.latitude).toFixed(5)}, ${Number(f.longitude).toFixed(5)})` : "Belum ada — simpan saat Anda berada di lokasi"}</div>
                 </div>
                 <button onClick={saveLocation} disabled={locBusy || !lead.id} className="text-xs border border-orange-300 text-orange-700 bg-white rounded-xl px-3 py-1.5 hover:bg-orange-50 disabled:opacity-50 shrink-0 font-medium">
                   {locBusy ? "Menyimpan…" : f.latitude ? "Update Titik Lokasi" : "Simpan Lokasi Ini"}
                 </button>
               </div>
               {f.latitude && (
-                <p className="text-[11px] text-slate-400">Ini cuma nyimpen titik alamat. Buat check-in kunjungan yang beneran diverifikasi jarak & foto, pakai tab "Visit & Follow-up".</p>
+                <p className="text-[11px] text-slate-400">Ini hanya menyimpan titik alamat. Untuk check-in kunjungan yang diverifikasi jarak & foto, gunakan tab "Visit & Follow-up".</p>
               )}
             </div>
           )}
@@ -636,14 +636,14 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <input type="date" className={inp} value={f.wait_until || ""} onChange={(e) => set("wait_until", e.target.value || null)} />
             </Field>
             {f.wait_until && (
-              <p className="text-[11px] text-orange-700">⏸️ NEX AI Advisor & reminder bakal DIEM buat lead ini sampai tanggal di atas lewat - gak akan dianggep overdue walaupun lama gak dikontak.</p>
+              <p className="text-[11px] text-orange-700">⏸️ NEX AI Advisor & pengingat tidak akan aktif untuk lead ini sampai tanggal di atas terlewati - lead tidak dianggap terlambat walaupun lama tidak dihubungi.</p>
             )}
           </div>
 
           <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50">
             <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1.5"><ClipboardList size={14} /> Progress harian</div>
             <div className="flex gap-2 mb-2">
-              <input className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-orange-500" value={newProg} onChange={(e) => setNewProg(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProg()} placeholder={lead.id ? "Update hari ini… (Enter)" : "Simpan lead dulu"} />
+              <input className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-orange-500" value={newProg} onChange={(e) => setNewProg(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProg()} placeholder={lead.id ? "Update hari ini… (Enter)" : "Simpan lead terlebih dahulu"} />
               <button onClick={addProg} className="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 rounded-lg flex items-center gap-1"><Plus size={13} /> Catat</button>
             </div>
             {log.length === 0 ? <p className="text-xs text-slate-400">Belum ada progress.</p> : (
@@ -681,9 +681,9 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             {showEmail && (
               <div className="mt-3 space-y-2.5">
                 {myLevel < 1 ? (
-                  <p className="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg p-2 flex items-center gap-1.5"><Lock size={12} className="shrink-0 text-slate-400" /> Kirim Email itu fitur khusus paket Standard ke atas. Upgrade dulu di tab Pengaturan.</p>
+                  <p className="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg p-2 flex items-center gap-1.5"><Lock size={12} className="shrink-0 text-slate-400" /> Kirim Email tersedia untuk paket Standard ke atas. Silakan upgrade di tab Pengaturan.</p>
                 ) : !f.email ? (
-                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2">Lead ini belum punya alamat email — isi dulu di field Email di atas.</p>
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2">Lead ini belum memiliki alamat email — isi terlebih dahulu di field Email di atas.</p>
                 ) : (
                   <>
                     <p className="text-[11px] text-slate-400">Kirim ke: <b>{f.email}</b></p>

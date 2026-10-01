@@ -290,7 +290,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       <div className="bg-white rounded-panel shadow-2xl w-full max-w-lg my-8 p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg flex items-center gap-2"><FileAudio size={18} className="text-orange-500" /> Rekam Meeting</h2>
-          <button onClick={isRecordingLive ? cancelRecording : handleClose} className="text-slate-400 hover:text-slate-700" aria-label={isRecordingLive ? "Batalin rekaman" : "Tutup"}><X size={20} /></button>
+          <button onClick={isRecordingLive ? cancelRecording : handleClose} className="text-slate-400 hover:text-slate-700" aria-label={isRecordingLive ? "Batalkan rekaman" : "Tutup"}><X size={20} /></button>
         </div>
 
         {!lead ? (
@@ -305,7 +305,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
                 {matches.map((c) => <div key={c.id} onClick={() => { setLead(c); setQ(""); }} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0">{c.name}</div>)}
               </div>
             )}
-            {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan dulu di tab Leads.</p>}
+            {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan terlebih dahulu di tab Leads.</p>}
           </div>
         ) : (
           <>
@@ -319,7 +319,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
                 <button onClick={startRecording} className="w-16 h-16 rounded-full bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center mx-auto shadow-lg shadow-orange-600/30">
                   <Mic size={24} />
                 </button>
-                <p className="text-xs text-slate-400 mt-3">Tekan buat mulai rekam meeting</p>
+                <p className="text-xs text-slate-400 mt-3">Tekan untuk mulai merekam meeting</p>
               </div>
             )}
 
@@ -341,7 +341,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
                     <Square size={20} fill="white" />
                   </button>
                 </div>
-                <p className="text-xs text-slate-400 mt-3">Lagi rekam… tekan buat stop</p>
+                <p className="text-xs text-slate-400 mt-3">Sedang merekam… tekan untuk berhenti</p>
               </div>
             )}
 
@@ -349,7 +349,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
               <div className="text-center py-10">
                 <Loader2 size={32} className="mx-auto text-orange-500 animate-spin mb-3" />
                 <p className="text-sm text-slate-500">
-                  {processingStep === "uploading" ? "Ngirim rekaman…" : "Mentranskrip & rapiin catatan…"}
+                  {processingStep === "uploading" ? "Mengirim rekaman…" : "Mentranskrip & merapikan catatan…"}
                 </p>
                 {/* Estimasi kasar - makin panjang rekamannya, makin jujur
                     kasih tau bakal makin lama (bukan "beberapa puluh detik"
@@ -378,8 +378,8 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
                 <textarea className="w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" rows={7} value={notes} onChange={(e) => { setNotes(e.target.value); updateReviewDraft({ notes: e.target.value }); }} />
 
                 <label className="block mt-3">
-                  <span className="text-xs font-medium text-slate-500">Next action (otomatis kedeteksi AI, bisa diedit/dikosongin)</span>
-                  <input className="w-full mt-1 px-3 py-2 text-sm border border-orange-300 bg-orange-50/60 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={nextAction} onChange={(e) => { setNextAction(e.target.value); updateReviewDraft({ nextAction: e.target.value }); }} placeholder="Kosong (AI ga nemu next step yang jelas)" />
+                  <span className="text-xs font-medium text-slate-500">Next action (terdeteksi otomatis oleh AI, dapat diedit/dikosongkan)</span>
+                  <input className="w-full mt-1 px-3 py-2 text-sm border border-orange-300 bg-orange-50/60 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10" value={nextAction} onChange={(e) => { setNextAction(e.target.value); updateReviewDraft({ nextAction: e.target.value }); }} placeholder="Kosong (AI tidak menemukan langkah berikutnya yang jelas)" />
                 </label>
 
                 <button onClick={() => setShowTranscript((v) => !v)} className="text-xs text-slate-400 hover:text-slate-600 mt-2">

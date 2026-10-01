@@ -40,7 +40,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy, demoR
   // row "PT Sinar Abadi Distribusi" palsu nyangkut di leads asli mereka.
   // Sekarang di-block total di mode demo, kasih alert upsell aja.
   const applyAction = async (lead, action) => {
-    if (dummy) { alert("Ini masih data contoh - upgrade paket dulu buat mulai pakai NEX AI Advisor beneran ya."); return; }
+    if (dummy) { alert("Ini masih data contoh - upgrade paket terlebih dahulu untuk mulai menggunakan NEX AI Advisor."); return; }
     try { await db.upsertLead({ ...lead, next_action: action }); onApplied(); }
     catch (e) { alert("Gagal jadikan next action: " + e.message); }
   };
@@ -50,7 +50,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy, demoR
   // yang tombol Simpan/Hapus-nya nulis ke database beneran pake lead id
   // palsu "dummy-1"). Sekarang di-block, kasih alert upsell juga.
   const handleOpen = (lead) => {
-    if (dummy) { alert("Ini masih data contoh - upgrade paket dulu buat mulai pakai NEX AI Advisor beneran ya."); return; }
+    if (dummy) { alert("Ini masih data contoh - upgrade paket terlebih dahulu untuk mulai menggunakan NEX AI Advisor."); return; }
     onOpen(lead);
   };
 
@@ -98,7 +98,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy, demoR
           <div className="text-xs text-slate-400 mb-3">{current?.ran_at ? `Dijalankan ${current.ran_at}` : ""} · {recs.length} rekomendasi</div>
 
           {recs.length === 0 ? (
-            <p className="text-sm text-slate-400">Ga ada rekomendasi di hari ini (mungkin belum ada lead aktif saat itu).</p>
+            <p className="text-sm text-slate-400">Tidak ada rekomendasi pada hari ini (kemungkinan belum ada lead aktif saat itu).</p>
           ) : (
             <div className="space-y-2.5">
               {recs.map((r, i) => {

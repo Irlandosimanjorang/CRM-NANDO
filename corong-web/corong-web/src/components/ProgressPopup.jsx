@@ -119,7 +119,7 @@ export default function ProgressPopup({ lead, onClose, onChanged, autoFocus }) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
-              placeholder="Update progress hari ini… (Enter buat kirim)"
+              placeholder="Update progress hari ini… (Enter untuk kirim)"
               rows={1}
               className="flex-1 text-sm border border-slate-300 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10"
             />

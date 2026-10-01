@@ -22,8 +22,8 @@ function useTools(tr) {
     { icon: FileSearch, name: "get_lead", desc: tr("Detail lengkap satu lead + histori progress terbaru.", "Full detail of one lead + latest progress history."), group: "read" },
     { icon: LayoutList, name: "list_stages", desc: tr("Lihat semua tahap pipeline yang ada di CRM.", "See every pipeline stage set up in the CRM."), group: "read" },
     { icon: Gauge, name: "get_pipeline_stats", desc: tr("Ringkasan lead aktif, overdue follow-up, dan win rate.", "Summary of active leads, overdue follow-ups, and win rate."), group: "read" },
-    { icon: PlusCircle, name: "create_lead", desc: tr("Bikin lead/prospek baru langsung dari chat.", "Create a new lead/prospect right from chat."), group: "write" },
-    { icon: ArrowRightLeft, name: "update_lead_stage", desc: tr("Pindahin lead ke tahap pipeline lain.", "Move a lead to a different pipeline stage."), group: "write" },
+    { icon: PlusCircle, name: "create_lead", desc: tr("Buat lead/prospek baru langsung dari chat.", "Create a new lead/prospect right from chat."), group: "write" },
+    { icon: ArrowRightLeft, name: "update_lead_stage", desc: tr("Pindahkan lead ke tahap pipeline lain.", "Move a lead to a different pipeline stage."), group: "write" },
     { icon: NotebookPen, name: "add_progress_note", desc: tr("Catat hasil telepon, WA, atau meeting ke satu lead.", "Log a call, WhatsApp chat, or meeting result to a lead."), group: "write" },
   ];
 }
@@ -31,26 +31,26 @@ function useTools(tr) {
 function usePrompts(tr) {
   return [
     tr("Cek lead yang overdue follow-up hari ini.", "Check leads with overdue follow-ups today."),
-    tr("Bikin lead baru buat PT Sumber Makmur, kategori distribusi, priority tinggi.", "Create a new lead for PT Sumber Makmur, distribution category, high priority."),
-    tr("Pindahin PT Asiaplast ke stage Negosiasi.", "Move PT Asiaplast to the Negotiation stage."),
-    tr("Kasih summary win rate pipeline saya bulan ini.", "Give me a summary of my pipeline win rate this month."),
+    tr("Buat lead baru untuk PT Sumber Makmur, kategori distribusi, prioritas tinggi.", "Create a new lead for PT Sumber Makmur, distribution category, high priority."),
+    tr("Pindahkan PT Asiaplast ke stage Negosiasi.", "Move PT Asiaplast to the Negotiation stage."),
+    tr("Berikan ringkasan win rate pipeline saya bulan ini.", "Give me a summary of my pipeline win rate this month."),
   ];
 }
 
 function useSteps(tr) {
   return [
-    { icon: KeyRound, title: tr("Buat API Key", "Create an API Key"), desc: tr('Buka Pengaturan → Integrasi MCP di Nexto, klik "Buat API Key". Sekali klik, langsung dapet key + Server URL.', 'Open Settings → MCP Integration in Nexto, click "Create API Key". One click gets you the key + Server URL.') },
-    { icon: Link2, title: tr("Sambungin ke Grok Bot", "Connect it to Grok Bot"), desc: tr('Bilang "Pasang Nexto MCP" ke Grok Bot, kirim Server URL + API Key-nya. Grok Bot connect sebagai custom MCP.', 'Tell Grok Bot "Set up Nexto MCP", send the Server URL + API Key. Grok Bot connects as a custom MCP.') },
+    { icon: KeyRound, title: tr("Buat API Key", "Create an API Key"), desc: tr('Buka Pengaturan → Integrasi MCP di Nexto, klik "Buat API Key". Sekali klik, Anda langsung mendapat key + Server URL.', 'Open Settings → MCP Integration in Nexto, click "Create API Key". One click gets you the key + Server URL.') },
+    { icon: Link2, title: tr("Hubungkan ke Grok Bot", "Connect it to Grok Bot"), desc: tr('Bilang "Pasang Nexto MCP" ke Grok Bot, kirim Server URL + API Key-nya. Grok Bot connect sebagai custom MCP.', 'Tell Grok Bot "Set up Nexto MCP", send the Server URL + API Key. Grok Bot connects as a custom MCP.') },
     { icon: MessageSquareText, title: tr("Suruh dia kerja", "Put it to work"), desc: tr('Tinggal ngobrol biasa - "cek lead overdue", "update stage PT Asiaplast" - Grok Bot yang eksekusi ke Nexto.', 'Just chat normally - "check overdue leads", "update PT Asiaplast\'s stage" - Grok Bot executes it in Nexto.') },
   ];
 }
 
 function useSecurityPoints(tr) {
   return [
-    { icon: Lock, text: tr("API key terpisah dari password login Anda - Grok Bot gak pernah tau password Anda.", "The API key is separate from your login password - Grok Bot never knows your password.") },
-    { icon: ShieldCheck, text: tr("Setiap key discope ke akun Anda sendiri - gak bisa nyentuh data organisasi lain.", "Every key is scoped to your own account - it can never touch another organization's data.") },
-    { icon: Check, text: tr("Bisa dicabut kapan aja dari Pengaturan - Grok Bot langsung kehilangan akses saat itu juga.", "Revoke it anytime from Settings - Grok Bot loses access instantly.") },
-    { icon: ListChecks, text: tr("Cuma 7 aksi spesifik yang di-expose - gak ada akses generik ke billing atau anggota team.", "Only 7 specific actions are exposed - no generic access to billing or team members.") },
+    { icon: Lock, text: tr("API key terpisah dari password login Anda - Grok Bot tidak pernah mengetahui password Anda.", "The API key is separate from your login password - Grok Bot never knows your password.") },
+    { icon: ShieldCheck, text: tr("Setiap key dibatasi ke akun Anda sendiri - tidak dapat mengakses data organisasi lain.", "Every key is scoped to your own account - it can never touch another organization's data.") },
+    { icon: Check, text: tr("Dapat dicabut kapan saja dari Pengaturan - Grok Bot langsung kehilangan akses saat itu juga.", "Revoke it anytime from Settings - Grok Bot loses access instantly.") },
+    { icon: ListChecks, text: tr("Hanya 7 aksi spesifik yang tersedia - tidak ada akses umum ke billing atau anggota team.", "Only 7 specific actions are exposed - no generic access to billing or team members.") },
   ];
 }
 
@@ -85,10 +85,10 @@ function GrokBotMcpContent({ lang, setLang }) {
   // pencarian buat "/grok-bot" punya identitas sendiri, bukan duplikat.
   useEffect(() => {
     const prevTitle = document.title;
-    document.title = "Nexto x Grok Bot - Integrasi MCP buat AI Agent";
+    document.title = "Nexto x Grok Bot - Integrasi MCP untuk AI Agent";
     const descTag = document.querySelector('meta[name="description"]');
     const prevDesc = descTag?.getAttribute("content") || null;
-    descTag?.setAttribute("content", "Sambungin Grok Bot (xAI) langsung ke CRM Nexto lewat protokol MCP - baca lead, pindahin stage pipeline, dan catat progress atas nama akun Anda, tanpa pernah pegang password Anda.");
+    descTag?.setAttribute("content", "Hubungkan Grok Bot (xAI) langsung ke CRM Nexto melalui protokol MCP - baca lead, pindahkan stage pipeline, dan catat progress atas nama akun Anda, tanpa pernah memegang password Anda.");
     return () => {
       document.title = prevTitle;
       if (prevDesc !== null) descTag?.setAttribute("content", prevDesc);
@@ -158,7 +158,7 @@ function GrokBotMcpContent({ lang, setLang }) {
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-center text-[15px] leading-relaxed text-slate-400 sm:text-base">
             {tr(
-              "Lewat protokol MCP, agent AI seperti Grok Bot bisa baca lead, pindahin stage pipeline, dan catat progress - atas nama akun Anda, tanpa pernah pegang password Anda.",
+              "Melalui protokol MCP, agent AI seperti Grok Bot dapat membaca lead, memindahkan stage pipeline, dan mencatat progress - atas nama akun Anda, tanpa pernah memegang password Anda.",
               "Through the MCP protocol, AI agents like Grok Bot can read leads, move pipeline stages, and log progress - on behalf of your account, without ever holding your password."
             )}
           </p>
@@ -187,7 +187,7 @@ function GrokBotMcpContent({ lang, setLang }) {
               </div>
               <div className="mr-auto max-w-[88%] rounded-2xl rounded-bl-sm bg-[#141a26] px-3.5 py-2.5 text-[12.5px] leading-relaxed text-slate-200">
                 {tr(
-                  <>Ada 2 lead overdue: <b>PT Elang Duta Asia</b> (6 hari) dan <b>PT Karya Linar</b> (9 hari). Mau saya catetin hasil follow-up-nya begitu Anda hubungi?</>,
+                  <>Ada 2 lead overdue: <b>PT Elang Duta Asia</b> (6 hari) dan <b>PT Karya Linar</b> (9 hari). Perlu saya catat hasil follow-up-nya setelah Anda hubungi?</>,
                   <>You have 2 overdue leads: <b>PT Elang Duta Asia</b> (6 days) and <b>PT Karya Linar</b> (9 days). Want me to log the follow-up result once you reach them?</>
                 )}
               </div>
@@ -202,7 +202,7 @@ function GrokBotMcpContent({ lang, setLang }) {
           <h2 className="text-2xl font-bold sm:text-3xl">{tr("Apa itu MCP?", "What is MCP?")}</h2>
           <p className="mt-4 text-[15px] leading-relaxed text-slate-400">
             {tr(
-              <><b className="text-slate-200">Model Context Protocol (MCP)</b> adalah standar terbuka yang bikin AI agent seperti Grok Bot bisa "bicara" langsung ke aplikasi lain lewat sekumpulan perintah (tools) yang jelas dan terbatas - bukan login sembarangan, bukan akses penuh ke semua data. Nexto expose 7 tools spesifik lewat MCP, jadi Grok Bot cuma bisa ngerjain hal-hal yang memang dimaksudkan buat sales, gak lebih dari itu.</>,
+              <><b className="text-slate-200">Model Context Protocol (MCP)</b> adalah standar terbuka yang memungkinkan AI agent seperti Grok Bot "berbicara" langsung dengan aplikasi lain melalui sekumpulan perintah (tools) yang jelas dan terbatas - bukan login sembarangan, bukan akses penuh ke semua data. Nexto menyediakan 7 tools spesifik melalui MCP, sehingga Grok Bot hanya dapat mengerjakan hal yang memang dimaksudkan untuk sales, tidak lebih.</>,
               <><b className="text-slate-200">Model Context Protocol (MCP)</b> is an open standard that lets AI agents like Grok Bot "talk" directly to other apps through a clear, limited set of commands (tools) - not arbitrary login, not full access to everything. Nexto exposes 7 specific tools through MCP, so Grok Bot can only do things meant for sales work, nothing more.</>
             )}
           </p>
@@ -237,7 +237,7 @@ function GrokBotMcpContent({ lang, setLang }) {
           <h2 className="text-center text-2xl font-bold sm:text-3xl">{tr("7 tools yang bisa dipakai Grok Bot", "7 tools Grok Bot can use")}</h2>
           <p className="mx-auto mt-3 max-w-lg text-center text-[13.5px] text-slate-400">
             {tr(
-              "Dibagi 2: yang cuma baca data (biru), dan yang bisa nulis/ubah data (oranye) - semuanya cuma nyentuh data di dalam akun Anda sendiri.",
+              "Dibagi 2: yang hanya membaca data (biru), dan yang dapat menulis/mengubah data (oranye) - semuanya hanya menyentuh data di dalam akun Anda sendiri.",
               "Split into 2: read-only (blue), and ones that can write/change data (orange) - all of them only ever touch data inside your own account."
             )}
           </p>
@@ -250,8 +250,8 @@ function GrokBotMcpContent({ lang, setLang }) {
       {/* ---- Contoh prompt ---- */}
       <section className="border-t border-white/[0.06] px-5 py-16 sm:px-7 sm:py-20 lg:px-10">
         <div className="mx-auto max-w-2xl">
-          <h2 className="text-center text-2xl font-bold sm:text-3xl">{tr("Tinggal ngobrol aja", "Just talk to it")}</h2>
-          <p className="mt-3 text-center text-[13.5px] text-slate-400">{tr("Gak perlu hafal perintah teknis - coba salah satu ini ke Grok Bot Anda:", "No need to memorize technical commands - try one of these on your Grok Bot:")}</p>
+          <h2 className="text-center text-2xl font-bold sm:text-3xl">{tr("Cukup lewat percakapan", "Just talk to it")}</h2>
+          <p className="mt-3 text-center text-[13.5px] text-slate-400">{tr("Tidak perlu menghafal perintah teknis - coba salah satu contoh ini ke Grok Bot Anda:", "No need to memorize technical commands - try one of these on your Grok Bot:")}</p>
           <div className="mt-8 space-y-2.5">
             {PROMPTS.map((p, i) => (
               <button
@@ -288,9 +288,9 @@ function GrokBotMcpContent({ lang, setLang }) {
 
       {/* ---- CTA akhir ---- */}
       <section className="border-t border-white/[0.06] px-5 py-16 text-center sm:px-7 sm:py-20 lg:px-10">
-        <h2 className="text-2xl font-bold sm:text-3xl">{tr("Siap sambungin Grok Bot ke Nexto?", "Ready to connect Grok Bot to Nexto?")}</h2>
+        <h2 className="text-2xl font-bold sm:text-3xl">{tr("Siap menghubungkan Grok Bot ke Nexto?", "Ready to connect Grok Bot to Nexto?")}</h2>
         <p className="mx-auto mt-3 max-w-md text-[13.5px] text-slate-400">
-          {tr("Tersedia buat paket Standard, Professional & Enterprise. Generate API key-nya dari Pengaturan, sambungin, langsung jalan.", "Available on the Standard, Professional & Enterprise plans. Generate the API key from Settings, connect it, and you're running.")}
+          {tr("Tersedia untuk paket Standard, Professional & Enterprise. Buat API key dari Pengaturan, hubungkan, dan langsung dapat digunakan.", "Available on the Standard, Professional & Enterprise plans. Generate the API key from Settings, connect it, and you're running.")}
         </p>
         <a href="/" className="mt-7 inline-flex items-center gap-1.5 rounded-2xl bg-orange-600 px-6 py-3.5 text-[14px] font-semibold text-white shadow-[0_15px_35px_-12px_rgba(249,115,22,0.55)] hover:bg-orange-700">
           {tr("Buka Nexto", "Open Nexto")} <ArrowRight size={15} />

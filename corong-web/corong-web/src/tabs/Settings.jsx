@@ -63,7 +63,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       if (data?.error) throw new Error(data.error);
       setRecoveryCodes(data.codes);
     } catch (e) {
-      setRecoveryMsg("Gagal bikin kode recovery: " + e.message);
+      setRecoveryMsg("Gagal membuat kode recovery: " + e.message);
     } finally {
       setRecoveryBusy(false);
     }
@@ -114,7 +114,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       if (challengeErr) throw challengeErr;
       const { error: verifyErr } = await supabase.auth.mfa.verify({ factorId: mfaPendingFactorId, challengeId: challenge.id, code: mfaCode });
       if (verifyErr) throw verifyErr;
-      setMfaMsg("✅ 2FA berhasil diaktifkan! Login berikutnya bakal minta kode dari app authenticator Anda."); setMfaMsgOk(true);
+      setMfaMsg("✅ 2FA berhasil diaktifkan! Login berikutnya akan meminta kode dari aplikasi authenticator Anda."); setMfaMsgOk(true);
       setMfaEnrolling(false); setMfaPendingFactorId(null); setMfaQrCode(""); setMfaSecret(""); setMfaCode("");
       loadMfaFactors();
       generateRecoveryCodes(); // langsung siapin kode recovery begitu 2FA aktif - jangan sampe user lupa/gak pernah punya kode cadangan
@@ -127,7 +127,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
   const disableMfa = async () => {
     if (!mfaFactor) return;
-    if (!window.confirm("Matiin 2FA? Login berikutnya cuma butuh email+password lagi, tanpa kode tambahan.")) return;
+    if (!window.confirm("Nonaktifkan 2FA? Login berikutnya hanya memerlukan email + password, tanpa kode tambahan.")) return;
     setMfaBusy(true); setMfaMsg("");
     try {
       const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactor.id });
@@ -135,7 +135,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       setMfaMsg("2FA dimatiin."); setMfaMsgOk(true);
       setMfaFactor(null);
     } catch (e) {
-      setMfaMsg("Gagal matiin 2FA: " + e.message); setMfaMsgOk(false);
+      setMfaMsg("Gagal menonaktifkan 2FA: " + e.message); setMfaMsgOk(false);
     } finally {
       setMfaBusy(false);
     }
@@ -243,7 +243,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       await db.revokeInviteCode(inviteCode);
       setInviteCode("");
       setInviteExpiresAt(null);
-    } catch (e) { alert("Gagal batalin kode: " + e.message); }
+    } catch (e) { alert("Gagal membatalkan kode: " + e.message); }
     finally { setCancelBusy(false); }
   };
 
@@ -255,7 +255,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       setInviteCode(row.code);
       setInviteExpiresAt(row.expires_at);
     }
-    catch (e) { alert("Gagal bikin kode: " + e.message); }
+    catch (e) { alert("Gagal membuat kode: " + e.message); }
     finally { setInviteBusy(false); }
   };
 
@@ -278,7 +278,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
   const [leaveBusy, setLeaveBusy] = useState(false);
   const leaveOrganization = async () => {
-    if (!window.confirm(`Keluar dari organisasi "${org?.name}"? Anda bakal balik punya ruang kerja sendiri (kosong).`)) return;
+    if (!window.confirm(`Keluar dari organisasi "${org?.name}"? Anda akan kembali memiliki ruang kerja sendiri (kosong).`)) return;
     setLeaveBusy(true);
     try { await db.leaveOrg(); loadOrg(); onChanged(); }
     catch (e) { alert("Gagal keluar: " + e.message); }
@@ -344,14 +344,14 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       setMcpNewLabel("");
       loadMcpKeys();
     } catch (e) {
-      setMcpMsg("Gagal bikin key: " + e.message);
+      setMcpMsg("Gagal membuat key: " + e.message);
     } finally {
       setMcpBusy(false);
     }
   };
 
   const revokeMcpKey = async (id, label) => {
-    if (!window.confirm(`Cabut API key "${label}"? Agent yang masih pakai key ini bakal langsung gagal connect.`)) return;
+    if (!window.confirm(`Cabut API key "${label}"? Agent yang masih menggunakan key ini akan langsung gagal terhubung.`)) return;
     setMcpBusy(true); setMcpMsg("");
     try {
       const { data, error } = await supabase.functions.invoke("mcp-keys", { body: { action: "revoke", key_id: id } });
@@ -482,9 +482,9 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
   const changePassword = async () => {
     setPwMsg(""); setPwMsgOk(false);
-    if (!pwOld) { setPwMsg("Masukin password lama dulu."); return; }
+    if (!pwOld) { setPwMsg("Masukkan password lama terlebih dahulu."); return; }
     if (pwNew.length < 8) { setPwMsg("Password baru minimal 8 karakter."); return; }
-    if (pwNew !== pwConfirm) { setPwMsg("Konfirmasi password gak cocok."); return; }
+    if (pwNew !== pwConfirm) { setPwMsg("Konfirmasi password tidak cocok."); return; }
     setPwBusy(true);
     try {
       // Verifikasi password LAMA dulu sebelum ganti - biar orang yang cuma
@@ -630,7 +630,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                   <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Paket Anda <b>Individual</b> - fitur undang anggota khusus paket Enterprise.</p>
                 ) : isEnterprise ? (
                   members.length >= (org?.member_limit || 1) ? (
-                    <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota udah penuh (maks {org.member_limit}).</p>
+                    <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">Anggota sudah penuh (maks {org.member_limit}).</p>
                   ) : inviteCode ? (
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
                       <p className="text-xs text-slate-600 mb-2">Bagikan kode ini ke anggota team. Mereka memasukkannya di Pengaturan → Team, bagian "Punya kode undangan?":</p>
@@ -639,9 +639,9 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                         <button onClick={() => copyToClipboard(inviteCode, "invite")} className={copiedKey === "invite" ? "text-emerald-600" : "text-slate-400 hover:text-slate-700"} title="Salin kode">
                           {copiedKey === "invite" ? <CheckCircle2 size={14} /> : <Copy size={14} />}
                         </button>
-                        <button onClick={cancelInvite} disabled={cancelBusy} className="text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Batalin kode ini"><X size={14} /></button>
+                        <button onClick={cancelInvite} disabled={cancelBusy} className="text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Batalkan kode ini"><X size={14} /></button>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-2">Bisa dipake berkali-kali sampe kuota anggota penuh. Berlaku 1 jam.</p>
+                      <p className="text-[11px] text-slate-400 mt-2">Dapat dipakai berkali-kali sampai kuota anggota penuh. Berlaku 1 jam.</p>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -655,7 +655,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                     </div>
                   )
                 ) : (
-                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise buat bisa undang anggota team.</p>
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">Upgrade ke paket Enterprise untuk mengundang anggota team.</p>
                 )}
 
                 {/* Kotak "Punya kode undangan?" untuk yang BELUM di team Enterprise
@@ -667,7 +667,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                 <div className="border-t border-slate-100 mt-3 pt-3">
                   <p className="text-xs font-medium text-slate-500 mb-1.5">Punya kode undangan?</p>
                   <div className="flex gap-2">
-                    <input className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl uppercase" placeholder="Masukin kode" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
+                    <input className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl uppercase" placeholder="Masukkan kode" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
                     <button onClick={joinWithCode} disabled={joinBusy} className="text-sm bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-4 font-medium">
                       {joinBusy ? <Loader2 size={15} className="animate-spin" /> : "Gabung"}
                     </button>
@@ -687,7 +687,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       {canManage && isEnterprise && pendingApprovals.length > 0 && (
         <div className="bg-white border border-amber-200 rounded-panel p-4">
           <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><ShieldAlert size={15} className="text-amber-500" /> Permintaan Approval</h3>
-          <p className="text-xs text-slate-400 mb-3">Sales rep butuh persetujuan buat hapus lead atau export data team.</p>
+          <p className="text-xs text-slate-400 mb-3">Sales rep memerlukan persetujuan untuk menghapus lead atau export data team.</p>
           <div className="space-y-2">
             {pendingApprovals.map((r) => (
               <div key={r.id} className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
@@ -711,7 +711,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <div className="flex items-center justify-between mb-2"><h3 className="font-semibold text-sm">Tahap pipeline</h3><button onClick={addStage} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={13} /> tambah tahap</button></div>
-        <p className="text-xs text-slate-400 mb-3">Tipe nentuin hitungan dashboard: <b>Deal</b> = menang, <b>Lost</b> = gugur, <b>Normal</b> = masih jalan.</p>
+        <p className="text-xs text-slate-400 mb-3">Tipe menentukan perhitungan dashboard: <b>Deal</b> = menang, <b>Lost</b> = gugur, <b>Normal</b> = masih jalan.</p>
         <div className="space-y-2">
           {st.map((s, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-center">
@@ -732,16 +732,16 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       {isEnterprise && <ProductCatalogCard canManage={canManage} industry={org?.industry} />}
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
-        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Sparkles size={15} className="text-orange-500" /> Rapihin Data</h3>
-        <p className="text-xs text-slate-500 mb-3">Cari saran kategori buat lead "Lainnya", lead yang udah lama ga aktif, dan data kontak yang kurang lengkap. Semua perubahan tetap Anda yang approve.</p>
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Sparkles size={15} className="text-orange-500" /> Rapikan Data</h3>
+        <p className="text-xs text-slate-500 mb-3">Cari saran kategori untuk lead "Lainnya", lead yang sudah lama tidak aktif, dan data kontak yang kurang lengkap. Semua perubahan tetap memerlukan persetujuan Anda.</p>
         <button onClick={() => { setShowCleanup(true); saveOpenModal("datacleanup", {}); }} className="text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
-          <Sparkles size={15} /> Buka Rapihin Data
+          <Sparkles size={15} /> Buka Rapikan Data
         </button>
       </div>
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Trash2 size={15} className="text-slate-400" /> Recycle Bin</h3>
-        <p className="text-xs text-slate-500 mb-3">Lead yang kehapus (manual atau otomatis dari bot) kesimpen di sini dulu, bisa dibalikin kapan aja sebelum di-hapus permanen.</p>
+        <p className="text-xs text-slate-500 mb-3">Lead yang terhapus (manual atau otomatis dari bot) disimpan di sini terlebih dahulu dan dapat dipulihkan kapan saja sebelum dihapus permanen.</p>
         <button onClick={() => { setShowRecycleBin(true); saveOpenModal("recyclebin", {}); }} className="text-sm border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
           <Trash2 size={15} /> Buka Recycle Bin
         </button>
@@ -753,14 +753,14 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           NEX <span className="text-ai">Pro</span>
         </h3>
         <p className="text-xs text-slate-500 mb-3">
-          Update lead pakai suara, langsung dari app - gak perlu app lain kayak Telegram lagi. Ngomong aja, AI yang urus sisanya: catat progress, jadwal visit{myLevel >= 2 ? " (otomatis sinkron ke Google Calendar di bawah)" : ""}, tutup deal menang/kalah, tambah lead baru, sampai kirim email follow-up. Hasilnya tetap direview dulu sebelum disimpan.
+          Update lead dengan suara, langsung dari aplikasi - tanpa aplikasi lain seperti Telegram. Cukup bicara, AI yang mengurus sisanya: catat progress, jadwal visit{myLevel >= 2 ? " (otomatis sinkron ke Google Calendar di bawah)" : ""}, tutup deal menang/kalah, tambah lead baru, hingga kirim email follow-up. Hasilnya tetap Anda tinjau sebelum disimpan.
         </p>
         {myLevel < 1 ? (
           <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
             <div className="text-sm">
               <div className="font-medium text-orange-900">NEX Pro itu fitur Standard ke atas</div>
-              <div className="text-xs text-orange-700 mt-0.5">Upgrade ke Standard buat bisa pake NEX Pro.</div>
+              <div className="text-xs text-orange-700 mt-0.5">Upgrade ke Standard untuk menggunakan NEX Pro.</div>
             </div>
           </div>
         ) : (
@@ -778,7 +778,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Smartphone size={15} className="text-orange-500" /> Install Nexto ke Home Screen HP</h3>
         <p className="text-xs text-slate-500 mb-3">
-          Jadiin Nexto kayak app beneran di HP - buka langsung dari home screen tanpa buka browser, dan NEX Pro (voice note) otomatis muncul tiap buka. Berlaku buat semua paket, gratis sekalipun.
+          Jadikan Nexto seperti aplikasi di HP - buka langsung dari home screen tanpa membuka browser, dan NEX Pro (voice note) otomatis muncul setiap dibuka. Berlaku untuk semua paket, termasuk Free.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
@@ -804,13 +804,13 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
-        <p className="text-xs text-slate-500 mb-3">Sambungin Google Calendar Anda biar jadwal visit & follow-up dari NEX Pro otomatis masuk ke calendar.</p>
+        <p className="text-xs text-slate-500 mb-3">Hubungkan Google Calendar Anda agar jadwal visit & follow-up dari NEX Pro otomatis masuk ke kalender.</p>
         {myLevel < 2 ? (
           <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
             <div className="text-sm">
               <div className="font-medium text-rose-900">Google Calendar itu fitur Professional</div>
-              <div className="text-xs text-rose-700 mt-0.5">Upgrade ke Professional buat bisa nyambungin Google Calendar Anda.</div>
+              <div className="text-xs text-rose-700 mt-0.5">Upgrade ke Professional untuk menghubungkan Google Calendar Anda.</div>
             </div>
           </div>
         ) : gcalLoading ? (
@@ -822,7 +822,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
               <button onClick={disconnectGcal} disabled={gcalBusy} className="text-xs border border-rose-300 text-rose-600 rounded-xl px-3 py-1.5 hover:bg-rose-50 disabled:opacity-60">Putuskan koneksi</button>
             </div>
             <div className="border-t border-slate-100 pt-3">
-              <p className="text-xs text-slate-500 mb-2">Punya jadwal visit lama yang dibuat sebelum Google Calendar terhubung? Klik ini buat sync-in semuanya sekaligus.</p>
+              <p className="text-xs text-slate-500 mb-2">Punya jadwal visit lama yang dibuat sebelum Google Calendar terhubung? Klik ini untuk menyinkronkan semuanya sekaligus.</p>
               <button onClick={syncOldData} disabled={syncBusy} className="text-xs bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
                 {syncBusy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {syncBusy ? "Menyinkronkan…" : "Sync semua jadwal lama"}
               </button>
@@ -839,21 +839,20 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Bot size={15} className="text-violet-500" /> Integrasi MCP ke Grok Bot</h3>
         <p className="text-xs text-slate-500 mb-3">
-          Sambungin agent AI luar (misal Grok Bot dari xAI) ke data CRM Anda lewat protokol MCP - agent bisa baca lead, update stage,
-          dan tambah catatan progress atas nama akun Anda, tanpa perlu login pakai email/password.
+          Hubungkan agent AI eksternal (misal Grok Bot dari xAI) ke data CRM Anda melalui protokol MCP - agent dapat membaca lead, update stage, dan menambah catatan progress atas nama akun Anda, tanpa perlu login dengan email/password.
         </p>
         {myLevel < 1 ? (
           <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
             <div className="text-sm">
               <div className="font-medium text-violet-900">Integrasi MCP itu fitur Standard ke atas</div>
-              <div className="text-xs text-violet-700 mt-0.5">Upgrade ke Standard buat bisa generate API key & sambungin agent AI luar.</div>
+              <div className="text-xs text-violet-700 mt-0.5">Upgrade ke Standard untuk membuat API key & menghubungkan agent AI eksternal.</div>
             </div>
           </div>
         ) : (
           <>
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3">
-              <p className="text-[11px] font-medium text-slate-500 mb-1">Server URL (masukin ini di konfigurasi connector/MCP agent-nya)</p>
+              <p className="text-[11px] font-medium text-slate-500 mb-1">Server URL (masukkan ini di konfigurasi connector/MCP agent)</p>
               <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-[11px]">
                 <span className="flex-1 break-all">{MCP_SERVER_URL}</span>
                 <button onClick={() => copyToClipboard(MCP_SERVER_URL, "mcpUrl")} className={(copiedKey === "mcpUrl" ? "text-emerald-600" : "text-slate-400 hover:text-slate-700") + " shrink-0"}>
@@ -864,7 +863,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
             {mcpNewPlaintext && (
               <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang - API key ini CUMA ditampilin sekali dan gak bisa dilihat ulang.</p>
+                <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang - API key ini HANYA ditampilkan sekali dan tidak dapat dilihat ulang.</p>
                 <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg px-3 py-2 font-mono text-[11px]">
                   <span className="flex-1 break-all">{mcpNewPlaintext}</span>
                   <button onClick={() => copyToClipboard(mcpNewPlaintext, "mcpToken")} className={(copiedKey === "mcpToken" ? "text-emerald-600" : "text-amber-600 hover:text-amber-800") + " shrink-0"}>
@@ -904,14 +903,14 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-100">
-              <p className="text-[11px] font-medium text-slate-500 mb-1.5">Cara sambungin ke Grok Bot:</p>
+              <p className="text-[11px] font-medium text-slate-500 mb-1.5">Cara menghubungkan ke Grok Bot:</p>
               <ol className="text-[11px] text-slate-500 space-y-1 list-decimal list-inside">
-                <li>Buat API Key di atas, salin Server URL & key-nya.</li>
+                <li>Buat API Key di atas, lalu salin Server URL & key-nya.</li>
                 <li>Di chat Grok Bot, bilang "Pasang Nexto MCP" lalu kirim Server URL + API Key-nya (jangan di-screenshot/share ke publik).</li>
-                <li>Grok Bot bakal nambahin sebagai connector - tunggu sampai statusnya "connected".</li>
+                <li>Grok Bot akan menambahkannya sebagai connector - tunggu sampai statusnya "connected".</li>
                 <li>Tes dengan suruh Grok Bot: "cek pipeline stats saya" atau "list lead yang overdue".</li>
               </ol>
-              <p className="text-[11px] text-slate-400 mt-2">Tiap user generate & pasang key-nya sendiri-sendiri - bukan sekali pasang buat semua anggota team.</p>
+              <p className="text-[11px] text-slate-400 mt-2">Setiap user membuat & memasang key-nya masing-masing - bukan sekali pasang untuk semua anggota team.</p>
             </div>
           </>
         )}
@@ -922,22 +921,22 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           {mfaFactor ? <ShieldCheck size={15} className="text-emerald-500" /> : <ShieldAlert size={15} className="text-slate-400" />}
           Autentikasi 2 Langkah (2FA)
         </h3>
-        <p className="text-xs text-slate-500 mb-3">Tambah lapisan keamanan - abis password bener, login masih minta kode 6 digit dari app authenticator (Google Authenticator, Authy, dll). Biar akun tetep aman walau password bocor.</p>
+        <p className="text-xs text-slate-500 mb-3">Tambahan lapisan keamanan - setelah password benar, login tetap meminta kode 6 digit dari aplikasi authenticator (Google Authenticator, Authy, dll), sehingga akun tetap aman walaupun password bocor.</p>
 
         {mfaLoading ? (
           <div className="text-xs text-slate-400 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> Memuat…</div>
         ) : mfaEnrolling ? (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 max-w-sm">
-            <p className="text-xs text-slate-600">1. Scan QR code ini pake app authenticator (Google Authenticator, Authy, dll):</p>
+            <p className="text-xs text-slate-600">1. Pindai QR code ini dengan aplikasi authenticator (Google Authenticator, Authy, dll):</p>
             {mfaQrCode && <img src={mfaQrCode} alt="QR code 2FA" className="w-40 h-40 mx-auto border border-slate-200 rounded-lg bg-white p-2" />}
-            <p className="text-[11px] text-slate-400">Gak bisa scan? Masukin manual kode ini di app authenticator-nya:</p>
+            <p className="text-[11px] text-slate-400">Tidak bisa memindai? Masukkan kode ini secara manual di aplikasi authenticator:</p>
             <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono text-[11px]">
               <span className="flex-1 break-all">{mfaSecret}</span>
               <button onClick={() => copyToClipboard(mfaSecret, "mfaSecret")} className={(copiedKey === "mfaSecret" ? "text-emerald-600" : "text-slate-400 hover:text-slate-700") + " shrink-0"}>
                 {copiedKey === "mfaSecret" ? <CheckCircle2 size={13} /> : <Copy size={13} />}
               </button>
             </div>
-            <p className="text-xs text-slate-600 pt-1">2. Masukin kode 6 digit yang muncul di app-nya:</p>
+            <p className="text-xs text-slate-600 pt-1">2. Masukkan kode 6 digit yang muncul di aplikasi:</p>
             <input
               className={inp + " text-center tracking-[0.3em] font-mono text-base"}
               placeholder="000000"
@@ -978,7 +977,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           <div className="mt-4 pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="text-xs text-slate-600">
-                <span className="font-semibold">Kode Recovery</span> — buat jaga-jaga kalau HP/app authenticator Anda ilang atau rusak, jadi gak kekunci permanen dari akun sendiri.
+                <span className="font-semibold">Kode Recovery</span> — untuk berjaga-jaga jika HP/aplikasi authenticator Anda hilang atau rusak, sehingga Anda tidak terkunci permanen dari akun sendiri.
               </div>
               <button onClick={generateRecoveryCodes} disabled={recoveryBusy} className="text-xs border border-slate-300 text-slate-700 rounded-xl px-3 py-1.5 hover:bg-slate-100 disabled:opacity-60 shrink-0 flex items-center gap-1.5">
                 {recoveryBusy ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} {recoveryCodes ? "Buat ulang" : "Buat kode recovery"}
@@ -987,7 +986,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
             {recoveryMsg && <div className="text-xs rounded-lg p-2 mt-2 bg-rose-50 text-rose-700">{recoveryMsg}</div>}
             {recoveryCodes && (
               <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 max-w-sm">
-                <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang — ini CUMA ditampilin sekali. Tiap kode cuma bisa dipake 1x buat masuk kalau HP Anda hilang.</p>
+                <p className="text-[11px] font-semibold text-amber-800 mb-2">⚠️ Simpan sekarang — kode ini HANYA ditampilkan sekali. Setiap kode hanya dapat dipakai 1x untuk masuk jika HP Anda hilang.</p>
                 <div className="grid grid-cols-2 gap-1.5 font-mono text-[12px] bg-white rounded-lg p-2.5 border border-amber-100">
                   {recoveryCodes.map((c) => <div key={c}>{c}</div>)}
                 </div>
@@ -1016,7 +1015,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><KeyRound size={15} className="text-slate-500" /> Ganti Password</h3>
-        <p className="text-xs text-slate-500 mb-3">Ganti password akun Anda kapan aja. Minimal 8 karakter.</p>
+        <p className="text-xs text-slate-500 mb-3">Ganti password akun Anda kapan saja. Minimal 8 karakter.</p>
         <div className="space-y-2 max-w-sm">
           <input type="password" className={inp} placeholder="Password lama" value={pwOld} onChange={(e) => setPwOld(e.target.value)} />
           <input type="password" className={inp} placeholder="Password baru" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
@@ -1030,13 +1029,13 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1">Backup data</h3>
-        <p className="text-xs text-slate-500 mb-3">Supabase Free ga ada backup otomatis. Download semua data (leads, kompetitor, tahap, histori NEX AI Advisor) jadi 1 file — simpen di komputer/HP Anda sesekali biar aman.</p>
+        <p className="text-xs text-slate-500 mb-3">Download semua data (leads, kompetitor, tahap, riwayat NEX AI Advisor) menjadi 1 file, lalu simpan di komputer/HP Anda secara berkala sebagai cadangan.</p>
         <div className="flex flex-wrap gap-2">
           <button onClick={exportExcelClean} disabled={exportingExcel} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
-            {exportingExcel ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exportingExcel ? "Menyiapkan…" : "Export Excel (rapi, buat dibaca)"}
+            {exportingExcel ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exportingExcel ? "Menyiapkan…" : "Export Excel (rapi, untuk dibaca)"}
           </button>
           <button onClick={exportBackup} disabled={exporting} className="text-sm border border-slate-300 rounded-xl px-3 py-2 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5">
-            {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export JSON mentah (buat restore)"}
+            {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} {exporting ? "Menyiapkan…" : "Export JSON mentah (untuk restore)"}
           </button>
         </div>
       </div>

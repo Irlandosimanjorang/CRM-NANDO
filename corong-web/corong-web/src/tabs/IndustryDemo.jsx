@@ -65,7 +65,7 @@ export default function IndustryDemo() {
       <div>
         <div className="flex items-center gap-2 text-orange-600 text-xs font-semibold uppercase tracking-wide"><Sparkles size={14} /> Demo Industri</div>
         <h1 className="text-xl font-bold text-slate-900 mt-1">Lihat isi tiap industri sebelum pitching</h1>
-        <p className="text-sm text-slate-500 mt-1">Preview doang - klik industri buat lihat pipeline, field, dan contoh lead. Gak nyentuh data asli sama sekali.</p>
+        <p className="text-sm text-slate-500 mt-1">Hanya pratinjau - klik industri untuk melihat pipeline, field, dan contoh lead. Tidak mengubah data asli sama sekali.</p>
       </div>
 
       {/* Selector industri */}
@@ -154,7 +154,7 @@ export default function IndustryDemo() {
         </table>
       </div>
 
-      <p className="text-xs text-slate-400 text-center">Semua data di halaman ini contoh doang. Buat industri betulan, pilih pas onboarding akun baru atau lewat Pengaturan.</p>
+      <p className="text-xs text-slate-400 text-center">Semua data di halaman ini hanya contoh. Untuk industri sebenarnya, pilih saat onboarding akun baru atau melalui Pengaturan.</p>
     </div>
   );
 }

@@ -398,7 +398,7 @@ const SECURITY_FEATURES = [
     icon: Radar,
     title: { id: "Dipantau AI 24 Jam", en: "Monitored by AI 24/7" },
     desc: {
-      id: "Sistem internal kami ngecek kesehatan & keamanan platform tiap beberapa jam sepanjang hari, dan langsung notif team kami kalau ada yang janggal — bukan nunggu ada yang lapor duluan.",
+      id: "Sistem internal kami memeriksa kesehatan & keamanan platform setiap beberapa jam sepanjang hari, dan langsung memberi tahu tim kami jika ada yang janggal — tidak menunggu ada laporan terlebih dahulu.",
       en: "Our internal system checks the platform's health & security every few hours around the clock, and instantly alerts our team if anything looks off — not waiting for someone to report it.",
     },
   },
@@ -406,7 +406,7 @@ const SECURITY_FEATURES = [
     icon: ShieldCheck,
     title: { id: "Login Aman Berlapis", en: "Layered Secure Login" },
     desc: {
-      id: "Aktifin 2FA pakai app authenticator, dan kalau HP hilang ada 10 kode cadangan sekali-pakai — akun Anda gak pernah kekunci permanen dari diri sendiri.",
+      id: "Aktifkan 2FA dengan aplikasi authenticator. Jika HP hilang, tersedia 10 kode cadangan sekali pakai — akun Anda tidak akan terkunci permanen.",
       en: "Turn on 2FA with an authenticator app, and if your phone is lost there are 10 one-time backup codes — your account is never permanently locked out on you.",
     },
   },
@@ -414,15 +414,15 @@ const SECURITY_FEATURES = [
     icon: Lock,
     title: { id: "Data Terisolasi & Terenkripsi", en: "Isolated & Encrypted Data" },
     desc: {
-      id: "Row Level Security mastiin data organisasi Anda gak bisa ketembus organisasi lain, dan semuanya disimpan terenkripsi baik saat disimpan maupun saat dikirim lewat internet.",
+      id: "Row Level Security memastikan data organisasi Anda tidak dapat diakses organisasi lain, dan semua data disimpan terenkripsi, baik saat disimpan maupun saat dikirim melalui internet.",
       en: "Row Level Security makes sure your organization's data can never be reached by another organization, and everything is encrypted both at rest and in transit.",
     },
   },
   {
     icon: EyeOff,
-    title: { id: "Kredensial Gak Pernah ke Browser", en: "Credentials Never Reach the Browser" },
+    title: { id: "Kredensial Tidak Pernah Dikirim ke Browser", en: "Credentials Never Reach the Browser" },
     desc: {
-      id: "Kunci-kunci sensitif (API key, service credential) cuma hidup di server kami, gak pernah dikirim ke browser Anda — gak ada yang bisa dicuri lewat sisi perangkat pengguna.",
+      id: "Kunci sensitif (API key, service credential) hanya berada di server kami dan tidak pernah dikirim ke browser Anda — tidak ada yang dapat dicuri dari sisi perangkat pengguna.",
       en: "Sensitive keys (API keys, service credentials) only ever live on our servers, never sent to your browser — nothing can be stolen from the user's device side.",
     },
   },
@@ -430,7 +430,7 @@ const SECURITY_FEATURES = [
     icon: History,
     title: { id: "Audit Log & Backup Berkala", en: "Audit Log & Regular Backups" },
     desc: {
-      id: "Perubahan sensitif tercatat rapi dan gampang ditelusuri, sementara database di-backup otomatis secara berkala — data Anda gak gantung di satu titik kegagalan.",
+      id: "Perubahan sensitif tercatat rapi dan mudah ditelusuri, sementara database dicadangkan otomatis secara berkala — data Anda tidak bergantung pada satu titik kegagalan.",
       en: "Sensitive changes are logged cleanly and easy to trace, while the database is backed up automatically on a schedule — your data never hangs on a single point of failure.",
     },
   },
@@ -467,7 +467,7 @@ export const STANDARD_FEATURES = [
   { id: "Deteksi Duplikat", en: "Duplicate Detection" },
   { id: "Nex — Komunitas Sesama Sales", en: "Nex — Sales Community" },
   { id: "Daily Digest (rekomendasi harian)", en: "Daily Digest (daily recommendations)" },
-  { id: "Rapihin Data", en: "Data Cleanup" },
+  { id: "Rapikan Data", en: "Data Cleanup" },
   { id: "Visit & Follow-up", en: "Visit & Follow-up" },
   { id: "Meeting Prep", en: "Meeting Prep" },
   { id: "Advisor harian", en: "Daily Advisor" },
@@ -476,7 +476,7 @@ export const STANDARD_FEATURES = [
 
 export const PROFESSIONAL_FEATURES = [
   { id: "Semua fitur Standard", en: "Everything in Standard" },
-  { id: "Kuota NEX Pro lebih gede - 150x/bulan", en: "Bigger NEX Pro quota - 150x/month" },
+  { id: "Kuota NEX Pro lebih besar - 150x/bulan", en: "Bigger NEX Pro quota - 150x/month" },
   { id: "Sinkron otomatis ke Google Calendar", en: "Automatic Google Calendar sync" },
   { id: "Generate Leads", en: "Generate Leads" },
   { id: "Rekam Meeting otomatis", en: "Automatic Meeting Recording" },
@@ -490,8 +490,8 @@ export const PROFESSIONAL_FEATURES = [
 export const ENTERPRISE_FEATURES = [
   { id: "Semua fitur Professional", en: "Everything in Professional" },
   { id: "GPS Check-in (tracking kunjungan team real-time)", en: "GPS Check-in (real-time team visit tracking)" },
-  { id: "Ringkasan Kebutuhan Klien (AI simpulin kebutuhan prospek dari notulen), 15x/bulan", en: "Client Needs Summary (AI distills prospect needs from meeting notes), 15x/month" },
-  { id: "Katalog Produk & Layanan - AI rekomendasiin produk yang cocok buat tiap prospek", en: "Product & Service Catalog - AI recommends the right product for each prospect" },
+  { id: "Ringkasan Kebutuhan Klien (AI menyimpulkan kebutuhan prospek dari notulen), 15x/bulan", en: "Client Needs Summary (AI distills prospect needs from meeting notes), 15x/month" },
+  { id: "Katalog Produk & Layanan - AI merekomendasikan produk yang cocok untuk setiap prospek", en: "Product & Service Catalog - AI recommends the right product for each prospect" },
   { id: "4 anggota team dalam satu organisasi", en: "4 team members in one organization" },
   { id: "Role-based visibility (Owner/Manager/Sales Rep)", en: "Role-based visibility (Owner/Manager/Sales Rep)" },
   { id: "Assign & filter leads per anggota team", en: "Assign & filter leads per team member" },
@@ -784,7 +784,7 @@ function NextoAISalesEngine({ robotVoice }) {
               number="03"
               icon={<Pencil size={19} />}
               title="Edit CRM"
-              accent={tr("AI yang Kerjain", "AI Does It")}
+              accent={tr("AI yang Mengerjakan", "AI Does It")}
               description={tr(
                 "Update status, edit lead, ubah next action, tambah catatan — cukup perintah lewat chat.",
                 "Update status, edit a lead, change the next action, add a note — just say it in chat."
@@ -919,7 +919,7 @@ function NextoAISalesEngine({ robotVoice }) {
               title="Update Progress"
               accent="Voice & Text"
               description={tr(
-                "Lagi di jalan? Tinggal ngomong. Lagi bisa mengetik? Chat. Nexto memahami dan menyimpan progress ke CRM.",
+                "Sedang di jalan? Cukup bicara. Bisa mengetik? Gunakan chat. Nexto memahami dan menyimpan progress ke CRM.",
                 "On the road? Just talk. Able to type? Chat. Nexto understands and saves the progress to your CRM."
               )}
             >
@@ -940,7 +940,7 @@ function NextoAISalesEngine({ robotVoice }) {
                   </div>
 
                   <div className="mt-2 text-center text-[8px] text-slate-500">
-                    “Ketemu Pak Budi…”
+                    “Bertemu Pak Budi…”
                   </div>
                 </div>
 
@@ -1025,7 +1025,7 @@ function NextoAISalesEngine({ robotVoice }) {
         ========================================================== */}
         <div className="mt-16 flex flex-col items-center gap-3 text-center">
           <p className="max-w-xs text-[11px] leading-relaxed text-slate-500">
-            {tr("Itu yang Anda liat & ajak ngobrol.", "That's what you see and talk to.")}
+            {tr("Itulah yang Anda lihat & ajak bicara.", "That's what you see and talk to.")}
             <span className="block text-white font-medium">{tr("Ini yang jalan di baliknya.", "This is what runs behind it.")}</span>
           </p>
           <span
@@ -2161,7 +2161,7 @@ function DemoScene({ sceneKey }) {
               NEX <span className="bg-gradient-to-r from-orange-400 to-violet-400 bg-clip-text text-transparent">Pro</span>
             </span>
           </div>
-          <p className="text-[10px] italic text-slate-400">"Asiaplast udah nego, harga Rp33.400/kg…"</p>
+          <p className="text-[10px] italic text-slate-400">"Asiaplast sudah negosiasi, harga Rp33.400/kg…"</p>
         </div>
         <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-r from-orange-600 to-orange-500 px-3 py-2 text-[10px] font-medium text-white">
           PT Asiaplast → stage <b>Nego</b>. Progress kecatet, next action di-set follow-up 3 hari lagi.
@@ -2180,7 +2180,7 @@ function DemoScene({ sceneKey }) {
       <div>
         <div className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-[#141a26] px-3 py-2 text-[9px] text-slate-500">
           <Sparkles size={12} className="text-orange-400" />
-          Nyari "distributor resin PVC" di Jawa Timur…
+          Mencari "distributor resin PVC" di Jawa Timur…
         </div>
         <div className="mt-3 space-y-1.5">
           {results.map((r) => (
@@ -2362,7 +2362,7 @@ function DemoScene({ sceneKey }) {
                 <span className="truncate text-[10px] font-semibold text-white">PT Global Teknindo</span>
                 <span className="shrink-0 rounded-full bg-rose-500 px-1.5 py-0.5 text-[6.5px] font-bold text-white">URGENT</span>
               </div>
-              <div className="mt-0.5 truncate text-[8.5px] text-slate-400">Belum follow-up 8 hari, udah 2x diskusi harga</div>
+              <div className="mt-0.5 truncate text-[8.5px] text-slate-400">Belum di-follow-up 8 hari, sudah 2x diskusi harga</div>
             </div>
             <span className="mt-0.5 shrink-0 rounded-lg bg-orange-500 px-2 py-1 text-[8px] font-semibold text-white">Handle</span>
           </div>
@@ -2551,7 +2551,7 @@ export default function Auth() {
         return;
       }
       if (!agreedTerms) {
-        setMsg(tr("Centang dulu persetujuan ketentuan layanan & kebijakan privasi.", "Please check the terms of service & privacy policy agreement first."));
+        setMsg(tr("Centang terlebih dahulu persetujuan ketentuan layanan & kebijakan privasi.", "Please check the terms of service & privacy policy agreement first."));
         return;
       }
     }
@@ -2597,7 +2597,7 @@ export default function Auth() {
         } catch {}
 
         if (!data.session) {
-          setMsg(tr("Akun dibuat. Cek email buat verifikasi, lalu masuk.", "Account created. Check your email to verify, then sign in."));
+          setMsg(tr("Akun dibuat. Periksa email untuk verifikasi, lalu masuk.", "Account created. Check your email to verify, then sign in."));
         }
       }
     } catch (e) {
@@ -2915,11 +2915,11 @@ export default function Auth() {
                 <SectionLabel>{tr("Keamanan", "Security")}</SectionLabel>
                 <h2 className="mt-4 text-[32px] font-bold leading-tight tracking-[-0.04em] text-white sm:text-[44px]">
                   {tr("Data lead Anda,", "Your lead data,")}
-                  <span className="block text-orange-500">{tr("dijaga kayak brankas.", "guarded like a vault.")}</span>
+                  <span className="block text-orange-500">{tr("dijaga seperti brankas.", "guarded like a vault.")}</span>
                 </h2>
                 <p className="mt-4 text-[13px] leading-6 text-slate-400">
                   {tr(
-                    "Ribuan lead & histori progress ada di CRM ini — kami ngerti itu aset bisnis Anda. Makanya keamanan akun bukan fitur tempelan.",
+                    "Ribuan lead & riwayat progress ada di CRM ini — kami memahami bahwa itu aset bisnis Anda. Karena itu keamanan akun bukan fitur tambahan.",
                     "Thousands of leads & progress history live in this CRM — we know that's your business asset. That's why account security isn't a bolted-on feature."
                   )}
                 </p>
@@ -3029,7 +3029,7 @@ export default function Auth() {
               </div>
               <div className="mt-1 text-[10px] leading-5 text-slate-500">
                 {tr(
-                  <>Data lead/progress tetap milik Anda, gak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) &amp; OpenAI untuk diproses — kami sebutkan jelas apa & kenapa di{" "}</>,
+                  <>Data lead/progress tetap milik Anda dan tidak pernah dijual ke pihak ketiga. Sebagian fitur AI memang mengirim data relevan ke Anthropic (Claude) & OpenAI untuk diproses — kami jelaskan apa & alasannya di{" "}</>,
                   <>Your lead/progress data stays yours, never sold to third parties. Some AI features do send relevant data to Anthropic (Claude) &amp; OpenAI for processing — we clearly state what & why in our{" "}</>
                 )}
                 <button onClick={() => setLegalModal("privacy")} className="font-semibold text-orange-400 underline hover:text-orange-300">
@@ -3100,7 +3100,7 @@ export default function Auth() {
                 </div>
 
                 <div className="mt-1 text-[10px] text-slate-500">
-                  {tr("CRM inti + AI ringan — untuk yang mau rapiin data leads dulu", "Core CRM + light AI — for those who want to organize lead data first")}
+                  {tr("CRM inti + AI ringan — untuk yang ingin merapikan data leads terlebih dahulu", "Core CRM + light AI — for those who want to organize lead data first")}
                 </div>
                 <MiniBillingToggle billingCycle={standardCycle} setBillingCycle={setStandardCycle} accent="slate" />
                 {isEarlyBird && (
@@ -3161,10 +3161,10 @@ export default function Auth() {
                 </div>
 
                 <div className="relative mt-1 text-[10px] text-slate-400">
-                  {tr("AI Sales Engine penuh — solo, tapi kerja kayak ada team", "Full AI Sales Engine — solo, but working like you have a team")}
+                  {tr("AI Sales Engine lengkap — bekerja sendiri, namun seperti memiliki tim", "Full AI Sales Engine — solo, but working like you have a team")}
                 </div>
                 <div className="relative mt-1 text-[10px] text-orange-300/70">
-                  {tr("Makin lama dipakai, makin ngerti pola closing bisnis Anda", "The longer you use it, the better it understands your business's closing patterns")}
+                  {tr("Semakin lama digunakan, semakin memahami pola closing bisnis Anda", "The longer you use it, the better it understands your business's closing patterns")}
                 </div>
                 <div className="relative">
                   <MiniBillingToggle billingCycle={professionalCycle} setBillingCycle={setProfessionalCycle} accent="orange" />
@@ -3279,7 +3279,7 @@ export default function Auth() {
 
             <p className="mx-auto mt-8 max-w-xl text-center text-[10px] leading-relaxed text-slate-500">
               {tr(
-                <>Penting: pas isi form di halaman pembayaran, pakai <b className="text-slate-300">email yang sama persis</b> dengan email akun Nexto Anda — supaya akun Anda otomatis ke-upgrade begitu pembayaran selesai.</>,
+                <>Penting: saat mengisi form di halaman pembayaran, gunakan <b className="text-slate-300">email yang sama persis</b> dengan email akun Nexto Anda — supaya akun Anda otomatis ke-upgrade begitu pembayaran selesai.</>,
                 <>Important: when filling out the payment page form, use the <b className="text-slate-300">exact same email</b> as your Nexto account — so your account upgrades automatically once payment is complete.</>
               )}
             </p>
@@ -3356,7 +3356,7 @@ export default function Auth() {
                     <p className="mt-1 text-[10px] leading-5 text-slate-500">
                       {mode === "signin"
                         ? tr("Lanjutkan mengelola sales loop Anda.", "Continue managing your sales loop.")
-                        : tr("Gratis buat mulai. Upgrade kapan Anda siap.", "Free to start. Upgrade whenever you're ready.")}
+                        : tr("Gratis untuk memulai. Upgrade kapan pun Anda siap.", "Free to start. Upgrade whenever you're ready.")}
                     </p>
 
                     {mode === "signup" && (() => {
@@ -3367,7 +3367,7 @@ export default function Auth() {
                       return (
                         <div className="mt-3 rounded-lg border border-orange-500/20 bg-orange-500/[0.06] px-3 py-2 text-[10px] leading-4 text-orange-300">
                           {tr(
-                            <>Anda pilih paket <b>{label}</b> — daftar gratis dulu di sini, abis itu kita arahin buat pembayarannya.</>,
+                            <>Anda pilih paket <b>{label}</b> — daftar gratis terlebih dahulu di sini, setelah itu kami arahkan ke pembayaran.</>,
                             <>You picked the <b>{label}</b> plan — sign up for free here first, then we'll guide you to payment.</>
                           )}
                         </div>

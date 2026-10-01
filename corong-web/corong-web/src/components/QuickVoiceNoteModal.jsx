@@ -41,7 +41,7 @@ const ACTION_META = {
 };
 
 const FIELD_LABELS = {
-  visit_date: "Tanggal visit", visit_agenda: "Agenda visit", visit_meet: "Ketemu siapa",
+  visit_date: "Tanggal visit", visit_agenda: "Agenda visit", visit_meet: "Bertemu siapa",
   next_action: "Next action", phone: "Telepon", email: "Email", website: "Website",
   key_person: "Key person", key_person_title: "Jabatan key person", product: "Produk",
   city: "Kota", priority: "Prioritas",
@@ -131,7 +131,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
     setEmailLoading(true);
     db.draftFollowup(lead.id, "email")
       .then((d) => setEmailDraft({ subject: d.subject || "", body: d.body || "" }))
-      .catch((e) => setErrMsg(e.message || "Gagal bikin draft email"))
+      .catch((e) => setErrMsg(e.message || "Gagal membuat draft email"))
       .finally(() => setEmailLoading(false));
   }, [stage, action, lead, emailDraft, emailLoading]);
 
@@ -233,7 +233,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
     setBusy(true);
     try {
       if (action === "update_lead") {
-        if (!lead) throw new Error("Pilih lead-nya dulu.");
+        if (!lead) throw new Error("Pilih lead terlebih dahulu.");
         // BUG FIX (22 Sep 2026, laporan Nando: visit batal gak ke-update ke
         // Google Calendar) - nge-null-in visit_date lewat upsertLead BIASA
         // gak pernah ngehapus event lama di Calendar (upsertLead cuma manggil
@@ -250,7 +250,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         await db.upsertLead(merged);
         if (progressNote.trim()) await db.addProgress(lead.id, progressNote.trim());
       } else if (action === "close_lead") {
-        if (!lead) throw new Error("Pilih lead-nya dulu.");
+        if (!lead) throw new Error("Pilih lead terlebih dahulu.");
         const existing = (leads || []).find((l) => l.id === lead.id) || {};
         const wonLostStage = (stages || []).find((s) => s.type === closeResult);
         await db.upsertLead({ ...existing, id: lead.id, stage_key: wonLostStage?.key || existing.stage_key });
@@ -261,7 +261,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         const saved = await db.upsertLead({ ...newLead, stage_key: stageKey });
         if (progressNote.trim()) await db.addProgress(saved.id, progressNote.trim());
       } else if (action === "delete_lead") {
-        if (!lead) throw new Error("Pilih lead-nya dulu.");
+        if (!lead) throw new Error("Pilih lead terlebih dahulu.");
         // Approval-gate Enterprise (BUG FIX 30 Sep 2026): sales_rep gak boleh
         // hapus langsung - kirim permintaan ke owner/manager, sama kayak
         // tombol hapus di kartu Leads & detail lead.
@@ -274,9 +274,9 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
           await db.deleteLead(lead.id);
         }
       } else if (action === "send_email") {
-        if (!lead) throw new Error("Pilih lead-nya dulu.");
+        if (!lead) throw new Error("Pilih lead terlebih dahulu.");
         const existing = (leads || []).find((l) => l.id === lead.id) || {};
-        if (!existing.email) throw new Error("Lead ini belum punya email tercatat - isi dulu di tab Leads.");
+        if (!existing.email) throw new Error("Lead ini belum memiliki email - isi terlebih dahulu di tab Leads.");
         if (!emailDraft?.subject?.trim() || !emailDraft?.body?.trim()) throw new Error("Draft email kosong.");
         await db.sendLeadEmail({ lead_id: lead.id, to_email: existing.email, to_name: existing.name, subject: emailDraft.subject, body: emailDraft.body, sender_name: settings?.community_display_name });
       }
@@ -342,7 +342,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                 </button>
               </div>
               <p className="text-[12.5px] text-slate-400 mt-5 leading-5 max-w-[280px] mx-auto">
-                Tekan, ngomong bebas — update progress, jadwal visit, tutup deal, lead baru, dll. <span className="text-violet-300">AI</span> yang ngurus sisanya.
+                Tekan, lalu bicara bebas — update progress, jadwal visit, tutup deal, lead baru, dll. <span className="text-violet-300">AI</span> yang ngurus sisanya.
               </p>
             </div>
           )}
@@ -361,14 +361,14 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
               <div className={`font-mono text-[32px] font-bold tabular-nums ${seconds >= MAX_RECORDING_SECONDS - 15 ? "text-rose-400" : "text-white"}`}>
                 {fmtTimer(seconds)} <span className="text-[14px] font-medium text-slate-500">/ {fmtTimer(MAX_RECORDING_SECONDS)}</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1 mb-6">Maks 3 menit - buat catatan cepat</p>
+              <p className="text-[11px] text-slate-500 mt-1 mb-6">Maks 3 menit - untuk catatan cepat</p>
               <div className="relative mx-auto w-20 h-20">
                 <span className="absolute inset-0 rounded-full bg-rose-500/25 animate-ping" style={{ animationDuration: "1.6s" }} />
                 <button onClick={stopRecording} className="absolute inset-0 m-auto h-[72px] w-[72px] rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-[0_0_35px_-6px_rgba(225,29,72,.8)]">
                   <Square size={20} fill="white" />
                 </button>
               </div>
-              <p className="text-xs text-slate-500 mt-4">Lagi rekam… tekan buat stop</p>
+              <p className="text-xs text-slate-500 mt-4">Sedang merekam… tekan untuk berhenti</p>
             </div>
           )}
 
@@ -378,7 +378,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                 <div className="absolute inset-0 rounded-full border-2 border-white/10" />
                 <div className="absolute inset-0 rounded-full border-2 border-t-orange-400 border-r-violet-400 border-b-transparent border-l-transparent animate-spin" />
               </div>
-              <p className="text-sm text-slate-300">{processingStep === "uploading" ? "Ngirim rekaman…" : "Mentranskrip & mikirin aksinya…"}</p>
+              <p className="text-sm text-slate-300">{processingStep === "uploading" ? "Mengirim rekaman…" : "Mentranskrip & menyiapkan aksi…"}</p>
               <p className="text-xs text-slate-500 mt-1">Biasanya sekitar 15-30 detik</p>
             </div>
           )}
@@ -420,7 +420,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                     </div>
                   ) : (
                     <div className="mt-1.5 mb-3">
-                      <p className="text-xs text-amber-400 mb-1.5 flex items-center gap-1"><AlertTriangle size={12} /> AI gak yakin ini lead yang mana, pilih manual:</p>
+                      <p className="text-xs text-amber-400 mb-1.5 flex items-center gap-1"><AlertTriangle size={12} /> AI belum yakin lead yang dimaksud, pilih manual:</p>
                       <div className="relative">
                         <Search size={15} className="absolute left-2.5 top-3 text-slate-500" />
                         <input autoFocus className={`${darkInput} pl-8`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari lead…" />
@@ -456,7 +456,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                   ))}
                   {(updates.visit_date || updates.visit_agenda || updates.visit_meet) && (
                     <label className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                      <input type="checkbox" checked={cancelVisit} onChange={(e) => setCancelVisit(e.target.checked)} /> Batalin jadwal visit ini (bukan pindah tanggal)
+                      <input type="checkbox" checked={cancelVisit} onChange={(e) => setCancelVisit(e.target.checked)} /> Batalkan jadwal visit ini (bukan pindah tanggal)
                     </label>
                   )}
                 </div>
@@ -471,7 +471,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
 
               {action === "send_email" && lead && (
                 emailLoading ? (
-                  <div className="mb-3 text-center py-6"><Loader2 size={22} className="mx-auto text-orange-400 animate-spin" /><p className="text-xs text-slate-500 mt-2">Bikin draft email…</p></div>
+                  <div className="mb-3 text-center py-6"><Loader2 size={22} className="mx-auto text-orange-400 animate-spin" /><p className="text-xs text-slate-500 mt-2">Membuat draft email…</p></div>
                 ) : emailDraft ? (
                   <div className="mb-3 grid gap-2">
                     <input className={`${darkInput} font-medium`} value={emailDraft.subject} onChange={(e) => setEmailDraft((p) => ({ ...p, subject: e.target.value }))} placeholder="Subjek" />

@@ -128,7 +128,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
     });
 
     if (missingLabel) {
-      alert("Isi dulu nama field-nya buat kolom yang dipilih \"+ Custom...\" (belum dikasih nama).");
+      alert("Isi terlebih dahulu nama field untuk kolom yang dipilih \"+ Custom...\" (belum diberi nama).");
       return;
     }
 
@@ -153,12 +153,12 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
         </div>
         <p className="text-sm text-slate-500 mb-1">
           {autoGuessed ? (
-            <>Nexto udah coba nebak petaan kolom di sheet <b>"{sheetName}"</b> ini{usedAiGuess ? " pakai AI" : ""} - cek dulu di bawah, betulin kalau ada yang salah, baru klik Import.</>
+            <>Nexto sudah mencoba menebak pemetaan kolom di sheet <b>"{sheetName}"</b> ini{usedAiGuess ? " pakai AI" : ""} - periksa di bawah, perbaiki jika ada yang salah, lalu klik Import.</>
           ) : (
-            <>Nexto gak yakin bisa nebak kolom di sheet <b>"{sheetName}"</b> ini. Tentuin sendiri kolom mana isinya apa lewat dropdown di atas tiap kolom.</>
+            <>Nexto belum yakin dapat menebak kolom di sheet <b>"{sheetName}"</b> ini. Tentukan sendiri isi setiap kolom melalui dropdown di atas tiap kolom.</>
           )}
         </p>
-        <p className="text-xs text-amber-600 flex items-center gap-1 mb-3"><AlertTriangle size={12} /> Wajib pilih satu kolom sebagai "Nama Lead / Perusahaan". Kolom yang gak ada padanannya bisa dipilih "+ Custom..." dan dikasih nama sendiri.</p>
+        <p className="text-xs text-amber-600 flex items-center gap-1 mb-3"><AlertTriangle size={12} /> Wajib memilih satu kolom sebagai "Nama Lead / Perusahaan". Kolom yang tidak memiliki padanan dapat dipilih "+ Custom..." dan diberi nama sendiri.</p>
 
         <div className="overflow-x-auto max-w-full border border-slate-200 rounded-2xl">
           <table className="text-xs w-full border-collapse">
@@ -201,7 +201,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
                   key={rowIdx}
                   onClick={() => setDataStartRow(rowIdx)}
                   className={`cursor-pointer ${rowIdx === dataStartRow ? "bg-emerald-50" : rowIdx < dataStartRow ? "opacity-40" : "hover:bg-slate-50"}`}
-                  title="Klik buat tandain: data asli mulai dari baris ini"
+                  title="Klik untuk menandai: data asli dimulai dari baris ini"
                 >
                   <td className="sticky left-0 bg-white border-b border-slate-100 p-2 text-slate-400 font-mono">
                     {rowIdx === dataStartRow ? "→" : rowIdx}
@@ -217,11 +217,11 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
           </table>
         </div>
         <p className="text-[11px] text-slate-400 mt-1.5">
-          Klik salah satu baris di atas buat nandain baris itu sebagai awal DATA ASLI (baris judul/header di atasnya bakal dilewatin).
-          {rawRows.length > MAX_PREVIEW_ROWS && ` Cuma ${MAX_PREVIEW_ROWS} baris pertama ditampilin di sini, sisanya (${rawRows.length - MAX_PREVIEW_ROWS} baris lagi) tetep ikut diproses.`}
+          Klik salah satu baris di atas untuk menandai baris tersebut sebagai awal DATA ASLI (baris judul/header di atasnya akan dilewati).
+          {rawRows.length > MAX_PREVIEW_ROWS && ` Cuma ${MAX_PREVIEW_ROWS} baris pertama ditampilkan di sini, sisanya (${rawRows.length - MAX_PREVIEW_ROWS} baris lagi) tetap ikut diproses.`}
         </p>
         {existingCustomSlots.length > 0 && (
-          <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><Sparkles size={11} /> Field custom yang udah ada: {existingCustomSlots.map((s) => s.label).join(", ")}.</p>
+          <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><Sparkles size={11} /> Field custom yang sudah ada: {existingCustomSlots.map((s) => s.label).join(", ")}.</p>
         )}
 
         <div className="flex gap-2 mt-4">

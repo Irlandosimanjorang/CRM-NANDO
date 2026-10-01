@@ -83,7 +83,7 @@ function ComposerModal({ displayName, avatarUrl, onClose, onPosted }) {
   };
 
   const submit = async () => {
-    if (!text.trim() && files.length === 0) { alert("Tulis sesuatu atau tambahin foto dulu."); return; }
+    if (!text.trim() && files.length === 0) { alert("Tulis sesuatu atau tambahkan foto terlebih dahulu."); return; }
     setBusy(true);
     try {
       const imageUrls = [];
@@ -291,7 +291,7 @@ function PostCard({ post, myId, onDeleted }) {
 }
 
 const DUMMY_POSTS = [
-  { id: "np-1", user_id: "dummy", author_name: "Rizal - Sales Jakarta", body: "Ada yang punya tips buat closing lead yang udah lama gak respon? Ada beberapa lead saya yang stuck cukup lama.", image_urls: [], created_at: new Date(Date.now() - 3600000).toISOString(), replyCount: 3, likeCount: 5, likedByMe: false, share_count: 1 },
+  { id: "np-1", user_id: "dummy", author_name: "Rizal - Sales Jakarta", body: "Ada yang punya tips untuk closing lead yang sudah lama tidak merespons? Beberapa lead saya tertahan cukup lama.", image_urls: [], created_at: new Date(Date.now() - 3600000).toISOString(), replyCount: 3, likeCount: 5, likedByMe: false, share_count: 1 },
   { id: "np-2", user_id: "dummy", author_name: "Dewi - Sales Bandung", body: "Baru closing 3 deal bulan ini di area Soreang! Semangat terus team 🔥", image_urls: [], created_at: new Date(Date.now() - 86400000).toISOString(), replyCount: 7, likeCount: 12, likedByMe: true, share_count: 2 },
 ];
 

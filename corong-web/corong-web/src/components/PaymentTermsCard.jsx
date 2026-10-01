@@ -47,7 +47,7 @@ export default function PaymentTermsCard({ leadId, projectValue }) {
 
   const add = () => run(async () => {
     const amount = Number(String(form.amount).replace(/[^\d]/g, "")) || 0;
-    if (!amount) throw new Error("isi nominal termin dulu");
+    if (!amount) throw new Error("isi nominal termin terlebih dahulu");
     const row = await db.addPaymentTerm(leadId, { label: form.label.trim() || `Termin ${(terms?.length || 0) + 1}`, amount, due_date: form.due_date || null, position: terms?.length || 0 });
     setTerms((t) => [...(t || []), row]);
     setForm({ label: "", amount: "", due_date: "" });
@@ -55,7 +55,7 @@ export default function PaymentTermsCard({ leadId, projectValue }) {
 
   const applyPreset = (p) => run(async () => {
     const total = Number(projectValue) || 0;
-    if (!total) throw new Error("isi Nilai proyek di atas dulu (terus Simpan), baru bisa bagi termin otomatis");
+    if (!total) throw new Error("isi Nilai proyek di atas terlebih dahulu (lalu Simpan), baru termin dapat dibagi otomatis");
     const rows = [];
     for (const [i, [label, pct]] of p.parts.entries()) {
       rows.push(await db.addPaymentTerm(leadId, { label, amount: Math.round(total * pct), due_date: null, position: (terms?.length || 0) + i }));
@@ -90,7 +90,7 @@ export default function PaymentTermsCard({ leadId, projectValue }) {
         <>
           {terms.length === 0 && (
             <div className="mt-2">
-              <p className="text-[11px] text-slate-500">Belum ada termin. Catat DP, termin, dan pelunasan biar ketauan mana yang udah ditagih & udah masuk (Cash In).</p>
+              <p className="text-[11px] text-slate-500">Belum ada termin. Catat DP, termin, dan pelunasan agar terlihat mana yang sudah ditagih & sudah masuk (Cash In).</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {PRESETS.map((p) => (
                   <button key={p.key} type="button" disabled={busy} onClick={() => applyPreset(p)} className="text-[11px] rounded-lg border border-emerald-300 bg-white px-2 py-1 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
