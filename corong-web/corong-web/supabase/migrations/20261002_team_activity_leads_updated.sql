@@ -1,0 +1,9 @@
+-- Rekap aktivitas tim: get_team_activity sekarang juga mengembalikan
+-- 'leads_updated' = jumlah lead berbeda yang diberi catatan progress per
+-- anggota di rentang waktu (2 Okt 2026). Sudah diterapkan lewat migration
+-- "team_activity_leads_updated"; definisi lengkap ada di database.
+-- Baris tambahan di jsonb_build_object members:
+--   'leads_updated', (select count(distinct n.lead_id) from progress_notes n
+--      where n.org_id = v_org and n.user_id = mem.user_id
+--        and n.created_at >= p_from and n.created_at < p_to
+--        and n.text not ilike 'Check-in GPS terverifikasi%'),

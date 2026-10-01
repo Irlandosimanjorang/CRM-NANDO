@@ -67,7 +67,9 @@ const EMPTY_EXAMPLES = [
 const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales" };
 const COLS = [
   { key: "visits", label: "Kunjungan" },
-  { key: "notes", label: "Notulen" },
+  // Jumlah LEAD berbeda yang diberi catatan progress (2 Okt 2026) - lebih
+  // jujur dari jumlah catatan (5 catatan di 1 lead = tetap 1 lead).
+  { key: "leads_updated", label: "Lead di-update", hint: (m) => `${Number(m.notes) || 0} catatan` },
   { key: "new_leads", label: "Lead baru" },
   { key: "stage_moves", label: "Pindah tahap" },
   { key: "deals", label: "Deal" },
@@ -419,6 +421,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
                               <div className="h-full rounded-full bg-brand motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${Math.round((v / maxOf[c.key]) * 100)}%` }} />
                             </div>
                             <div className="mt-1 truncate text-[10.5px] text-slate-500">{c.label}</div>
+                            {c.hint && <div className="truncate text-[10px] text-slate-500">{c.hint(m)}</div>}
                           </div>
                         );
                       })}
@@ -478,7 +481,7 @@ function MemberTable({ members, maxOf, totalOf, maxTotal }) {
                 {COLS.map((c) => {
                   const v = Number(m[c.key]) || 0;
                   const top = v > 0 && v === maxOf[c.key];
-                  return <td key={c.key} className={`px-2 py-2.5 text-right tabular-nums ${v === 0 ? "text-slate-300" : top ? "font-bold text-ink" : "text-slate-700"}`}>{v}</td>;
+                  return <td key={c.key} title={c.hint ? c.hint(m) : undefined} className={`px-2 py-2.5 text-right tabular-nums ${v === 0 ? "text-slate-300" : top ? "font-bold text-ink" : "text-slate-700"}`}>{v}</td>;
                 })}
                 <td className="py-2.5 pl-2 pr-1"><div className="flex justify-end"><Ring pct={score} size={34} /></div></td>
               </tr>

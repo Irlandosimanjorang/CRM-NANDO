@@ -12,6 +12,7 @@ const SPECIAL = {
   getLeadGenCooldown: "({ canGenerate: true, usedThisMonth: 1, quotaMax: 4, nextAvailableAt: null })",
   getCheckinCooldown: "({ canCheckIn: true, usedThisMonth: 2, quotaMax: 50, nextAvailableAt: null })",
   getEnrichProgress: "[]",
+  getTeamActivity: "({ members: [{ user_id: 'u1', role: 'owner', name: 'Nando', visits: 1, notes: 5, leads_updated: 3, new_leads: 4, stage_moves: 1, deals: 0, deal_value: 0, last_activity_at: new Date().toISOString() }, { user_id: 'u2', role: 'sales_rep', name: 'Budi', visits: 2, notes: 3, leads_updated: 3, new_leads: 2, stage_moves: 3, deals: 1, deal_value: 50000000, last_activity_at: new Date(Date.now() - 86400000).toISOString() }], feed: [] })",
 };
 let out = "// AUTO-GENERATED oleh gen-mockdb.cjs - jangan diedit manual.\n";
 for (const n of names) {
