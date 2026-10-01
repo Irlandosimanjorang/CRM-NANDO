@@ -47,12 +47,34 @@ export const typeBadge = (t) => {
   return t; // industri lain (Automotive/Property/Asuransi): tampilin apa adanya, misal "Fleet" atau "Korporat"
 };
 
+// Kolom telepon bisa berisi beberapa nomor ("0812-xxx, 021-xxx"). Dulu semua
+// digit digabung jadi satu nomor ngawur. Sekarang dipecah per nomor dan
+// dinormalisasi ke format 62xxx (1 Okt 2026).
+export const phoneNumbers = (phone) =>
+  String(phone || "")
+    .split(/[,;/\n]|\s{2,}/)
+    .map((x) => {
+      let p = x.replace(/[^0-9+]/g, "").replace(/(?!^)\+/g, "");
+      if (p.startsWith("+")) p = p.slice(1);
+      if (p.startsWith("0")) p = "62" + p.slice(1);
+      return p;
+    })
+    .filter((p) => p.length >= 8);
+
+// Nomor HP Indonesia (62 8xx) - yang bisa dipakai WhatsApp.
+const isMobile = (p) => /^628\d{7,12}$/.test(p);
+
+// Link WhatsApp ke nomor HP pertama. Nomor kantor (021-xxx) gak dipakai,
+// karena hampir pasti bukan nomor WhatsApp.
 export const waLink = (phone) => {
-  if (!phone) return "";
-  let p = String(phone).replace(/[^0-9+]/g, "");
-  if (p.startsWith("0")) p = "62" + p.slice(1);
-  p = p.replace(/\+/g, "");
-  return p.length >= 8 ? `https://wa.me/${p}` : "";
+  const mobile = phoneNumbers(phone).find(isMobile);
+  return mobile ? `https://wa.me/${mobile}` : "";
+};
+
+// Link telepon ke nomor pertama (HP atau kantor).
+export const telLink = (phone) => {
+  const first = phoneNumbers(phone)[0];
+  return first ? `tel:+${first}` : "";
 };
 export const normUrl = (u) => { const s = String(u || "").trim(); if (!s) return ""; return /^https?:\/\//i.test(s) ? s : "https://" + s; };
 export const prettyDomain = (u) => { let s = String(u || "").trim().replace(/^https?:\/\//i, "").replace(/^www\./i, ""); return s.replace(/\/.*$/, "") || s; };

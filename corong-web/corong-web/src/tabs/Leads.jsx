@@ -12,6 +12,7 @@ import {
   Copy,
   Sparkles,
   Phone,
+  MessageCircle,
   ClipboardList,
   ChevronLeft,
   ChevronRight,
@@ -31,6 +32,7 @@ import * as db from "../lib/db";
 import {
   stageMeta,
   waLink,
+  telLink,
   daysSince,
   fmtRp,
   todayISO,
@@ -263,6 +265,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
 
   const sm = stageMeta(stages, c.stage_key);
   const wa = waLink(c.phone);
+  const tel = telLink(c.phone);
 
   const stageIndex = Math.max(0, stages.findIndex((s) => s.key === c.stage_key));
   const stageNumber = stages.length > 0 ? stageIndex + 1 : 1;
@@ -359,16 +362,18 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
 
         {/* FOOTER ACTIONS */}
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          {c.phone && (
-            wa ? (
-              <a href={wa} target="_blank" rel="noreferrer" className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50" title={c.phone} aria-label="Chat WhatsApp">
-                <Phone size={15} />
-              </a>
-            ) : (
-              <span className="p-2 text-slate-300" title={c.phone}>
-                <Phone size={15} />
-              </span>
-            )
+          {/* Telepon & WhatsApp dipisah (1 Okt 2026). Dulu ikon telepon diam-diam
+              membuka WhatsApp, termasuk ke nomor kantor yang gak punya WA.
+              Badge WA cuma muncul kalau ada nomor HP. */}
+          {tel && (
+            <a href={tel} className="p-2 rounded-lg text-slate-600 hover:bg-slate-100" title={`Telepon ${c.phone}`} aria-label="Telepon">
+              <Phone size={15} />
+            </a>
+          )}
+          {wa && (
+            <a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100" title={`WhatsApp +${wa.replace("https://wa.me/", "")}`} aria-label="Chat WhatsApp">
+              <MessageCircle size={13} /> WA
+            </a>
           )}
 
           {c.email && (
