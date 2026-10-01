@@ -233,7 +233,7 @@ export const INDUSTRY_TEMPLATES = {
     quantityUnits: null, // "Nilai kontrak/SPK (Rp)" = uang, sama dengan Total Rp
     // Pilihan "Produk" di form Tambah Deal (1 Okt 2026, permintaan Nando).
     // User tetap bisa isi sendiri di luar daftar ini.
-    dealProductTypes: ["Rise", "In House Training", "Public Class", "Coaching Mentoring"],
+    dealProductTypes: ["Riset", "In House Training", "Public Class", "Coaching Mentoring"],
     label: "Corporate Consultant",
     description: "Konsultan/kontraktor jasa berbasis project buat perusahaan (SPK/kontrak kerja)",
     // Pipeline & penamaan PERSIS dari masukan calon klien (bisnis project-based:
