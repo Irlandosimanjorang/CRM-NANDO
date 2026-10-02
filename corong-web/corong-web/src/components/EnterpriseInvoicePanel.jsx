@@ -554,11 +554,11 @@ function PaidDateDialog({ invoice, onClose, onSave }) {
         <div className="px-5 py-4">
           <label className={lbl} htmlFor="paid-date">Tanggal uang diterima</label>
           <input id="paid-date" type="date" className={field} value={d} max={todayWib} onChange={(e) => setD(e.target.value)} />
-          <p className="mt-1.5 text-[11.5px] text-slate-500">Sesuaikan dengan tanggal di mutasi rekening. Tanggal ini tercetak di invoice sebagai tanggal lunas.</p>
+          <p className="mt-1.5 text-[11.5px] text-slate-500">Sesuaikan dengan tanggal di mutasi rekening. Tanggal ini tercetak di invoice sebagai tanggal lunas.{invoice.status !== "paid" && !invoice.data?.activation ? " Setelah disimpan, jendela aktivasi paket langsung terbuka." : ""}</p>
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-3">
           <button type="button" onClick={onClose} disabled={saving} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50">Batal</button>
-          <button type="button" onClick={save} disabled={saving || !d || d > todayWib} className="rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-40">{saving ? "Menyimpan…" : "Simpan"}</button>
+          <button type="button" onClick={save} disabled={saving || !d || d > todayWib} className="rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-40">{saving ? "Menyimpan…" : invoice.status !== "paid" && !invoice.data?.activation ? "Simpan & lanjut aktivasi" : "Simpan"}</button>
         </div>
       </div>
     </div>
@@ -736,11 +736,15 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const setStatus = async (inv, status, paidDate) => {
     if (status === "paid" && !paidDate) { setPaying(inv); return false; }
     if (status === "void" && !window.confirm(`Batalkan invoice ${inv.number}? Nomornya tetap tercatat (tidak dipakai ulang).`)) return false;
+    const openActivation = status === "paid" && inv.status !== "paid" && !inv.data?.activation && !!PLANS[inv.data?.plan];
     try {
       const { invoice } = await db.adminInvoices("set_status", { id: inv.id, status, paid_date: paidDate });
       setHistory((h) => (h || []).map((x) => (x.id === inv.id ? { ...x, ...invoice } : x)));
       if (viewing?.id === inv.id) setViewing((v) => ({ ...v, ...invoice }));
       setPaying(null);
+      // Baru ditandai lunas & paketnya belum diaktifkan -> jendela aktivasi
+      // langsung dibuka (tetap perlu konfirmasi; menutupnya aman).
+      if (openActivation) setActivating({ ...inv, ...invoice });
       return true;
     } catch (e) {
       alert("Gagal mengubah status: " + e.message);
