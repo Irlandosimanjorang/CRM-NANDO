@@ -276,8 +276,11 @@ export async function processSignatureFile(file, { maxW = 600, maxH = 300, keepC
   return out.toDataURL("image/png");
 }
 
+const PROFILE_BASE = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", signName: "", signTitle: "", signImage: "", stampImage: "" };
+// Salinan lokal hanya cache (tampil instan & cadangan saat offline) - sumber
+// utamanya tabel admin_settings di server (lihat sinkronisasi di komponen).
 function loadProfile() {
-  const base = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", signName: "", signTitle: "", signImage: "", stampImage: "" };
+  const base = PROFILE_BASE;
   try {
     const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
     return { ...base, ...saved };
@@ -519,6 +522,34 @@ function ActivateDialog({ invoice, onClose, onDone }) {
   );
 }
 
+// Tandai lunas dengan tanggal uang benar-benar masuk (2 Okt 2026) - dulu
+// otomatis memakai waktu klik, tidak cocok untuk pembukuan.
+function PaidDateDialog({ invoice, onClose, onSave }) {
+  const todayWib = isoDay(new Date());
+  const [d, setD] = useState(invoice.paid_at ? isoDay(new Date(invoice.paid_at)) : todayWib);
+  const [saving, setSaving] = useState(false);
+  const save = async () => { setSaving(true); const ok = await onSave(invoice, d); if (!ok) setSaving(false); };
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="paid-title" className="w-full max-w-[360px] rounded-xl border border-slate-700 bg-[#0f1420] shadow-2xl">
+        <div className="border-b border-slate-800 px-5 py-4">
+          <h3 id="paid-title" className="text-[15px] font-semibold text-slate-100">{invoice.status === "paid" ? "Ubah tanggal pembayaran" : "Tandai lunas"}</h3>
+          <p className="mt-0.5 text-[12px] text-slate-400"><span className="font-mono">{invoice.number}</span>, {invoice.company}, {rp(invoice.total)}</p>
+        </div>
+        <div className="px-5 py-4">
+          <label className={lbl} htmlFor="paid-date">Tanggal uang diterima</label>
+          <input id="paid-date" type="date" className={field} value={d} max={todayWib} onChange={(e) => setD(e.target.value)} />
+          <p className="mt-1.5 text-[11.5px] text-slate-500">Sesuaikan dengan tanggal di mutasi rekening. Tanggal ini tercetak di invoice sebagai tanggal lunas.</p>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-3">
+          <button type="button" onClick={onClose} disabled={saving} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50">Batal</button>
+          <button type="button" onClick={save} disabled={saving || !d || d > todayWib} className="rounded-lg bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-40">{saving ? "Menyimpan…" : "Simpan"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EnterpriseInvoicePanel({ users = [] }) {
   // Klien berbayar dari direktori user, per organisasi (paket, owner, jumlah anggota).
   const orgs = useMemo(() => {
@@ -559,6 +590,11 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const [historyErr, setHistoryErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [activating, setActivating] = useState(null); // invoice yang sedang diaktifkan paketnya
+  const [paying, setPaying] = useState(null); // invoice yang sedang ditandai lunas (dialog tanggal)
+  const [profileSync, setProfileSync] = useState("loading"); // loading | saved | saving | error
+  const profileReady = useRef(false);
+  const skipAutofill = useRef(false);
+  const [emailCheck, setEmailCheck] = useState(null); // null | { status: "checking" | "found" | "notfound" | "invalid", ... }
   const frameRef = useRef(null);
   const topRef = useRef(null);
 
@@ -582,15 +618,55 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   };
 
   useEffect(() => {
+    if (skipAutofill.current) { skipAutofill.current = false; return; }
     if (!matched || viewing) return;
     setContact(matched.owner?.display_name || "");
     setEmail(matched.owner?.email || "");
     choosePlan(matched.plan, matched.members);
   }, [matched?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Data penagih tersimpan di server (2 Okt 2026) supaya sama di semua
+  // perangkat. Pertama kali: kalau server masih kosong, data di browser ini
+  // diunggah. Setelah itu setiap perubahan disimpan otomatis (jeda 0,8 detik).
+  useEffect(() => {
+    let cancelled = false;
+    db.adminInvoices("get_profile").then(async ({ profile }) => {
+      if (cancelled) return;
+      if (profile) {
+        setSeller({ ...PROFILE_BASE, ...profile });
+      } else {
+        const local = loadProfile();
+        if (local.account || local.signImage || local.address) await db.adminInvoices("save_profile", { profile: local });
+      }
+      profileReady.current = true;
+      setProfileSync("saved");
+    }).catch(() => { if (!cancelled) { profileReady.current = true; setProfileSync("error"); } });
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(seller)); } catch (_) {}
+    if (!profileReady.current) return undefined;
+    setProfileSync("saving");
+    const t = setTimeout(() => {
+      db.adminInvoices("save_profile", { profile: seller }).then(() => setProfileSync("saved")).catch(() => setProfileSync("error"));
+    }, 800);
+    return () => clearTimeout(t);
   }, [seller]);
+
+  // Cek email klien saat diketik (2 Okt 2026) - salah ketik email ketahuan
+  // sebelum invoice disimpan, bukan baru saat aktivasi paket.
+  useEffect(() => {
+    const e = email.trim();
+    if (viewing || !e) { setEmailCheck(null); return undefined; }
+    setEmailCheck({ status: "checking" });
+    const t = setTimeout(() => {
+      db.adminInvoices("check_email", { email: e })
+        .then((r) => setEmailCheck(r.invalid ? { status: "invalid" } : r.found ? { status: "found", ...r } : { status: "notfound" }))
+        .catch(() => setEmailCheck(null));
+    }, 600);
+    return () => clearTimeout(t);
+  }, [email, viewing]);
 
 
   // Data draf saat ini (juga yang disimpan ke database saat "Simpan").
@@ -624,7 +700,9 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
 
   const saveAndPrint = async () => {
     if (!company.trim()) { alert("Isi nama perusahaan terlebih dahulu."); return; }
-    if (!window.confirm(`Simpan invoice untuk ${company.trim()} sebesar ${rp(total)}? Nomor invoice dibuat berurutan dan invoice tidak dapat diubah setelah disimpan.`)) return;
+    const emailWarn = emailCheck?.status === "notfound" ? `\n\nPerhatian: belum ada akun Nexto dengan email ${email.trim()}. Pastikan email benar, karena paket nanti diaktifkan ke akun dengan email ini.`
+      : emailCheck?.status === "invalid" ? "\n\nPerhatian: format email klien tidak valid." : !email.trim() ? "\n\nPerhatian: email klien belum diisi." : "";
+    if (!window.confirm(`Simpan invoice untuk ${company.trim()} sebesar ${rp(total)}? Nomor invoice dibuat berurutan dan invoice tidak dapat diubah setelah disimpan.${emailWarn}`)) return;
     setBusy(true);
     try {
       const { invoice } = await db.adminInvoices("create", { invoice: { company: draft.company, invoice_date: draft.date, due_date: draft.due, total, data: draft } });
@@ -638,15 +716,35 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     }
   };
 
-  const setStatus = async (inv, status) => {
-    if (status === "void" && !window.confirm(`Batalkan invoice ${inv.number}? Nomornya tetap tercatat (tidak dipakai ulang).`)) return;
+  const setStatus = async (inv, status, paidDate) => {
+    if (status === "paid" && !paidDate) { setPaying(inv); return false; }
+    if (status === "void" && !window.confirm(`Batalkan invoice ${inv.number}? Nomornya tetap tercatat (tidak dipakai ulang).`)) return false;
     try {
-      const { invoice } = await db.adminInvoices("set_status", { id: inv.id, status });
+      const { invoice } = await db.adminInvoices("set_status", { id: inv.id, status, paid_date: paidDate });
       setHistory((h) => (h || []).map((x) => (x.id === inv.id ? { ...x, ...invoice } : x)));
       if (viewing?.id === inv.id) setViewing((v) => ({ ...v, ...invoice }));
+      setPaying(null);
+      return true;
     } catch (e) {
       alert("Gagal mengubah status: " + e.message);
+      return false;
     }
+  };
+
+  // Duplikat (2 Okt 2026): salin isi invoice tersimpan ke form baru untuk
+  // memperbaiki kesalahan - invoice lama tetap ada dan bisa dibatalkan.
+  // Data penagih memakai profil terbaru, tanggal mulai dari hari ini.
+  const duplicate = (inv) => {
+    const d = inv.data || {};
+    skipAutofill.current = (d.company || "") !== company;
+    setViewing(null);
+    setCompany(d.company || ""); setContact(d.contact || ""); setEmail(d.email || ""); setAddress(d.address || ""); setPo(d.po || "");
+    const pl = PLANS[d.plan] ? d.plan : "custom";
+    setPlan(pl); setCustomItem(pl === "custom" ? (d.item || "") : "");
+    setSeats(d.seats || PLANS[pl].minSeats); setMonths(d.months || 1); setPricePerSeat(d.pricePerSeat ?? priceOf(pl === "custom" ? "enterprise" : pl));
+    setDiscountLabel(d.discountLabel || ""); setDiscountType(d.discountType || "amount"); setDiscountValue(d.discountValue ? String(d.discountValue) : "");
+    setNote(d.note || ""); setDate(today); setStart(today);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const onActivated = (patch) => {
@@ -671,7 +769,10 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
           {viewing && (
             <div className="rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-[12px] text-violet-100">
               Menampilkan invoice tersimpan <b>{viewing.number}</b>. Invoice tersimpan tidak dapat diubah.
-              <button type="button" onClick={newInvoice} className="ml-2 font-semibold underline underline-offset-2">Buat invoice baru</button>
+              <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                <button type="button" onClick={() => duplicate(viewing)} className="font-semibold underline underline-offset-2">Duplikat untuk diperbaiki</button>
+                <button type="button" onClick={newInvoice} className="font-semibold underline underline-offset-2">Buat invoice baru</button>
+              </span>
             </div>
           )}
           <div className="space-y-3 lg:-mr-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-2">
@@ -690,8 +791,16 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className={lbl}>Nama PIC</label><input className={field} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Nama penanggung jawab" /></div>
-                  <div><label className={lbl}>Email</label><input className={field} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@perusahaan.com" /></div>
+                  <div><label className={lbl}>Email akun klien</label><input type="email" className={field} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@perusahaan.com" /></div>
                 </div>
+                {emailCheck && (
+                  <p className={`-mt-1 text-[11.5px] ${emailCheck.status === "found" ? "text-emerald-300" : emailCheck.status === "checking" ? "text-slate-500" : "text-amber-300"}`}>
+                    {emailCheck.status === "checking" ? "Memeriksa akun…"
+                      : emailCheck.status === "invalid" ? "Format email belum valid."
+                      : emailCheck.status === "notfound" ? "Belum ada akun Nexto dengan email ini. Periksa ejaannya, atau minta klien mendaftar dengan email ini."
+                      : `Akun ditemukan: ${emailCheck.role === "owner" ? "owner" : emailCheck.role === "manager" ? "manager" : "anggota"} ${emailCheck.org_name || "organisasi tanpa nama"}, paket ${emailCheck.org_plan === "enterprise" ? "Enterprise" : "Free/perorangan"}.${emailCheck.role && emailCheck.role !== "owner" ? " Paket Enterprise diaktifkan ke akun owner." : ""}`}
+                  </p>
+                )}
                 <div><label className={lbl}>Alamat perusahaan</label><textarea rows={2} className={field} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Jl. ..., Kota, Kode pos" /></div>
                 <div><label className={lbl}>Nomor PO klien (opsional)</label><input className={field} value={po} onChange={(e) => setPo(e.target.value)} placeholder="Misal: PO/2026/0153" /></div>
                 <div>
@@ -747,7 +856,12 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
 
                 <div className="rounded-lg border border-slate-700">
                   <button type="button" onClick={() => setShowSeller((v) => !v)} className="flex w-full items-center justify-between px-3 py-2 text-[12px] font-semibold text-slate-300">
-                    Data penagih & penanda tangan<span className="text-slate-500">{showSeller ? "Tutup" : "Ubah"}</span>
+                    <span>Data penagih & penanda tangan
+                      <span className={`ml-2 font-normal ${profileSync === "error" ? "text-amber-300" : "text-slate-500"}`}>
+                        {profileSync === "loading" ? "Memuat…" : profileSync === "saving" ? "Menyimpan…" : profileSync === "error" ? "Belum tersimpan di server" : "Tersimpan di server"}
+                      </span>
+                    </span>
+                    <span className="text-slate-500">{showSeller ? "Tutup" : "Ubah"}</span>
                   </button>
                   {showSeller && (
                     <div className="grid gap-2 border-t border-slate-700 p-3">
@@ -841,6 +955,9 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                         <select value={x.status} disabled={!!x.data?.activation} title={x.data?.activation ? "Paket sudah diaktifkan dari invoice ini" : undefined} onChange={(e) => setStatus(x, e.target.value)} className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px]" style={{ color: x.status === "paid" ? "#86efac" : x.status === "void" ? "#94a3b8" : "#fcd34d" }} aria-label={`Status ${x.number}`}>
                           <option value="unpaid">Belum dibayar</option><option value="paid">Lunas</option><option value="void">Dibatalkan</option>
                         </select>
+                        {x.status === "paid" && x.paid_at && (
+                          <button type="button" onClick={() => setPaying(x)} className="mt-0.5 block text-[11px] text-slate-400 hover:text-slate-200" title="Ubah tanggal pembayaran">Dibayar {fmtShort(isoDay(new Date(x.paid_at)))}</button>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         {x.data?.activation ? (
@@ -852,6 +969,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
+                        <button type="button" onClick={() => duplicate(x)} className="mr-3 font-semibold text-slate-400 hover:text-slate-200" title="Salin isi invoice ini ke form baru">Duplikat</button>
                         {viewing?.id === x.id
                           ? <button type="button" onClick={newInvoice} className="font-semibold text-slate-300 hover:text-white">Tutup</button>
                           : <button type="button" onClick={() => { setViewing(x); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="font-semibold text-violet-300 hover:text-violet-200">Lihat</button>}
@@ -864,6 +982,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
           </div>
         )}
       </div>
+      {paying && <PaidDateDialog invoice={paying} onClose={() => setPaying(null)} onSave={(inv, d) => setStatus(inv, "paid", d)} />}
       {activating && <ActivateDialog invoice={activating} onClose={() => setActivating(null)} onDone={onActivated} />}
     </div>
   );

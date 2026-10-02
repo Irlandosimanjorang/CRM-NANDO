@@ -9,6 +9,9 @@
 //       { action: "set_status", id, status: "unpaid" | "paid" | "void" }
 //       { action: "activation_preview", id, email? }  -> kondisi akun sekarang vs sesudah
 //       { action: "activate", id, email? }            -> terapkan paket dari invoice Lunas
+//       { action: "get_profile" } / { action: "save_profile", profile }
+//                                                     -> data penagih (rekening, ttd, stempel)
+//       { action: "check_email", email }              -> cek akun klien saat membuat invoice
 //
 // Aktivasi paket dari invoice (2 Okt 2026, permintaan Nando): Enterprise
 // biasanya custom jumlah anggota (bukan 4 seperti di Mayar), jadi admin
@@ -32,6 +35,9 @@ const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PLAN_LABEL = { standard: "Standard", professional: "Professional", enterprise: "Enterprise" };
+const PROFILE_KEYS = ["name", "address", "email", "phone", "bank", "account", "holder", "signName", "signTitle", "signImage", "stampImage"];
+const MAX_PROFILE_BYTES = 1.5 * 1024 * 1024; // tanda tangan & stempel berupa data URL PNG
+const wibToday = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
 const fmtWib = (iso) => new Date(iso).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 
 async function findUserByEmail(admin, email) {
@@ -162,8 +168,17 @@ Deno.serve(async (req) => {
       const { data: cur } = await admin.from("admin_invoices").select("status, data").eq("id", body.id).maybeSingle();
       if (!cur) return json({ error: "Invoice tidak ditemukan." }, 404);
       if (cur.data?.activation && body.status !== "paid") return json({ error: "Paket dari invoice ini sudah diaktifkan, jadi statusnya tetap Lunas. Ubah paket klien secara manual bila perlu." }, 409);
-      const patch = { status: body.status, paid_at: body.status === "paid" ? (cur.status === "paid" ? undefined : new Date().toISOString()) : null };
-      if (patch.paid_at === undefined) delete patch.paid_at;
+      // Tanggal lunas (2 Okt 2026): admin mengisi tanggal uang benar-benar
+      // masuk (bukan waktu klik). Disimpan pukul 12.00 WIB supaya tanggalnya
+      // tidak bergeser karena zona waktu. Tanpa paid_date = hari ini.
+      let paidAt = null;
+      if (body.status === "paid") {
+        const pd = body.paid_date || wibToday();
+        if (!DATE_RE.test(pd)) return json({ error: "Tanggal pembayaran tidak valid." }, 400);
+        if (pd > wibToday()) return json({ error: "Tanggal pembayaran tidak boleh di masa depan." }, 400);
+        paidAt = new Date(`${pd}T12:00:00+07:00`).toISOString();
+      }
+      const patch = { status: body.status, paid_at: paidAt };
       const { data, error } = await admin.from("admin_invoices").update(patch).eq("id", body.id).select("id, status, paid_at").maybeSingle();
       if (error) throw error;
       return json({ invoice: data });
@@ -206,6 +221,34 @@ Deno.serve(async (req) => {
       }
       console.log(`[admin-invoices] ${p.invoice.number} diaktifkan: ${p.plan} x${p.seats} untuk ${p.user.email}${p.org ? ` (org ${p.org.id})` : ""}, s.d. ${p.expires_at}`);
       return json({ invoice: { id: body.id, data: after }, activation });
+    }
+
+    if (body.action === "get_profile") {
+      const { data, error } = await admin.from("admin_settings").select("value, updated_at").eq("key", "invoice_seller").maybeSingle();
+      if (error) throw error;
+      return json({ profile: data?.value || null, updated_at: data?.updated_at || null });
+    }
+
+    if (body.action === "save_profile") {
+      const src = body.profile || {};
+      const profile = {};
+      for (const k of PROFILE_KEYS) profile[k] = typeof src[k] === "string" ? src[k] : "";
+      for (const k of ["signImage", "stampImage"]) if (profile[k] && !profile[k].startsWith("data:image/")) profile[k] = "";
+      if (JSON.stringify(profile).length > MAX_PROFILE_BYTES) return json({ error: "Gambar tanda tangan/stempel terlalu besar. Unggah ulang dengan ukuran lebih kecil." }, 413);
+      const updated_at = new Date().toISOString();
+      const { error } = await admin.from("admin_settings").upsert({ key: "invoice_seller", value: profile, updated_at });
+      if (error) throw error;
+      return json({ ok: true, updated_at });
+    }
+
+    if (body.action === "check_email") {
+      const email = String(body.email || "").trim().toLowerCase();
+      if (!EMAIL_RE.test(email)) return json({ found: false, invalid: true });
+      const user = await findUserByEmail(admin, email);
+      if (!user) return json({ found: false });
+      const { data: m } = await admin.from("organization_members").select("org_id, role").eq("user_id", user.id).limit(1).maybeSingle();
+      const { data: org } = m ? await admin.from("organizations").select("name, plan").eq("id", m.org_id).maybeSingle() : { data: null };
+      return json({ found: true, role: m?.role || null, org_name: org?.name || null, org_plan: org?.plan || null });
     }
 
     return json({ error: "Aksi tidak dikenal." }, 400);
