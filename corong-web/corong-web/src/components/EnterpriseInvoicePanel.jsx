@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MAYAR_PAYMENT_LINK } from "../lib/plans";
 import * as db from "../lib/db";
 
 // Invoice langganan Nexto (2 Okt 2026, permintaan Nando) - khusus admin
@@ -25,7 +24,6 @@ const PLANS = {
   custom: { label: "Custom", item: "", unit: "pengguna", early: 0, normal: 0, minSeats: 1 },
 };
 const priceOf = (plan) => (new Date() < EARLY_BIRD_DEADLINE ? PLANS[plan].early : PLANS[plan].normal);
-const DEFAULT_LINKS = { standard: MAYAR_PAYMENT_LINK, professional: MAYAR_PAYMENT_LINK, enterprise: MAYAR_PAYMENT_LINK, custom: MAYAR_PAYMENT_LINK };
 
 const STATUS = {
   unpaid: { label: "Belum dibayar", color: "#b45309" },
@@ -116,10 +114,10 @@ export function processSignatureFile(file, { maxW = 600, maxH = 300 } = {}) {
 }
 
 function loadProfile() {
-  const base = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", signName: "", signTitle: "", signImage: "", stampImage: "", links: DEFAULT_LINKS };
+  const base = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", signName: "", signTitle: "", signImage: "", stampImage: "" };
   try {
     const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
-    return { ...base, ...saved, links: { ...DEFAULT_LINKS, ...(saved.links || {}) } };
+    return { ...base, ...saved };
   } catch (_) {
     return base;
   }
@@ -138,8 +136,11 @@ export function buildInvoiceHtml(d, meta = {}) {
   const seller = d.seller || {};
   const { subtotal, discount, total } = computeTotals(d);
   const sellerLines = [seller.address, seller.email, seller.phone, "nexto.site"].filter(Boolean);
-  const bank = seller.bank && seller.account
-    ? `<div class="row"><span>Transfer bank</span><span>${esc(seller.bank)} ${esc(seller.account)}${seller.holder ? `, a.n. ${esc(seller.holder)}` : ""}</span></div>`
+  // Pembayaran lewat transfer bank (2 Okt 2026): cukup nomor rekening yang
+  // wajib - nama bank & atas nama ditampilkan bila diisi.
+  const bank = seller.account
+    ? [seller.bank && ["Bank", seller.bank], ["No. rekening", seller.account], seller.holder && ["Atas nama", seller.holder]]
+        .filter(Boolean).map(([k, v]) => `<div class="row"><span>${k}</span><span${k === "No. rekening" ? ' class="acc"' : ""}>${esc(v)}</span></div>`).join("")
     : "";
   const logo = `${window.location.origin}/nexto-logo.png`;
   const number = meta.number || "Draf";
@@ -181,6 +182,7 @@ export function buildInvoiceHtml(d, meta = {}) {
   .pay { margin-top: 32px; }
   h2 { margin: 0 0 8px; font-size: 13px; }
   .pay .row { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 4px 0; }
+  .pay .acc { font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
   .pay .row span:first-child { color: #5b6475; }
   .pay a { color: #1c2230; word-break: break-all; }
   .pay p { margin: 8px 0 0; color: #5b6475; }
@@ -426,8 +428,6 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(seller)); } catch (_) {}
   }, [seller]);
 
-  const payLink = (seller.links || DEFAULT_LINKS)[plan] || "";
-  const setPayLink = (v) => setSeller((s) => ({ ...s, links: { ...(s.links || DEFAULT_LINKS), [plan]: v } }));
 
   // Data draf saat ini (juga yang disimpan ke database saat "Simpan").
   const draft = {
@@ -436,7 +436,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     seats: Math.max(1, Number(seats) || 1), months: Number(months) || 1, pricePerSeat: Number(pricePerSeat) || 0,
     discountLabel: discountLabel.trim(), discountType, discountValue: Number(discountValue) || 0,
     date, due: addDays(date, Number(dueDays) || 0), start, end: addMonths(start, Number(months) || 1),
-    note: note.trim(), payLink: payLink.trim(),
+    note: note.trim(),
     seller: { name: seller.name, address: seller.address, email: seller.email, phone: seller.phone, bank: seller.bank, account: seller.account, holder: seller.holder, signName: seller.signName, signTitle: seller.signTitle, signImage: seller.signImage, stampImage: seller.stampImage },
   };
   const shown = viewing ? viewing.data : draft;
@@ -564,10 +564,16 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                     </select>
                   </div>
                 </div>
-                <div>
-                  <label className={lbl}>Link pembayaran paket {PLANS[plan].label}</label>
-                  <input className={field} value={payLink} onChange={(e) => setPayLink(e.target.value)} placeholder="https://..." />
-                  <p className="mt-1 text-[11px] text-slate-500">Diingat per paket. Kosongkan jika pembayaran hanya lewat transfer bank.</p>
+                <div className="rounded-lg border border-slate-700 px-3 py-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className={lbl}>Rekening tujuan transfer</div>
+                      {seller.account
+                        ? <div className="text-[13px] text-slate-100">{[seller.bank, seller.account].filter(Boolean).join(" ")}{seller.holder ? <span className="text-slate-400">, a.n. {seller.holder}</span> : null}</div>
+                        : <div className="text-[12.5px] text-amber-300">Nomor rekening belum diisi, bagian Cara pembayaran di invoice akan kosong.</div>}
+                    </div>
+                    <button type="button" onClick={() => setShowSeller(true)} className="shrink-0 text-[12px] font-semibold text-violet-300 hover:text-violet-200">{seller.account ? "Ubah" : "Isi"}</button>
+                  </div>
                 </div>
                 <div><label className={lbl}>Catatan (opsional)</label><textarea rows={2} className={field} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Misal: perpanjangan periode Oktober" /></div>
 
@@ -577,7 +583,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                   </button>
                   {showSeller && (
                     <div className="grid gap-2 border-t border-slate-700 p-3">
-                      {[["name", "Nama usaha"], ["address", "Alamat"], ["email", "Email"], ["phone", "Telepon"], ["bank", "Bank (opsional)"], ["account", "No. rekening"], ["holder", "Atas nama"], ["signName", "Nama penanda tangan"], ["signTitle", "Jabatan penanda tangan"]].map(([k, l]) => (
+                      {[["name", "Nama usaha"], ["address", "Alamat"], ["email", "Email"], ["phone", "Telepon"], ["bank", "Nama bank"], ["account", "No. rekening"], ["holder", "Atas nama rekening"], ["signName", "Nama penanda tangan"], ["signTitle", "Jabatan penanda tangan"]].map(([k, l]) => (
                         <div key={k}><label className={lbl}>{l}</label><input className={field} value={seller[k] || ""} onChange={(e) => setSeller((s) => ({ ...s, [k]: e.target.value }))} /></div>
                       ))}
                       {[["signImage", "Tanda tangan digital"], ["stampImage", "Stempel (opsional)"]].map(([k, l]) => (
