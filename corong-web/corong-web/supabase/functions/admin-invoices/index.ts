@@ -7,8 +7,9 @@
 // Body: { action: "list" }
 //       { action: "create", invoice: { company, invoice_date, due_date, total, data } }
 //       { action: "set_status", id, status: "unpaid" | "paid" | "void" }
-//       { action: "activation_preview", id, email? }  -> kondisi akun sekarang vs sesudah
-//       { action: "activate", id, email? }            -> terapkan paket dari invoice Lunas
+//       { action: "activation_preview", id, email?, plan? }  -> kondisi akun sekarang vs sesudah
+//       { action: "activate", id, email?, plan? }            -> terapkan paket dari invoice Lunas
+//         (plan hanya dipakai untuk invoice paket Custom: enterprise | professional | standard)
 //       { action: "get_profile" } / { action: "save_profile", profile }
 //                                                     -> data penagih (rekening, ttd, stempel)
 //       { action: "check_email", email }              -> cek akun klien saat membuat invoice
@@ -55,14 +56,18 @@ async function findUserByEmail(admin, email) {
 // Kondisi sekarang & rencana perubahan untuk satu invoice - tidak mengubah
 // apa pun. `problems` = alasan aktivasi ditolak; `warnings` = hal yang perlu
 // diperhatikan admin sebelum konfirmasi.
-async function planActivation(admin, id, emailOverride) {
+async function planActivation(admin, id, emailOverride, planOverride) {
   const { data: inv, error } = await admin.from("admin_invoices").select("id, number, status, data").eq("id", id).maybeSingle();
   if (error) throw error;
   if (!inv) return null;
   const d = inv.data || {};
   const problems = [];
   const warnings = [];
-  const plan = d.plan;
+  // Invoice Custom (2 Okt 2026): harga/jumlah bebas, paket Nexto yang
+  // diaktifkan dipilih admin (default dari isian invoice, lalu Enterprise).
+  const plan = d.plan === "custom"
+    ? (PLAN_LABEL[planOverride] ? planOverride : PLAN_LABEL[d.activatePlan] ? d.activatePlan : "enterprise")
+    : d.plan;
   const seats = Math.max(1, Math.floor(Number(d.seats) || 1));
   const email = String(emailOverride || d.email || "").trim().toLowerCase();
   const expiresAt = DATE_RE.test(d.end || "") ? new Date(`${d.end}T23:59:59+07:00`).toISOString() : null;
@@ -75,7 +80,7 @@ async function planActivation(admin, id, emailOverride) {
 
   if (d.activation) problems.push(`Invoice ini sudah diaktifkan pada ${fmtWib(d.activation.at)}.`);
   if (inv.status !== "paid") problems.push("Paket hanya dapat diaktifkan dari invoice berstatus Lunas.");
-  if (!PLAN_LABEL[plan]) problems.push("Invoice paket Custom tidak terhubung ke paket Nexto, sehingga tidak dapat diaktifkan otomatis.");
+  if (!PLAN_LABEL[plan]) problems.push("Paket pada invoice ini tidak dikenali, sehingga tidak dapat diaktifkan otomatis.");
   if (!expiresAt) problems.push("Periode langganan di invoice tidak valid.");
   else if (new Date(expiresAt).getTime() <= Date.now()) problems.push("Periode langganan di invoice sudah berakhir.");
   if (problems.length) return out;
@@ -185,14 +190,14 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "activation_preview") {
-      const p = await planActivation(admin, body.id, body.email);
+      const p = await planActivation(admin, body.id, body.email, body.plan);
       if (!p) return json({ error: "Invoice tidak ditemukan." }, 404);
       delete p.invoice.data;
       return json({ preview: p });
     }
 
     if (body.action === "activate") {
-      const p = await planActivation(admin, body.id, body.email);
+      const p = await planActivation(admin, body.id, body.email, body.plan);
       if (!p) return json({ error: "Invoice tidak ditemukan." }, 404);
       if (p.problems.length) return json({ error: p.problems[0] }, 409);
 

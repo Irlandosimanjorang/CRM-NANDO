@@ -442,16 +442,20 @@ const fmtWib = (iso) => (iso ? new Date(iso).toLocaleDateString("id-ID", { day: 
 // Aktifkan paket dari invoice Lunas (2 Okt 2026). Dialog selalu meminta
 // pratinjau ke server dulu (akun, organisasi, kondisi sekarang vs sesudah),
 // tombol Aktifkan baru menyala kalau tidak ada masalah.
+const ACTIVATE_AS = [["enterprise", "Enterprise (tim)"], ["professional", "Professional (perorangan)"], ["standard", "Standard (perorangan)"]];
+
 function ActivateDialog({ invoice, onClose, onDone }) {
+  const isCustom = invoice.data?.plan === "custom";
+  const [asPlan, setAsPlan] = useState(invoice.data?.activatePlan || "enterprise");
   const [email, setEmail] = useState(invoice.data?.email || "");
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const check = async (addr) => {
+  const check = async (addr, planAs = asPlan) => {
     setLoading(true); setErr("");
-    try { const r = await db.adminInvoices("activation_preview", { id: invoice.id, email: addr.trim() }); setPreview(r.preview); }
+    try { const r = await db.adminInvoices("activation_preview", { id: invoice.id, email: addr.trim(), plan: isCustom ? planAs : undefined }); setPreview(r.preview); }
     catch (e) { setPreview(null); setErr(e.message); }
     finally { setLoading(false); }
   };
@@ -464,7 +468,7 @@ function ActivateDialog({ invoice, onClose, onDone }) {
 
   const activate = async () => {
     setSaving(true); setErr("");
-    try { const r = await db.adminInvoices("activate", { id: invoice.id, email: preview.email }); onDone(r.invoice); }
+    try { const r = await db.adminInvoices("activate", { id: invoice.id, email: preview.email, plan: isCustom ? asPlan : undefined }); onDone(r.invoice); }
     catch (e) { setErr(e.message); setSaving(false); }
   };
 
@@ -477,7 +481,7 @@ function ActivateDialog({ invoice, onClose, onDone }) {
     ...(ent && pv.org ? [["Kuota anggota", `${curPlan === "enterprise" ? pv.org.member_limit : 1} (terisi ${pv.org.members})`, `${pv.seats} anggota`]] : []),
     ["Aktif sampai", curPlan ? fmtWib(curExp) : "-", `${fmtWib(pv.expires_at)}, 23.59 WIB`],
   ] : [];
-  const canActivate = pv && !loading && !saving && pv.problems.length === 0 && email.trim().toLowerCase() === pv.email;
+  const canActivate = pv && !loading && !saving && pv.problems.length === 0 && email.trim().toLowerCase() === pv.email && (!isCustom || pv.plan === asPlan);
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}>
@@ -487,6 +491,15 @@ function ActivateDialog({ invoice, onClose, onDone }) {
           <p className="mt-0.5 text-[12px] text-slate-400"><span className="font-mono">{invoice.number}</span>, {invoice.company}</p>
         </div>
         <div className="space-y-4 px-5 py-4">
+          {isCustom && (
+            <div>
+              <label className={lbl} htmlFor="act-plan">Aktifkan sebagai paket</label>
+              <select id="act-plan" className={field} value={asPlan} disabled={saving} onChange={(e) => { setAsPlan(e.target.value); check(email, e.target.value); }}>
+                {ACTIVATE_AS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+              <p className="mt-1 text-[11.5px] text-slate-500">Invoice ini paket Custom. Kuota anggota dan masa aktif tetap mengikuti invoice ({invoice.data?.seats} {invoice.data?.unit || "pengguna"}).</p>
+            </div>
+          )}
           <div>
             <label className={lbl} htmlFor="act-email">Email akun owner klien</label>
             <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); check(email); }}>
@@ -575,6 +588,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const [po, setPo] = useState("");
   const [plan, setPlan] = useState("enterprise");
   const [customItem, setCustomItem] = useState("");
+  const [activatePlan, setActivatePlan] = useState("enterprise"); // paket Nexto untuk invoice Custom
   const [seats, setSeats] = useState(PLANS.enterprise.minSeats);
   const [months, setMonths] = useState(1);
   const [pricePerSeat, setPricePerSeat] = useState(priceOf("enterprise"));
@@ -675,6 +689,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const draft = {
     company: company.trim(), contact: contact.trim(), email: email.trim(), address: address.trim(), po: po.trim(),
     plan, item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item, unit: PLANS[plan].unit,
+    ...(plan === "custom" ? { activatePlan } : {}),
     seats: Math.max(1, Number(seats) || 1), months: Number(months) || 1, pricePerSeat: Number(pricePerSeat) || 0,
     discountLabel: discountLabel.trim(), discountType, discountValue: Number(discountValue) || 0,
     date, due: addDays(date, Number(dueDays) || 0), start, end: addMonths(start, Number(months) || 1),
@@ -742,7 +757,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     setViewing(null);
     setCompany(d.company || ""); setContact(d.contact || ""); setEmail(d.email || ""); setAddress(d.address || ""); setPo(d.po || "");
     const pl = PLANS[d.plan] ? d.plan : "custom";
-    setPlan(pl); setCustomItem(pl === "custom" ? (d.item || "") : "");
+    setPlan(pl); setCustomItem(pl === "custom" ? (d.item || "") : ""); setActivatePlan(d.activatePlan || "enterprise");
     setSeats(d.seats || PLANS[pl].minSeats); setMonths(d.months || 1); setPricePerSeat(d.pricePerSeat ?? priceOf(pl === "custom" ? "enterprise" : pl));
     setDiscountLabel(d.discountLabel || ""); setDiscountType(d.discountType || "amount"); setDiscountValue(d.discountValue ? String(d.discountValue) : "");
     setNote(d.note || ""); setDate(today); setStart(today);
@@ -814,7 +829,15 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                   </select>
                 </div>
                 {plan === "custom" && (
-                  <div><label className={lbl}>Deskripsi layanan</label><input className={field} value={customItem} onChange={(e) => setCustomItem(e.target.value)} placeholder="Misal: Nexto Enterprise + onboarding tim" /></div>
+                  <>
+                    <div><label className={lbl}>Deskripsi layanan</label><input className={field} value={customItem} onChange={(e) => setCustomItem(e.target.value)} placeholder="Misal: Nexto Enterprise + onboarding tim" /></div>
+                    <div>
+                      <label className={lbl} htmlFor="inv-actplan">Paket Nexto yang diaktifkan setelah lunas</label>
+                      <select id="inv-actplan" className={field} value={activatePlan} onChange={(e) => setActivatePlan(e.target.value)}>
+                        {ACTIVATE_AS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                      </select>
+                    </div>
+                  </>
                 )}
                 <div className="grid grid-cols-3 gap-3">
                   <div><label className={lbl}>Jumlah {PLANS[plan].unit}</label><input type="number" min={PLANS[plan].minSeats} className={field} value={seats} onChange={(e) => setSeats(e.target.value)} /></div>
@@ -964,10 +987,10 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                       <td className="px-2 py-2">
                         {x.data?.activation ? (
                           <span className="text-[12px] text-emerald-300" title={`Diaktifkan ${fmtWib(x.data.activation.at)} untuk ${x.data.activation.email}`}>Aktif s.d. {fmtShort(isoDay(new Date(x.data.activation.expires_at)))}</span>
-                        ) : x.status === "paid" && PLANS[x.data?.plan] && x.data.plan !== "custom" ? (
+                        ) : x.status === "paid" && PLANS[x.data?.plan] ? (
                           <button type="button" onClick={() => setActivating(x)} className="rounded-md border border-violet-400/50 px-2 py-1 text-[12px] font-semibold text-violet-200 hover:bg-violet-500/15">Aktifkan paket</button>
                         ) : (
-                          <span className="text-[12px] text-slate-500">{x.status === "void" ? "-" : x.status === "unpaid" ? "Menunggu pembayaran" : "Aktifkan manual"}</span>
+                          <span className="text-[12px] text-slate-500">{x.status === "void" ? "-" : "Menunggu pembayaran"}</span>
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
