@@ -61,9 +61,19 @@ async function removeAudio(admin, path) {
   try { await admin.storage.from("meeting-audio").remove([path]); } catch (_) { /* best effort */ }
 }
 
-async function transcribeAudio(audioBlob) {
+// Format audio (2 Okt 2026): Whisper membaca format dari ekstensi nama file.
+// Chrome/Android merekam WebM, Safari/iPhone merekam MP4 - nama file
+// sekarang mengikuti ekstensi path di storage (dulu selalu .webm, sehingga
+// rekaman iPhone berisiko gagal ditranskrip).
+const AUDIO_EXT = ["webm", "m4a", "mp4", "ogg", "wav", "mp3"];
+const audioFileName = (path) => {
+  const ext = String(path || "").split(".").pop().toLowerCase();
+  return `meeting.${AUDIO_EXT.includes(ext) ? ext : "webm"}`;
+};
+
+async function transcribeAudio(audioBlob, path) {
   const form = new FormData();
-  form.append("file", audioBlob, "meeting.webm");
+  form.append("file", audioBlob, audioFileName(path));
   form.append("model", "whisper-1");
   form.append("language", "id");
   const resp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
@@ -108,7 +118,7 @@ Transkrip:
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 2500, thinking: { type: "between_tools" }, output_config: { effort: "medium" }, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 6000, thinking: { type: "adaptive" }, output_config: { effort: "medium" }, messages: [{ role: "user", content: prompt }] }),
   });
   if (!resp.ok) throw new Error(`Claude API ${resp.status}`);
   const dat = await resp.json();
@@ -183,7 +193,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: `Rekaman terlalu panjang/besar (maks ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)}MB). Silakan pecah menjadi beberapa rekaman yang lebih pendek.` }), { status: 413, headers: cors });
     }
 
-    const transcript = await transcribeAudio(fileBlob);
+    const transcript = await transcribeAudio(fileBlob, storagePath);
     if (!transcript) {
       await removeAudio(admin, storagePath);
       await releaseSlot(admin, reservationId); reservationId = null;

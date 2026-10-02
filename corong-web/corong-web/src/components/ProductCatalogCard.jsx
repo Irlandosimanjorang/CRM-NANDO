@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getCatalogExample } from "../lib/industryTemplates";
 import { Package, Plus, Trash2, Save, Loader2, CheckCircle2 } from "lucide-react";
 import * as db from "../lib/db";

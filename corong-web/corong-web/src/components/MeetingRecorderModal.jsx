@@ -165,7 +165,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       // harus ditutup manual - kalau enggak, lampu mic HP nyala terus
       // padahal gak lagi ngerekam apa-apa.
       stream?.getTracks().forEach((t) => t.stop());
-      alert("Gagal akses mic. Pastikan izin mikrofon diaktifkan di browser/HP Anda.");
+      alert("Mikrofon tidak dapat diakses. Pastikan izin mikrofon untuk nexto.site diaktifkan di browser atau HP Anda.");
     }
   };
 
@@ -190,7 +190,8 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
     setStage("processing");
     mr.onstop = async () => {
       mr.stream.getTracks().forEach((t) => t.stop());
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      // Tipe mengikuti browser: WebM (Chrome/Android) atau MP4 (iPhone).
+      const blob = new Blob(chunksRef.current, { type: mr.mimeType || chunksRef.current[0]?.type || "audio/webm" });
       try {
         const path = await db.uploadMeetingAudio(lead.id, blob);
         setProcessingStep("transcribing");
@@ -224,7 +225,7 @@ export default function MeetingRecorderModal({ lead: initialLead, leads, onClose
       const mr = mediaRecorderRef.current;
       if (mr) mr.stream.getTracks().forEach((t) => t.stop());
       setStage("idle");
-      alert("Rekamannya kependekan, coba lagi ya.");
+      alert("Rekaman terlalu singkat. Silakan coba lagi.");
       return;
     }
     finishRecording();

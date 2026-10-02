@@ -675,7 +675,6 @@ export default function App() {
   // (audit 22 Sep 2026: dihitung di atas sebagai myLevel, sebelum early
   // return - lihat komentar di deklarasinya - dipake ulang di sini,
   // gak perlu dihitung dua kali.)
-  const isPremium = myLevel >= 2; // dipake di beberapa tempat lain (banner upgrade, dst) - "premium" di sini = Professional
 
   // Tier yang dipilih user pas klik tombol pricing di landing page SEBELUM
   // daftar (lihat chooseTierAndSignup di Auth.jsx) - dipake buat personalisasi

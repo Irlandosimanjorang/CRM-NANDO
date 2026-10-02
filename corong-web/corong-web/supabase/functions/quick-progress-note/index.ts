@@ -80,9 +80,19 @@ async function getUsedThisMonth(admin, userId, functionName) {
   return count || 0;
 }
 
-async function transcribeAudio(audioBlob) {
+// Format audio (2 Okt 2026): Whisper membaca format dari ekstensi nama file.
+// Chrome/Android merekam WebM, Safari/iPhone merekam MP4 - nama file
+// sekarang mengikuti ekstensi path di storage (dulu selalu .webm, sehingga
+// rekaman iPhone berisiko gagal ditranskrip).
+const AUDIO_EXT = ["webm", "m4a", "mp4", "ogg", "wav", "mp3"];
+const audioFileName = (path) => {
+  const ext = String(path || "").split(".").pop().toLowerCase();
+  return `quicknote.${AUDIO_EXT.includes(ext) ? ext : "webm"}`;
+};
+
+async function transcribeAudio(audioBlob, path) {
   const form = new FormData();
-  form.append("file", audioBlob, "quicknote.webm");
+  form.append("file", audioBlob, audioFileName(path));
   form.append("model", "whisper-1");
   form.append("language", "id");
   const resp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
@@ -223,7 +233,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: `Rekaman terlalu besar (maks ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)}MB). NEX Pro untuk catatan singkat, bukan rekaman meeting panjang.` }), { status: 413, headers: cors });
     }
 
-    const transcript = await transcribeAudio(fileBlob);
+    const transcript = await transcribeAudio(fileBlob, storagePath);
     if (!transcript) {
       await removeAudio(admin, storagePath);
       await releaseSlot(admin, reservationId); reservationId = null;

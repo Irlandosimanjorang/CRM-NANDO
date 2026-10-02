@@ -79,8 +79,15 @@ function ComposerModal({ displayName, avatarUrl, onClose, onPosted }) {
   };
   const removeImage = (i) => {
     setFiles((prev) => prev.filter((_, idx) => idx !== i));
-    setPreviews((prev) => prev.filter((_, idx) => idx !== i));
+    setPreviews((prev) => {
+      if (prev[i]) URL.revokeObjectURL(prev[i]);
+      return prev.filter((_, idx) => idx !== i);
+    });
   };
+  // Lepas URL pratinjau saat modal ditutup (hindari kebocoran memori).
+  const previewsRef = useRef(previews);
+  previewsRef.current = previews;
+  useEffect(() => () => previewsRef.current.forEach((u) => URL.revokeObjectURL(u)), []);
 
   const submit = async () => {
     if (!text.trim() && files.length === 0) { alert("Tulis sesuatu atau tambahkan foto terlebih dahulu."); return; }

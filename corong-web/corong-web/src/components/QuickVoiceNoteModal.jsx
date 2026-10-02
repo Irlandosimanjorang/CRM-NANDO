@@ -162,7 +162,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
       }, 1000);
     } catch (e) {
       stream?.getTracks().forEach((t) => t.stop());
-      alert("Gagal akses mic. Pastikan izin mikrofon diaktifkan di browser/HP Anda.");
+      alert("Mikrofon tidak dapat diakses. Pastikan izin mikrofon untuk nexto.site diaktifkan di browser atau HP Anda.");
     }
   };
 
@@ -174,7 +174,8 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
     setStage("processing");
     mr.onstop = async () => {
       mr.stream.getTracks().forEach((t) => t.stop());
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      // Tipe mengikuti browser: WebM (Chrome/Android) atau MP4 (iPhone).
+      const blob = new Blob(chunksRef.current, { type: mr.mimeType || chunksRef.current[0]?.type || "audio/webm" });
       try {
         const path = await db.uploadQuickVoiceNote(blob);
         setProcessingStep("transcribing");
@@ -212,7 +213,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
       const mr = mediaRecorderRef.current;
       if (mr) mr.stream.getTracks().forEach((t) => t.stop());
       setStage("idle");
-      alert("Rekamannya kependekan, coba lagi ya.");
+      alert("Rekaman terlalu singkat. Silakan coba lagi.");
       return;
     }
     finishRecording();

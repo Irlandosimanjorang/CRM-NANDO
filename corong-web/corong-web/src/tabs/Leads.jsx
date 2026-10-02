@@ -648,48 +648,11 @@ export default function Leads({
      LABEL / INDUSTRY
   ========================================================= */
 
-  const titleLabel =
-    getFieldLabel(
-      industry,
-      "key_person_title",
-      "Jabatan"
-    );
-
-  const keyPersonLabel =
-    getFieldLabel(
-      industry,
-      "key_person",
-      "Key Person"
-    );
-
   const productLabel =
     getFieldLabel(
       industry,
       "product",
       "Produk"
-    );
-
-  const hideKeyPerson =
-    isFieldHidden(
-      industry,
-      "key_person"
-    );
-
-  const hideTitle =
-    isFieldHidden(
-      industry,
-      "key_person_title"
-    );
-
-  const hideWebsite =
-    isFieldHidden(
-      industry,
-      "website"
-    );
-
-  const customSlots =
-    getCustomFieldSlots(
-      industry
     );
 
   const categories =

@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient";
 import { getIndustryTemplate } from "./industryTemplates";
 import { todayISO } from "./helpers";
+import { compressImage } from "./imageCompress";
 
 // Bersihin kolom telepon/WA: cuma boleh angka + karakter pemisah wajar (+, -, spasi,
 // koma, slash, kurung). Nama/label kayak "Admin 1:" otomatis kebuang, sisa nomornya
@@ -372,8 +373,12 @@ const AVATAR_MAX_SIZE_MB = 5;
 const AVATAR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function uploadAvatar(file) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Format file harus JPG, PNG, WEBP, atau GIF.");
+  }
+  file = await compressImage(file, { maxSide: 800 });
   if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
-    throw new Error("Format file harus JPG, PNG, WEBP, atau GIF ya.");
+    throw new Error("Format file harus JPG, PNG, WEBP, atau GIF.");
   }
   if (file.size > AVATAR_MAX_SIZE_MB * 1024 * 1024) {
     throw new Error(`Ukuran file maksimal ${AVATAR_MAX_SIZE_MB}MB (file Anda ${(file.size / 1024 / 1024).toFixed(1)}MB).`);
@@ -1015,6 +1020,9 @@ export async function reverseGeocode(lat, lng) {
 }
 
 export async function uploadCheckinPhoto(file) {
+  // Foto check-in dikompres (sisi terpanjang 1600 px) - foto kamera HP bisa
+  // 5-10 MB, lambat diunggah di lapangan & bisa melewati batas bucket 8 MB.
+  file = await compressImage(file, { maxSide: 1600 });
   const uid = (await supabase.auth.getUser()).data.user.id;
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${uid}/${Date.now()}.${ext}`;
@@ -1207,18 +1215,41 @@ export async function updateProgress(id, text) {
 }
 
 // ---- REKAM MEETING ----
+// Format rekaman mengikuti browser (2 Okt 2026): Chrome/Android = WebM,
+// Safari/iPhone = MP4. Ekstensi path & content type disamakan dengan isi
+// file - edge function memberi nama file ke Whisper dari ekstensi ini.
+// Rekaman kosong (mikrofon tidak menangkap apa pun) ditolak sebelum diunggah.
+function audioUploadMeta(blob) {
+  if (!blob || blob.size < 1024) throw new Error("Rekaman kosong - mikrofon tidak menangkap suara. Periksa izin mikrofon, lalu coba lagi.");
+  const t = (blob.type || "").toLowerCase();
+  const ext = /mp4|m4a|aac/.test(t) ? "m4a" : t.includes("ogg") ? "ogg" : t.includes("wav") ? "wav" : t.includes("mpeg") ? "mp3" : "webm";
+  const contentType = { m4a: "audio/mp4", ogg: "audio/ogg", wav: "audio/wav", mp3: "audio/mpeg", webm: "audio/webm" }[ext];
+  return { ext, contentType };
+}
+
+// Pesan error asli dari edge function (bukan "non-2xx status code").
+async function invokeWithMessage(name, body, fallback) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || fallback);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export async function uploadMeetingAudio(leadId, blob) {
+  const { ext, contentType } = audioUploadMeta(blob);
   const uid = (await supabase.auth.getUser()).data.user.id;
-  const path = `${uid}/${leadId}-${Date.now()}.webm`;
-  const { error } = await supabase.storage.from("meeting-audio").upload(path, blob, { contentType: blob.type || "audio/webm" });
+  const path = `${uid}/${leadId}-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("meeting-audio").upload(path, blob, { contentType });
   if (error) throw error;
   return path;
 }
 
 export async function transcribeMeeting(storagePath, leadName) {
-  const { data, error } = await supabase.functions.invoke("transcribe-meeting", { body: { storagePath, leadName } });
-  if (error) throw error;
-  return data; // { transcript, notes }
+  return invokeWithMessage("transcribe-meeting", { storagePath, leadName }, "Gagal memproses rekaman meeting"); // { transcript, notes }
 }
 
 // ---- GENERATE LEAD DARI LINK (25 Sep 2026, permintaan Nando) - paste link
@@ -1245,17 +1276,16 @@ export async function leadFromUrl(url) {
 // "meeting-audio" yang sama (convention path {user_id}/... udah dicek
 // ownership-nya di edge function transcribe-meeting, dipake ulang persis).
 export async function uploadQuickVoiceNote(blob) {
+  const { ext, contentType } = audioUploadMeta(blob);
   const uid = (await supabase.auth.getUser()).data.user.id;
-  const path = `${uid}/quicknote-${Date.now()}.webm`;
-  const { error } = await supabase.storage.from("meeting-audio").upload(path, blob, { contentType: blob.type || "audio/webm" });
+  const path = `${uid}/quicknote-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("meeting-audio").upload(path, blob, { contentType });
   if (error) throw error;
   return path;
 }
 
 export async function transcribeQuickVoiceNote(storagePath) {
-  const { data, error } = await supabase.functions.invoke("quick-progress-note", { body: { storagePath } });
-  if (error) throw error;
-  return data; // { transcript, action, progress_note, lead_id, lead_name, confidence, updates, cancel_visit, result, new_lead, quota }
+  return invokeWithMessage("quick-progress-note", { storagePath }, "Gagal memproses catatan suara"); // { transcript, action, progress_note, lead_id, lead_name, confidence, updates, cancel_visit, result, new_lead, quota }
 }
 
 // Cek sisa kuota bulanan TANPA motong slot - dipake modal nampilin status
@@ -1496,6 +1526,7 @@ export async function getCommunityDisplayName() {
   return s.community_display_name || "";
 }
 export async function uploadCommunityImage(file) {
+  file = await compressImage(file, { maxSide: 1600 });
   const uid = (await supabase.auth.getUser()).data.user.id;
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;

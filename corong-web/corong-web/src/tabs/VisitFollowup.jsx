@@ -97,17 +97,25 @@ function LocationConfirmModal({ confirmData, onConfirm, onCancel }) {
 // Sekarang bener-bener buka feed kamera depan langsung di dalam modal,
 // user jepret dari situ - gak ada jalan buat milih file dari galeri.
 // Fallback ke <input capture> cuma kalo getUserMedia gak didukung/ditolak.
+// Audit 2 Okt 2026: browser tanpa getUserMedia (in-app browser WhatsApp/IG,
+// halaman non-HTTPS) dulu membuat kotak kamera hitam selamanya tanpa fallback;
+// sekarang langsung ke fallback. Tombol jepret baru aktif setelah gambar
+// kamera benar-benar tampil, dan kamera yang terputus (dipakai aplikasi lain)
+// juga dialihkan ke fallback.
 function LiveCamera({ onCapture, onFallback }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [error, setError] = useState(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    navigator.mediaDevices?.getUserMedia?.({ video: { facingMode: "user" }, audio: false })
+    if (!navigator.mediaDevices?.getUserMedia) { setError(true); return undefined; }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false })
       .then((stream) => {
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
+        stream.getVideoTracks()[0]?.addEventListener("ended", () => { if (!cancelled) setError(true); });
         if (videoRef.current) videoRef.current.srcObject = stream;
       })
       .catch(() => { if (!cancelled) setError(true); });
@@ -117,7 +125,7 @@ function LiveCamera({ onCapture, onFallback }) {
     };
   }, []);
 
-  useEffect(() => { if (error) onFallback(); }, [error]);
+  useEffect(() => { if (error) onFallback(); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shoot = () => {
     const video = videoRef.current;
@@ -139,11 +147,13 @@ function LiveCamera({ onCapture, onFallback }) {
   if (error) return null;
   return (
     <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-slate-900">
-      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
+      <video ref={videoRef} autoPlay playsInline muted onPlaying={() => setReady(true)} className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
+      {!ready && <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs text-slate-300"><Loader2 size={14} className="animate-spin" /> Menyiapkan kamera…</div>}
       <button
         type="button"
         onClick={shoot}
-        className="absolute bottom-2.5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-white border-4 border-orange-500 shadow-lg active:scale-95"
+        disabled={!ready}
+        className="absolute bottom-2.5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-white border-4 border-orange-500 shadow-lg active:scale-95 disabled:opacity-40"
         aria-label="Jepret foto"
       />
     </div>
@@ -159,8 +169,9 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
 
   const handleCapture = (file) => {
     setPhoto(file);
-    setPreview(URL.createObjectURL(file));
+    setPreview((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(file); });
   };
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   // Fallback doang kalo getUserMedia gak jalan (browser lama/HP tanpa kamera
   // depan kedetek/dst) - capture="user" masih ngarahin ke app kamera native,
@@ -171,13 +182,13 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
     handleCapture(file);
   };
 
-  const retake = () => { setPhoto(null); setPreview(null); };
+  const retake = () => { setPhoto(null); setPreview(null); setCameraFailed(false); };
 
   const confirm = async () => {
     if (!photo) { alert("Foto wajib dilampirkan untuk check-in."); return; }
     setBusy(true);
     try {
-      setBusyLabel("Ngupload foto…");
+      setBusyLabel("Mengunggah foto…");
       const photo_url = await db.uploadCheckinPhoto(photo);
 
       // Verifikasi AI - pastiin fotonya beneran ada orangnya (selfie di
@@ -191,7 +202,7 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
         return { isSelfie: true };
       });
       if (!verify.isSelfie) {
-        alert(`❌ Foto ini kelihatannya bukan foto diri Anda di lokasi.${verify.reason ? " (" + verify.reason + ")" : ""}\n\nTolong upload ulang foto selfie Anda di lokasi kunjungan.`);
+        alert(`Foto ini tidak terdeteksi sebagai foto diri Anda di lokasi.${verify.reason ? " (" + verify.reason + ")" : ""}\n\nSilakan ambil ulang selfie di lokasi kunjungan.`);
         setBusy(false);
         return;
       }
