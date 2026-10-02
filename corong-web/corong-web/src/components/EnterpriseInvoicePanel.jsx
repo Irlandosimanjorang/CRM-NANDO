@@ -66,7 +66,9 @@ export function terbilang(n) {
 }
 
 // Olah foto tanda tangan / stempel (2 Okt 2026, diperbaiki untuk foto HP):
-// - Foto HEIC dari iPhone dikonversi dulu (Chrome tidak bisa membacanya).
+// - Foto HEIC (format bawaan iPhone) tidak didukung: konverternya butuh
+//   new Function & Worker blob:, yang diblokir CSP production. Pengguna
+//   diarahkan memakai JPG/PNG atau screenshot.
 // - Latar kertas diukur PER AREA (bukan satu ambang putih), jadi bayangan,
 //   kertas bergaris, dan tulisan tembus dari halaman belakang ikut hilang -
 //   yang diambil hanya goresan yang jauh lebih gelap dari kertas di sekitarnya.
@@ -77,32 +79,30 @@ export function terbilang(n) {
 const isHeic = (file) => /hei[cf]/i.test(file.type || "") || /\.hei[cf]$/i.test(file.name || "");
 
 async function decodeImage(file) {
-  let blob = file;
-  if (isHeic(file)) {
-    try {
-      const { default: heic2any } = await import("heic2any");
-      const conv = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
-      blob = Array.isArray(conv) ? conv[0] : conv;
-    } catch (_) {
-      throw new Error("Foto HEIC tidak dapat dikonversi. Ambil screenshot fotonya lalu unggah screenshot tersebut.");
-    }
-  }
-  const url = URL.createObjectURL(blob);
+  // Dibaca sebagai data: URL, bukan blob: - CSP production (vercel.json,
+  // img-src) dulu hanya mengizinkan data:, jadi blob: URL gagal dimuat.
   try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    return img;
+    const dataUrl = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(file);
+    });
+    return await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
   } catch (_) {
     throw new Error("Gambar tidak dapat dibaca. Gunakan file JPG atau PNG.");
-  } finally {
-    URL.revokeObjectURL(url);
   }
 }
 
 export async function processSignatureFile(file, { maxW = 600, maxH = 300, keepColor = false } = {}) {
   if (!file) throw new Error("Pilih file gambar.");
-  if (!isHeic(file) && !/^image\//.test(file.type || "")) throw new Error("File harus berupa gambar (JPG, PNG, atau HEIC).");
+  if (isHeic(file)) throw new Error("Foto HEIC (format bawaan iPhone) belum didukung. Unggah dalam format JPG atau PNG, misalnya screenshot dari foto tersebut.");
+  if (!/^image\//.test(file.type || "")) throw new Error("File harus berupa gambar JPG atau PNG.");
   if (file.size > 20 * 1024 * 1024) throw new Error("Ukuran gambar maksimal 20 MB.");
   const img = await decodeImage(file);
 
@@ -758,7 +758,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                             </div>
                             <label className="cursor-pointer rounded-md border border-slate-600 px-2.5 py-1.5 text-[12px] font-semibold text-slate-200 hover:bg-slate-800">
                               {seller[k] ? "Ganti" : "Unggah"}
-                              <input type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" className="sr-only" onChange={async (e) => {
+                              <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={async (e) => {
                                 const file = e.target.files?.[0]; e.target.value = "";
                                 if (!file) return;
                                 try { const dataUrl = await processSignatureFile(file, k === "stampImage" ? { maxW: 360, maxH: 360, keepColor: true } : undefined); setSeller((s) => ({ ...s, [k]: dataUrl })); }
