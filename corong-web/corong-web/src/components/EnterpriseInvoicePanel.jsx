@@ -578,12 +578,14 @@ function ActivateDialog({ invoice, onClose, onDone }) {
 // Kirim invoice ke email klien (2 Okt 2026). Email berisi ringkasan tagihan,
 // rekening tujuan, dan tombol ke halaman invoice (nexto.site/invoice?t=...).
 // Pengingat jatuh tempo otomatis diatur di sini juga.
-const EMAIL_LABEL = { invoice: "Invoice dikirim", due_minus3: "Pengingat 3 hari sebelum jatuh tempo", due_today: "Pengingat hari jatuh tempo", overdue_3: "Pengingat 3 hari lewat jatuh tempo", overdue_7: "Pengingat 7 hari lewat jatuh tempo" };
+const EMAIL_LABEL = { invoice: "Invoice dikirim", receipt: "Bukti pembayaran dikirim", due_minus3: "Pengingat 3 hari sebelum jatuh tempo", due_today: "Pengingat hari jatuh tempo", overdue_3: "Pengingat 3 hari lewat jatuh tempo", overdue_7: "Pengingat 7 hari lewat jatuh tempo" };
 const fmtStamp = (iso) => new Date(iso).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 
 function SendDialog({ invoice, onClose, onChange }) {
   const log = invoice.email_log || [];
-  const lastTo = [...log].reverse().find((e) => e.type === "invoice")?.to;
+  const lastTo = [...log].reverse().find((e) => e.type === "invoice" || e.type === "receipt")?.to;
+  const paid = invoice.status === "paid";
+  const sentKind = paid ? "receipt" : "invoice";
   const [to, setTo] = useState(lastTo || invoice.data?.email || "");
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
@@ -612,10 +614,15 @@ function SendDialog({ invoice, onClose, onChange }) {
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !sending) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-labelledby="send-title" className="w-full max-w-[480px] rounded-xl border border-slate-700 bg-[#0f1420] shadow-2xl">
         <div className="border-b border-slate-800 px-5 py-4">
-          <h3 id="send-title" className="text-[15px] font-semibold text-slate-100">Kirim invoice</h3>
+          <h3 id="send-title" className="text-[15px] font-semibold text-slate-100">{paid ? "Kirim bukti pembayaran" : "Kirim invoice"}</h3>
           <p className="mt-0.5 text-[12px] text-slate-400"><span className="font-mono">{invoice.number}</span>, {invoice.company}, {rp(invoice.total)}</p>
         </div>
         <div className="space-y-4 px-5 py-4">
+          <p className="rounded-lg bg-slate-900/70 px-3 py-2 text-[12px] text-slate-300">
+            {paid
+              ? "Invoice ini sudah Lunas, jadi yang dikirim adalah bukti pembayaran: ucapan terima kasih, tanggal pembayaran, dan masa aktif paket, tanpa rincian cara pembayaran."
+              : "Invoice ini belum dibayar, jadi yang dikirim adalah tagihan: total, jatuh tempo, dan rekening tujuan transfer."}
+          </p>
           <div>
             <label className={lbl} htmlFor="send-to">Kirim ke email</label>
             <input id="send-to" type="email" className={field} value={to} onChange={(e) => setTo(e.target.value)} placeholder="keuangan@perusahaan.co.id" disabled={sending} />
@@ -647,7 +654,7 @@ function SendDialog({ invoice, onClose, onChange }) {
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-3">
           <button type="button" onClick={onClose} disabled={sending} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50">Tutup</button>
-          <button type="button" onClick={send} disabled={sending || !validTo || invoice.status === "void"} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:opacity-40">{sending ? "Mengirim…" : log.some((e) => e.type === "invoice") ? "Kirim ulang" : "Kirim invoice"}</button>
+          <button type="button" onClick={send} disabled={sending || !validTo || invoice.status === "void"} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:opacity-40">{sending ? "Mengirim…" : log.some((e) => e.type === sentKind) ? "Kirim ulang" : paid ? "Kirim bukti lunas" : "Kirim invoice"}</button>
         </div>
       </div>
     </div>
@@ -1107,7 +1114,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                       <td className="px-4 py-2 font-mono text-slate-200">{x.number}</td>
                       <td className="max-w-[200px] px-2 py-2 text-slate-200">
                         <div className="truncate">{x.company}</div>
-                        {(() => { const sent = [...(x.email_log || [])].reverse().find((e) => e.type === "invoice"); return sent ? <div className="truncate text-[11px] text-slate-500" title={sent.to}>Terkirim {fmtShort(isoDay(new Date(sent.at)))}</div> : null; })()}
+                        {(() => { const sent = [...(x.email_log || [])].reverse().find((e) => e.type === "invoice" || e.type === "receipt"); return sent ? <div className="truncate text-[11px] text-slate-500" title={sent.to}>{sent.type === "receipt" ? "Bukti lunas terkirim" : "Terkirim"} {fmtShort(isoDay(new Date(sent.at)))}</div> : null; })()}
                       </td>
                       <td className="px-2 py-2 text-slate-400">{fmtShort(x.invoice_date)}</td>
                       <td className={`px-2 py-2 ${late ? "font-semibold text-rose-300" : "text-slate-400"}`}>{fmtShort(x.due_date)}{late ? " (lewat)" : ""}</td>

@@ -13,7 +13,8 @@
 //       { action: "get_profile" } / { action: "save_profile", profile }
 //                                                     -> data penagih (rekening, ttd, stempel)
 //       { action: "check_email", email }              -> cek akun klien saat membuat invoice
-//       { action: "send", id, to, note? }             -> kirim invoice ke email klien (Resend)
+//       { action: "send", id, to, note? }             -> kirim invoice ke email klien (Resend);
+//                                                        invoice Lunas dikirim sebagai bukti pembayaran
 //       { action: "set_reminders", id, enabled }      -> nyalakan/matikan pengingat jatuh tempo
 //
 // Aktivasi paket dari invoice (2 Okt 2026, permintaan Nando): Enterprise
@@ -267,18 +268,19 @@ Deno.serve(async (req) => {
       const to = String(body.to || "").trim().toLowerCase();
       if (!EMAIL_RE.test(to)) return json({ error: "Alamat email tujuan tidak valid." }, 400);
       if (!RESEND_API_KEY) return json({ error: "Layanan email belum dikonfigurasi (RESEND_API_KEY)." }, 500);
-      const { data: inv, error } = await admin.from("admin_invoices").select("id, number, company, invoice_date, due_date, total, status, data, public_token, email_log").eq("id", body.id).maybeSingle();
+      const { data: inv, error } = await admin.from("admin_invoices").select("id, number, company, invoice_date, due_date, total, status, paid_at, data, public_token, email_log").eq("id", body.id).maybeSingle();
       if (error) throw error;
       if (!inv) return json({ error: "Invoice tidak ditemukan." }, 404);
       if (inv.status === "void") return json({ error: "Invoice yang dibatalkan tidak dapat dikirim." }, 409);
       const seller = inv.data?.seller || {};
+      const kind = inv.status === "paid" ? "receipt" : "invoice"; // Lunas -> bukti pembayaran, bukan tagihan
       await sendEmail({
         apiKey: RESEND_API_KEY, to,
-        subject: invoiceSubject("invoice", inv, seller),
-        html: renderInvoiceEmail("invoice", inv, seller, String(body.note || "").slice(0, 1000)),
+        subject: invoiceSubject(kind, inv, seller),
+        html: renderInvoiceEmail(kind, inv, seller, String(body.note || "").slice(0, 1000)),
         replyTo: seller.email || ADMIN_EMAIL, bcc: seller.email || ADMIN_EMAIL,
       });
-      const email_log = [...(inv.email_log || []), { type: "invoice", to, at: new Date().toISOString() }];
+      const email_log = [...(inv.email_log || []), { type: kind, to, at: new Date().toISOString() }];
       const { error: upErr } = await admin.from("admin_invoices").update({ email_log }).eq("id", inv.id);
       if (upErr) throw upErr;
       return json({ invoice: { id: inv.id, email_log } });

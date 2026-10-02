@@ -17,20 +17,26 @@ const INTRO = {
   due_today: (n, due) => `Invoice <b>${n}</b> jatuh tempo hari ini, <b>${due}</b>.`,
   overdue_3: (n, due) => `Invoice <b>${n}</b> telah melewati jatuh tempo sejak <b>${due}</b>. Mohon pembayaran dapat segera dilakukan.`,
   overdue_7: (n, due) => `Invoice <b>${n}</b> telah melewati jatuh tempo sejak <b>${due}</b> dan belum kami terima pembayarannya. Mohon pembayaran dapat segera dilakukan.`,
+  // Bukti pembayaran (invoice berstatus Lunas) - tanpa ajakan membayar.
+  receipt: (n, _due, paid) => `Terima kasih. Pembayaran untuk invoice <b>${n}</b> telah kami terima${paid ? ` pada <b>${paid}</b>` : ""}. Invoice ini berstatus <b>LUNAS</b>.`,
 };
 
 export function invoiceSubject(kind, inv, seller) {
   const n = inv.number;
   if (kind === "invoice") return `Invoice ${n} dari ${seller?.name || "Nexto"}`;
+  if (kind === "receipt") return `Pembayaran diterima: invoice ${n} (Lunas)`;
   if (kind === "due_minus3") return `Pengingat: invoice ${n} jatuh tempo ${fmtTanggal(inv.due_date)}`;
   if (kind === "due_today") return `Invoice ${n} jatuh tempo hari ini`;
   return `Invoice ${n} telah lewat jatuh tempo`;
 }
 
-// kind: invoice | due_minus3 | due_today | overdue_3 | overdue_7
+// kind: invoice | receipt | due_minus3 | due_today | overdue_3 | overdue_7
 export function renderInvoiceEmail(kind, inv, seller = {}, note = "") {
   const d = inv.data || {};
   const due = fmtTanggal(inv.due_date);
+  const isReceipt = kind === "receipt";
+  const paidOn = inv.paid_at ? fmtTanggal(new Date(new Date(inv.paid_at).getTime() + 7 * 3600000).toISOString().slice(0, 10)) : "";
+  const activeUntil = d.activation?.expires_at ? fmtTanggal(new Date(new Date(d.activation.expires_at).getTime() + 7 * 3600000).toISOString().slice(0, 10)) : "";
   const link = PUBLIC_INVOICE_URL + inv.public_token;
   const greet = d.contact ? `Yth. ${esc(d.contact)},` : `Yth. ${esc(inv.company)},`;
   const row = (k, v, strong = false) => `<tr><td style="padding:7px 0;color:#5b6475;font-size:13px;">${k}</td><td style="padding:7px 0;text-align:right;font-size:13px;color:#1c2230;${strong ? "font-weight:700;" : ""}">${v}</td></tr>`;
@@ -61,7 +67,7 @@ export function renderInvoiceEmail(kind, inv, seller = {}, note = "") {
   </td></tr>
   <tr><td style="padding:24px 28px 8px;font-size:14px;line-height:1.6;">
     <p style="margin:0 0 12px;">${greet}</p>
-    <p style="margin:0 0 12px;">${(INTRO[kind] || INTRO.invoice)(esc(inv.number), due)}</p>
+    <p style="margin:0 0 12px;">${(INTRO[kind] || INTRO.invoice)(esc(inv.number), due, paidOn)}</p>
     ${note ? `<p style="margin:0 0 12px;">${esc(note).replace(/\n/g, "<br>")}</p>` : ""}
   </td></tr>
   <tr><td style="padding:4px 28px 0;">
@@ -69,25 +75,25 @@ export function renderInvoiceEmail(kind, inv, seller = {}, note = "") {
       ${row("Ditagihkan kepada", esc(inv.company))}
       ${row("Layanan", esc(d.item || "Langganan Nexto"))}
       ${row("Tanggal invoice", fmtTanggal(inv.invoice_date))}
-      ${row("Jatuh tempo", due)}
-      <tr><td style="padding:10px 0;border-top:2px solid #1c2230;font-size:15px;font-weight:700;">Total tagihan</td><td style="padding:10px 0;border-top:2px solid #1c2230;text-align:right;font-size:15px;font-weight:700;color:#c2410c;">${rp(inv.total)}</td></tr>
+      ${isReceipt ? row("Tanggal pembayaran", paidOn || "-") + row("Status", `<span style="color:#15803d;font-weight:700;">Lunas</span>`) : row("Jatuh tempo", due)}
+      <tr><td style="padding:10px 0;border-top:2px solid #1c2230;font-size:15px;font-weight:700;">${isReceipt ? "Total dibayar" : "Total tagihan"}</td><td style="padding:10px 0;border-top:2px solid #1c2230;text-align:right;font-size:15px;font-weight:700;color:${isReceipt ? "#15803d" : "#c2410c"};">${rp(inv.total)}</td></tr>
     </table>
   </td></tr>
   <tr><td style="padding:18px 28px 0;">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Detail langganan</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${sub}</table>
-    <p style="margin:6px 0 0;font-size:12px;color:#5b6475;">${team ? "Anggota tim bergabung lewat kode undangan dari akun owner. " : ""}Akses aktif setelah pembayaran diterima.</p>
+    <p style="margin:6px 0 0;font-size:12px;color:#5b6475;">${team ? "Anggota tim bergabung lewat kode undangan dari akun owner. " : ""}${isReceipt ? (activeUntil ? `Paket sudah aktif sampai <b style="color:#1c2230;">${activeUntil}</b>.` : "Paket akan segera kami aktifkan.") : "Akses aktif setelah pembayaran diterima."}</p>
   </td></tr>
-  ${bank ? `<tr><td style="padding:18px 28px 0;">
+  ${bank && !isReceipt ? `<tr><td style="padding:18px 28px 0;">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Cara pembayaran</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${bank}</table>
     <p style="margin:6px 0 0;font-size:12px;color:#5b6475;">Cantumkan nomor ${esc(inv.number)} pada berita transfer.</p>
   </td></tr>` : ""}
   <tr><td style="padding:22px 28px 6px;">
-    <a href="${link}" target="_blank" style="display:inline-block;background:#1c2230;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 20px;border-radius:5px;">Lihat &amp; unduh invoice</a>
+    <a href="${link}" target="_blank" style="display:inline-block;background:#1c2230;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 20px;border-radius:5px;">${isReceipt ? "Lihat &amp; unduh invoice lunas" : "Lihat &amp; unduh invoice"}</a>
   </td></tr>
   <tr><td style="padding:14px 28px 24px;font-size:13px;line-height:1.6;color:#5b6475;">
-    ${kind === "invoice" ? "Jika ada pertanyaan, silakan balas email ini." : "Jika pembayaran sudah dilakukan, mohon abaikan email ini atau balas dengan bukti transfer."}
+    ${isReceipt ? "Simpan email ini sebagai bukti pembayaran. Jika ada pertanyaan, silakan balas email ini." : kind === "invoice" ? "Jika ada pertanyaan, silakan balas email ini." : "Jika pembayaran sudah dilakukan, mohon abaikan email ini atau balas dengan bukti transfer."}
     ${sign.length ? `<p style="margin:14px 0 0;color:#1c2230;">Hormat kami,<br>${sign.join("<br>")}</p>` : ""}
   </td></tr>
 </table>
