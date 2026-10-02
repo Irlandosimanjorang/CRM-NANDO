@@ -9,6 +9,8 @@ const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").
 const rp = (n) => "Rp" + Math.round(Number(n) || 0).toLocaleString("id-ID");
 export const fmtTanggal = (iso) => new Date(`${iso}T00:00:00+07:00`).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
 
+const PLAN_NAME = { enterprise: "Enterprise", professional: "Professional", standard: "Standard" };
+
 const INTRO = {
   invoice: (n, due) => `Berikut kami sampaikan invoice <b>${n}</b> dengan jatuh tempo <b>${due}</b>.`,
   due_minus3: (n, due) => `Kami mengingatkan bahwa invoice <b>${n}</b> akan jatuh tempo pada <b>${due}</b>, tiga hari lagi.`,
@@ -36,6 +38,18 @@ export function renderInvoiceEmail(kind, inv, seller = {}, note = "") {
     ? [seller.bank && row("Bank", esc(seller.bank)), row("No. rekening", esc(seller.account), true), seller.holder && row("Atas nama", esc(seller.holder))].filter(Boolean).join("")
     : "";
   const sign = [seller.signName, seller.signTitle, seller.name].filter(Boolean).map(esc);
+  // Detail langganan (sama dengan bagian "Detail langganan" di invoice).
+  const key = d.plan === "custom" ? d.activatePlan : d.plan;
+  const team = key === "enterprise";
+  const seats = Number(d.seats) || 1, months = Number(d.months) || 1;
+  const sub = [
+    row("Paket", PLAN_NAME[key] ? `Nexto ${PLAN_NAME[key]}` : esc(d.item || "Layanan Nexto")),
+    row("Jumlah anggota", team ? `${seats} anggota tim (termasuk owner)` : `${seats} pengguna`),
+    row("Durasi", `${months} bulan`),
+    d.start && d.end ? row("Periode", `${fmtTanggal(d.start)} sampai ${fmtTanggal(d.end)}`) : "",
+    row("Harga", `${rp(d.pricePerSeat)} per ${team ? "anggota" : "pengguna"}/bulan`),
+    d.email ? row("Akun Nexto", esc(d.email)) : "",
+  ].join("");
   return `<!DOCTYPE html><html lang="id"><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#1c2230;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;"><tr><td align="center" style="padding:28px 12px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e3e6eb;border-radius:6px;">
@@ -58,6 +72,11 @@ export function renderInvoiceEmail(kind, inv, seller = {}, note = "") {
       ${row("Jatuh tempo", due)}
       <tr><td style="padding:10px 0;border-top:2px solid #1c2230;font-size:15px;font-weight:700;">Total tagihan</td><td style="padding:10px 0;border-top:2px solid #1c2230;text-align:right;font-size:15px;font-weight:700;color:#c2410c;">${rp(inv.total)}</td></tr>
     </table>
+  </td></tr>
+  <tr><td style="padding:18px 28px 0;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Detail langganan</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${sub}</table>
+    <p style="margin:6px 0 0;font-size:12px;color:#5b6475;">${team ? "Anggota tim bergabung lewat kode undangan dari akun owner. " : ""}Akses aktif setelah pembayaran diterima.</p>
   </td></tr>
   ${bank ? `<tr><td style="padding:18px 28px 0;">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Cara pembayaran</div>

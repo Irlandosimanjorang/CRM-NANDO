@@ -305,6 +305,24 @@ function computeTotals(d) {
   return { subtotal, discount, total: subtotal - discount };
 }
 
+// Detail langganan Nexto yang tercetak di invoice & email (2 Okt 2026):
+// paket, jumlah anggota, durasi, periode, harga per orang, akun yang diaktifkan.
+const PLAN_NAME = { enterprise: "Enterprise", professional: "Professional", standard: "Standard" };
+export function subscriptionDetail(d) {
+  const key = d.plan === "custom" ? d.activatePlan : d.plan;
+  const team = key === "enterprise";
+  const seats = Number(d.seats) || 1, months = Number(d.months) || 1;
+  return {
+    plan: PLAN_NAME[key] ? `Nexto ${PLAN_NAME[key]}` : (d.item || "Layanan Nexto"),
+    people: team ? `${seats} anggota tim` : `${seats} pengguna`,
+    peopleNote: team ? "Termasuk akun owner; anggota bergabung lewat kode undangan" : seats > 1 ? "Setiap pengguna memakai akun masing-masing" : "Satu akun pengguna",
+    duration: `${months} bulan`,
+    period: d.start && d.end ? `${fmtDate(d.start)} sampai ${fmtDate(d.end)}` : "",
+    price: `${rp(d.pricePerSeat)} per ${team ? "anggota" : "pengguna"}/bulan`,
+    account: d.email || "",
+  };
+}
+
 /** d = data invoice (draf atau tersimpan), meta = { number, status, paidAt } */
 export function buildInvoiceHtml(d, meta = {}) {
   const seller = d.seller || {};
@@ -355,6 +373,10 @@ export function buildInvoiceHtml(d, meta = {}) {
   .sum .grand { margin-top: 6px; padding-top: 10px; border-top: 2px solid #1c2230; color: #1c2230; font-size: 16px; font-weight: 700; }
   .sum .grand span:last-child { color: #c2410c; }
   .words { margin-top: 10px; text-align: right; color: #5b6475; font-style: italic; }
+  .subs { margin-top: 24px; padding: 14px 16px; background: #f5f6f8; border-radius: 4px; }
+  .subs .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .subs .v { font-size: 12.5px; }
+  .subs .v small { display: block; font-weight: 400; color: #5b6475; font-size: 11.5px; }
   .pay { margin-top: 32px; }
   h2 { margin: 0 0 8px; font-size: 13px; }
   .pay .row { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 4px 0; }
@@ -403,6 +425,12 @@ export function buildInvoiceHtml(d, meta = {}) {
     <div class="row grand"><span>Total tagihan</span><span>${rp(total)}</span></div>
   </div>
   <div class="words">Terbilang: ${terbilang(total)}</div>
+  ${(() => { const s = subscriptionDetail(d); return `<div class="subs"><h2>Detail langganan</h2><div class="grid">
+    <div><div class="k">Paket</div><div class="v">${esc(s.plan)}<small>${esc(s.price)}</small></div></div>
+    <div><div class="k">Jumlah anggota</div><div class="v">${esc(s.people)}<small>${esc(s.peopleNote)}</small></div></div>
+    <div><div class="k">Durasi</div><div class="v">${esc(s.duration)}${s.period ? `<small>${esc(s.period)}</small>` : ""}</div></div>
+    <div><div class="k">Akun Nexto</div><div class="v" style="word-break:break-all">${esc(s.account || "-")}<small>Aktif setelah pembayaran diterima</small></div></div>
+  </div></div>`; })()}
   <div class="bottom">
     <div class="pay">
       <h2>Cara pembayaran</h2>
@@ -780,7 +808,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   // Data draf saat ini (juga yang disimpan ke database saat "Simpan").
   const draft = {
     company: company.trim(), contact: contact.trim(), email: email.trim(), address: address.trim(), po: po.trim(),
-    plan, item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item, unit: PLANS[plan].unit,
+    plan, item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item, unit: plan === "custom" && activatePlan === "enterprise" ? "anggota tim" : PLANS[plan].unit,
     ...(plan === "custom" ? { activatePlan } : {}),
     seats: Math.max(1, Number(seats) || 1), months: Number(months) || 1, pricePerSeat: Number(pricePerSeat) || 0,
     discountLabel: discountLabel.trim(), discountType, discountValue: Number(discountValue) || 0,
@@ -945,7 +973,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                   </>
                 )}
                 <div className="grid grid-cols-3 gap-3">
-                  <div><label className={lbl}>Jumlah {PLANS[plan].unit}</label><input type="number" min={PLANS[plan].minSeats} className={field} value={seats} onChange={(e) => setSeats(e.target.value)} /></div>
+                  <div><label className={lbl}>Jumlah {draft.unit}</label><input type="number" min={PLANS[plan].minSeats} className={field} value={seats} onChange={(e) => setSeats(e.target.value)} /></div>
                   <div>
                     <label className={lbl}>Periode</label>
                     <select className={field} value={months} onChange={(e) => setMonths(e.target.value)}>
