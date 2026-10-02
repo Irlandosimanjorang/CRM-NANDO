@@ -67,8 +67,56 @@ export function terbilang(n) {
   return t.charAt(0).toUpperCase() + t.slice(1) + " rupiah";
 }
 
+// Olah foto tanda tangan / stempel (2 Okt 2026): latar putih/terang dibuat
+// transparan (kalau gambarnya belum transparan), margin kosong dipotong, dan
+// ukuran diperkecil supaya ringan disimpan bersama setiap invoice.
+export function processSignatureFile(file, { maxW = 600, maxH = 300 } = {}) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type)) { reject(new Error("File harus berupa gambar (PNG atau JPG).")); return; }
+    if (file.size > 8 * 1024 * 1024) { reject(new Error("Ukuran gambar maksimal 8 MB.")); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Gambar tidak dapat dibaca.")); };
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, c.width, c.height);
+      const px = data.data;
+      let transparent = 0;
+      for (let i = 3; i < px.length; i += 4) if (px[i] < 250) transparent++;
+      const alreadyTransparent = transparent > px.length / 4 * 0.05;
+      if (!alreadyTransparent) {
+        for (let i = 0; i < px.length; i += 4) {
+          const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+          if (lum >= 215) px[i + 3] = 0;
+          else if (lum > 160) px[i + 3] = Math.round(px[i + 3] * (215 - lum) / 55);
+        }
+        ctx.putImageData(data, 0, 0);
+      }
+      // Potong margin kosong.
+      let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+      for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+        if (px[(y * c.width + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      }
+      if (x1 < 0) { reject(new Error("Tanda tangan tidak terdeteksi. Gunakan foto yang lebih jelas dengan latar putih.")); return; }
+      const pad = 6;
+      x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(c.width - 1, x1 + pad); y1 = Math.min(c.height - 1, y1 + pad);
+      const w = x1 - x0 + 1, h = y1 - y0 + 1;
+      const scale = Math.min(1, maxW / w, maxH / h);
+      const out = document.createElement("canvas");
+      out.width = Math.max(1, Math.round(w * scale)); out.height = Math.max(1, Math.round(h * scale));
+      out.getContext("2d").drawImage(c, x0, y0, w, h, 0, 0, out.width, out.height);
+      resolve(out.toDataURL("image/png"));
+    };
+    img.src = url;
+  });
+}
+
 function loadProfile() {
-  const base = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", signName: "", signTitle: "", links: DEFAULT_LINKS };
+  const base = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", signName: "", signTitle: "", signImage: "", stampImage: "", links: DEFAULT_LINKS };
   try {
     const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
     return { ...base, ...saved, links: { ...DEFAULT_LINKS, ...(saved.links || {}) } };
@@ -138,7 +186,9 @@ export function buildInvoiceHtml(d, meta = {}) {
   .pay p { margin: 8px 0 0; color: #5b6475; }
   .bottom { display: grid; grid-template-columns: 1fr 220px; gap: 32px; margin-top: 28px; align-items: end; }
   .sign { text-align: center; }
-  .sign .space { height: 72px; }
+  .sign .space { position: relative; height: 84px; display: flex; align-items: flex-end; justify-content: center; }
+  .sign .space .ttd { max-height: 76px; max-width: 200px; position: relative; z-index: 2; }
+  .sign .space .cap { position: absolute; left: 6px; top: -6px; height: 92px; max-width: 120px; opacity: 0.9; z-index: 1; }
   .sign .name { font-weight: 700; border-top: 1px solid #1c2230; padding-top: 6px; }
   .sign .role { color: #5b6475; }
   .foot { margin-top: 36px; padding-top: 12px; border-top: 1px solid #e6e9ee; color: #8a92a1; font-size: 11px; display: flex; justify-content: space-between; }
@@ -180,12 +230,12 @@ export function buildInvoiceHtml(d, meta = {}) {
       <h2>Cara pembayaran</h2>
       ${d.payLink ? `<div class="row"><span>Pembayaran online</span><a href="${esc(d.payLink)}">${esc(d.payLink)}</a></div>` : ""}
       ${bank}
-      <p>Cantumkan nomor ${esc(number)} pada berita pembayaran.</p>
+      <p>${meta.number ? `Cantumkan nomor ${esc(number)} pada berita pembayaran.` : "Nomor invoice dibuat saat invoice disimpan."}</p>
       ${d.note ? `<h2 style="margin-top:18px">Catatan</h2><div>${esc(d.note).replace(/\n/g, "<br>")}</div>` : ""}
     </div>
     <div class="sign">
       <div>Hormat kami,</div>
-      <div class="space"></div>
+      <div class="space">${seller.stampImage ? `<img class="cap" src="${seller.stampImage}" alt="">` : ""}${seller.signImage ? `<img class="ttd" src="${seller.signImage}" alt="Tanda tangan">` : ""}</div>
       <div class="name">${esc(seller.signName || seller.name || "Nexto")}</div>
       ${seller.signTitle ? `<div class="role">${esc(seller.signTitle)}</div>` : ""}
     </div>
@@ -298,7 +348,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     discountLabel: discountLabel.trim(), discountType, discountValue: Number(discountValue) || 0,
     date, due: addDays(date, Number(dueDays) || 0), start, end: addMonths(start, Number(months) || 1),
     note: note.trim(), payLink: payLink.trim(),
-    seller: { name: seller.name, address: seller.address, email: seller.email, phone: seller.phone, bank: seller.bank, account: seller.account, holder: seller.holder, signName: seller.signName, signTitle: seller.signTitle },
+    seller: { name: seller.name, address: seller.address, email: seller.email, phone: seller.phone, bank: seller.bank, account: seller.account, holder: seller.holder, signName: seller.signName, signTitle: seller.signTitle, signImage: seller.signImage, stampImage: seller.stampImage },
   };
   const shown = viewing ? viewing.data : draft;
   const html = viewing
@@ -435,7 +485,27 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                       {[["name", "Nama usaha"], ["address", "Alamat"], ["email", "Email"], ["phone", "Telepon"], ["bank", "Bank (opsional)"], ["account", "No. rekening"], ["holder", "Atas nama"], ["signName", "Nama penanda tangan"], ["signTitle", "Jabatan penanda tangan"]].map(([k, l]) => (
                         <div key={k}><label className={lbl}>{l}</label><input className={field} value={seller[k] || ""} onChange={(e) => setSeller((s) => ({ ...s, [k]: e.target.value }))} /></div>
                       ))}
-                      <p className="text-[11px] text-slate-500">Disimpan di perangkat ini. Invoice yang sudah tersimpan tetap memakai data saat dibuat.</p>
+                      {[["signImage", "Tanda tangan digital"], ["stampImage", "Stempel (opsional)"]].map(([k, l]) => (
+                        <div key={k}>
+                          <label className={lbl}>{l}</label>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-14 w-32 shrink-0 items-center justify-center rounded-md bg-white">
+                              {seller[k] ? <img src={seller[k]} alt="" className="max-h-12 max-w-[120px]" /> : <span className="text-[10.5px] text-slate-400">Belum ada</span>}
+                            </div>
+                            <label className="cursor-pointer rounded-md border border-slate-600 px-2.5 py-1.5 text-[12px] font-semibold text-slate-200 hover:bg-slate-800">
+                              {seller[k] ? "Ganti" : "Unggah"}
+                              <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={async (e) => {
+                                const file = e.target.files?.[0]; e.target.value = "";
+                                if (!file) return;
+                                try { const dataUrl = await processSignatureFile(file, k === "stampImage" ? { maxW: 360, maxH: 360 } : undefined); setSeller((s) => ({ ...s, [k]: dataUrl })); }
+                                catch (err) { alert(err.message); }
+                              }} />
+                            </label>
+                            {seller[k] && <button type="button" onClick={() => setSeller((s) => ({ ...s, [k]: "" }))} className="text-[12px] text-slate-400 hover:text-rose-300">Hapus</button>}
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-[11px] text-slate-500">Foto tanda tangan di kertas putih dengan pulpen hitam/biru - latar putihnya dihapus otomatis. Semua data ini disimpan di perangkat ini; invoice yang sudah tersimpan tetap memakai tanda tangan saat invoice dibuat.</p>
                     </div>
                   )}
                 </div>
