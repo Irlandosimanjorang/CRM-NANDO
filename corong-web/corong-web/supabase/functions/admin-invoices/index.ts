@@ -13,6 +13,8 @@
 //       { action: "get_profile" } / { action: "save_profile", profile }
 //                                                     -> data penagih (rekening, ttd, stempel)
 //       { action: "check_email", email }              -> cek akun klien saat membuat invoice
+//       { action: "send", id, to, note? }             -> kirim invoice ke email klien (Resend)
+//       { action: "set_reminders", id, enabled }      -> nyalakan/matikan pengingat jatuh tempo
 //
 // Aktivasi paket dari invoice (2 Okt 2026, permintaan Nando): Enterprise
 // biasanya custom jumlah anggota (bukan 4 seperti di Mayar), jadi admin
@@ -22,11 +24,13 @@
 // biasa. Masa aktif = tanggal akhir periode di invoice, pukul 23:59:59 WIB.
 // Satu invoice hanya bisa diaktifkan sekali (tercatat di data.activation).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { renderInvoiceEmail, invoiceSubject, sendEmail } from "./invoice_email.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const CORS = {
   "Access-Control-Allow-Origin": "https://nexto.site",
@@ -144,7 +148,7 @@ Deno.serve(async (req) => {
     if (body.action === "list") {
       const { data, error } = await admin
         .from("admin_invoices")
-        .select("id, number, company, invoice_date, due_date, total, status, paid_at, data, created_at")
+        .select("id, number, company, invoice_date, due_date, total, status, paid_at, data, created_at, public_token, email_log, reminders_enabled")
         .order("year", { ascending: false })
         .order("seq", { ascending: false })
         .limit(300);
@@ -257,6 +261,34 @@ Deno.serve(async (req) => {
       // Masa aktif paket yang berjalan (untuk menyarankan tanggal mulai invoice perpanjangan).
       const expires_at = org?.plan === "enterprise" ? org.plan_expires_at : (st?.plan ? st.plan_expires_at : null);
       return json({ found: true, role: m?.role || null, org_name: org?.name || null, org_plan: org?.plan || null, expires_at: expires_at || null });
+    }
+
+    if (body.action === "send") {
+      const to = String(body.to || "").trim().toLowerCase();
+      if (!EMAIL_RE.test(to)) return json({ error: "Alamat email tujuan tidak valid." }, 400);
+      if (!RESEND_API_KEY) return json({ error: "Layanan email belum dikonfigurasi (RESEND_API_KEY)." }, 500);
+      const { data: inv, error } = await admin.from("admin_invoices").select("id, number, company, invoice_date, due_date, total, status, data, public_token, email_log").eq("id", body.id).maybeSingle();
+      if (error) throw error;
+      if (!inv) return json({ error: "Invoice tidak ditemukan." }, 404);
+      if (inv.status === "void") return json({ error: "Invoice yang dibatalkan tidak dapat dikirim." }, 409);
+      const seller = inv.data?.seller || {};
+      await sendEmail({
+        apiKey: RESEND_API_KEY, to,
+        subject: invoiceSubject("invoice", inv, seller),
+        html: renderInvoiceEmail("invoice", inv, seller, String(body.note || "").slice(0, 1000)),
+        replyTo: seller.email || ADMIN_EMAIL, bcc: seller.email || ADMIN_EMAIL,
+      });
+      const email_log = [...(inv.email_log || []), { type: "invoice", to, at: new Date().toISOString() }];
+      const { error: upErr } = await admin.from("admin_invoices").update({ email_log }).eq("id", inv.id);
+      if (upErr) throw upErr;
+      return json({ invoice: { id: inv.id, email_log } });
+    }
+
+    if (body.action === "set_reminders") {
+      const { data, error } = await admin.from("admin_invoices").update({ reminders_enabled: !!body.enabled }).eq("id", body.id).select("id, reminders_enabled").maybeSingle();
+      if (error) throw error;
+      if (!data) return json({ error: "Invoice tidak ditemukan." }, 404);
+      return json({ invoice: data });
     }
 
     return json({ error: "Aksi tidak dikenal." }, 400);

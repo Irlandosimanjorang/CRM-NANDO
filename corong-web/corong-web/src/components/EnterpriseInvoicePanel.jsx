@@ -423,7 +423,7 @@ export function buildInvoiceHtml(d, meta = {}) {
 }
 
 // Cetak dokumen lewat iframe sementara (dialog cetak -> "Simpan sebagai PDF").
-function printHtml(html) {
+export function printHtml(html) {
   // Tes otomatis (scripts/smoke) memasang window.__nextoPrintHook supaya
   // dialog cetak - yang menahan halaman - tidak terbuka saat pengujian.
   if (typeof window.__nextoPrintHook === "function") { window.__nextoPrintHook(html); return; }
@@ -547,6 +547,85 @@ function ActivateDialog({ invoice, onClose, onDone }) {
 
 // Tandai lunas dengan tanggal uang benar-benar masuk (2 Okt 2026) - dulu
 // otomatis memakai waktu klik, tidak cocok untuk pembukuan.
+// Kirim invoice ke email klien (2 Okt 2026). Email berisi ringkasan tagihan,
+// rekening tujuan, dan tombol ke halaman invoice (nexto.site/invoice?t=...).
+// Pengingat jatuh tempo otomatis diatur di sini juga.
+const EMAIL_LABEL = { invoice: "Invoice dikirim", due_minus3: "Pengingat 3 hari sebelum jatuh tempo", due_today: "Pengingat hari jatuh tempo", overdue_3: "Pengingat 3 hari lewat jatuh tempo", overdue_7: "Pengingat 7 hari lewat jatuh tempo" };
+const fmtStamp = (iso) => new Date(iso).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
+
+function SendDialog({ invoice, onClose, onChange }) {
+  const log = invoice.email_log || [];
+  const lastTo = [...log].reverse().find((e) => e.type === "invoice")?.to;
+  const [to, setTo] = useState(lastTo || invoice.data?.email || "");
+  const [note, setNote] = useState("");
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState("");
+  const [copied, setCopied] = useState(false);
+  const link = `https://nexto.site/invoice?t=${invoice.public_token}`;
+  const validTo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim());
+
+  const send = async () => {
+    setSending(true); setErr("");
+    try {
+      const r = await db.adminInvoices("send", { id: invoice.id, to: to.trim(), note: note.trim() });
+      onChange({ id: invoice.id, email_log: r.invoice.email_log });
+      onClose();
+    } catch (e) { setErr(e.message); setSending(false); }
+  };
+  const toggleReminders = async (enabled) => {
+    try { const r = await db.adminInvoices("set_reminders", { id: invoice.id, enabled }); onChange({ id: invoice.id, reminders_enabled: r.invoice.reminders_enabled }); }
+    catch (e) { setErr(e.message); }
+  };
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch (_) { window.prompt("Salin link invoice:", link); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !sending) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="send-title" className="w-full max-w-[480px] rounded-xl border border-slate-700 bg-[#0f1420] shadow-2xl">
+        <div className="border-b border-slate-800 px-5 py-4">
+          <h3 id="send-title" className="text-[15px] font-semibold text-slate-100">Kirim invoice</h3>
+          <p className="mt-0.5 text-[12px] text-slate-400"><span className="font-mono">{invoice.number}</span>, {invoice.company}, {rp(invoice.total)}</p>
+        </div>
+        <div className="space-y-4 px-5 py-4">
+          <div>
+            <label className={lbl} htmlFor="send-to">Kirim ke email</label>
+            <input id="send-to" type="email" className={field} value={to} onChange={(e) => setTo(e.target.value)} placeholder="keuangan@perusahaan.co.id" disabled={sending} />
+            <p className="mt-1 text-[11.5px] text-slate-500">Boleh berbeda dari email akun, misalnya email bagian keuangan klien. Balasan klien masuk ke email penagih, dan Anda menerima salinannya.</p>
+          </div>
+          <div>
+            <label className={lbl} htmlFor="send-note">Pesan tambahan (opsional)</label>
+            <textarea id="send-note" rows={2} className={field} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Misal: Terima kasih atas kerja samanya." disabled={sending} />
+          </div>
+          {invoice.status === "unpaid" && (
+            <label className="flex cursor-pointer items-start gap-2.5 text-[12.5px] text-slate-300">
+              <input type="checkbox" className="mt-0.5" checked={invoice.reminders_enabled !== false} onChange={(e) => toggleReminders(e.target.checked)} />
+              <span>Kirim pengingat otomatis: 3 hari sebelum jatuh tempo, pada hari jatuh tempo, lalu 3 dan 7 hari setelah lewat. Berhenti otomatis saat invoice ditandai Lunas.</span>
+            </label>
+          )}
+          <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-900/70 px-3 py-2">
+            <span className="min-w-0 truncate text-[12px] text-slate-400">{link}</span>
+            <button type="button" onClick={copy} className="shrink-0 text-[12px] font-semibold text-violet-300 hover:text-violet-200">{copied ? "Tersalin" : "Salin link"}</button>
+          </div>
+          {log.length > 0 && (
+            <div>
+              <div className={lbl}>Riwayat email</div>
+              <ul className="space-y-1 text-[12px] text-slate-400">
+                {[...log].reverse().map((e, i) => <li key={i}>{EMAIL_LABEL[e.type] || e.type} ke {e.to}, {fmtStamp(e.at)}</li>)}
+              </ul>
+            </div>
+          )}
+          {err && <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[12.5px] text-rose-200">{err}</p>}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-3">
+          <button type="button" onClick={onClose} disabled={sending} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50">Tutup</button>
+          <button type="button" onClick={send} disabled={sending || !validTo || invoice.status === "void"} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:opacity-40">{sending ? "Mengirim…" : log.some((e) => e.type === "invoice") ? "Kirim ulang" : "Kirim invoice"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PaidDateDialog({ invoice, onClose, onSave }) {
   const todayWib = isoDay(new Date());
   const [d, setD] = useState(invoice.paid_at ? isoDay(new Date(invoice.paid_at)) : todayWib);
@@ -615,6 +694,11 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const [busy, setBusy] = useState(false);
   const [activating, setActivating] = useState(null); // invoice yang sedang diaktifkan paketnya
   const [paying, setPaying] = useState(null); // invoice yang sedang ditandai lunas (dialog tanggal)
+  const [sendingInv, setSendingInv] = useState(null); // invoice yang sedang dikirim lewat email
+  const patchInvoice = (patch) => {
+    setHistory((h) => (h || []).map((x) => (x.id === patch.id ? { ...x, ...patch } : x)));
+    setSendingInv((v) => (v && v.id === patch.id ? { ...v, ...patch } : v));
+  };
   const [profileSync, setProfileSync] = useState("loading"); // loading | saved | saving | error
   const profileReady = useRef(false);
   const skipAutofill = useRef(false);
@@ -983,7 +1067,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
           <p className="px-4 py-4 text-[12px] text-slate-500">Belum ada invoice tersimpan. Invoice pertama akan bernomor 0001.</p>
         ) : (
           <div className="max-h-[360px] overflow-auto overscroll-contain">
-            <table className="w-full min-w-[860px] text-[12.5px]">
+            <table className="w-full min-w-[920px] text-[12.5px]">
               <thead className="sticky top-0 bg-[#0b0f17] text-left text-[11px] text-slate-400">
                 <tr><th className="px-4 py-2 font-semibold">Nomor</th><th className="px-2 py-2 font-semibold">Klien</th><th className="px-2 py-2 font-semibold">Tanggal</th><th className="px-2 py-2 font-semibold">Jatuh tempo</th><th className="px-2 py-2 text-right font-semibold">Total</th><th className="px-2 py-2 font-semibold">Status</th><th className="px-2 py-2 font-semibold">Paket</th><th className="px-4 py-2" /></tr>
               </thead>
@@ -993,7 +1077,10 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                   return (
                     <tr key={x.id} className={viewing?.id === x.id ? "bg-violet-500/10" : ""}>
                       <td className="px-4 py-2 font-mono text-slate-200">{x.number}</td>
-                      <td className="max-w-[200px] truncate px-2 py-2 text-slate-200">{x.company}</td>
+                      <td className="max-w-[200px] px-2 py-2 text-slate-200">
+                        <div className="truncate">{x.company}</div>
+                        {(() => { const sent = [...(x.email_log || [])].reverse().find((e) => e.type === "invoice"); return sent ? <div className="truncate text-[11px] text-slate-500" title={sent.to}>Terkirim {fmtShort(isoDay(new Date(sent.at)))}</div> : null; })()}
+                      </td>
                       <td className="px-2 py-2 text-slate-400">{fmtShort(x.invoice_date)}</td>
                       <td className={`px-2 py-2 ${late ? "font-semibold text-rose-300" : "text-slate-400"}`}>{fmtShort(x.due_date)}{late ? " (lewat)" : ""}</td>
                       <td className="px-2 py-2 text-right font-mono text-slate-100">{rp(x.total)}</td>
@@ -1015,6 +1102,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
+                        {x.status !== "void" && x.public_token && <button type="button" onClick={() => setSendingInv(x)} className="mr-3 font-semibold text-violet-300 hover:text-violet-200">Kirim</button>}
                         <button type="button" onClick={() => duplicate(x)} className="mr-3 font-semibold text-slate-400 hover:text-slate-200" title="Salin isi invoice ini ke form baru">Duplikat</button>
                         {viewing?.id === x.id
                           ? <button type="button" onClick={newInvoice} className="font-semibold text-slate-300 hover:text-white">Tutup</button>
@@ -1028,6 +1116,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
           </div>
         )}
       </div>
+      {sendingInv && <SendDialog invoice={sendingInv} onClose={() => setSendingInv(null)} onChange={patchInvoice} />}
       {paying && <PaidDateDialog invoice={paying} onClose={() => setPaying(null)} onSave={(inv, d) => setStatus(inv, "paid", d)} />}
       {activating && <ActivateDialog invoice={activating} onClose={() => setActivating(null)} onDone={onActivated} />}
     </div>

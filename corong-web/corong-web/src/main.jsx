@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import App from "./App.jsx";
 import GrokBotMcp from "./pages/GrokBotMcp.jsx";
 import PublicDemo from "./pages/PublicDemo.jsx";
+import InvoicePublic from "./pages/InvoicePublic.jsx";
 import { installClientErrorLog } from "./lib/clientErrorLog";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./index.css";
@@ -17,7 +18,8 @@ installClientErrorLog();
 // App.jsx sama sekali. /demo (18 Sep 2026) - demo interaktif publik buat
 // dilampirin ke proposal sales, gak perlu login.
 const path = window.location.pathname.replace(/\/+$/, "") || "/";
-const RootComponent = path === "/grok-bot" ? GrokBotMcp : path === "/demo" ? PublicDemo : App;
+// /invoice (2 Okt 2026) - halaman invoice untuk klien dari link email.
+const RootComponent = path === "/grok-bot" ? GrokBotMcp : path === "/demo" ? PublicDemo : path === "/invoice" ? InvoicePublic : App;
 
 // Vercel Analytics (17 Sep 2026, permintaan Nando) - biar bisa liat jumlah
 // pengunjung nexto.site tiap hari dari dashboard Vercel yang udah ada.
@@ -28,6 +30,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <ErrorBoundary name="app" fullScreen>
       <RootComponent />
     </ErrorBoundary>
-    <Analytics />
+    {/* Halaman invoice klien tidak dilacak (URL-nya memuat token rahasia). */}
+    {path !== "/invoice" && <Analytics />}
   </React.StrictMode>
 );
