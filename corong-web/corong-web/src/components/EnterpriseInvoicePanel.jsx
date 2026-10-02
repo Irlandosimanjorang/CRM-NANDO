@@ -52,87 +52,86 @@ function loadProfile() {
 
 export function buildInvoiceHtml(inv, seller) {
   const total = inv.seats * inv.pricePerSeat * inv.months;
-  const sellerLines = [seller.address, [seller.email, seller.phone].filter(Boolean).join(" · "), "nexto.site"].filter(Boolean);
+  const sellerLines = [seller.address, seller.email, seller.phone, "nexto.site"].filter(Boolean);
   const bank = seller.bank && seller.account
-    ? `<p><strong>Transfer bank:</strong> ${esc(seller.bank)} ${esc(seller.account)}${seller.holder ? ` a.n. ${esc(seller.holder)}` : ""}</p>`
+    ? `<div class="row"><span>Transfer bank</span><span>${esc(seller.bank)} ${esc(seller.account)}${seller.holder ? `, a.n. ${esc(seller.holder)}` : ""}</span></div>`
     : "";
   const logo = `${window.location.origin}/nexto-logo.png`;
+  // Gaya invoice akuntansi (2 Okt 2026): label huruf biasa, garis tipis,
+  // total ditandai garis tebal (bukan kotak gelap), oranye Nexto hanya
+  // untuk angka total. Logo putih tetap di atas blok gelap kecil.
   return `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${esc(inv.number)} - ${esc(inv.company)}</title>
 <style>
-  @page { size: A4; margin: 18mm; }
+  @page { size: A4; margin: 16mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; color: #0f172a; font-size: 12.5px; line-height: 1.55; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .doc { max-width: 760px; margin: 0 auto; padding: 32px; }
-  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 20px; border-bottom: 2px solid #0f172a; }
-  /* Logo Nexto berwarna putih - ditaruh di atas latar gelap supaya terbaca di kertas putih. */
-  .brand { display: inline-flex; align-items: center; background: #0f172a; border-radius: 8px; padding: 9px 14px; margin-bottom: 10px; }
-  .brand img { height: 22px; width: auto; display: block; }
-  .seller { font-weight: 700; font-size: 14px; }
-  .muted { color: #64748b; }
-  h1 { margin: 0; font-size: 26px; letter-spacing: 0.08em; text-align: right; }
-  .meta { margin-top: 6px; text-align: right; }
-  .meta div { white-space: nowrap; }
-  .parties { display: flex; justify-content: space-between; gap: 24px; margin: 22px 0; }
-  .label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; color: #64748b; margin-bottom: 4px; }
-  .strong { font-weight: 700; font-size: 14px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th { text-align: left; font-size: 10.5px; letter-spacing: 0.06em; color: #64748b; border-bottom: 1px solid #cbd5e1; padding: 8px 6px; }
-  td { padding: 12px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-  .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .total { display: flex; justify-content: flex-end; margin-top: 14px; }
-  .total div { min-width: 260px; display: flex; justify-content: space-between; padding: 12px 14px; background: #0f172a; color: #fff; border-radius: 10px; font-size: 15px; font-weight: 800; }
-  .pay { margin-top: 26px; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; }
-  .pay p { margin: 4px 0; }
-  .pay a { color: #c2410c; word-break: break-all; }
-  .note { margin-top: 18px; }
-  .foot { margin-top: 36px; text-align: center; color: #94a3b8; font-size: 11px; }
+  body { margin: 0; font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; color: #1c2230; font-size: 12.5px; line-height: 1.6; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .doc { max-width: 760px; margin: 0 auto; padding: 36px 36px 28px; }
+  .head { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start; }
+  .logo { display: inline-block; background: #1c2230; padding: 8px 12px; border-radius: 4px; }
+  .logo img { height: 20px; width: auto; display: block; }
+  .from { margin-top: 12px; color: #5b6475; }
+  .from b { display: block; color: #1c2230; font-size: 13.5px; }
+  .title { text-align: right; }
+  .title h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+  .title .no { margin-top: 2px; color: #5b6475; font-variant-numeric: tabular-nums; }
+  .facts { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 20px; margin: 34px 0 26px; padding: 16px 0; border-top: 1px solid #d9dde4; border-bottom: 1px solid #d9dde4; }
+  .k { color: #5b6475; font-size: 11.5px; font-weight: 600; margin-bottom: 3px; }
+  .v { font-weight: 600; }
+  .v small { display: block; font-weight: 400; color: #5b6475; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: #5b6475; font-size: 11.5px; font-weight: 600; padding: 0 0 8px; border-bottom: 1px solid #1c2230; }
+  td { padding: 14px 0; border-bottom: 1px solid #e6e9ee; vertical-align: top; }
+  td.d { padding-right: 16px; }
+  td.d small { display: block; color: #5b6475; font-size: 12px; }
+  .r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; padding-left: 16px; }
+  .sum { margin: 18px 0 0 auto; width: 300px; }
+  .sum .row { display: flex; justify-content: space-between; padding: 5px 0; color: #5b6475; font-variant-numeric: tabular-nums; }
+  .sum .grand { margin-top: 6px; padding-top: 10px; border-top: 2px solid #1c2230; color: #1c2230; font-size: 16px; font-weight: 700; }
+  .sum .grand span:last-child { color: #c2410c; }
+  .pay { margin-top: 36px; }
+  .pay h2 { margin: 0 0 8px; font-size: 13px; }
+  .pay .row { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 4px 0; }
+  .pay .row span:first-child { color: #5b6475; }
+  .pay a { color: #1c2230; word-break: break-all; }
+  .pay p { margin: 8px 0 0; color: #5b6475; }
+  .note { margin-top: 24px; }
+  .note h2 { margin: 0 0 4px; font-size: 13px; }
+  .foot { margin-top: 44px; padding-top: 12px; border-top: 1px solid #e6e9ee; color: #8a92a1; font-size: 11px; display: flex; justify-content: space-between; }
   @media print { .doc { padding: 0; } }
 </style></head><body><div class="doc">
-  <div class="top">
+  <div class="head">
     <div>
-      <div class="brand"><img src="${logo}" alt="Nexto"></div>
-      <div class="seller">${esc(seller.name || "Nexto")}</div>
-      ${sellerLines.map((l) => `<div class="muted">${esc(l)}</div>`).join("")}
+      <div class="logo"><img src="${logo}" alt="Nexto"></div>
+      <div class="from"><b>${esc(seller.name || "Nexto")}</b>${sellerLines.map((l) => `${esc(l)}<br>`).join("")}</div>
     </div>
-    <div>
-      <h1>INVOICE</h1>
-      <div class="meta">
-        <div><span class="muted">Nomor</span> <strong>${esc(inv.number)}</strong></div>
-        <div><span class="muted">Tanggal</span> ${fmtDate(inv.date)}</div>
-        <div><span class="muted">Jatuh tempo</span> <strong>${fmtDate(inv.due)}</strong></div>
-      </div>
-    </div>
+    <div class="title"><h1>Invoice</h1><div class="no">${esc(inv.number)}</div></div>
   </div>
-  <div class="parties">
-    <div>
-      <div class="label">DITAGIHKAN KEPADA</div>
-      <div class="strong">${esc(inv.company)}</div>
-      ${inv.contact ? `<div>${esc(inv.contact)}</div>` : ""}
-      ${inv.email ? `<div class="muted">${esc(inv.email)}</div>` : ""}
-    </div>
-    <div style="text-align:right">
-      <div class="label">PERIODE LANGGANAN</div>
-      <div>${fmtDate(inv.start)} – ${fmtDate(inv.end)}</div>
-    </div>
+  <div class="facts">
+    <div><div class="k">Ditagihkan kepada</div><div class="v">${esc(inv.company)}${inv.contact ? `<small>${esc(inv.contact)}</small>` : ""}${inv.email ? `<small>${esc(inv.email)}</small>` : ""}</div></div>
+    <div><div class="k">Tanggal invoice</div><div class="v">${fmtDate(inv.date)}</div><div class="k" style="margin-top:10px">Jatuh tempo</div><div class="v">${fmtDate(inv.due)}</div></div>
+    <div><div class="k">Periode langganan</div><div class="v">${fmtDate(inv.start)}<small>sampai ${fmtDate(inv.end)}</small></div></div>
   </div>
   <table>
-    <thead><tr><th>DESKRIPSI</th><th class="num">JUMLAH</th><th class="num">HARGA</th><th class="num">SUBTOTAL</th></tr></thead>
+    <thead><tr><th>Deskripsi</th><th class="r">Jumlah</th><th class="r">Harga satuan</th><th class="r">Subtotal</th></tr></thead>
     <tbody><tr>
-      <td><strong>${esc(inv.item)}</strong><div class="muted">${inv.seats} ${esc(inv.unit)} · ${inv.months} bulan${inv.plan !== "custom" ? " · AI Sales CRM" : ""}</div></td>
-      <td class="num">${inv.seats} × ${inv.months} bln</td>
-      <td class="num">${rp(inv.pricePerSeat)}<div class="muted">per ${esc(inv.unit)}/bulan</div></td>
-      <td class="num">${rp(total)}</td>
+      <td class="d"><b>${esc(inv.item)}</b><small>${inv.seats} ${esc(inv.unit)}, ${inv.months} bulan</small></td>
+      <td class="r">${inv.seats * inv.months}</td>
+      <td class="r">${rp(inv.pricePerSeat)}<small style="display:block;color:#5b6475;font-size:12px">per ${esc(inv.unit)}/bulan</small></td>
+      <td class="r">${rp(total)}</td>
     </tr></tbody>
   </table>
-  <div class="total"><div><span>Total</span><span>${rp(total)}</span></div></div>
-  <div class="pay">
-    <div class="label">CARA PEMBAYARAN</div>
-    ${inv.payLink ? `<p><strong>Pembayaran online:</strong> <a href="${esc(inv.payLink)}">${esc(inv.payLink)}</a></p>` : ""}
-    ${bank}
-    <p class="muted">Cantumkan nomor invoice ${esc(inv.number)} pada berita pembayaran.</p>
+  <div class="sum">
+    <div class="row"><span>Subtotal</span><span>${rp(total)}</span></div>
+    <div class="row grand"><span>Total tagihan</span><span>${rp(total)}</span></div>
   </div>
-  ${inv.note ? `<div class="note"><div class="label">CATATAN</div><div>${esc(inv.note).replace(/\n/g, "<br>")}</div></div>` : ""}
-  <div class="foot">Terima kasih telah menggunakan Nexto.</div>
+  <div class="pay">
+    <h2>Cara pembayaran</h2>
+    ${inv.payLink ? `<div class="row"><span>Pembayaran online</span><a href="${esc(inv.payLink)}">${esc(inv.payLink)}</a></div>` : ""}
+    ${bank}
+    <p>Cantumkan nomor ${esc(inv.number)} pada berita pembayaran.</p>
+  </div>
+  ${inv.note ? `<div class="note"><h2>Catatan</h2><div>${esc(inv.note).replace(/\n/g, "<br>")}</div></div>` : ""}
+  <div class="foot"><span>Terima kasih telah menggunakan Nexto.</span><span>${esc(inv.number)}</span></div>
 </div></body></html>`;
 }
 
@@ -196,6 +195,8 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(seller)); } catch (_) {}
   }, [seller]);
 
+  // Nomor dikunci saat form dibuka / tanggal diganti, bukan dihitung ulang tiap ketikan.
+  const invNumber = useMemo(() => invoiceNumber(date), [date]);
   const payLink = (seller.links || DEFAULT_LINKS)[plan] || "";
   const setPayLink = (v) => setSeller((s) => ({ ...s, links: { ...(s.links || DEFAULT_LINKS), [plan]: v } }));
 
@@ -204,7 +205,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item,
     unit: PLANS[plan].unit,
     payLink: payLink.trim(),
-    number: invoiceNumber(date),
+    number: invNumber,
     company: company.trim() || "Nama perusahaan",
     contact: contact.trim(),
     email: email.trim(),
@@ -219,6 +220,18 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   };
   const total = inv.seats * inv.pricePerSeat * inv.months;
   const html = buildInvoiceHtml(inv, seller);
+
+  // Pratinjau dimuat SEKALI (srcDoc awal), perubahan berikutnya hanya
+  // mengganti isi <body> di tempat - dulu srcDoc berganti tiap ketikan/
+  // pilihan sehingga lembar invoice berkedip & scroll-nya balik ke atas.
+  const [initialHtml] = useState(html);
+  useEffect(() => {
+    const doc = frameRef.current?.contentDocument;
+    if (!doc?.body) return;
+    const next = new DOMParser().parseFromString(html, "text/html");
+    if (doc.body.innerHTML !== next.body.innerHTML) doc.body.innerHTML = next.body.innerHTML;
+    if (doc.title !== next.title) doc.title = next.title;
+  }, [html]);
 
   const printInvoice = () => {
     if (!company.trim()) { alert("Isi nama perusahaan terlebih dahulu."); return; }
@@ -307,7 +320,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
       </div>
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-slate-700 bg-white">
-        <iframe ref={frameRef} title="Pratinjau invoice" srcDoc={html} className="h-[720px] w-full bg-white" />
+        <iframe ref={frameRef} title="Pratinjau invoice" srcDoc={initialHtml} onLoad={(e) => { const doc = e.currentTarget.contentDocument; const next = new DOMParser().parseFromString(html, "text/html"); if (doc?.body) doc.body.innerHTML = next.body.innerHTML; }} className="h-[720px] w-full bg-white" />
       </div>
     </div>
   );
