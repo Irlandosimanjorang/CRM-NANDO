@@ -266,6 +266,94 @@ function printHtml(html) {
 const field = "w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none disabled:opacity-60";
 const lbl = "mb-1 block text-[11px] font-semibold text-slate-400";
 
+const CURRENT_PLAN_LABEL = { enterprise: "Enterprise", standard: "Standard", premium: "Professional" };
+const fmtWib = (iso) => (iso ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }) : "-");
+
+// Aktifkan paket dari invoice Lunas (2 Okt 2026). Dialog selalu meminta
+// pratinjau ke server dulu (akun, organisasi, kondisi sekarang vs sesudah),
+// tombol Aktifkan baru menyala kalau tidak ada masalah.
+function ActivateDialog({ invoice, onClose, onDone }) {
+  const [email, setEmail] = useState(invoice.data?.email || "");
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const check = async (addr) => {
+    setLoading(true); setErr("");
+    try { const r = await db.adminInvoices("activation_preview", { id: invoice.id, email: addr.trim() }); setPreview(r.preview); }
+    catch (e) { setPreview(null); setErr(e.message); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { check(email); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape" && !saving) onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [saving, onClose]);
+
+  const activate = async () => {
+    setSaving(true); setErr("");
+    try { const r = await db.adminInvoices("activate", { id: invoice.id, email: preview.email }); onDone(r.invoice); }
+    catch (e) { setErr(e.message); setSaving(false); }
+  };
+
+  const pv = preview;
+  const ent = pv?.plan === "enterprise";
+  const curPlan = ent ? pv?.org?.plan : pv?.current?.plan;
+  const curExp = ent ? pv?.org?.plan_expires_at : pv?.current?.plan_expires_at;
+  const rows = pv?.user ? [
+    ["Paket", CURRENT_PLAN_LABEL[curPlan] || "Gratis", pv.planLabel],
+    ...(ent && pv.org ? [["Kuota anggota", `${curPlan === "enterprise" ? pv.org.member_limit : 1} (terisi ${pv.org.members})`, `${pv.seats} anggota`]] : []),
+    ["Aktif sampai", curPlan ? fmtWib(curExp) : "-", `${fmtWib(pv.expires_at)}, 23.59 WIB`],
+  ] : [];
+  const canActivate = pv && !loading && !saving && pv.problems.length === 0 && email.trim().toLowerCase() === pv.email;
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="act-title" className="w-full max-w-[480px] rounded-xl border border-slate-700 bg-[#0f1420] shadow-2xl">
+        <div className="border-b border-slate-800 px-5 py-4">
+          <h3 id="act-title" className="text-[15px] font-semibold text-slate-100">Aktifkan paket</h3>
+          <p className="mt-0.5 text-[12px] text-slate-400"><span className="font-mono">{invoice.number}</span>, {invoice.company}</p>
+        </div>
+        <div className="space-y-4 px-5 py-4">
+          <div>
+            <label className={lbl} htmlFor="act-email">Email akun owner klien</label>
+            <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); check(email); }}>
+              <input id="act-email" type="email" className={field} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="owner@perusahaan.co.id" disabled={saving} />
+              <button type="submit" disabled={loading || saving} className="shrink-0 rounded-lg border border-slate-600 px-3 text-[12.5px] font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50">Periksa</button>
+            </form>
+            {pv?.org && <p className="mt-1.5 text-[12px] text-slate-400">Organisasi: <span className="text-slate-200">{pv.org.name || "Tanpa nama"}</span></p>}
+          </div>
+
+          {loading ? (
+            <p className="text-[12.5px] text-slate-500">Memeriksa akun…</p>
+          ) : pv && rows.length > 0 ? (
+            <table className="w-full text-[12.5px]">
+              <thead><tr className="text-left text-[11px] text-slate-500"><th className="pb-1.5 font-semibold" /><th className="pb-1.5 font-semibold">Sekarang</th><th className="pb-1.5 font-semibold">Sesudah</th></tr></thead>
+              <tbody className="divide-y divide-slate-800">
+                {rows.map(([k, a, b]) => (
+                  <tr key={k}><td className="py-2 pr-3 text-slate-400">{k}</td><td className="py-2 pr-3 text-slate-400">{a}</td><td className="py-2 font-semibold text-slate-100">{b}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          ) : null}
+
+          {!loading && pv?.problems.map((m) => <p key={m} className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[12.5px] text-rose-200">{m}</p>)}
+          {!loading && pv?.problems.length === 0 && pv.warnings.map((m) => <p key={m} className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12.5px] text-amber-100">{m}</p>)}
+          {err && <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[12.5px] text-rose-200">{err}</p>}
+          {!loading && pv && email.trim().toLowerCase() !== pv.email && <p className="text-[12px] text-slate-400">Email diubah. Klik Periksa untuk memuat ulang data akun.</p>}
+          {canActivate && <p className="text-[12px] text-slate-400">{ent ? "Anggota tim bergabung lewat kode undangan dari akun owner sampai kuota terpenuhi. " : ""}Pengingat H-3 dan penurunan paket otomatis tetap berjalan sesuai tanggal di atas.</p>}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-3">
+          <button type="button" onClick={onClose} disabled={saving} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50">Batal</button>
+          <button type="button" onClick={activate} disabled={!canActivate} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-40">{saving ? "Mengaktifkan…" : "Aktifkan paket"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EnterpriseInvoicePanel({ users = [] }) {
   // Klien berbayar dari direktori user, per organisasi (paket, owner, jumlah anggota).
   const orgs = useMemo(() => {
@@ -305,6 +393,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const [history, setHistory] = useState(null);
   const [historyErr, setHistoryErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activating, setActivating] = useState(null); // invoice yang sedang diaktifkan paketnya
   const frameRef = useRef(null);
 
   const loadHistory = () => {
@@ -394,6 +483,12 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     } catch (e) {
       alert("Gagal mengubah status: " + e.message);
     }
+  };
+
+  const onActivated = (patch) => {
+    setHistory((h) => (h || []).map((x) => (x.id === patch.id ? { ...x, data: patch.data } : x)));
+    if (viewing?.id === patch.id) setViewing((v) => ({ ...v, data: patch.data }));
+    setActivating(null);
   };
 
   const newInvoice = () => { setViewing(null); setCompany(""); setContact(""); setEmail(""); setAddress(""); setPo(""); setNote(""); setDiscountValue(""); setDiscountLabel(""); setDate(today); setStart(today); };
@@ -551,9 +646,9 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
           <p className="px-4 py-4 text-[12px] text-slate-500">Belum ada invoice tersimpan. Invoice pertama akan bernomor 0001.</p>
         ) : (
           <div className="max-h-[360px] overflow-auto overscroll-contain">
-            <table className="w-full min-w-[720px] text-[12.5px]">
+            <table className="w-full min-w-[860px] text-[12.5px]">
               <thead className="sticky top-0 bg-[#0b0f17] text-left text-[11px] text-slate-400">
-                <tr><th className="px-4 py-2 font-semibold">Nomor</th><th className="px-2 py-2 font-semibold">Klien</th><th className="px-2 py-2 font-semibold">Tanggal</th><th className="px-2 py-2 font-semibold">Jatuh tempo</th><th className="px-2 py-2 text-right font-semibold">Total</th><th className="px-2 py-2 font-semibold">Status</th><th className="px-4 py-2" /></tr>
+                <tr><th className="px-4 py-2 font-semibold">Nomor</th><th className="px-2 py-2 font-semibold">Klien</th><th className="px-2 py-2 font-semibold">Tanggal</th><th className="px-2 py-2 font-semibold">Jatuh tempo</th><th className="px-2 py-2 text-right font-semibold">Total</th><th className="px-2 py-2 font-semibold">Status</th><th className="px-2 py-2 font-semibold">Paket</th><th className="px-4 py-2" /></tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {history.map((x) => {
@@ -566,9 +661,18 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                       <td className={`px-2 py-2 ${late ? "font-semibold text-rose-300" : "text-slate-400"}`}>{fmtShort(x.due_date)}{late ? " (lewat)" : ""}</td>
                       <td className="px-2 py-2 text-right font-mono text-slate-100">{rp(x.total)}</td>
                       <td className="px-2 py-2">
-                        <select value={x.status} onChange={(e) => setStatus(x, e.target.value)} className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px]" style={{ color: x.status === "paid" ? "#86efac" : x.status === "void" ? "#94a3b8" : "#fcd34d" }} aria-label={`Status ${x.number}`}>
+                        <select value={x.status} disabled={!!x.data?.activation} title={x.data?.activation ? "Paket sudah diaktifkan dari invoice ini" : undefined} onChange={(e) => setStatus(x, e.target.value)} className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px]" style={{ color: x.status === "paid" ? "#86efac" : x.status === "void" ? "#94a3b8" : "#fcd34d" }} aria-label={`Status ${x.number}`}>
                           <option value="unpaid">Belum dibayar</option><option value="paid">Lunas</option><option value="void">Dibatalkan</option>
                         </select>
+                      </td>
+                      <td className="px-2 py-2">
+                        {x.data?.activation ? (
+                          <span className="text-[12px] text-emerald-300" title={`Diaktifkan ${fmtWib(x.data.activation.at)} untuk ${x.data.activation.email}`}>Aktif s.d. {fmtShort(isoDay(new Date(x.data.activation.expires_at)))}</span>
+                        ) : x.status === "paid" && PLANS[x.data?.plan] && x.data.plan !== "custom" ? (
+                          <button type="button" onClick={() => setActivating(x)} className="rounded-md border border-violet-400/50 px-2 py-1 text-[12px] font-semibold text-violet-200 hover:bg-violet-500/15">Aktifkan paket</button>
+                        ) : (
+                          <span className="text-[12px] text-slate-500">{x.status === "void" ? "-" : x.status === "unpaid" ? "Menunggu pembayaran" : "Aktifkan manual"}</span>
+                        )}
                       </td>
                       <td className="px-4 py-2 text-right"><button type="button" onClick={() => setViewing(x)} className="font-semibold text-violet-300 hover:text-violet-200">Lihat</button></td>
                     </tr>
@@ -579,6 +683,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
           </div>
         )}
       </div>
+      {activating && <ActivateDialog invoice={activating} onClose={() => setActivating(null)} onDone={onActivated} />}
     </div>
   );
 }

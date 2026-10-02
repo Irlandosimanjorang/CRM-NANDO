@@ -7,6 +7,16 @@
 // Body: { action: "list" }
 //       { action: "create", invoice: { company, invoice_date, due_date, total, data } }
 //       { action: "set_status", id, status: "unpaid" | "paid" | "void" }
+//       { action: "activation_preview", id, email? }  -> kondisi akun sekarang vs sesudah
+//       { action: "activate", id, email? }            -> terapkan paket dari invoice Lunas
+//
+// Aktivasi paket dari invoice (2 Okt 2026, permintaan Nando): Enterprise
+// biasanya custom jumlah anggota (bukan 4 seperti di Mayar), jadi admin
+// mengaktifkan langsung dari invoice yang sudah Lunas. Kolom yang diubah SAMA
+// dengan mayar-webhook (plan, member_limit, plan_expires_at, reset reminder),
+// jadi reminder H-3 & auto-downgrade check-plan-expiry tetap berjalan seperti
+// biasa. Masa aktif = tanggal akhir periode di invoice, pukul 23:59:59 WIB.
+// Satu invoice hanya bisa diaktifkan sekali (tercatat di data.activation).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -20,6 +30,86 @@ const CORS = {
 };
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PLAN_LABEL = { standard: "Standard", professional: "Professional", enterprise: "Enterprise" };
+const fmtWib = (iso) => new Date(iso).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
+
+async function findUserByEmail(admin, email) {
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw error;
+    const users = data?.users || [];
+    const hit = users.find((u) => (u.email || "").toLowerCase() === email);
+    if (hit) return hit;
+    if (users.length < 200) return null;
+  }
+  return null;
+}
+
+// Kondisi sekarang & rencana perubahan untuk satu invoice - tidak mengubah
+// apa pun. `problems` = alasan aktivasi ditolak; `warnings` = hal yang perlu
+// diperhatikan admin sebelum konfirmasi.
+async function planActivation(admin, id, emailOverride) {
+  const { data: inv, error } = await admin.from("admin_invoices").select("id, number, status, data").eq("id", id).maybeSingle();
+  if (error) throw error;
+  if (!inv) return null;
+  const d = inv.data || {};
+  const problems = [];
+  const warnings = [];
+  const plan = d.plan;
+  const seats = Math.max(1, Math.floor(Number(d.seats) || 1));
+  const email = String(emailOverride || d.email || "").trim().toLowerCase();
+  const expiresAt = DATE_RE.test(d.end || "") ? new Date(`${d.end}T23:59:59+07:00`).toISOString() : null;
+
+  const out = {
+    invoice: { id: inv.id, number: inv.number, status: inv.status, data: d },
+    plan, planLabel: PLAN_LABEL[plan] || "Custom", seats, email, expires_at: expiresAt,
+    user: null, org: null, current: null, problems, warnings,
+  };
+
+  if (d.activation) problems.push(`Invoice ini sudah diaktifkan pada ${fmtWib(d.activation.at)}.`);
+  if (inv.status !== "paid") problems.push("Paket hanya dapat diaktifkan dari invoice berstatus Lunas.");
+  if (!PLAN_LABEL[plan]) problems.push("Invoice paket Custom tidak terhubung ke paket Nexto, sehingga tidak dapat diaktifkan otomatis.");
+  if (!expiresAt) problems.push("Periode langganan di invoice tidak valid.");
+  else if (new Date(expiresAt).getTime() <= Date.now()) problems.push("Periode langganan di invoice sudah berakhir.");
+  if (problems.length) return out;
+  if (!email) { problems.push("Invoice tidak memiliki email klien. Isi email akun owner klien."); return out; }
+  if (!EMAIL_RE.test(email)) { problems.push("Format email tidak valid."); return out; }
+
+  const user = await findUserByEmail(admin, email);
+  if (!user) { problems.push(`Belum ada akun Nexto dengan email ${email}. Minta klien mendaftar dengan email ini terlebih dahulu.`); return out; }
+  out.user = { id: user.id, email: user.email };
+
+  if (plan === "enterprise") {
+    const { data: org, error: orgErr } = await admin.from("organizations").select("id, name, plan, member_limit, plan_expires_at")
+      .eq("owner_user_id", user.id).order("created_at", { ascending: true }).limit(1).maybeSingle();
+    if (orgErr) throw orgErr;
+    if (!org) {
+      const { data: m } = await admin.from("organization_members").select("org_id").eq("user_id", user.id).limit(1).maybeSingle();
+      problems.push(m
+        ? `${email} terdaftar sebagai anggota tim organisasi lain, bukan owner. Paket Enterprise diaktifkan ke akun owner.`
+        : `Organisasi untuk ${email} belum terbentuk. Minta klien masuk ke Nexto sekali, lalu coba lagi.`);
+      return out;
+    }
+    const { count, error: cErr } = await admin.from("organization_members").select("id", { count: "exact", head: true }).eq("org_id", org.id);
+    if (cErr) throw cErr;
+    out.org = { ...org, members: count || 0 };
+    if ((count || 0) > seats) problems.push(`Organisasi ini sudah memiliki ${count} anggota, lebih banyak dari ${seats} anggota di invoice.`);
+    if (org.plan === "enterprise" && org.plan_expires_at && new Date(org.plan_expires_at) > new Date(expiresAt)) {
+      warnings.push(`Masa aktif Enterprise saat ini (${fmtWib(org.plan_expires_at)}) lebih panjang dari periode invoice dan akan diganti dengan tanggal di invoice.`);
+    }
+  } else {
+    const { data: st, error: sErr } = await admin.from("settings").select("plan, plan_expires_at").eq("user_id", user.id).maybeSingle();
+    if (sErr) throw sErr;
+    if (!st) { problems.push(`Akun ${email} belum pernah masuk ke Nexto. Minta klien masuk sekali, lalu coba lagi.`); return out; }
+    out.current = st;
+    if (seats > 1) warnings.push(`Paket ${PLAN_LABEL[plan]} berlaku per akun. Hanya akun ${email} yang diaktifkan; ${seats - 1} pengguna lainnya diaktifkan dari invoice masing-masing.`);
+    if (st.plan && st.plan_expires_at && new Date(st.plan_expires_at) > new Date(expiresAt)) {
+      warnings.push(`Masa aktif paket saat ini (${fmtWib(st.plan_expires_at)}) lebih panjang dari periode invoice dan akan diganti dengan tanggal di invoice.`);
+    }
+  }
+  return out;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -51,20 +141,64 @@ Deno.serve(async (req) => {
       if (!DATE_RE.test(inv.invoice_date || "") || !DATE_RE.test(inv.due_date || "")) return json({ error: "Tanggal invoice atau jatuh tempo tidak valid." }, 400);
       const total = Number(inv.total);
       if (!Number.isFinite(total) || total < 0) return json({ error: "Total tidak valid." }, 400);
-      const { data, error } = await admin.rpc("create_admin_invoice", {
-        p_company: company, p_invoice_date: inv.invoice_date, p_due_date: inv.due_date, p_total: total, p_data: inv.data || {},
+      const data = { ...(inv.data || {}) };
+      delete data.activation; // hanya boleh diisi oleh aksi "activate"
+      const { data: row, error } = await admin.rpc("create_admin_invoice", {
+        p_company: company, p_invoice_date: inv.invoice_date, p_due_date: inv.due_date, p_total: total, p_data: data,
       });
       if (error) throw error;
-      return json({ invoice: data });
+      return json({ invoice: row });
     }
 
     if (body.action === "set_status") {
       if (!["unpaid", "paid", "void"].includes(body.status)) return json({ error: "Status tidak valid." }, 400);
-      const patch = { status: body.status, paid_at: body.status === "paid" ? new Date().toISOString() : null };
+      const { data: cur } = await admin.from("admin_invoices").select("status, data").eq("id", body.id).maybeSingle();
+      if (!cur) return json({ error: "Invoice tidak ditemukan." }, 404);
+      if (cur.data?.activation && body.status !== "paid") return json({ error: "Paket dari invoice ini sudah diaktifkan, jadi statusnya tetap Lunas. Ubah paket klien secara manual bila perlu." }, 409);
+      const patch = { status: body.status, paid_at: body.status === "paid" ? (cur.status === "paid" ? undefined : new Date().toISOString()) : null };
+      if (patch.paid_at === undefined) delete patch.paid_at;
       const { data, error } = await admin.from("admin_invoices").update(patch).eq("id", body.id).select("id, status, paid_at").maybeSingle();
       if (error) throw error;
-      if (!data) return json({ error: "Invoice tidak ditemukan." }, 404);
       return json({ invoice: data });
+    }
+
+    if (body.action === "activation_preview") {
+      const p = await planActivation(admin, body.id, body.email);
+      if (!p) return json({ error: "Invoice tidak ditemukan." }, 404);
+      delete p.invoice.data;
+      return json({ preview: p });
+    }
+
+    if (body.action === "activate") {
+      const p = await planActivation(admin, body.id, body.email);
+      if (!p) return json({ error: "Invoice tidak ditemukan." }, 404);
+      if (p.problems.length) return json({ error: p.problems[0] }, 409);
+
+      // Kunci invoice dulu (hanya jika masih Lunas & belum pernah diaktifkan)
+      // supaya klik ganda / dua tab tidak menerapkan paket dua kali.
+      const before = p.invoice.data;
+      const activation = {
+        at: new Date().toISOString(), by: userData.user.email, user_id: p.user.id, email: p.user.email,
+        plan: p.plan, seats: p.seats, expires_at: p.expires_at, org_id: p.org?.id || null, org_name: p.org?.name || null,
+      };
+      const after = { ...before, activation };
+      const { data: locked, error: lockErr } = await admin.from("admin_invoices")
+        .update({ data: after })
+        .eq("id", body.id).eq("status", "paid").is("data->activation", null)
+        .select("id").maybeSingle();
+      if (lockErr) throw lockErr;
+      if (!locked) return json({ error: "Invoice ini baru saja diaktifkan atau statusnya berubah. Muat ulang riwayat invoice." }, 409);
+
+      const { error: applyErr } = p.plan === "enterprise"
+        ? await admin.from("organizations").update({ plan: "enterprise", member_limit: p.seats, plan_expires_at: p.expires_at, plan_expiry_reminder_sent_at: null }).eq("id", p.org.id)
+        : await admin.from("settings").update({ plan: p.plan === "professional" ? "premium" : "standard", plan_expires_at: p.expires_at, plan_expiry_reminder_sent_at: null }).eq("user_id", p.user.id);
+      if (applyErr) {
+        // Gagal menerapkan -> lepas kunci supaya bisa dicoba lagi.
+        await admin.from("admin_invoices").update({ data: before }).eq("id", body.id);
+        throw applyErr;
+      }
+      console.log(`[admin-invoices] ${p.invoice.number} diaktifkan: ${p.plan} x${p.seats} untuk ${p.user.email}${p.org ? ` (org ${p.org.id})` : ""}, s.d. ${p.expires_at}`);
+      return json({ invoice: { id: body.id, data: after }, activation });
     }
 
     return json({ error: "Aksi tidak dikenal." }, 400);
