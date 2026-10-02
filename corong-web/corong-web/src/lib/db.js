@@ -626,6 +626,19 @@ export async function deleteMyAccount() {
 // ---- DASHBOARD ADMIN - status "karyawan AI" (health-check, daily-digest,
 // bot Telegram, dst) buat SELURUH platform. Cuma bisa dipanggil sama admin
 // (dicek server-side di Edge Function-nya, bukan cuma disembunyiin di UI). ----
+// Invoice langganan Nexto (admin, 2 Okt 2026) - lewat edge function
+// admin-invoices (cek ADMIN_EMAIL di server). action: list | create | set_status.
+export async function adminInvoices(action, payload = {}) {
+  const { data, error } = await supabase.functions.invoke("admin-invoices", { body: { action, ...payload } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal memproses invoice");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export async function getAdminStatus() {
   const { data, error } = await supabase.functions.invoke("admin-status");
   if (error) {
