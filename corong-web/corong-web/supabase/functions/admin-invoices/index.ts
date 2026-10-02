@@ -79,6 +79,7 @@ async function planActivation(admin, id, emailOverride) {
   const user = await findUserByEmail(admin, email);
   if (!user) { problems.push(`Belum ada akun Nexto dengan email ${email}. Minta klien mendaftar dengan email ini terlebih dahulu.`); return out; }
   out.user = { id: user.id, email: user.email };
+  if (ADMIN_EMAIL && email === ADMIN_EMAIL.toLowerCase()) warnings.push("Ini akun admin Anda sendiri, bukan akun klien. Paket di akun ini akan ikut berubah.");
 
   if (plan === "enterprise") {
     const { data: org, error: orgErr } = await admin.from("organizations").select("id, name, plan, member_limit, plan_expires_at")
@@ -95,6 +96,9 @@ async function planActivation(admin, id, emailOverride) {
     if (cErr) throw cErr;
     out.org = { ...org, members: count || 0 };
     if ((count || 0) > seats) problems.push(`Organisasi ini sudah memiliki ${count} anggota, lebih banyak dari ${seats} anggota di invoice.`);
+    if (org.plan === "enterprise" && !org.plan_expires_at) {
+      warnings.push("Enterprise organisasi ini saat ini TANPA batas waktu. Setelah diaktifkan, masa aktifnya berakhir sesuai tanggal di invoice dan organisasi turun ke Free otomatis setelahnya.");
+    }
     if (org.plan === "enterprise" && org.plan_expires_at && new Date(org.plan_expires_at) > new Date(expiresAt)) {
       warnings.push(`Masa aktif Enterprise saat ini (${fmtWib(org.plan_expires_at)}) lebih panjang dari periode invoice dan akan diganti dengan tanggal di invoice.`);
     }
@@ -104,6 +108,9 @@ async function planActivation(admin, id, emailOverride) {
     if (!st) { problems.push(`Akun ${email} belum pernah masuk ke Nexto. Minta klien masuk sekali, lalu coba lagi.`); return out; }
     out.current = st;
     if (seats > 1) warnings.push(`Paket ${PLAN_LABEL[plan]} berlaku per akun. Hanya akun ${email} yang diaktifkan; ${seats - 1} pengguna lainnya diaktifkan dari invoice masing-masing.`);
+    if (st.plan && !st.plan_expires_at) {
+      warnings.push("Paket akun ini saat ini TANPA batas waktu. Setelah diaktifkan, masa aktifnya berakhir sesuai tanggal di invoice dan akun turun ke Free otomatis setelahnya.");
+    }
     if (st.plan && st.plan_expires_at && new Date(st.plan_expires_at) > new Date(expiresAt)) {
       warnings.push(`Masa aktif paket saat ini (${fmtWib(st.plan_expires_at)}) lebih panjang dari periode invoice dan akan diganti dengan tanggal di invoice.`);
     }
