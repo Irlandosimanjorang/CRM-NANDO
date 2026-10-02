@@ -314,9 +314,11 @@ export function buildInvoiceHtml(d, meta = {}) {
   const discountLabel = d.discountLabel?.trim() || "Diskon";
   // Gaya invoice akuntansi: label huruf biasa, garis tipis, total ditandai
   // garis tebal, oranye Nexto hanya untuk angka total.
-  return `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${esc(number)} - ${esc(d.company)}</title>
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${esc(number.replaceAll("/", "-"))} ${esc(d.company)}</title>
 <style>
-  @page { size: A4; margin: 16mm; }
+  /* Margin halaman 0 = Chrome tidak mencetak header/footer bawaan (tanggal,
+     alamat situs, nomor halaman); jarak tepi diganti padding .doc saat cetak. */
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   html { overscroll-behavior: contain; }
   body { margin: 0; font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; color: #1c2230; font-size: 12.5px; line-height: 1.6; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -360,7 +362,7 @@ export function buildInvoiceHtml(d, meta = {}) {
   .sign .name { font-weight: 700; border-top: 1px solid #1c2230; padding-top: 6px; }
   .sign .role { color: #5b6475; }
   .foot { margin-top: 36px; padding-top: 12px; border-top: 1px solid #e6e9ee; color: #8a92a1; font-size: 11px; display: flex; justify-content: space-between; }
-  @media print { .doc { padding: 0; } }
+  @media print { .doc { max-width: none; padding: 16mm 18mm; } }
 </style></head><body><div class="doc">
   <div class="head">
     <div>
