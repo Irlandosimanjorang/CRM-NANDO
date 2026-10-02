@@ -47,7 +47,7 @@ const views = {
   advisor: <Advisor leads={leads} stages={stages} onOpen={noop} dummy={!ent} demoRecs={demo.advisorRecs} />,
   industrydemo: <IndustryDemo />,
   settings: <Settings settings={{}} stages={stages} leads={leads} onChanged={noop} userEmail="uji@example.com" locked={false} />,
-  invoice: <div style={{ background: "#05070c", padding: 24 }}><EnterpriseInvoicePanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }, { plan: "free", org_name: "Org Free", role: "owner" }, { plan: "professional", org_name: "CV Maju Jaya", role: "owner", display_name: "Pak Budi", email: "budi@majujaya.id" }]} /></div>,
+  invoice: <div id="modal-scroll" className="max-h-[85vh] overflow-y-auto overscroll-contain" style={{ background: "#05070c", padding: 24 }}><EnterpriseInvoicePanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }, { plan: "free", org_name: "Org Free", role: "owner" }, { plan: "professional", org_name: "CV Maju Jaya", role: "owner", display_name: "Pak Budi", email: "budi@majujaya.id" }]} /></div>,
   leadmodal: <LeadModal lead={leads[0]} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
   leadmodal_weird: <LeadModal lead={weird} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
 };

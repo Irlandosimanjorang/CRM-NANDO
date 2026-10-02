@@ -257,7 +257,7 @@ function EmployeeDetailModal({ employee, onTrigger, triggering, onClose }) {
   return createPortal(
     <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className={`relative w-full ${employee.wide ? "max-w-6xl" : "max-w-lg"} max-h-[85vh] overflow-y-auto rounded-[22px] pt-9`}
+        className={`relative w-full ${employee.wide ? "max-w-6xl" : "max-w-lg"} max-h-[85vh] overflow-y-auto overscroll-contain rounded-[22px] pt-9`}
         onClick={(e) => e.stopPropagation()}
       >
         <button onClick={onClose} className="absolute top-2 right-2 z-30 text-slate-400 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] rounded-lg p-1.5 transition-colors">

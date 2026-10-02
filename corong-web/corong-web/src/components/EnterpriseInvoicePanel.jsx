@@ -225,13 +225,28 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   // mengganti isi <body> di tempat - dulu srcDoc berganti tiap ketikan/
   // pilihan sehingga lembar invoice berkedip & scroll-nya balik ke atas.
   const [initialHtml] = useState(html);
-  useEffect(() => {
+  // Tinggi pratinjau = tinggi lembar invoice (tanpa scroll di dalamnya),
+  // supaya cuma ada SATU area scroll (jendela kartu) - dua scroll bertumpuk
+  // bikin gulir terasa tersendat.
+  const [frameH, setFrameH] = useState(900);
+  const syncFrame = () => {
     const doc = frameRef.current?.contentDocument;
     if (!doc?.body) return;
     const next = new DOMParser().parseFromString(html, "text/html");
     if (doc.body.innerHTML !== next.body.innerHTML) doc.body.innerHTML = next.body.innerHTML;
     if (doc.title !== next.title) doc.title = next.title;
-  }, [html]);
+    doc.querySelectorAll("img").forEach((img) => { if (!img.complete) img.addEventListener("load", syncFrame, { once: true }); });
+    // Ukur isi lembar (body), bukan documentElement - yang terakhir minimal setinggi iframe-nya sendiri.
+    const h = Math.ceil(doc.body.getBoundingClientRect().height);
+    if (h > 0) setFrameH((cur) => (Math.abs(cur - h) > 1 ? h : cur));
+  };
+  useEffect(syncFrame, [html]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // Logo/font selesai dimuat atau lebar kolom berubah -> tinggi ikut disesuaikan.
+    const onResize = () => syncFrame();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   const printInvoice = () => {
     if (!company.trim()) { alert("Isi nama perusahaan terlebih dahulu."); return; }
@@ -243,7 +258,9 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-      <div className="space-y-3">
+      {/* Form tetap terlihat (sticky) saat lembar invoice digulir - kecuali
+          saat "Data penagih" dibuka (form jadi lebih tinggi dari jendela). */}
+      <div className={`space-y-3 lg:self-start ${showSeller ? "" : "lg:sticky lg:top-0"}`}>
         <div>
           <label className={lbl} htmlFor="inv-company">Nama perusahaan</label>
           <input id="inv-company" list="inv-orgs" className={field} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ketik nama perusahaan klien" autoComplete="off" />
@@ -320,7 +337,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
       </div>
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-slate-700 bg-white">
-        <iframe ref={frameRef} title="Pratinjau invoice" srcDoc={initialHtml} onLoad={(e) => { const doc = e.currentTarget.contentDocument; const next = new DOMParser().parseFromString(html, "text/html"); if (doc?.body) doc.body.innerHTML = next.body.innerHTML; }} className="h-[720px] w-full bg-white" />
+        <iframe ref={frameRef} title="Pratinjau invoice" srcDoc={initialHtml} onLoad={syncFrame} scrolling="no" style={{ height: frameH }} className="block w-full overflow-hidden bg-white" />
       </div>
     </div>
   );
