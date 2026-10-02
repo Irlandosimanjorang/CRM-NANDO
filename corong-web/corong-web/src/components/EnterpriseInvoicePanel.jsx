@@ -65,52 +65,215 @@ export function terbilang(n) {
   return t.charAt(0).toUpperCase() + t.slice(1) + " rupiah";
 }
 
-// Olah foto tanda tangan / stempel (2 Okt 2026): latar putih/terang dibuat
-// transparan (kalau gambarnya belum transparan), margin kosong dipotong, dan
-// ukuran diperkecil supaya ringan disimpan bersama setiap invoice.
-export function processSignatureFile(file, { maxW = 600, maxH = 300 } = {}) {
-  return new Promise((resolve, reject) => {
-    if (!file || !/^image\//.test(file.type)) { reject(new Error("File harus berupa gambar (PNG atau JPG).")); return; }
-    if (file.size > 8 * 1024 * 1024) { reject(new Error("Ukuran gambar maksimal 8 MB.")); return; }
-    const url = URL.createObjectURL(file);
+// Olah foto tanda tangan / stempel (2 Okt 2026, diperbaiki untuk foto HP):
+// - Foto HEIC dari iPhone dikonversi dulu (Chrome tidak bisa membacanya).
+// - Latar kertas diukur PER AREA (bukan satu ambang putih), jadi bayangan,
+//   kertas bergaris, dan tulisan tembus dari halaman belakang ikut hilang -
+//   yang diambil hanya goresan yang jauh lebih gelap dari kertas di sekitarnya.
+// - Bintik kecil yang terpisah dibuang, margin dipotong, ukuran diperkecil
+//   supaya ringan disimpan bersama setiap invoice.
+// - Tanda tangan diwarnai satu warna tinta (rata, seperti pulpen); stempel
+//   mempertahankan warna aslinya.
+const isHeic = (file) => /hei[cf]/i.test(file.type || "") || /\.hei[cf]$/i.test(file.name || "");
+
+async function decodeImage(file) {
+  let blob = file;
+  if (isHeic(file)) {
+    try {
+      const { default: heic2any } = await import("heic2any");
+      const conv = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+      blob = Array.isArray(conv) ? conv[0] : conv;
+    } catch (_) {
+      throw new Error("Foto HEIC tidak dapat dikonversi. Ambil screenshot fotonya lalu unggah screenshot tersebut.");
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  try {
     const img = new Image();
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Gambar tidak dapat dibaca.")); };
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const c = document.createElement("canvas");
-      c.width = img.naturalWidth; c.height = img.naturalHeight;
-      const ctx = c.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      const data = ctx.getImageData(0, 0, c.width, c.height);
-      const px = data.data;
-      let transparent = 0;
-      for (let i = 3; i < px.length; i += 4) if (px[i] < 250) transparent++;
-      const alreadyTransparent = transparent > px.length / 4 * 0.05;
-      if (!alreadyTransparent) {
-        for (let i = 0; i < px.length; i += 4) {
-          const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-          if (lum >= 215) px[i + 3] = 0;
-          else if (lum > 160) px[i + 3] = Math.round(px[i + 3] * (215 - lum) / 55);
-        }
-        ctx.putImageData(data, 0, 0);
-      }
-      // Potong margin kosong.
-      let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
-      for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
-        if (px[(y * c.width + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-      }
-      if (x1 < 0) { reject(new Error("Tanda tangan tidak terdeteksi. Gunakan foto yang lebih jelas dengan latar putih.")); return; }
-      const pad = 6;
-      x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(c.width - 1, x1 + pad); y1 = Math.min(c.height - 1, y1 + pad);
-      const w = x1 - x0 + 1, h = y1 - y0 + 1;
-      const scale = Math.min(1, maxW / w, maxH / h);
-      const out = document.createElement("canvas");
-      out.width = Math.max(1, Math.round(w * scale)); out.height = Math.max(1, Math.round(h * scale));
-      out.getContext("2d").drawImage(c, x0, y0, w, h, 0, 0, out.width, out.height);
-      resolve(out.toDataURL("image/png"));
-    };
     img.src = url;
-  });
+    await img.decode();
+    return img;
+  } catch (_) {
+    throw new Error("Gambar tidak dapat dibaca. Gunakan file JPG atau PNG.");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export async function processSignatureFile(file, { maxW = 600, maxH = 300, keepColor = false } = {}) {
+  if (!file) throw new Error("Pilih file gambar.");
+  if (!isHeic(file) && !/^image\//.test(file.type || "")) throw new Error("File harus berupa gambar (JPG, PNG, atau HEIC).");
+  if (file.size > 20 * 1024 * 1024) throw new Error("Ukuran gambar maksimal 20 MB.");
+  const img = await decodeImage(file);
+
+  // Perkecil foto besar dulu (sisi terpanjang 1400 px) supaya cepat diolah.
+  const k = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.max(1, Math.round(img.naturalWidth * k)), H = Math.max(1, Math.round(img.naturalHeight * k));
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, W, H);
+  const data = ctx.getImageData(0, 0, W, H);
+  const px = data.data;
+  const N = W * H;
+
+  let transparent = 0;
+  for (let i = 3; i < px.length; i += 4) if (px[i] < 250) transparent++;
+  const alpha = new Float32Array(N);
+
+  if (transparent > N * 0.05) {
+    // Sudah PNG transparan: pakai apa adanya.
+    for (let i = 0; i < N; i++) alpha[i] = px[i * 4 + 3] / 255;
+  } else {
+    const L = new Float32Array(N);
+    for (let i = 0; i < N; i++) L[i] = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
+
+    // Kecerahan kertas per blok (persentil 80 - goresan tipis tidak
+    // menurunkannya), lalu diinterpolasi halus ke tiap piksel.
+    const B = Math.max(12, Math.round(Math.max(W, H) / 36));
+    const gw = Math.ceil(W / B), gh = Math.ceil(H / B);
+    const grid = new Float32Array(gw * gh);
+    const hist = new Uint32Array(256);
+    for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
+      hist.fill(0);
+      let n = 0;
+      for (let y = gy * B; y < Math.min(H, (gy + 1) * B); y++) for (let x = gx * B; x < Math.min(W, (gx + 1) * B); x++) { hist[L[y * W + x] | 0]++; n++; }
+      let acc = 0, v = 255;
+      for (let t = 0; t < 256; t++) { acc += hist[t]; if (acc >= n * 0.8) { v = t; break; } }
+      grid[gy * gw + gx] = v;
+    }
+    const bgAt = (x, y) => {
+      const fx = Math.min(gw - 1, Math.max(0, x / B - 0.5)), fy = Math.min(gh - 1, Math.max(0, y / B - 0.5));
+      const x0 = Math.floor(fx), y0 = Math.floor(fy), x1 = Math.min(gw - 1, x0 + 1), y1 = Math.min(gh - 1, y0 + 1);
+      const ax = fx - x0, ay = fy - y0;
+      return (grid[y0 * gw + x0] * (1 - ax) + grid[y0 * gw + x1] * ax) * (1 - ay) + (grid[y1 * gw + x0] * (1 - ax) + grid[y1 * gw + x1] * ax) * ay;
+    };
+
+    // Seberapa gelap tiap piksel dibanding kertas di sekitarnya, relatif
+    // terhadap kecerahan kertas itu (foto redup tetap terbaca).
+    const diff = new Float32Array(N);
+    const dh = new Uint32Array(256);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      const bg = Math.max(40, bgAt(x, y));
+      const d = Math.max(0, Math.min(255, ((bg - L[i]) / bg) * 255));
+      diff[i] = d;
+      dh[d | 0]++;
+    }
+    // Ambang otomatis (Otsu) di antara "kertas + garis tipis" dan "tinta";
+    // minimal 70 supaya garis buku & tulisan tembus tidak ikut.
+    let sum = 0, total = 0;
+    for (let t = 0; t < 256; t++) { sum += t * dh[t]; total += dh[t]; }
+    let sumB = 0, wB = 0, best = 0, thr = 70;
+    for (let t = 0; t < 256; t++) {
+      wB += dh[t]; if (!wB) continue;
+      const wF = total - wB; if (!wF) break;
+      sumB += t * dh[t];
+      const mB = sumB / wB, mF = (sum - sumB) / wF;
+      const between = wB * wF * (mB - mF) * (mB - mF);
+      if (between > best) { best = between; thr = t; }
+    }
+    thr = Math.max(70, thr);
+    const lo = thr * 0.8, hi = thr * 1.25;
+    for (let i = 0; i < N; i++) alpha[i] = diff[i] <= lo ? 0 : diff[i] >= hi ? 1 : (diff[i] - lo) / (hi - lo);
+
+    // Kelompokkan goresan yang tersambung. Yang disimpan hanya tanda tangan
+    // utama (goresan terbesar) plus goresan yang dekat dengannya (titik huruf
+    // i, coretan terpisah). Bintik kecil, noda di tepi foto, dan tulisan lain
+    // yang jauh dari tanda tangan dibuang.
+    const label = new Int32Array(N).fill(-1);
+    const stack = new Int32Array(N);
+    const comps = [];
+    for (let s0 = 0; s0 < N; s0++) {
+      if (alpha[s0] < 0.5 || label[s0] !== -1) continue;
+      const id = comps.length;
+      const comp = { members: [], x0: W, y0: H, x1: 0, y1: 0 };
+      let top = 0;
+      stack[top++] = s0; label[s0] = id;
+      while (top) {
+        const i = stack[--top]; comp.members.push(i);
+        const x = i % W, y = (i / W) | 0;
+        if (x < comp.x0) comp.x0 = x; if (x > comp.x1) comp.x1 = x; if (y < comp.y0) comp.y0 = y; if (y > comp.y1) comp.y1 = y;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const j = ny * W + nx;
+          if (alpha[j] >= 0.5 && label[j] === -1) { label[j] = id; stack[top++] = j; }
+        }
+      }
+      comps.push(comp);
+    }
+    const minArea = Math.max(6, Math.round(N * 0.00003));
+    const edge = Math.max(2, Math.round(Math.min(W, H) * 0.01));
+    const big = comps.reduce((m, c2) => Math.max(m, c2.members.length), 0);
+    const ok = comps.filter((c2) => {
+      if (c2.members.length < minArea) return false;
+      const touches = c2.x0 <= edge || c2.y0 <= edge || c2.x1 >= W - 1 - edge || c2.y1 >= H - 1 - edge;
+      return !(touches && c2.members.length < big * 0.25);
+    }).sort((p1, p2) => p2.members.length - p1.members.length);
+    const keep = new Set();
+    if (ok.length) {
+      const box = { x0: ok[0].x0, y0: ok[0].y0, x1: ok[0].x1, y1: ok[0].y1 };
+      keep.add(ok[0]);
+      for (let grew = true; grew;) {
+        grew = false;
+        const m = Math.max(box.x1 - box.x0, box.y1 - box.y0) * 0.12 + 4;
+        for (const c2 of ok) {
+          if (keep.has(c2)) continue;
+          if (c2.x1 >= box.x0 - m && c2.x0 <= box.x1 + m && c2.y1 >= box.y0 - m && c2.y0 <= box.y1 + m) {
+            keep.add(c2); grew = true;
+            box.x0 = Math.min(box.x0, c2.x0); box.y0 = Math.min(box.y0, c2.y0); box.x1 = Math.max(box.x1, c2.x1); box.y1 = Math.max(box.y1, c2.y1);
+          }
+        }
+      }
+    }
+    for (const c2 of comps) if (!keep.has(c2)) for (const i of c2.members) alpha[i] = 0;
+    // Tepi lembut yang tidak menempel ke goresan utama ikut dibuang.
+    for (let i = 0; i < N; i++) {
+      if (alpha[i] > 0 && alpha[i] < 0.5) {
+        const x = i % W, y = (i / W) | 0;
+        let near = false;
+        for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && ny >= 0 && nx < W && ny < H && alpha[ny * W + nx] >= 0.5) { near = true; break; }
+        }
+        if (!near) alpha[i] = 0;
+      }
+    }
+
+    // Warna: tanda tangan = satu warna tinta (rata-rata goresan paling
+    // pekat, digelapkan); stempel = warna asli diperkuat.
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let i = 0; i < N; i++) if (alpha[i] >= 0.95) { r += px[i * 4]; g += px[i * 4 + 1]; b += px[i * 4 + 2]; n++; }
+    if (n) { r /= n; g /= n; b /= n; }
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b || 1;
+    const f = Math.min(1, 45 / lum);
+    const ink = [Math.round(r * f), Math.round(g * f), Math.round(b * f)];
+    for (let i = 0; i < N; i++) {
+      const o = i * 4;
+      if (!keepColor) { px[o] = ink[0]; px[o + 1] = ink[1]; px[o + 2] = ink[2]; }
+      else { const s = 0.75; px[o] = Math.round(px[o] * s); px[o + 1] = Math.round(px[o + 1] * s); px[o + 2] = Math.round(px[o + 2] * s); }
+      px[o + 3] = Math.round(alpha[i] * 255);
+    }
+    ctx.putImageData(data, 0, 0);
+  }
+
+  // Potong margin kosong.
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (alpha[y * W + x] > 0.1) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) throw new Error("Tanda tangan tidak terdeteksi. Gunakan foto yang lebih jelas: pulpen gelap di kertas polos, cahaya merata.");
+  const pad = 4;
+  x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(W - 1, x1 + pad); y1 = Math.min(H - 1, y1 + pad);
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const scale = Math.min(1, maxW / w, maxH / h);
+  const out = document.createElement("canvas");
+  out.width = Math.max(1, Math.round(w * scale)); out.height = Math.max(1, Math.round(h * scale));
+  const octx = out.getContext("2d");
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(c, x0, y0, w, h, 0, 0, out.width, out.height);
+  return out.toDataURL("image/png");
 }
 
 function loadProfile() {
@@ -595,10 +758,10 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                             </div>
                             <label className="cursor-pointer rounded-md border border-slate-600 px-2.5 py-1.5 text-[12px] font-semibold text-slate-200 hover:bg-slate-800">
                               {seller[k] ? "Ganti" : "Unggah"}
-                              <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={async (e) => {
+                              <input type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" className="sr-only" onChange={async (e) => {
                                 const file = e.target.files?.[0]; e.target.value = "";
                                 if (!file) return;
-                                try { const dataUrl = await processSignatureFile(file, k === "stampImage" ? { maxW: 360, maxH: 360 } : undefined); setSeller((s) => ({ ...s, [k]: dataUrl })); }
+                                try { const dataUrl = await processSignatureFile(file, k === "stampImage" ? { maxW: 360, maxH: 360, keepColor: true } : undefined); setSeller((s) => ({ ...s, [k]: dataUrl })); }
                                 catch (err) { alert(err.message); }
                               }} />
                             </label>
