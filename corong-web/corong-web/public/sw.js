@@ -29,6 +29,17 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Audit 2 Okt 2026: setiap deploy menghasilkan file /assets/ baru (nama
+// ber-hash), dan yang lama dulu tidak pernah dibuang - cache di HP pengguna
+// terus membesar. Sekarang hanya MAX_ASSETS file terbaru yang disimpan
+// (cache.keys() berurutan sesuai waktu dimasukkan).
+const MAX_ASSETS = 60;
+async function trimAssets(cache) {
+  const assets = (await cache.keys()).filter((r) => new URL(r.url).pathname.startsWith("/assets/"));
+  const excess = assets.length - MAX_ASSETS;
+  for (let i = 0; i < excess; i++) await cache.delete(assets[i]);
+}
+
 function isSameOrigin(url) {
   try {
     return new URL(url).origin === self.location.origin;
@@ -54,7 +65,7 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((resp) => {
-          if (resp.ok) caches.open(CACHE_NAME).then((cache) => cache.put(request, resp.clone()));
+          if (resp.ok) caches.open(CACHE_NAME).then((cache) => cache.put(request, resp.clone()).then(() => trimAssets(cache)));
           return resp;
         });
       })
