@@ -560,6 +560,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const [busy, setBusy] = useState(false);
   const [activating, setActivating] = useState(null); // invoice yang sedang diaktifkan paketnya
   const frameRef = useRef(null);
+  const topRef = useRef(null);
 
   const loadHistory = () => {
     setHistoryErr("");
@@ -662,14 +663,18 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <div className="space-y-3">
+      <div ref={topRef} className="grid scroll-mt-4 gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+        {/* Kolom form punya scroll sendiri setinggi pratinjau (desktop), jadi
+            menggulir form tidak ikut menggeser pratinjau; total & tombol
+            simpan tetap terlihat di bawah. */}
+        <div className="flex flex-col gap-3 lg:h-[min(72vh,760px)]">
           {viewing && (
             <div className="rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-[12px] text-violet-100">
               Menampilkan invoice tersimpan <b>{viewing.number}</b>. Invoice tersimpan tidak dapat diubah.
               <button type="button" onClick={newInvoice} className="ml-2 font-semibold underline underline-offset-2">Buat invoice baru</button>
             </div>
           )}
+          <div className="space-y-3 lg:-mr-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-2">
           <fieldset disabled={!!viewing} className="space-y-3">
             <div>
               <label className={lbl} htmlFor="inv-company">Nama perusahaan</label>
@@ -776,7 +781,9 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
               </>
             )}
           </fieldset>
+          </div>
 
+          <div className="shrink-0 space-y-1.5">
           <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-900/70 px-3 py-2.5">
             <div>
               <div className="text-[11px] text-slate-400">Total tagihan</div>
@@ -789,6 +796,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
             )}
           </div>
           <p className="text-[11px] text-slate-500">Pada jendela cetak, pilih "Simpan sebagai PDF".</p>
+          </div>
         </div>
 
         <div className="min-w-0 overflow-hidden rounded-xl border border-slate-700 bg-white">
@@ -843,7 +851,11 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                           <span className="text-[12px] text-slate-500">{x.status === "void" ? "-" : x.status === "unpaid" ? "Menunggu pembayaran" : "Aktifkan manual"}</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 text-right"><button type="button" onClick={() => setViewing(x)} className="font-semibold text-violet-300 hover:text-violet-200">Lihat</button></td>
+                      <td className="px-4 py-2 text-right">
+                        {viewing?.id === x.id
+                          ? <button type="button" onClick={newInvoice} className="font-semibold text-slate-300 hover:text-white">Tutup</button>
+                          : <button type="button" onClick={() => { setViewing(x); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} className="font-semibold text-violet-300 hover:text-violet-200">Lihat</button>}
+                      </td>
                     </tr>
                   );
                 })}
