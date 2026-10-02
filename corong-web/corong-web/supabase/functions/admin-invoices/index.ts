@@ -252,8 +252,11 @@ Deno.serve(async (req) => {
       const user = await findUserByEmail(admin, email);
       if (!user) return json({ found: false });
       const { data: m } = await admin.from("organization_members").select("org_id, role").eq("user_id", user.id).limit(1).maybeSingle();
-      const { data: org } = m ? await admin.from("organizations").select("name, plan").eq("id", m.org_id).maybeSingle() : { data: null };
-      return json({ found: true, role: m?.role || null, org_name: org?.name || null, org_plan: org?.plan || null });
+      const { data: org } = m ? await admin.from("organizations").select("name, plan, plan_expires_at").eq("id", m.org_id).maybeSingle() : { data: null };
+      const { data: st } = await admin.from("settings").select("plan, plan_expires_at").eq("user_id", user.id).maybeSingle();
+      // Masa aktif paket yang berjalan (untuk menyarankan tanggal mulai invoice perpanjangan).
+      const expires_at = org?.plan === "enterprise" ? org.plan_expires_at : (st?.plan ? st.plan_expires_at : null);
+      return json({ found: true, role: m?.role || null, org_name: org?.name || null, org_plan: org?.plan || null, expires_at: expires_at || null });
     }
 
     return json({ error: "Aksi tidak dikenal." }, 400);

@@ -34,10 +34,18 @@ const STATUS = {
 const rp = (n) => "Rp" + Math.round(Number(n) || 0).toLocaleString("id-ID");
 const isoDay = (d) => new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10);
 const addDays = (iso, n) => isoDay(new Date(new Date(iso + "T00:00:00+07:00").getTime() + n * 86400000));
+// Akhir periode langganan (inklusif). Audit 2 Okt 2026: versi lama memakai
+// setMonth - mulai 31 Jan + 1 bulan meluber jadi 2 Mar (klien dapat hari
+// ekstra) dan bergantung zona waktu browser. Sekarang dihitung murni dari
+// tanggal: hari jatuh tempo berikutnya dikunci ke akhir bulan (31 Jan -> 28 Feb),
+// lalu dikurangi satu hari kecuali tanggalnya terpotong akhir bulan.
 const addMonths = (iso, n) => {
-  const t = new Date(iso + "T00:00:00+07:00");
-  t.setMonth(t.getMonth() + n); t.setDate(t.getDate() - 1);
-  return isoDay(t);
+  const [y, m, d] = iso.split("-").map(Number);
+  const target = new Date(Date.UTC(y, m - 1 + n, 1));
+  const ty = target.getUTCFullYear(), tm = target.getUTCMonth();
+  const lastDay = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate();
+  const end = d > lastDay ? new Date(Date.UTC(ty, tm, lastDay)) : new Date(Date.UTC(ty, tm, d - 1));
+  return end.toISOString().slice(0, 10);
 };
 const fmtDate = (iso) => new Date(iso + "T00:00:00+07:00").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
 const fmtShort = (iso) => new Date(iso + "T00:00:00+07:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
@@ -814,6 +822,15 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                   <div><label className={lbl}>Nama PIC</label><input className={field} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Nama penanggung jawab" /></div>
                   <div><label className={lbl}>Email akun klien</label><input type="email" className={field} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@perusahaan.com" /></div>
                 </div>
+                {emailCheck?.status === "found" && emailCheck.expires_at && emailCheck.expires_at.slice(0, 10) >= today && (() => {
+                  const next = addDays(isoDay(new Date(emailCheck.expires_at)), 1);
+                  return (
+                    <p className="-mt-1 rounded-md bg-slate-800/70 px-2.5 py-1.5 text-[11.5px] text-slate-300">
+                      Paket klien aktif sampai {fmtShort(isoDay(new Date(emailCheck.expires_at)))}. Untuk perpanjangan, periode sebaiknya mulai {fmtShort(next)} supaya tidak tumpang tindih.
+                      {start !== next && <button type="button" onClick={() => setStart(next)} className="ml-1.5 font-semibold text-violet-300 underline underline-offset-2">Mulai {fmtShort(next)}</button>}
+                    </p>
+                  );
+                })()}
                 {emailCheck && (
                   <p className={`-mt-1 text-[11.5px] ${emailCheck.status === "found" ? "text-emerald-300" : emailCheck.status === "checking" ? "text-slate-500" : "text-amber-300"}`}>
                     {emailCheck.status === "checking" ? "Memeriksa akun…"
