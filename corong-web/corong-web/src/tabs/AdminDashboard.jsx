@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2, Users, Globe, FileText } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2, Users, Globe, FileText, Coins } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
@@ -576,6 +576,164 @@ const USER_PLAN_SECTIONS = [
 function fmtShortDate(iso) {
   if (!iso) return "-";
   return new Date(iso).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "2-digit" });
+}
+
+// Panel card "BIAYA AI" (6 Okt 2026, permintaan Nando) - pemakaian AI per
+// akun berbayar (owner, manager, sales rep): pemakaian vs limit per fitur,
+// token & biaya nyata (tabel ai_usage), dan persen dari total limit. Persen
+// ditimbang biaya per fitur (Generate Leads lebih berat dari Tebak Alasan),
+// dihitung server di admin_ai_usage_report().
+const fmtRp = (n) => `Rp${Math.round(Number(n) || 0).toLocaleString("id-ID")}`;
+const fmtTokens = (n) => {
+  const v = Number(n) || 0;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)} jt`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)} rb`;
+  return String(v);
+};
+const pctColor = (p) => (p >= 85 ? "#f43f5e" : p >= 60 ? "#f59e0b" : "#34d399");
+const AI_COST_PLAN_FILTERS = [
+  { key: "all", label: "Semua" },
+  { key: "standard", label: "Standard" },
+  { key: "professional", label: "Professional" },
+  { key: "enterprise", label: "Enterprise" },
+];
+const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales" };
+
+export function AiCostPanel({ data }) {
+  const [planFilter, setPlanFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState(null);
+  const accounts = data?.accounts || [];
+  if (!data) return <div className="text-[11px] text-slate-500 font-mono">Data pemakaian AI belum tersedia.</div>;
+
+  const q = query.trim().toLowerCase();
+  const shown = accounts.filter((a) =>
+    (planFilter === "all" || a.plan === planFilter) &&
+    (!q || [a.email, a.display_name, a.org_name].some((v) => (v || "").toLowerCase().includes(q)))
+  );
+  const totalCost = accounts.reduce((s, a) => s + (Number(a.cost_rp) || 0), 0);
+  const totalTokens = accounts.reduce((s, a) => s + (Number(a.tokens) || 0), 0);
+  const avgPct = accounts.length ? accounts.reduce((s, a) => s + (Number(a.pct_of_limit) || 0), 0) / accounts.length : 0;
+  const nearLimit = accounts.filter((a) => Number(a.pct_of_limit) >= 85).length;
+
+  return (
+    <div className="grid gap-3 min-w-0">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <StatTile label="Biaya AI tercatat" value={fmtRp(totalCost)} accent="#f472b6" />
+        <StatTile label="Total token" value={fmtTokens(totalTokens)} />
+        <StatTile label="Rata-rata % limit" value={`${avgPct.toFixed(1)}%`} accent={pctColor(avgPct)} />
+        <StatTile label="Akun ≥85% limit" value={nearLimit} accent={nearLimit ? "#f43f5e" : "#34d399"} />
+      </div>
+
+      <div className="text-[10px] text-slate-500 font-mono leading-relaxed">
+        Token & biaya nyata tercatat sejak {data.tracking_since ? new Date(data.tracking_since).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "pencatatan dimulai (belum ada pemakaian)"} (kurs Rp{Number(data.kurs || 0).toLocaleString("id-ID")}/USD).
+        % limit = pemakaian × perkiraan biaya per fitur dibanding seluruh kuota paketnya, per siklus langganan berjalan.
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {AI_COST_PLAN_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setPlanFilter(f.key)}
+            className={`text-[10.5px] font-mono px-2.5 py-1 rounded-lg border transition-colors ${planFilter === f.key ? "border-pink-400/40 bg-pink-500/15 text-pink-200" : "border-white/[0.08] text-slate-400 hover:text-slate-200"}`}
+          >
+            {f.label}
+          </button>
+        ))}
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Cari email, nama, atau organisasi"
+          className="ml-auto min-w-0 flex-1 sm:flex-none sm:w-56 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-pink-400/40"
+        />
+      </div>
+
+      {shown.length === 0 ? (
+        <div className="text-[11px] text-slate-500 font-mono">Tidak ada akun yang cocok.</div>
+      ) : (
+        <div className="min-w-0 overflow-x-auto rounded-xl border border-white/[0.06]">
+          <table className="w-full text-left border-collapse min-w-[640px]">
+            <thead>
+              <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+                <th className="py-2 pl-3 pr-2 font-medium">Akun</th>
+                <th className="py-2 pr-2 font-medium">Paket</th>
+                <th className="py-2 pr-2 font-medium">Reset</th>
+                <th className="py-2 pr-2 font-medium text-right">Token</th>
+                <th className="py-2 pr-2 font-medium text-right">Biaya nyata</th>
+                <th className="py-2 pr-3 font-medium w-[150px]">% dari limit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((a) => {
+                const pct = Number(a.pct_of_limit) || 0;
+                const isOpen = openId === a.user_id;
+                return [
+                  <tr
+                    key={a.user_id}
+                    onClick={() => setOpenId(isOpen ? null : a.user_id)}
+                    className="border-t border-white/[0.05] cursor-pointer hover:bg-white/[0.02]"
+                  >
+                    <td className="py-2 pl-3 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <ChevronDown size={12} className={`shrink-0 text-slate-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                        <div className="min-w-0">
+                          <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[200px]">{a.display_name || a.email}</div>
+                          <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[200px]">{a.display_name ? a.email : ""}{a.display_name ? " · " : ""}{a.org_name} · {ROLE_LABEL[a.role] || a.role}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-2 text-[10.5px] font-mono text-slate-300 capitalize">{a.plan}</td>
+                    <td className="py-2 pr-2 text-[10.5px] font-mono text-slate-400 whitespace-nowrap" title={a.period_source === "plan" ? "Siklus langganan" : "Bulan kalender (paket tanpa tanggal berakhir)"}>{fmtShortDate(a.period_end)}</td>
+                    <td className="py-2 pr-2 text-[10.5px] font-mono text-slate-300 text-right tabular-nums">{fmtTokens(a.tokens)}</td>
+                    <td className="py-2 pr-2 text-[10.5px] font-mono text-pink-200 text-right tabular-nums">{fmtRp(a.cost_rp)}</td>
+                    <td className="py-2 pr-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 rounded-full bg-white/[0.06] overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: pctColor(pct) }} />
+                        </div>
+                        <span className="text-[10.5px] font-mono font-bold tabular-nums w-11 text-right" style={{ color: pctColor(pct) }}>{pct.toFixed(1)}%</span>
+                      </div>
+                    </td>
+                  </tr>,
+                  isOpen && (
+                    <tr key={`${a.user_id}-detail`} className="bg-white/[0.015]">
+                      <td colSpan={6} className="px-3 pb-3 pt-1">
+                        <div className="text-[9.5px] text-slate-500 font-mono mb-1.5">
+                          Periode {fmtShortDate(a.period_start)} – {fmtShortDate(a.period_end)} · perkiraan pemakaian {fmtRp(a.est_used_rp)} dari maksimal {fmtRp(a.est_max_rp)}
+                        </div>
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="text-[9px] uppercase tracking-wide text-slate-600 font-mono">
+                              <th className="py-1 pr-2 font-medium">Fitur</th>
+                              <th className="py-1 pr-2 font-medium">Pakai / limit</th>
+                              <th className="py-1 pr-2 font-medium text-right">Token</th>
+                              <th className="py-1 font-medium text-right">Biaya nyata</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(a.features || []).map((f) => (
+                              <tr key={f.key} className="border-t border-white/[0.04]">
+                                <td className="py-1 pr-2 text-[10.5px] text-slate-300">{f.label}</td>
+                                <td className="py-1 pr-2 text-[10.5px] font-mono tabular-nums" style={{ color: f.limit ? pctColor(f.pct || 0) : "#64748b" }}>
+                                  {f.limit ? `${f.used}/${f.limit}` : "otomatis"}
+                                </td>
+                                <td className="py-1 pr-2 text-[10.5px] font-mono text-slate-400 text-right tabular-nums">{fmtTokens(f.tokens)}</td>
+                                <td className="py-1 text-[10.5px] font-mono text-slate-300 text-right tabular-nums">{fmtRp(f.cost_rp)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  ),
+                ];
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Panel card "DATA" - direktori SEMUA user platform (17 Sep 2026, permintaan
@@ -1244,6 +1402,25 @@ export default function AdminDashboard() {
       statLabel: "KUNJUNGAN HARI INI",
       statValue: status?.traffic?.visits_today ?? 0,
       content: <TrafficPanel data={status?.traffic} />,
+    },
+    {
+      // BIAYA AI (6 Okt 2026, permintaan Nando) - pemakaian token & biaya AI
+      // tiap akun berbayar + persen dari total limit paketnya.
+      key: "ai_cost",
+      title: "BIAYA AI",
+      subtitle: "Token & Biaya per Akun",
+      icon: Coins,
+      accentColor: "#f472b6",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(244,114,182,0.6)]",
+      ok: !(status?.ai_usage?.accounts || []).some((a) => Number(a.pct_of_limit) >= 85),
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "dicatat otomatis tiap panggilan AI",
+      wide: true,
+      blurb: `${(status?.ai_usage?.accounts || []).length} akun berbayar, biaya AI tercatat ${fmtRp((status?.ai_usage?.accounts || []).reduce((s, a) => s + (Number(a.cost_rp) || 0), 0))}.`,
+      statLabel: "BIAYA AI TERCATAT",
+      statValue: fmtRp((status?.ai_usage?.accounts || []).reduce((s, a) => s + (Number(a.cost_rp) || 0), 0)),
+      content: <AiCostPanel data={status?.ai_usage} />,
     },
     {
       // INVOICE (2 Okt 2026, permintaan Nando) - buat invoice langganan

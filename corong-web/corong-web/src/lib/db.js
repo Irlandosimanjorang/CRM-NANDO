@@ -1246,14 +1246,6 @@ export async function transcribeQuickVoiceNote(storagePath) {
   return invokeWithMessage("quick-progress-note", { storagePath }, "Gagal memproses catatan suara"); // { transcript, action, progress_note, lead_id, lead_name, confidence, updates, cancel_visit, result, new_lead, quota }
 }
 
-// Cek sisa kuota bulanan TANPA motong slot - dipake modal nampilin status
-// "X/100 dipake bulan ini" SEBELUM mulai rekam.
-export async function getQuickVoiceQuota() {
-  const { data, error } = await supabase.functions.invoke("quick-progress-note", { body: { checkQuotaOnly: true } });
-  if (error) throw error;
-  return data; // { used, max }
-}
-
 // ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----
 export async function getDealTransactions() {
   const { data, error } = await supabase.from("deal_transactions").select("*").order("deal_date", { ascending: false });

@@ -56,7 +56,6 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
   const [stage, setStage] = useState("idle"); // idle | recording | processing | review | error
   const [seconds, setSeconds] = useState(0);
   const [processingStep, setProcessingStep] = useState("uploading"); // uploading | transcribing
-  const [quota, setQuota] = useState(null); // { used, max }
 
   const [action, setAction] = useState("update_lead");
   const [lead, setLead] = useState(null);
@@ -116,10 +115,6 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         try { mr.stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
       }
     };
-  }, []);
-
-  useEffect(() => {
-    db.getQuickVoiceQuota().then(setQuota).catch(() => setQuota(null));
   }, []);
 
   // Draft email di-fetch TERPISAH (bukan bagian respons quick-progress-note)
@@ -192,7 +187,6 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         setCloseResult(result.result || "won");
         setNewLead(result.new_lead || null);
         setConfidence(result.confidence || null);
-        if (result.quota) setQuota(result.quota);
         const matchedLead = result.lead_id ? (leads || []).find((l) => l.id === result.lead_id) : null;
         setLead(matchedLead ? { id: matchedLead.id, name: matchedLead.name } : (result.lead_id ? { id: result.lead_id, name: result.lead_name } : null));
         setStage("review");
@@ -320,17 +314,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
             <button onClick={stage === "recording" ? cancelRecording : onClose} className="text-slate-500 hover:text-white transition-colors" aria-label="Tutup"><X size={18} /></button>
           </div>
 
-          {quota && stage === "idle" && (
-            <div className="mt-4 mb-1">
-              <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">
-                <span>{quota.reset_at ? `Kuota · terisi kembali ${db.formatQuotaDate(quota.reset_at)}` : "Kuota per bulan"}</span>
-                <span className="font-mono tabular-nums text-slate-400">{quota.used}/{quota.max}</span>
-              </div>
-              <div className="h-[3px] rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full rounded-full bg-violet-400" style={{ width: `${Math.min(100, (quota.used / quota.max) * 100)}%` }} />
-              </div>
-            </div>
-          )}
+          {/* Kuota NEX Pro tidak ditampilkan ke pengguna (6 Okt 2026) - dipantau admin di Command Center. */}
           {stage !== "idle" && <div className="mb-2" />}
 
           {stage === "idle" && (

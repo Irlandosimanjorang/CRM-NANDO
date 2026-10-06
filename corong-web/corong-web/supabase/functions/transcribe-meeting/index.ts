@@ -12,6 +12,94 @@
 // org masing-masing. Sekalian fix releaseSlot (`.catch()` di hasil rpc() bikin
 // pengembalian kuota error sendiri) dan pesan error pakai bahasa baku.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+// === PENCATAT PEMAKAIAN AI (6 Okt 2026, permintaan Nando) ===
+// Setiap panggilan ke Anthropic/OpenAI dari function ini dicatat ke tabel
+// ai_usage (token, pencarian web, durasi audio, biaya USD) atas nama pengguna
+// yang memicunya - dipakai Command Center untuk pemakaian & biaya per akun.
+// Pengguna diambil dari JWT request; jalur cron/internal memanggil aiSetUser().
+// Harga per 1 juta token: [input, output, tulis cache, baca cache].
+const AI_FEATURE = "transcribe-meeting";
+const AI_CTX = new AsyncLocalStorage();
+const AI_PRICE = { sonnet: [2, 10, 2.5, 0.2], haiku: [1, 5, 1.25, 0.1] };
+function aiSetUser(userId, orgId = null) {
+  const s = AI_CTX.getStore();
+  if (s) { s.userId = userId || null; if (orgId) s.orgId = orgId; }
+}
+function aiJwtUser(req) {
+  try {
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.role === "authenticated" ? payload.sub : null;
+  } catch (_) {
+    return null;
+  }
+}
+const AI_RAW_FETCH = globalThis.fetch.bind(globalThis);
+globalThis.fetch = async (input, init) => {
+  const resp = await AI_RAW_FETCH(input, init);
+  try {
+    const url = typeof input === "string" ? input : (input?.url || String(input));
+    if (resp.ok && (url.startsWith("https://api.anthropic.com/") || url.startsWith("https://api.openai.com/"))) {
+      await aiLogUsage(url, init, resp.clone());
+    }
+  } catch (e) {
+    console.log("[ai-usage] gagal mencatat:", String(e));
+  }
+  return resp;
+};
+async function aiLogUsage(url, init, resp) {
+  const ctx = AI_CTX.getStore() || {};
+  const row = {
+    feature: AI_FEATURE,
+    user_id: ctx.userId !== undefined ? ctx.userId : (ctx.req ? aiJwtUser(ctx.req) : null),
+    org_id: ctx.orgId || null,
+    provider: url.includes("anthropic") ? "anthropic" : "openai",
+  };
+  if (row.provider === "anthropic") {
+    const d = await resp.json();
+    const u = d.usage || {};
+    let model = d.model || "";
+    if (!model) { try { model = JSON.parse(init?.body || "{}").model || ""; } catch (_) { /* tanpa model */ } }
+    const p = model.includes("haiku") ? AI_PRICE.haiku : AI_PRICE.sonnet;
+    Object.assign(row, {
+      model,
+      input_tokens: u.input_tokens || 0,
+      output_tokens: u.output_tokens || 0,
+      cache_write_tokens: u.cache_creation_input_tokens || 0,
+      cache_read_tokens: u.cache_read_input_tokens || 0,
+      web_searches: u.server_tool_use?.web_search_requests || 0,
+      web_fetches: u.server_tool_use?.web_fetch_requests || 0,
+    });
+    row.cost_usd = (row.input_tokens * p[0] + row.output_tokens * p[1] + row.cache_write_tokens * p[2] + row.cache_read_tokens * p[3]) / 1e6 + row.web_searches * 0.01;
+  } else if (url.includes("/audio/transcriptions")) {
+    const d = await resp.json();
+    row.model = "whisper-1";
+    row.audio_seconds = Math.round(d.duration || 0);
+    row.cost_usd = ((d.duration || 0) / 60) * 0.006;
+  } else if (url.includes("/audio/speech")) {
+    let body = {};
+    try { body = JSON.parse(init?.body || "{}"); } catch (_) { /* body bukan JSON */ }
+    row.model = body.model || "tts-1";
+    row.tts_chars = String(body.input || "").length;
+    row.cost_usd = (row.tts_chars * 15) / 1e6;
+  } else if (url.includes("/embeddings")) {
+    const d = await resp.json();
+    row.model = d.model || "text-embedding-3-small";
+    row.input_tokens = d.usage?.total_tokens || 0;
+    row.cost_usd = (row.input_tokens * 0.02) / 1e6;
+  } else {
+    return;
+  }
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const ins = await AI_RAW_FETCH(`${Deno.env.get("SUPABASE_URL")}/rest/v1/ai_usage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}`, Prefer: "return=minimal" },
+    body: JSON.stringify(row),
+  });
+  if (!ins.ok) console.log("[ai-usage] simpan gagal:", ins.status, (await ins.text()).slice(0, 200));
+}
 
 // Kuota bulanan berlaku 1 bulan sejak pemakaian pertama (6 Okt 2026, tabel
 // quota_periods) - bukan lagi reset tiap tanggal 1. reserve_edge_function_call
@@ -88,6 +176,7 @@ async function transcribeAudio(audioBlob, path) {
   form.append("file", audioBlob, audioFileName(path));
   form.append("model", "whisper-1");
   form.append("language", "id");
+  form.append("response_format", "verbose_json"); // berisi durasi audio untuk pencatatan biaya
   const resp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
@@ -142,7 +231,7 @@ Transkrip:
   return { notes: t, next_action: "" };
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => AI_CTX.run({ req }, async () => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -224,4 +313,4 @@ Deno.serve(async (req) => {
     if (admin && storagePath) await removeAudio(admin, storagePath);
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
   }
-});
+}));

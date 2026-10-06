@@ -16,6 +16,7 @@ import IndustryDemo from "../../src/tabs/IndustryDemo";
 import Team from "../../src/tabs/Team";
 import LeadModal from "../../src/components/LeadModal";
 import EnterpriseInvoicePanel from "../../src/components/EnterpriseInvoicePanel";
+import { AiCostPanel } from "../../src/tabs/AdminDashboard";
 
 const q = new URLSearchParams(location.search);
 const ind = q.get("ind"), role = q.get("role"), tab = q.get("tab");
@@ -48,6 +49,15 @@ const views = {
   industrydemo: <IndustryDemo />,
   settings: <Settings settings={{}} stages={stages} leads={leads} onChanged={noop} userEmail="uji@example.com" locked={false} />,
   invoice: <div id="modal-scroll" className="max-h-[85vh] overflow-y-auto overscroll-contain" style={{ background: "#05070c", padding: 24 }}><EnterpriseInvoicePanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }, { plan: "free", org_name: "Org Free", role: "owner" }, { plan: "professional", org_name: "CV Maju Jaya", role: "owner", display_name: "Pak Budi", email: "budi@majujaya.id" }]} /></div>,
+  aicost: <div style={{ background: "#05070c", padding: 24 }}><AiCostPanel data={{ kurs: 17700, tracking_since: "2026-10-06T11:00:00Z", accounts: [
+    { user_id: "a1", email: "lia@queenpacific.co.id", display_name: "Bu Lia", org_name: "PT Queen Pacific", role: "owner", plan: "enterprise", period_start: "2026-10-06T17:00:00Z", period_end: "2026-11-06T17:00:00Z", period_source: "plan", tokens: 1843210, cost_rp: 96400, est_used_rp: 187300, est_max_rp: 213955, pct_of_limit: 87.5, features: [
+      { key: "generate-leads", label: "Generate Leads", used: 4, limit: 4, pct: 100, tokens: 1422000, cost_rp: 68100 },
+      { key: "quick-progress-note", label: "NEX Pro", used: 140, limit: 150, pct: 93, tokens: 380000, cost_rp: 24100 },
+      { key: "daily-digest", label: "AI Advisor (otomatis)", used: 3, limit: 22, pct: 14, tokens: 41210, cost_rp: 4200 },
+      { key: "customer-chat", label: "Chat Bantuan", used: 0, limit: null, tokens: 0, cost_rp: 0 } ] },
+    { user_id: "a2", email: "budi@queenpacific.co.id", display_name: null, org_name: "PT Queen Pacific", role: "sales_rep", plan: "enterprise", period_start: "2026-10-06T17:00:00Z", period_end: "2026-11-06T17:00:00Z", period_source: "plan", tokens: 120400, cost_rp: 8800, est_used_rp: 60000, est_max_rp: 213955, pct_of_limit: 28, features: [
+      { key: "lead-from-url", label: "Lead dari Link", used: 6, limit: 10, pct: 60, tokens: 120400, cost_rp: 8800 } ] },
+    { user_id: "a3", email: "rina@majujaya.id", display_name: "Rina", org_name: "CV Maju Jaya", role: "owner", plan: "standard", period_start: "2026-09-24T02:10:00Z", period_end: "2026-10-24T02:10:00Z", period_source: "plan", tokens: 0, cost_rp: 0, est_used_rp: 110, est_max_rp: 53955, pct_of_limit: 0.2, features: [] } ] }} /></div>,
   leadmodal: <LeadModal lead={leads[0]} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
   leadmodal_weird: <LeadModal lead={weird} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
 };

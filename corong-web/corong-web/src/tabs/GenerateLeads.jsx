@@ -262,7 +262,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
             <Info size={14} />
           </button>
         </div>
-        <p className="text-sm text-slate-500 mt-1">AI mencari calon CUSTOMER untuk produk Anda — bukan sekadar perusahaan sejenis. Provinsi/kota opsional (kosongkan untuk mencari di seluruh Indonesia, atau isi nama kota untuk hasil yang lebih lokal); kolom lain wajib diisi agar AI mengarah ke pembeli potensial yang paling akurat. Maks 10 lead per generate (kontak langsung dilengkapi otomatis), 4x sebulan per pengguna.</p>
+        <p className="text-sm text-slate-500 mt-1">AI mencari calon CUSTOMER untuk produk Anda — bukan sekadar perusahaan sejenis. Provinsi/kota opsional (kosongkan untuk mencari di seluruh Indonesia, atau isi nama kota untuk hasil yang lebih lokal); kolom lain wajib diisi agar AI mengarah ke pembeli potensial yang paling akurat. Maks 10 lead per generate (kontak langsung dilengkapi otomatis).</p>
 
         {showInfo && (
           <div className="mt-3 bg-orange-50/60 border border-orange-100 rounded-2xl p-4 relative">
@@ -285,23 +285,12 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       </div>
 
       <div className="bg-white border border-slate-100 rounded-panel p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-orange-500 transition-all"
-              style={{ width: `${Math.min(100, (cooldown.usedThisMonth / (cooldown.quotaMax || 4)) * 100)}%` }}
-            />
-          </div>
-          <span className="text-[11px] text-slate-400 shrink-0 ml-1">
-            {cooldown.usedThisMonth}/{cooldown.quotaMax || 4} terpakai
-            {cooldown.resetAt ? ` · terisi kembali ${db.formatQuotaDate(cooldown.resetAt)}` : ""}
-          </span>
-        </div>
+        {/* Penghitung kuota tidak ditampilkan ke pengguna (6 Okt 2026, permintaan Nando) - dipantau admin di Command Center. */}
 
         {!cooldown.canGenerate ? (
           <div className="flex items-center gap-2.5 text-sm text-amber-700 bg-amber-50 rounded-2xl p-4">
             <Clock size={18} className="shrink-0" />
-            <span>Kuota Generate Leads Anda ({cooldown.quotaMax || 4}x per bulan) sudah terpakai. Kuota terisi kembali {nextDate ? <>pada <b>{db.formatQuotaDate(cooldown.nextAvailableAt)}</b> ({daysLeft} hari lagi)</> : "1 bulan setelah pemakaian pertama"}.</span>
+            <span>Kuota Generate Leads Anda untuk periode ini sudah terpakai. Kuota terisi kembali {nextDate ? <>pada <b>{db.formatQuotaDate(cooldown.nextAvailableAt)}</b> ({daysLeft} hari lagi)</> : "1 bulan setelah pemakaian pertama"}.</span>
           </div>
         ) : (
           <div className="space-y-3">
