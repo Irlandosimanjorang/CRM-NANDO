@@ -16,7 +16,8 @@
 // - Pesan ke user pakai bahasa baku.
 //
 // === BATAS BULANAN (6 Okt 2026, permintaan Nando) ===
-// Dari 30x/hari menjadi 15x/bulan per pengguna (kalender WIB). Semua email
+// Dari 30x/hari menjadi 15x/bulan per pengguna (1 bulan sejak pemakaian
+// pertama, lihat quota_periods). Semua email
 // terkirim dari noreply@nexto.site - domain yang sama dengan invoice &
 // pengingat jatuh tempo - jadi pengiriman massal dari banyak akun berisiko
 // menurunkan reputasi domain (email invoice ikut masuk spam).
@@ -32,6 +33,14 @@ const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 function wibMonthStartUTC(d = new Date()) {
   const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
   return new Date(Date.UTC(wibNow.getUTCFullYear(), wibNow.getUTCMonth(), 1) - WIB_OFFSET_MS);
+}
+// Kuota berlaku 1 bulan sejak pemakaian pertama (6 Okt 2026, quota_periods).
+async function quotaRefillText(admin, userId, feature) {
+  try {
+    const { data } = await admin.rpc("quota_usage", { p_user_id: userId, p_feature: feature });
+    if (data?.reset_at) return `Kuota terisi kembali pada ${new Date(data.reset_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" })}.`;
+  } catch (_) { /* pesan tanpa tanggal */ }
+  return "Kuota terisi kembali 1 bulan setelah pemakaian pertama.";
 }
 
 const cors = {
@@ -97,7 +106,7 @@ Deno.serve(async (req) => {
       p_window_start: wibMonthStartUTC().toISOString(), p_max_calls: MONTHLY_LIMIT,
     });
     if (rlErr) console.error("[send-lead-email] reserve_edge_function_call gagal:", rlErr);
-    if (!reserved) return json({ error: `Batas kirim email (${MONTHLY_LIMIT}x/bulan) sudah tercapai. Kuota terisi kembali setiap tanggal 1.` }, 429);
+    if (!reserved) return json({ error: `Batas kirim email (${MONTHLY_LIMIT}x per bulan) sudah tercapai. ${await quotaRefillText(admin, userId, "send-lead-email")}` }, 429);
     reservationId = reserved;
 
     const htmlBody = emailBody.split("\n").map((line) => `<p style="margin:0 0 12px;color:#334155;font-size:14px;line-height:1.6;">${line ? escapeHtml(line) : "&nbsp;"}</p>`).join("");

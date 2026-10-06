@@ -17,6 +17,18 @@
 // REASON_CATEGORIES di LeadModal.jsx). Kuota dikembalikan kalau AI gagal.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
+// Kuota bulanan berlaku 1 bulan sejak pemakaian pertama (6 Okt 2026, tabel
+// quota_periods) - bukan lagi reset tiap tanggal 1. reserve_edge_function_call
+// menghitung periodenya sendiri; helper ini untuk menampilkan tanggal terisi
+// kembali di pesan kuota habis.
+async function quotaRefillText(admin, userId, feature) {
+  try {
+    const { data } = await admin.rpc("quota_usage", { p_user_id: userId, p_feature: feature });
+    if (data?.reset_at) return `Kuota terisi kembali pada ${new Date(data.reset_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" })}.`;
+  } catch (_) { /* pesan tanpa tanggal */ }
+  return "Kuota terisi kembali 1 bulan setelah pemakaian pertama.";
+}
+
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -44,16 +56,12 @@ async function getVaultSecret(admin, name) {
 }
 
 // Balikin id baris pemakaian (buat dihapus lagi kalau AI gagal), atau null
-// kalau kuota bulan ini habis.
+// kalau kuota habis. Lewat reserve_edge_function_call (atomic) - periodenya
+// 1 bulan sejak pemakaian pertama (quota_periods, 6 Okt 2026).
 async function reserveMonthly(admin, userId, functionName, maxCalls) {
-  const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
-  const wibNow = new Date(Date.now() + WIB_OFFSET_MS);
-  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth();
-  const windowStart = new Date(Date.UTC(y, m, 1, 0, 0, 0) - WIB_OFFSET_MS).toISOString();
-  const { count } = await admin.from("edge_function_calls").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("function_name", functionName).gte("called_at", windowStart);
-  if ((count ?? 0) >= maxCalls) return null;
-  const { data } = await admin.from("edge_function_calls").insert({ user_id: userId, function_name: functionName }).select("id").single();
-  return data?.id || "reserved";
+  const { data, error } = await admin.rpc("reserve_edge_function_call", { p_user_id: userId, p_function_name: functionName, p_window_start: new Date(Date.now() - 86400000).toISOString(), p_max_calls: maxCalls });
+  if (error) { console.error("[guess-outcome-reason] reserve_edge_function_call gagal:", error); return null; }
+  return data || null;
 }
 
 async function releaseMonthly(admin, id) {
@@ -150,7 +158,7 @@ Deno.serve(async (req) => {
         console.log("[guess-outcome-reason] auto-skip, jatah 15x/bulan udah abis buat user:", userId);
         return new Response(JSON.stringify({ ok: true, skipped: "rate limited (15x/bulan)" }), { headers: { ...cors, "Content-Type": "application/json" } });
       }
-      return new Response(JSON.stringify({ error: "Kuota tebak alasan (15x/bulan) sudah terpakai. Silakan isi secara manual." }), { status: 429, headers: cors });
+      return new Response(JSON.stringify({ error: `Kuota tebak alasan (15x per bulan) sudah terpakai. ${await quotaRefillText(admin, userId, "guess-outcome-reason")} Silakan isi secara manual.` }), { status: 429, headers: cors });
     }
 
     const resultWord = result === "won" ? "MENANG (deal closed)" : "KALAH (lost/tidak jadi)";

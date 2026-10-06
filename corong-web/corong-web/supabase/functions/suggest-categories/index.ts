@@ -12,6 +12,18 @@
 // AI gagal. Pesan ke user pakai bahasa baku.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
+// Kuota bulanan berlaku 1 bulan sejak pemakaian pertama (6 Okt 2026, tabel
+// quota_periods) - bukan lagi reset tiap tanggal 1. reserve_edge_function_call
+// menghitung periodenya sendiri; helper ini untuk menampilkan tanggal terisi
+// kembali di pesan kuota habis.
+async function quotaRefillText(admin, userId, feature) {
+  try {
+    const { data } = await admin.rpc("quota_usage", { p_user_id: userId, p_feature: feature });
+    if (data?.reset_at) return `Kuota terisi kembali pada ${new Date(data.reset_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" })}.`;
+  } catch (_) { /* pesan tanpa tanggal */ }
+  return "Kuota terisi kembali 1 bulan setelah pemakaian pertama.";
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -78,7 +90,7 @@ Deno.serve(async (req) => {
       return json({ error: "Gagal memeriksa kuota. Silakan coba lagi sebentar." }, 500);
     }
     if (!reserved) {
-      return json({ error: `Kuota Rapihin Data (${MAX_CALLS_PER_MONTH}x/bulan) sudah terpakai. Silakan coba lagi bulan depan.` }, 429);
+      return json({ error: `Kuota Rapihin Data (${MAX_CALLS_PER_MONTH}x per bulan) sudah terpakai. ${await quotaRefillText(admin, userId, "suggest-categories")}` }, 429);
     }
     reservationId = reserved;
 

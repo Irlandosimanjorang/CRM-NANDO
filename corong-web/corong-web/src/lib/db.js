@@ -479,40 +479,21 @@ export async function getGeneratedLeads() {
   return data || [];
 }
 
-// QUOTA FIX (8 Sep 2026): sebelumnya ini ngitung "1x/minggu" (malah ada sisa
-// logic "2x/minggu" yang lebih tua lagi) - gak nyambung sama backend
-// (generate-leads edge function) yang udah lama diubah jadi 4x/BULAN
-// kalender WIB. Sekarang dihitung sama persis kayak backend: awal bulan
-// kalender WIB, maks 4x, biar counter "X/4 bulan ini" di UI gak bohong.
-const GEN_LEADS_QUOTA_MAX = 4;
-const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
-function wibMonthStartUTC(d = new Date()) {
-  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
-  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth();
-  return new Date(Date.UTC(y, m, 1, 0, 0, 0) - WIB_OFFSET_MS);
-}
-function wibNextMonthStartUTC(d = new Date()) {
-  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
-  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth();
-  return new Date(Date.UTC(y, m + 1, 1, 0, 0, 0) - WIB_OFFSET_MS);
-}
-// 6 Okt 2026: kuota per pengguna (bukan per organisasi) - sama dengan
-// reserve_lead_gen_slot(p_user_id) di backend.
-export async function getLeadGenCooldown() {
-  const { data: { user } } = await supabase.auth.getUser();
-  const monthStart = wibMonthStartUTC().toISOString();
-  const { data, error } = await supabase
-    .from("lead_gen_runs")
-    .select("generated_at")
-    .eq("user_id", user?.id)
-    .gte("generated_at", monthStart)
-    .order("generated_at", { ascending: true });
+// Kuota bulanan (6 Okt 2026): per pengguna, berlaku 1 bulan sejak pemakaian
+// pertama (tabel quota_periods) - bukan lagi reset tiap tanggal 1. Angkanya
+// dihitung server lewat my_quota_usage, sama persis dengan yang dipakai
+// backend saat memotong kuota. resetAt null = periode belum dimulai.
+async function getMyQuotaUsage(feature) {
+  const { data, error } = await supabase.rpc("my_quota_usage", { p_feature: feature });
   if (error) throw error;
-  const runs = data || [];
-  const usedThisMonth = runs.length;
-  const canGenerate = usedThisMonth < GEN_LEADS_QUOTA_MAX;
-  const nextAvailableAt = canGenerate ? null : wibNextMonthStartUTC().toISOString();
-  return { canGenerate, usedThisMonth, quotaMax: GEN_LEADS_QUOTA_MAX, nextAvailableAt };
+  return { used: data?.used || 0, resetAt: data?.reset_at || null };
+}
+
+const GEN_LEADS_QUOTA_MAX = 4;
+export async function getLeadGenCooldown() {
+  const { used, resetAt } = await getMyQuotaUsage("generate-leads");
+  const canGenerate = used < GEN_LEADS_QUOTA_MAX;
+  return { canGenerate, usedThisMonth: used, quotaMax: GEN_LEADS_QUOTA_MAX, nextAvailableAt: canGenerate ? null : resetAt, resetAt };
 }
 
 export async function importGeneratedLead(genLead, defaultStageKey) {
@@ -1036,36 +1017,25 @@ export async function verifySelfiePhoto(photo_url) {
 
 // Kuota check-in GPS - 20x/bulan PER USER (bukan per org), soalnya check-in
 // itu tindakan personal tiap sales rep ngunjungin customer, bukan hal yang
-// masuk akal dibagi rata se-org. Dihitung per bulan kalender WIB, sama pola
-// kayak GEN_LEADS_QUOTA_MAX di atas. Dicek di DUA tempat: checkIn() (di sini,
-// SUMBER KEBENARAN - nolak insert kalo udah abis, gak bisa dibypass lewat
-// panggilan API langsung) dan getCheckinCooldown() (buat UI nampilin sisa
-// kuota SEBELUM user buka kamera, biar gak buang-buang usaha foto duluan).
+// masuk akal dibagi rata se-org. Periodenya 1 bulan sejak check-in pertama
+// (trigger visit_checkins_claim_quota memulai periode). Dicek di DUA tempat:
+// checkIn() (nolak insert kalo udah abis) dan getCheckinCooldown() (buat UI
+// nampilin sisa kuota SEBELUM user buka kamera, biar gak buang-buang usaha
+// foto duluan).
 const CHECKIN_QUOTA_MAX = 20;
-async function countCheckinsThisMonth(uid) {
-  const monthStart = wibMonthStartUTC().toISOString();
-  const { count, error } = await supabase
-    .from("visit_checkins")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", uid)
-    .gte("checked_in_at", monthStart);
-  if (error) throw error;
-  return count || 0;
-}
+export const formatQuotaDate = (iso) => new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 export async function getCheckinCooldown() {
-  const uid = (await supabase.auth.getUser()).data.user.id;
-  const usedThisMonth = await countCheckinsThisMonth(uid);
-  const canCheckIn = usedThisMonth < CHECKIN_QUOTA_MAX;
-  const nextAvailableAt = canCheckIn ? null : wibNextMonthStartUTC().toISOString();
-  return { canCheckIn, usedThisMonth, quotaMax: CHECKIN_QUOTA_MAX, nextAvailableAt };
+  const { used, resetAt } = await getMyQuotaUsage("checkin");
+  const canCheckIn = used < CHECKIN_QUOTA_MAX;
+  return { canCheckIn, usedThisMonth: used, quotaMax: CHECKIN_QUOTA_MAX, nextAvailableAt: canCheckIn ? null : resetAt, resetAt };
 }
 
 export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters, photo_url, accuracy_m = null }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
-  const usedThisMonth = await countCheckinsThisMonth(uid);
-  if (usedThisMonth >= CHECKIN_QUOTA_MAX) {
-    throw new Error(`Kuota check-in GPS bulan ini sudah habis (maks ${CHECKIN_QUOTA_MAX}x/bulan per user). Bisa lagi awal bulan depan.`);
+  const { used, resetAt } = await getMyQuotaUsage("checkin");
+  if (used >= CHECKIN_QUOTA_MAX) {
+    throw new Error(`Kuota check-in GPS Anda (${CHECKIN_QUOTA_MAX}x per bulan) sudah habis. ${resetAt ? `Kuota terisi kembali pada ${formatQuotaDate(resetAt)}.` : ""}`.trim());
   }
   const { data, error } = await supabase
     .from("visit_checkins")

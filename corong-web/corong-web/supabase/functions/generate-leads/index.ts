@@ -23,7 +23,9 @@
 //
 // === KUOTA PER PENGGUNA (6 Okt 2026, permintaan Nando: "4x per orang") ===
 // Kuota 4x/bulan sekarang dihitung per pengguna, bukan per organisasi -
-// reserve_lead_gen_slot menerima p_user_id (lead_gen_runs.user_id).
+// reserve_lead_gen_slot menerima p_user_id (lead_gen_runs.user_id). Periode
+// kuota berlaku 1 bulan sejak pemakaian pertama (tabel quota_periods),
+// bukan lagi reset tiap tanggal 1.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -45,22 +47,22 @@ const FIRST_PASS_MAX_SEARCH = 12;
 const RETRY_PASS_MAX_SEARCH = 6;
 const MAX_EXCLUDE_NAMES_IN_PROMPT = 40;
 const QUOTA_MAX_RUNS = 4;
-const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 const HANDLER_HARD_LIMIT_MS = 150 * 1000;
 const RESPONSE_MARGIN_MS = 10 * 1000;
 const RETRY_TIME_BUDGET_MS = 90 * 1000;
 const MAX_PAUSE_CONTINUATIONS = 3;
 
-function wibMonthStartUTC(d = new Date()) {
-  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
-  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth();
-  return new Date(Date.UTC(y, m, 1, 0, 0, 0) - WIB_OFFSET_MS);
+// Kuota berlaku 1 bulan sejak pemakaian pertama (6 Okt 2026) - tanggal
+// terisi kembali diambil dari quota_usage.
+async function quotaResetAt(admin, userId, feature) {
+  try {
+    const { data } = await admin.rpc("quota_usage", { p_user_id: userId, p_feature: feature });
+    return data?.reset_at ? new Date(data.reset_at) : null;
+  } catch (_) {
+    return null;
+  }
 }
-function wibNextMonthStartUTC(d = new Date()) {
-  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
-  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth();
-  return new Date(Date.UTC(y, m + 1, 1, 0, 0, 0) - WIB_OFFSET_MS);
-}
+const fmtTanggal = (d) => d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
 
 const UNIVERSAL_INSTRUCTIONS = `Kamu riset lead sales B2B/B2C buat bisnis di Indonesia. Cari SAMPAI ${MAX_LEADS} perusahaan/calon customer yang berpotensi jadi lead, pake web search kamu buat nyari dari:
 - Hasil Google Maps yang publik (nama bisnis, alamat, telepon, website)
@@ -438,8 +440,8 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Gagal cek kuota: " + reserveErr.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
       }
       if (!reserved) {
-        const nextAt = wibNextMonthStartUTC();
-        return new Response(JSON.stringify({ error: `Kuota Generate Leads Anda (${QUOTA_MAX_RUNS}x/bulan) sudah terpakai. Silakan coba lagi mulai ${nextAt.toISOString().slice(0, 10)}.`, next_available_at: nextAt.toISOString() }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
+        const nextAt = await quotaResetAt(admin, userId, "generate-leads");
+        return new Response(JSON.stringify({ error: `Kuota Generate Leads Anda (${QUOTA_MAX_RUNS}x per bulan) sudah terpakai. Kuota terisi kembali pada ${nextAt ? fmtTanggal(nextAt) : "1 bulan setelah pemakaian pertama"}.`, next_available_at: nextAt ? nextAt.toISOString() : null }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
       }
       reservedRunId = reserved;
     }

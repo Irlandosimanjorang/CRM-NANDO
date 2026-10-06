@@ -292,13 +292,16 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
               style={{ width: `${Math.min(100, (cooldown.usedThisMonth / (cooldown.quotaMax || 4)) * 100)}%` }}
             />
           </div>
-          <span className="text-[11px] text-slate-400 shrink-0 ml-1">{cooldown.usedThisMonth}/{cooldown.quotaMax || 4} bulan ini</span>
+          <span className="text-[11px] text-slate-400 shrink-0 ml-1">
+            {cooldown.usedThisMonth}/{cooldown.quotaMax || 4} terpakai
+            {cooldown.resetAt ? ` · terisi kembali ${db.formatQuotaDate(cooldown.resetAt)}` : ""}
+          </span>
         </div>
 
         {!cooldown.canGenerate ? (
           <div className="flex items-center gap-2.5 text-sm text-amber-700 bg-amber-50 rounded-2xl p-4">
             <Clock size={18} className="shrink-0" />
-            <span>Kuota Generate Leads Anda ({cooldown.quotaMax || 4}x/bulan) sudah terpakai —dapat digunakan lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
+            <span>Kuota Generate Leads Anda ({cooldown.quotaMax || 4}x per bulan) sudah terpakai. Kuota terisi kembali {nextDate ? <>pada <b>{db.formatQuotaDate(cooldown.nextAvailableAt)}</b> ({daysLeft} hari lagi)</> : "1 bulan setelah pemakaian pertama"}.</span>
           </div>
         ) : (
           <div className="space-y-3">

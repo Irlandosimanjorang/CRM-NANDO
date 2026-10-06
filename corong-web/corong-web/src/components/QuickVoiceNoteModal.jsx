@@ -323,7 +323,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
           {quota && stage === "idle" && (
             <div className="mt-4 mb-1">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">
-                <span>Kuota bulan ini</span>
+                <span>{quota.reset_at ? `Kuota · terisi kembali ${db.formatQuotaDate(quota.reset_at)}` : "Kuota per bulan"}</span>
                 <span className="font-mono tabular-nums text-slate-400">{quota.used}/{quota.max}</span>
               </div>
               <div className="h-[3px] rounded-full bg-white/5 overflow-hidden">

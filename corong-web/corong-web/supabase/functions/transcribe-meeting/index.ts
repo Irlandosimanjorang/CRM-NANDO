@@ -13,6 +13,18 @@
 // pengembalian kuota error sendiri) dan pesan error pakai bahasa baku.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
+// Kuota bulanan berlaku 1 bulan sejak pemakaian pertama (6 Okt 2026, tabel
+// quota_periods) - bukan lagi reset tiap tanggal 1. reserve_edge_function_call
+// menghitung periodenya sendiri; helper ini untuk menampilkan tanggal terisi
+// kembali di pesan kuota habis.
+async function quotaRefillText(admin, userId, feature) {
+  try {
+    const { data } = await admin.rpc("quota_usage", { p_user_id: userId, p_feature: feature });
+    if (data?.reset_at) return `Kuota terisi kembali pada ${new Date(data.reset_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" })}.`;
+  } catch (_) { /* pesan tanpa tanggal */ }
+  return "Kuota terisi kembali 1 bulan setelah pemakaian pertama.";
+}
+
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -164,7 +176,7 @@ Deno.serve(async (req) => {
     const MAX_CALLS = 10;
     reservationId = await reserveMonthlySlot(admin, userData.user.id, "transcribe-meeting", MAX_CALLS);
     if (!reservationId) {
-      return new Response(JSON.stringify({ error: "Kuota Rekam Meeting (10x/bulan) sudah terpakai. Silakan coba lagi bulan depan, atau catat manual terlebih dahulu." }), { status: 429, headers: cors });
+      return new Response(JSON.stringify({ error: `Kuota Rekam Meeting (10x per bulan) sudah terpakai. ${await quotaRefillText(admin, userData.user.id, "transcribe-meeting")} Sementara itu, Anda dapat mencatat secara manual.` }), { status: 429, headers: cors });
     }
 
     const body = await req.json();

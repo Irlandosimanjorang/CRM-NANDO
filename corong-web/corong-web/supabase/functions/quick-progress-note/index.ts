@@ -5,7 +5,7 @@
 // dulu, baru dieksekusi via db.js pas user tap Simpan.
 //
 // TIER + KUOTA: Standard 25x/bulan, Professional/Enterprise 150x/bulan
-// (kalender WIB). Mode `checkQuotaOnly` (tanpa audio) buat nampilin sisa
+// (1 bulan sejak pemakaian pertama, lihat quota_periods). Mode `checkQuotaOnly` (tanpa audio) buat nampilin sisa
 // jatah tanpa motong kuota.
 //
 // === AUDIT ISTILAH INDUSTRI (30 Sep 2026) ===
@@ -15,6 +15,18 @@
 // punya .catch) bikin pengembalian kuota error sendiri - diganti try/await.
 // Pesan error ke user pakai bahasa baku.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+// Kuota bulanan berlaku 1 bulan sejak pemakaian pertama (6 Okt 2026, tabel
+// quota_periods) - bukan lagi reset tiap tanggal 1. reserve_edge_function_call
+// menghitung periodenya sendiri; helper ini untuk menampilkan tanggal terisi
+// kembali di pesan kuota habis.
+async function quotaRefillText(admin, userId, feature) {
+  try {
+    const { data } = await admin.rpc("quota_usage", { p_user_id: userId, p_feature: feature });
+    if (data?.reset_at) return `Kuota terisi kembali pada ${new Date(data.reset_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" })}.`;
+  } catch (_) { /* pesan tanpa tanggal */ }
+  return "Kuota terisi kembali 1 bulan setelah pemakaian pertama.";
+}
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -73,11 +85,12 @@ async function removeAudio(admin, path) {
   if (!path) return;
   try { await admin.storage.from("meeting-audio").remove([path]); } catch (_) { /* best effort */ }
 }
-async function getUsedThisMonth(admin, userId, functionName) {
-  const windowStart = wibMonthStartUTC().toISOString();
-  const { count, error } = await admin.from("edge_function_calls").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("function_name", functionName).gte("called_at", windowStart);
-  if (error) { console.error("[quick-progress-note] getUsedThisMonth gagal:", error); return 0; }
-  return count || 0;
+// Pemakaian periode berjalan (1 bulan sejak pemakaian pertama) + tanggal
+// kuota terisi kembali.
+async function getQuotaUsage(admin, userId, functionName) {
+  const { data, error } = await admin.rpc("quota_usage", { p_user_id: userId, p_feature: functionName });
+  if (error) { console.error("[quick-progress-note] getQuotaUsage gagal:", error); return { used: 0, reset_at: null }; }
+  return { used: data?.used || 0, reset_at: data?.reset_at || null };
 }
 
 // Format audio (2 Okt 2026): Whisper membaca format dari ekstensi nama file.
@@ -203,13 +216,13 @@ Deno.serve(async (req) => {
     const body = await req.json();
 
     if (body.checkQuotaOnly) {
-      const used = await getUsedThisMonth(admin, userData.user.id, "quick-progress-note");
-      return new Response(JSON.stringify({ used, max: monthlyMax }), { headers: { ...cors, "Content-Type": "application/json" } });
+      const { used, reset_at } = await getQuotaUsage(admin, userData.user.id, "quick-progress-note");
+      return new Response(JSON.stringify({ used, max: monthlyMax, reset_at }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     reservationId = await reserveMonthlySlot(admin, userData.user.id, "quick-progress-note", monthlyMax);
     if (!reservationId) {
-      return new Response(JSON.stringify({ error: `Kuota NEX Pro (${monthlyMax}x/bulan) sudah terpakai. Silakan coba lagi bulan depan, atau catat manual di tab Leads.` }), { status: 429, headers: cors });
+      return new Response(JSON.stringify({ error: `Kuota NEX Pro (${monthlyMax}x per bulan) sudah terpakai. ${await quotaRefillText(admin, userData.user.id, "quick-progress-note")} Sementara itu, Anda dapat mencatat manual di tab Leads.` }), { status: 429, headers: cors });
     }
 
     storagePath = body.storagePath;
@@ -250,7 +263,7 @@ Deno.serve(async (req) => {
     ]);
 
     const matchedLead = classified.lead_id ? (leads || []).find((l) => l.id === classified.lead_id) || null : null;
-    const usedNow = await getUsedThisMonth(admin, userData.user.id, "quick-progress-note");
+    const quotaNow = await getQuotaUsage(admin, userData.user.id, "quick-progress-note");
 
     // Sampe sini berarti SUKSES - reservasi slot TETEP kepake (gak di-release).
     return new Response(JSON.stringify({
@@ -264,7 +277,7 @@ Deno.serve(async (req) => {
       cancel_visit: !!classified.cancel_visit,
       result: classified.result || null,
       new_lead: classified.new_lead || null,
-      quota: { used: usedNow, max: monthlyMax },
+      quota: { used: quotaNow.used, max: monthlyMax, reset_at: quotaNow.reset_at },
     }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     if (admin && reservationId) await releaseSlot(admin, reservationId);
