@@ -250,24 +250,6 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
     }
   };
 
-  const [enrichingId, setEnrichingId] = useState(null);
-  const [enrichMsg, setEnrichMsg] = useState({});
-  const enrichLead = async (gl) => {
-    if (enrichingId) return;
-    setEnrichingId(gl.id);
-    setEnrichMsg((m) => ({ ...m, [gl.id]: "" }));
-    try {
-      const res = await db.enrichGeneratedLead(gl.id);
-      setResults((prev) => prev.map((r) => (r.id === gl.id ? { ...r, ...res.lead } : r)));
-      const found = [res.lead.phone && !gl.phone && "telepon", res.lead.email && !gl.email && "email", res.lead.key_person && res.lead.key_person !== gl.key_person && "PIC"].filter(Boolean);
-      setEnrichMsg((m) => ({ ...m, [gl.id]: found.length ? `Ketemu ${found.join(", ")} baru.` : "Tidak ada kontak publik tambahan yang dapat diverifikasi." }));
-    } catch (e) {
-      setEnrichMsg((m) => ({ ...m, [gl.id]: "Gagal: " + e.message }));
-    } finally {
-      setEnrichingId(null);
-    }
-  };
-
   const nextDate = cooldown.nextAvailableAt ? new Date(cooldown.nextAvailableAt) : null;
   const daysLeft = nextDate ? Math.max(1, Math.ceil((nextDate - new Date()) / 86400000)) : 0;
 
@@ -280,7 +262,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
             <Info size={14} />
           </button>
         </div>
-        <p className="text-sm text-slate-500 mt-1">AI mencari calon CUSTOMER untuk produk Anda — bukan sekadar perusahaan sejenis. Provinsi/kota opsional (kosongkan untuk mencari di seluruh Indonesia, atau isi nama kota untuk hasil yang lebih lokal); kolom lain wajib diisi agar AI mengarah ke pembeli potensial yang paling akurat. Maks 10 lead per generate (kontak langsung dilengkapi otomatis), 4x sebulan.</p>
+        <p className="text-sm text-slate-500 mt-1">AI mencari calon CUSTOMER untuk produk Anda — bukan sekadar perusahaan sejenis. Provinsi/kota opsional (kosongkan untuk mencari di seluruh Indonesia, atau isi nama kota untuk hasil yang lebih lokal); kolom lain wajib diisi agar AI mengarah ke pembeli potensial yang paling akurat. Maks 10 lead per generate (kontak langsung dilengkapi otomatis), 4x sebulan per pengguna.</p>
 
         {showInfo && (
           <div className="mt-3 bg-orange-50/60 border border-orange-100 rounded-2xl p-4 relative">
@@ -316,7 +298,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         {!cooldown.canGenerate ? (
           <div className="flex items-center gap-2.5 text-sm text-amber-700 bg-amber-50 rounded-2xl p-4">
             <Clock size={18} className="shrink-0" />
-            <span>Kuota 4x/bulan sudah terpakai — dapat digunakan lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
+            <span>Kuota Generate Leads Anda ({cooldown.quotaMax || 4}x/bulan) sudah terpakai —dapat digunakan lagi dalam <b>{daysLeft} hari</b>{nextDate ? ` (${nextDate.toLocaleDateString("id-ID")})` : ""}.</span>
           </div>
         ) : (
           <div className="space-y-3">
@@ -467,21 +449,6 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                                   </div>
                                 </div>
                               </button>
-                              {!imported && (enrichingId === r.id || enrichMsg[r.id] || (!busy && (r.enrich_status === "failed" || r.enrich_status === "pending"))) && (
-                                <div className="flex items-center gap-2 flex-wrap mt-2 px-2">
-                                  {(enrichingId === r.id || r.enrich_status === "failed" || r.enrich_status === "pending") && (
-                                    <button
-                                      onClick={() => enrichLead(r)}
-                                      disabled={!!enrichingId}
-                                      className="text-[11px] font-medium text-violet-300 hover:text-violet-200 disabled:opacity-50 flex items-center gap-1"
-                                    >
-                                      {enrichingId === r.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                      {enrichingId === r.id ? "Lagi buka website resminya (±1-2 menit)…" : "Kontak belum berhasil dilengkapi - coba lagi"}
-                                    </button>
-                                  )}
-                                  {enrichMsg[r.id] && <span className={`text-[11px] ${enrichMsg[r.id].startsWith("Gagal") ? "text-rose-400" : "text-slate-400"}`}>{enrichMsg[r.id]}</span>}
-                                </div>
-                              )}
                               {!imported && (
                                 <div className="h-3 mx-8 -mt-1 rounded-full blur-md opacity-30" style={{ background: t.ring }} />
                               )}

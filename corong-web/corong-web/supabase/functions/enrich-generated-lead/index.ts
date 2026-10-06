@@ -2,15 +2,12 @@
 // Lengkapi & verifikasi kontak SATU perusahaan hasil Generate Leads:
 // website resmi, telepon, email, dan PIC yang MASIH bekerja di sana.
 //
-// Dua cara dipanggil:
-// 1. OTOMATIS (utama) - generate-leads, abis nyimpen hasil, nembak fungsi ini
-//    buat SEMUA lead sekaligus lewat pg_net (dispatch_lead_enrichment) dengan
-//    header x-cron-secret. Tiap lead = 1 invocation sendiri, jadi paralel &
-//    gak kepotong batas 150 detik generate-leads.
-// 2. MANUAL - tombol "Lengkapi ulang" di kartu yang enrich_status-nya gagal
-//    (JWT user biasa, kena tier gate + kuota harian).
-// verify_jwt dimatiin di gateway karena mode 1 gak bawa JWT - auth dicek
-// manual di bawah (cron secret ATAU user login).
+// Hanya dipanggil OTOMATIS - generate-leads, abis nyimpen hasil, nembak fungsi
+// ini buat SEMUA lead sekaligus lewat pg_net (dispatch_lead_enrichment) dengan
+// header x-cron-secret. Tiap lead = 1 invocation sendiri, jadi paralel & gak
+// kepotong batas 150 detik generate-leads. Jalur manual (tombol "coba lagi")
+// dihapus 6 Okt 2026. verify_jwt dimatiin di gateway karena pemanggilnya gak
+// bawa JWT - auth dicek lewat cron secret di bawah.
 //
 // === HEMAT BIAYA (6 Okt 2026, permintaan Nando) ===
 // Versi sebelumnya: AI (Haiku) dengan 3 pencarian web + 2 web_fetch per lead
@@ -30,9 +27,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
 const cors = {
@@ -41,16 +36,9 @@ const cors = {
 };
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const DAILY_LIMIT = 20;
 const MAX_CONTINUATIONS = 2;
 const MAX_RATE_RETRIES = 3;
-const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-function wibDayStartUTC(d = new Date()) {
-  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
-  return new Date(Date.UTC(wibNow.getUTCFullYear(), wibNow.getUTCMonth(), wibNow.getUTCDate()) - WIB_OFFSET_MS);
-}
 
 // ---------------------------------------------------------------------------
 // Tahap 1: baca website resmi (tanpa AI)
@@ -218,7 +206,7 @@ async function callClaudeWithContinuation(body, signal) {
 
 // Kena bunuh platform di 150 detik = gak sempet nyatet status (nyangkut
 // "pending"). Dipotong sendiri lebih dulu biar statusnya jadi "failed" dan
-// user bisa klik "Lengkapi ulang".
+// layar Generate Leads berhenti menunggu.
 const ENRICH_DEADLINE_MS = 110 * 1000;
 const FORMER_RE = /\b(mantan|former|ex)\b|\bex-/i;
 const HR_RE = /\b(hr|hrd|human|people|talent|recruit|personalia|sdm)\b/i;
@@ -367,38 +355,13 @@ Deno.serve(async (req) => {
     const { generated_lead_id: glId } = await req.json();
     if (!glId) return json({ error: "generated_lead_id wajib diisi" }, 400);
 
+    // Hanya dari generate-leads (otomatis). Lengkapi ulang manual dihapus
+    // 6 Okt 2026 (Nando: "hanya dari hasil generate lead itu hasil semuanya").
     const isInternal = !!CRON_SECRET && req.headers.get("x-cron-secret") === CRON_SECRET;
-    let gl;
+    if (!isInternal) return json({ error: "Lengkapi kontak manual tidak tersedia. Kontak dilengkapi otomatis saat Generate Leads." }, 410);
 
-    if (isInternal) {
-      const { data } = await admin.from("generated_leads").select("*").eq("id", glId).maybeSingle();
-      if (!data) return json({ error: "Lead hasil generate tidak ditemukan" }, 404);
-      gl = data;
-    } else {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: req.headers.get("Authorization") || "" } } });
-      const { data: userData, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
-      const userId = userData.user.id;
-      const isAdmin = !!ADMIN_EMAIL && userData.user.email === ADMIN_EMAIL;
-
-      const { data: memberRow } = await supabase.from("organization_members").select("org_id").eq("user_id", userId).limit(1).maybeSingle();
-      if (!memberRow) return json({ error: "Organisasi tidak ditemukan" }, 400);
-      const { data: orgRow } = await supabase.from("organizations").select("plan").eq("id", memberRow.org_id).maybeSingle();
-      const { data: settingsRow } = await supabase.from("settings").select("plan").eq("user_id", userId).maybeSingle();
-      const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
-      const level = orgRow?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settingsRow?.plan] ?? 0);
-      if (!isAdmin && level < 2) return json({ error: "Fitur ini khusus paket Professional ke atas." }, 403);
-
-      // Lewat client user (RLS) - cuma bisa baca hasil generate org sendiri.
-      const { data, error: glErr } = await supabase.from("generated_leads").select("*").eq("id", glId).maybeSingle();
-      if (glErr || !data) return json({ error: "Lead hasil generate tidak ditemukan" }, 404);
-      gl = data;
-
-      if (!isAdmin) {
-        const { data: ok, error: rlErr } = await admin.rpc("reserve_edge_function_call", { p_user_id: userId, p_function_name: "enrich-generated-lead", p_window_start: wibDayStartUTC().toISOString(), p_max_calls: DAILY_LIMIT });
-        if (rlErr || !ok) return json({ error: `Kuota lengkapi kontak (${DAILY_LIMIT}x/hari) sudah terpakai. Silakan coba lagi besok.` }, 429);
-      }
-    }
+    const { data: gl } = await admin.from("generated_leads").select("*").eq("id", glId).maybeSingle();
+    if (!gl) return json({ error: "Lead hasil generate tidak ditemukan" }, 404);
 
     authorizedId = gl.id;
     await admin.from("generated_leads").update({ enrich_status: "pending", enrich_started_at: new Date().toISOString() }).eq("id", gl.id);

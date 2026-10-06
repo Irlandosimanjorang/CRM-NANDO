@@ -496,13 +496,15 @@ function wibNextMonthStartUTC(d = new Date()) {
   const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth();
   return new Date(Date.UTC(y, m + 1, 1, 0, 0, 0) - WIB_OFFSET_MS);
 }
+// 6 Okt 2026: kuota per pengguna (bukan per organisasi) - sama dengan
+// reserve_lead_gen_slot(p_user_id) di backend.
 export async function getLeadGenCooldown() {
-  const orgId = await getMyOrgId();
+  const { data: { user } } = await supabase.auth.getUser();
   const monthStart = wibMonthStartUTC().toISOString();
   const { data, error } = await supabase
     .from("lead_gen_runs")
     .select("generated_at")
-    .eq("org_id", orgId)
+    .eq("user_id", user?.id)
     .gte("generated_at", monthStart)
     .order("generated_at", { ascending: true });
   if (error) throw error;
@@ -565,20 +567,6 @@ export async function summarizeLeadNeeds(leadId) {
     let specificMsg = null;
     try { specificMsg = (await error.context.json())?.error; } catch (_) {}
     throw new Error(specificMsg || error.message || "Gagal membuat ringkasan kebutuhan");
-  }
-  if (data?.error) throw new Error(data.error);
-  return data;
-}
-
-// AI buka website resmi 1 perusahaan hasil Generate Leads buat verifikasi
-// website + nyari telp kantor, email resmi (HR/karir/umum), dan PIC yang
-// masih aktif. Balikin baris generated_leads yang udah di-update.
-export async function enrichGeneratedLead(generatedLeadId) {
-  const { data, error } = await supabase.functions.invoke("enrich-generated-lead", { body: { generated_lead_id: generatedLeadId } });
-  if (error) {
-    let specificMsg = null;
-    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
-    throw new Error(specificMsg || error.message || "Gagal melengkapi kontak");
   }
   if (data?.error) throw new Error(data.error);
   return data;

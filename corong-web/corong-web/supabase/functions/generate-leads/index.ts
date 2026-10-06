@@ -20,6 +20,10 @@
 // dipasang biar blok server_tool_use/hasil search yang udah "dimakan" sama
 // code execution gak ikut di-echo balik ke response (hemat output token,
 // gak ngaruh ke hasil akhir karena yang kepake cuma teks JSON final-nya).
+//
+// === KUOTA PER PENGGUNA (6 Okt 2026, permintaan Nando: "4x per orang") ===
+// Kuota 4x/bulan sekarang dihitung per pengguna, bukan per organisasi -
+// reserve_lead_gen_slot menerima p_user_id (lead_gen_runs.user_id).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -425,17 +429,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Generate Leads AI tersedia untuk paket Professional ke atas. Silakan upgrade melalui tab Pengaturan." }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ---- KUOTA BULANAN ORG - admin platform (ADMIN_EMAIL) skip sama sekali,
-    // org lain tetep kena kuota normal 4x/bulan.
+    // ---- KUOTA BULANAN PER PENGGUNA - admin platform (ADMIN_EMAIL) skip sama
+    // sekali, pengguna lain kena kuota normal 4x/bulan per orang.
     let reservedRunId = null;
     if (!isAdmin) {
-      const { data: reserved, error: reserveErr } = await admin.rpc("reserve_lead_gen_slot", { p_org_id: orgId, p_max: QUOTA_MAX_RUNS });
+      const { data: reserved, error: reserveErr } = await admin.rpc("reserve_lead_gen_slot", { p_org_id: orgId, p_max: QUOTA_MAX_RUNS, p_user_id: userId });
       if (reserveErr) {
         return new Response(JSON.stringify({ error: "Gagal cek kuota: " + reserveErr.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
       }
       if (!reserved) {
         const nextAt = wibNextMonthStartUTC();
-        return new Response(JSON.stringify({ error: `Kuota ${QUOTA_MAX_RUNS}x/bulan sudah terpakai. Silakan coba lagi mulai ${nextAt.toISOString().slice(0, 10)}.`, next_available_at: nextAt.toISOString() }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: `Kuota Generate Leads Anda (${QUOTA_MAX_RUNS}x/bulan) sudah terpakai. Silakan coba lagi mulai ${nextAt.toISOString().slice(0, 10)}.`, next_available_at: nextAt.toISOString() }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
       }
       reservedRunId = reserved;
     }
