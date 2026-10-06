@@ -14,6 +14,12 @@
 // - Isi email di-escape (karakter < > & dari teks sales gak lagi dibaca
 //   sebagai HTML).
 // - Pesan ke user pakai bahasa baku.
+//
+// === BATAS BULANAN (6 Okt 2026, permintaan Nando) ===
+// Dari 30x/hari menjadi 15x/bulan per pengguna (kalender WIB). Semua email
+// terkirim dari noreply@nexto.site - domain yang sama dengan invoice &
+// pengingat jatuh tempo - jadi pengiriman massal dari banyak akun berisiko
+// menurunkan reputasi domain (email invoice ikut masuk spam).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -21,11 +27,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-const DAILY_LIMIT = 30;
+const MONTHLY_LIMIT = 15;
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
-function wibDayStartUTC(d = new Date()) {
+function wibMonthStartUTC(d = new Date()) {
   const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
-  return new Date(Date.UTC(wibNow.getUTCFullYear(), wibNow.getUTCMonth(), wibNow.getUTCDate()) - WIB_OFFSET_MS);
+  return new Date(Date.UTC(wibNow.getUTCFullYear(), wibNow.getUTCMonth(), 1) - WIB_OFFSET_MS);
 }
 
 const cors = {
@@ -85,13 +91,13 @@ Deno.serve(async (req) => {
       leadOrgId = leadRow.org_id;
     }
 
-    // ---- LIMIT HARIAN - reservasi atomic, dilepas lagi kalau pengiriman gagal.
+    // ---- LIMIT BULANAN - reservasi atomic, dilepas lagi kalau pengiriman gagal.
     const { data: reserved, error: rlErr } = await admin.rpc("reserve_edge_function_call", {
       p_user_id: userId, p_function_name: "send-lead-email",
-      p_window_start: wibDayStartUTC().toISOString(), p_max_calls: DAILY_LIMIT,
+      p_window_start: wibMonthStartUTC().toISOString(), p_max_calls: MONTHLY_LIMIT,
     });
     if (rlErr) console.error("[send-lead-email] reserve_edge_function_call gagal:", rlErr);
-    if (!reserved) return json({ error: `Batas kirim email (${DAILY_LIMIT}x/hari) sudah tercapai. Silakan coba lagi besok.` }, 429);
+    if (!reserved) return json({ error: `Batas kirim email (${MONTHLY_LIMIT}x/bulan) sudah tercapai. Kuota terisi kembali setiap tanggal 1.` }, 429);
     reservationId = reserved;
 
     const htmlBody = emailBody.split("\n").map((line) => `<p style="margin:0 0 12px;color:#334155;font-size:14px;line-height:1.6;">${line ? escapeHtml(line) : "&nbsp;"}</p>`).join("");
