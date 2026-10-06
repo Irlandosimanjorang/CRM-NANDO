@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, lazy, Suspense, useLayoutEffect } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import * as db from "./lib/db";
@@ -301,6 +301,22 @@ export default function App() {
 
   // ---- TOAST STATE - lihat komentar di komponen Toast di atas ----
   const [toasts, setToasts] = useState([]);
+  // Sidebar desktop: scroll roda mouse di atasnya tidak boleh ikut menggulung
+  // halaman/tab di sebelahnya (6 Okt 2026, laporan Nando). Menu yang bisa
+  // digulung dibiarkan (overscroll-contain di <nav>); area lain (header,
+  // profil, menu yang muat semua) menahan wheel.
+  const sidebarCleanupRef = useRef(null);
+  const sidebarRef = useCallback((el) => {
+    if (sidebarCleanupRef.current) { sidebarCleanupRef.current(); sidebarCleanupRef.current = null; }
+    if (!el) return;
+    const onWheel = (e) => {
+      const nav = el.querySelector("nav");
+      const scrollable = nav && nav.contains(e.target) && nav.scrollHeight > nav.clientHeight + 1;
+      if (!scrollable) e.preventDefault();
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    sidebarCleanupRef.current = () => el.removeEventListener("wheel", onWheel);
+  }, []);
   const pushToast = (text, type = "success") => {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((t) => [...t, { id, text, type }]);
@@ -810,7 +826,7 @@ export default function App() {
       {/* DESKTOP SIDEBAR - panel melayang (16 Sep 2026), rounded penuh +
           inset dari tepi layar, ganti border-r doang jadi border keliling
           biar konsisten sama bentuk panel yang gak nempel ke sisi manapun. */}
-      <aside className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float">
+      <aside ref={sidebarRef} className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float">
         {/* Header sidebar (16 Sep 2026): profil + badge plan DIPINDAH ke
             bawah (pola app pada umumnya - Slack/Notion dst naro profil di
             footer sidebar, bukan header). Header sekarang logo doang. */}
@@ -841,7 +857,7 @@ export default function App() {
 
         <div className="mx-4 mb-3 h-px bg-white/10" />
 
-        <nav className="flex-1 px-3 py-2.5 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2.5 space-y-1 overflow-y-auto overscroll-contain">
           <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Menu utama</div>
           {navItems.map((n) => {
             const I = n.icon;
