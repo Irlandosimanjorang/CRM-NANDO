@@ -31,7 +31,6 @@ import SettingsTab from "./tabs/Settings";
 // async yang lagi jalan gak keputus pas pindah tab, sama kayak sebelumnya).
 const GenerateLeads = lazy(() => import("./tabs/GenerateLeads"));
 const Deal = lazy(() => import("./tabs/Deal"));
-const Documents = lazy(() => import("./tabs/Documents"));
 const VisitFollowup = lazy(() => import("./tabs/VisitFollowup"));
 const Kompetitor = lazy(() => import("./tabs/Kompetitor"));
 const Nex = lazy(() => import("./tabs/Nex"));
@@ -51,7 +50,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck, FileText,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -66,7 +65,6 @@ const NAV = [
   { key: "leads", label: "Leads", short: "Leads", icon: Users },
   { key: "generateleads", label: "Generate Leads", short: "Cari Lead", icon: Sparkles },
   { key: "deal", label: "Deal", short: "Deal", icon: Trophy },
-  { key: "dokumen", label: "Dokumen", short: "Dokumen", icon: FileText },
   { key: "visitfollowup", label: "Visit & Follow-up", short: "Visit", icon: CalendarCheck },
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
   { key: "komunitas", label: "Nex", short: "Nex", icon: Users2, special: true },
@@ -726,7 +724,7 @@ export default function App() {
     // advisor diturunin ke Standard (16 Sep 2026, permintaan Nando) - daily
     // digest (backend) emang udah lama ngelayanin Standard+ juga, tab
     // Advisor-nya doang yang ketinggalan masih di-lock Professional.
-    generateleads: 2, deal: 2, dokumen: 2, visitfollowup: 1, kompetitor: 2, advisor: 1,
+    generateleads: 2, deal: 2, visitfollowup: 1, kompetitor: 2, advisor: 1,
   };
 
 
@@ -1065,13 +1063,6 @@ export default function App() {
                     </PreviewLock>
                   </div>
                 )}
-                {visitedTabs.has("dokumen") && (
-                  <div style={{ display: effectiveTab === "dokumen" ? "block" : "none" }}>
-                    <PreviewLock locked={isLocked("dokumen")} minLevel={TAB_MIN_LEVEL.dokumen}>
-                      <Documents leads={isLocked("dokumen") ? demo.leads : leads} canManage={canManage} isEnterprise={isEnterprise} onNotify={pushToast} dummy={isLocked("dokumen")} />
-                    </PreviewLock>
-                  </div>
-                )}
                 {visitedTabs.has("visitfollowup") && (
                   <div style={{ display: effectiveTab === "visitfollowup" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("visitfollowup")} minLevel={TAB_MIN_LEVEL.visitfollowup}>
@@ -1160,7 +1151,7 @@ export default function App() {
         </nav>
       </div>
 
-      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} onCreateDoc={(kind, l) => { try { sessionStorage.setItem("nexto-doc-prefill", JSON.stringify({ leadId: l.id, kind })); } catch { /* tanpa prefill */ } setEditLead(null); setTab("dokumen"); }} />}
+      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
 
       {/* Tombol mengambang NEX Pro (21-22 Sep 2026, permintaan Nando) -
           alternatif dari shortcut icon HP (gak bisa diandelin di iPhone,
