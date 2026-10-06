@@ -1,17 +1,31 @@
 // Supabase Edge Function: enrich-generated-lead
-// Lengkapi & verifikasi kontak SATU perusahaan hasil Generate Leads: buka
-// website resminya (web_fetch) buat dapet website terverifikasi, telepon,
-// email resmi, dan PIC yang MASIH kerja di situ.
+// Lengkapi & verifikasi kontak SATU perusahaan hasil Generate Leads:
+// website resmi, telepon, email, dan PIC yang MASIH bekerja di sana.
 //
 // Dua cara dipanggil:
 // 1. OTOMATIS (utama) - generate-leads, abis nyimpen hasil, nembak fungsi ini
 //    buat SEMUA lead sekaligus lewat pg_net (dispatch_lead_enrichment) dengan
 //    header x-cron-secret. Tiap lead = 1 invocation sendiri, jadi paralel &
 //    gak kepotong batas 150 detik generate-leads.
-// 2. MANUAL - tombol "Coba lagi" di kartu yang enrich_status-nya gagal (JWT
-//    user biasa, kena tier gate + kuota harian).
+// 2. MANUAL - tombol "Lengkapi ulang" di kartu yang enrich_status-nya gagal
+//    (JWT user biasa, kena tier gate + kuota harian).
 // verify_jwt dimatiin di gateway karena mode 1 gak bawa JWT - auth dicek
 // manual di bawah (cron secret ATAU user login).
+//
+// === HEMAT BIAYA (6 Okt 2026, permintaan Nando) ===
+// Versi sebelumnya: AI (Haiku) dengan 3 pencarian web + 2 web_fetch per lead
+// = $0,08-0,23 (±Rp2.750) per lead, 40-90 ribu token input - mayoritas dari
+// isi halaman & hasil pencarian. Sekarang dua tahap:
+//   Tahap 1 (GRATIS, tanpa AI): server membuka sendiri halaman utama +
+//     halaman Kontak website perusahaan, ambil telepon & email dari tautan
+//     tel:/mailto: dan teks halaman.
+//   Tahap 2 (AI hemat): Haiku dengan maksimal DUA pencarian web, tanpa
+//     web_fetch, khusus mencari PIC di jabatan target - prioritas utama
+//     klien (Nando: "yang paling penting cari nama PIC sesuai keinginan
+//     client"). Plus SATU pencarian kontak hanya kalau website tidak memuat
+//     telepon/email (banyak website perusahaan dirender lewat JavaScript
+//     atau tidak mencantumkan kontak di halaman yang bisa dibaca langsung).
+// Target biaya ±Rp700-1.000 per lead.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
@@ -28,7 +42,7 @@ const cors = {
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 const DAILY_LIMIT = 20;
-const MAX_CONTINUATIONS = 4;
+const MAX_CONTINUATIONS = 2;
 const MAX_RATE_RETRIES = 3;
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -38,6 +52,130 @@ function wibDayStartUTC(d = new Date()) {
   return new Date(Date.UTC(wibNow.getUTCFullYear(), wibNow.getUTCMonth(), wibNow.getUTCDate()) - WIB_OFFSET_MS);
 }
 
+// ---------------------------------------------------------------------------
+// Tahap 1: baca website resmi (tanpa AI)
+// ---------------------------------------------------------------------------
+const PAGE_TIMEOUT_MS = 9000;
+const MAX_HTML_CHARS = 1500000;
+const CONTACT_PATHS = ["/contact", "/contact-us", "/kontak", "/hubungi-kami"];
+const CONTACT_LINK_RE = /(contact|kontak|hubungi|reach-us|get-in-touch)/i;
+const JUNK_EMAIL_RE = /\.(png|jpe?g|gif|svg|webp|css|js)$|@(example|domain|email|sentry|wixpress|sentry-next)\.|^(no-?reply|noreply|donotreply)@|@\d+x\./i;
+
+function normalizeSite(raw) {
+  let s = String(raw || "").trim();
+  if (!s) return null;
+  if (!/^https?:\/\//i.test(s)) s = "https://" + s;
+  try {
+    const u = new URL(s);
+    if (!u.hostname.includes(".")) return null;
+    return u.origin;
+  } catch (_) {
+    return null;
+  }
+}
+const domainOf = (origin) => { try { return new URL(origin).hostname.replace(/^www\./, "").toLowerCase(); } catch (_) { return ""; } };
+
+async function fetchPage(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), PAGE_TIMEOUT_MS);
+  try {
+    const resp = await fetch(url, {
+      redirect: "follow",
+      signal: ctrl.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; NextoBot/1.0; +https://nexto.site)", Accept: "text/html,application/xhtml+xml" },
+    });
+    if (!resp.ok || !(resp.headers.get("content-type") || "").includes("text/html")) return null;
+    return { html: (await resp.text()).slice(0, MAX_HTML_CHARS), finalUrl: resp.url };
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// Nomor telepon Indonesia: +62 / 62 / 0 diikuti 7-12 digit (boleh berspasi,
+// strip, titik, kurung). Disimpan dalam format aslinya (spasi dirapikan),
+// misal "021-5095-9900" tetap seperti itu.
+function cleanPhone(raw) {
+  const pretty = String(raw || "").replace(/\s+/g, " ").trim();
+  const s = pretty.replace(/[^\d+]/g, "");
+  const digits = s.replace(/\D/g, "");
+  if (digits.length < 8 || digits.length > 15) return "";
+  if (!/^(\+?62|0)/.test(s)) return "";
+  return /^62/.test(pretty) ? "+" + pretty : pretty;
+}
+
+function extractContacts(html) {
+  const decoded = html.replace(/&#64;|&#x40;|\[at\]|\(at\)/gi, "@").replace(/&amp;/g, "&");
+  const emails = new Set(), phones = new Set();
+  for (const m of decoded.matchAll(/mailto:([^"'?>\s]+)/gi)) emails.add(decodeURIComponent(m[1]).toLowerCase());
+  for (const m of decoded.matchAll(/tel:([^"'>]+)/gi)) { const p = cleanPhone(decodeURIComponent(m[1])); if (p) phones.add(p); }
+  // Data terstruktur di dalam <script> (schema.org JSON-LD, data halaman
+  // Next.js/Nuxt): banyak website perusahaan dirender lewat JavaScript, jadi
+  // kontaknya hanya ada di sini, bukan di teks HTML.
+  for (const m of decoded.matchAll(/\\?"(?:telephone|phone|phoneNumber|phone_number|contactPhone|whatsapp)\\?"\s*:\s*\\?"([^"\\]{6,30})\\?"/gi)) { const p = cleanPhone(m[1]); if (p) phones.add(p); }
+  for (const m of decoded.matchAll(/\\?"(?:email|contactEmail|e-mail)\\?"\s*:\s*\\?"([^"\\\s]+@[^"\\\s]+\.[a-z]{2,})\\?"/gi)) emails.add(m[1].toLowerCase());
+  const text = decoded.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ");
+  for (const m of text.matchAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)) emails.add(m[0].toLowerCase());
+  for (const m of text.matchAll(/(?:\+62|\b62|\b0)[\s.\-()]*\d[\d\s.\-()]{6,16}\d/g)) { const p = cleanPhone(m[0]); if (p) phones.add(p); }
+  const links = [...decoded.matchAll(/href=["']([^"'#]+)["']/gi)].map((m) => m[1]).filter((h) => CONTACT_LINK_RE.test(h));
+  return { emails: [...emails].filter((e) => !JUNK_EMAIL_RE.test(e)), phones: [...phones], links };
+}
+
+// Email paling cocok: domain perusahaan sendiri dulu, lalu awalan sesuai
+// kebutuhan (HR kalau jabatan target HR, selain itu sales/marketing/info).
+function pickEmail(emails, domain, isHrTarget) {
+  if (!emails.length) return { email: "", type: "" };
+  const prefs = isHrTarget
+    ? [["hr", /^(hr|hrd|human|people|recruit|career|karir|talent)/], ["general", /^(info|contact|admin|halo|hello|cs|office)/]]
+    : [["sales", /^(sales|marketing|bisnis|business|partnership)/], ["general", /^(info|contact|admin|halo|hello|cs|office|enquir|inquir)/]];
+  const sameDomain = emails.filter((e) => domain && e.endsWith("@" + domain));
+  const pool = sameDomain.length ? sameDomain : emails;
+  for (const [type, re] of prefs) {
+    const hit = pool.find((e) => re.test(e));
+    if (hit) return { email: hit, type };
+  }
+  return { email: pool[0], type: "general" };
+}
+
+async function scrapeWebsite(site) {
+  const origin = normalizeSite(site);
+  if (!origin) return null;
+  const home = await fetchPage(origin);
+  if (!home) return { origin, reachable: false, emails: [], phones: [], pages: 0 };
+  const base = new URL(home.finalUrl).origin;
+  // Dialihkan ke domain lain = bukan website perusahaan lagi (domain
+  // kedaluwarsa yang diambil situs judi/spam, dll - ditemukan 6 Okt 2026:
+  // sehatq.com -> situs judi). Hanya terima pengalihan di domain yang sama
+  // (www, subdomain, http -> https).
+  const want = domainOf(origin), got = domainOf(base);
+  if (got !== want && !got.endsWith("." + want) && !want.endsWith("." + got)) {
+    console.log("[enrich-generated-lead] website dialihkan ke domain lain, diabaikan:", want, "->", got);
+    return { origin, reachable: false, redirected: got, emails: [], phones: [], pages: 0 };
+  }
+  const found = extractContacts(home.html);
+  const emails = new Set(found.emails), phones = new Set(found.phones);
+  // Halaman kontak: utamakan tautan yang memang ada di halaman utama, lalu
+  // tebakan alamat umum. Maksimal 2 halaman tambahan.
+  const candidates = [];
+  for (const h of found.links) { try { const u = new URL(h, base); if (u.origin === base) candidates.push(u.href); } catch (_) {} }
+  for (const p of CONTACT_PATHS) candidates.push(base + p);
+  let pages = 1;
+  for (const url of [...new Set(candidates)]) {
+    if (pages >= 3 || (emails.size && phones.size)) break;
+    const page = await fetchPage(url);
+    if (!page) continue;
+    pages++;
+    const c = extractContacts(page.html);
+    c.emails.forEach((e) => emails.add(e));
+    c.phones.forEach((p) => phones.add(p));
+  }
+  return { origin: base, reachable: true, emails: [...emails], phones: [...phones], pages };
+}
+
+// ---------------------------------------------------------------------------
+// Tahap 2: AI hemat (2 pencarian PIC, +1 kontak bila perlu, tanpa web_fetch)
+// ---------------------------------------------------------------------------
 // - "pause_turn": server tool berhenti di tengah, harus dilanjutin biar JSON
 //   final-nya keluar.
 // - 429/529: belasan lead jalan paralel bisa kena rate limit/overload -
@@ -72,7 +210,7 @@ async function callClaudeWithContinuation(body, signal) {
     messages.push({ role: "assistant", content: dat.content });
   }
   // Harga Haiku 4.5 (per MTok): input $1, cache write 5m $1.25, cache read
-  // $0.1, output $5; web search $10/1000. Web fetch gratis (cuma token).
+  // $0.1, output $5; web search $10/1000.
   const costUsd = (usage.input * 1 + usage.cache_write * 1.25 + usage.cache_read * 0.1 + usage.output * 5) / 1e6 + usage.searches * 0.01;
   console.log("[enrich-generated-lead] USAGE", JSON.stringify({ ...usage, cost_usd: Math.round(costUsd * 10000) / 10000 }));
   return (dat?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
@@ -80,14 +218,50 @@ async function callClaudeWithContinuation(body, signal) {
 
 // Kena bunuh platform di 150 detik = gak sempet nyatet status (nyangkut
 // "pending"). Dipotong sendiri lebih dulu biar statusnya jadi "failed" dan
-// user bisa klik "coba lagi".
-const ENRICH_DEADLINE_MS = 125 * 1000;
+// user bisa klik "Lengkapi ulang".
+const ENRICH_DEADLINE_MS = 110 * 1000;
 const FORMER_RE = /\b(mantan|former|ex)\b|\bex-/i;
+const HR_RE = /\b(hr|hrd|human|people|talent|recruit|personalia|sdm)\b/i;
+
+async function askAi({ gl, targetRole, site, needWebsite, needPhone, needEmail }, signal) {
+  const extra = [
+    needWebsite ? "- website: domain resmi perusahaan (bukan direktori/portal lowongan/media sosial)" : "",
+    needPhone ? "- phone: telepon kantor yang TERTULIS di hasil pencarian" : "",
+    needEmail ? "- email: email perusahaan yang TERTULIS di hasil pencarian" : "",
+  ].filter(Boolean).join("\n");
+  const prompt = `Cari PIC perusahaan berikut untuk kebutuhan sales B2B di Indonesia. Ini tugas UTAMA: temukan orang di jabatan yang diminta klien. Untuk PIC kamu punya MAKSIMAL DUA pencarian web:
+1. Pertama: site:linkedin.com/in "${gl.name}" ${targetRole}
+2. Hanya kalau belum ketemu: coba padanan jabatannya (misal HRD: HR Manager, Head of People, HR Business Partner, Talent Acquisition; Purchasing: Procurement Manager, Head of Purchasing, Buyer) atau halaman tim/manajemen perusahaan.
+
+Perusahaan: "${gl.name}"
+Kota: ${gl.city || "-"}
+Website: ${site || "(belum diketahui)"}
+PIC yang tercatat: ${gl.key_person ? `${gl.key_person} (${gl.key_person_title || "-"})` : "(belum ada)"}
+Jabatan PIC yang dicari: ${targetRole}
+
+Cari orang dengan jabatan target (atau padanan dekatnya) yang MASIH bekerja di perusahaan ini menurut cuplikan hasil pencarian. Tolak yang tertulis "ex-", "former", "mantan", atau sudah di perusahaan lain. JANGAN ganti dengan CEO/Direktur kalau bukan jabatan target.${extra ? `\n\nSetelah urusan PIC selesai, kamu boleh memakai SATU pencarian tambahan (misal: "${gl.name}" ${gl.city || ""} kontak telepon email) untuk mengisi:\n${extra}` : ""}
+
+ATURAN: jangan mengarang nama, nomor, atau pola email. Yang tidak terlihat jelas = string kosong.
+Balas HANYA JSON tanpa markdown:
+{"key_person":"","key_person_title":"","pic_status":"confirmed|left|not_found","website":"","phone":"","email":""}
+pic_status: "confirmed" = PIC terbukti masih bekerja di sini; "left" = PIC yang tercatat terbukti sudah pindah; "not_found" = tidak berhasil memastikan.`;
+  const text = await callClaudeWithContinuation({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 600,
+    messages: [{ role: "user", content: prompt }],
+    // 2 pencarian untuk PIC (prioritas), +1 hanya kalau website tidak
+    // memuat kontak yang dibutuhkan.
+    tools: [{ type: "web_search_20250305", name: "web_search", max_uses: extra ? 3 : 2 }],
+  }, signal);
+  const x = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const a = x.indexOf("{"), e = x.lastIndexOf("}");
+  if (a !== -1 && e !== -1) { try { return JSON.parse(x.slice(a, e + 1)); } catch (_) {} }
+  return null;
+}
 
 async function enrich(admin, gl) {
   // Jabatan yang dicari user di form generate (bukan jabatan PIC yang
   // kebetulan ketemu di tahap 1 - itu sering CEO/Direktur).
-  let requestedRole = "";
   let { data: job } = gl.run_id
     ? await admin.from("lead_gen_jobs").select("params").eq("run_id", gl.run_id).limit(1).maybeSingle()
     : { data: null };
@@ -96,100 +270,90 @@ async function enrich(admin, gl) {
     // "running") - ambil job terbaru org ini yang dibuat sebelum lead ini.
     ({ data: job } = await admin.from("lead_gen_jobs").select("params").eq("org_id", gl.org_id).lte("created_at", gl.created_at || new Date().toISOString()).order("created_at", { ascending: false }).limit(1).maybeSingle());
   }
-  requestedRole = String(job?.params?.targetRole || "").trim();
-  const targetRole = requestedRole || gl.key_person_title || "pengambil keputusan pembelian yang relevan sama produk";
-  const prompt = `Tugas: lengkapi & VERIFIKASI data kontak SATU perusahaan di Indonesia buat kebutuhan sales B2B.
-
-Perusahaan: "${gl.name}"
-Kota: ${gl.city || "-"}
-Kategori: ${gl.category || "-"}
-Produk yang mau ditawarin ke mereka: ${gl.product || "-"}
-Website yang tercatat (BELUM tentu benar): ${gl.website || "(belum ada)"}
-PIC yang tercatat: ${gl.key_person ? `${gl.key_person} (${gl.key_person_title || "-"})` : "(belum ada)"}
-Jabatan PIC yang dicari: ${targetRole}
-
-Langkah:
-1. Pastikan website resmi perusahaan ini lewat web search (domain resmi, bukan direktori/portal lowongan). Kalau website tercatat di atas ternyata salah, ganti.
-2. Buka (web_fetch) MAKSIMAL 2 halaman website resmi yang paling mungkin berisi kontak: prioritas halaman Kontak/Contact Us, lalu Karir/Careers. Ambil telepon dan email yang tercantum di situ. Jatah pencarian cuma 3x - gabungin kebutuhan (misal cari domain resmi + halaman kontak dalam 1 query).
-3. Cari PIC dengan JABATAN TARGET di atas (atau padanan dekatnya - misal buat HRD: HR Manager, Head of People, HR Business Partner, Talent Acquisition, CHRO) lewat web search (misal site:linkedin.com/in "${gl.name}" ${targetRole}). Ambil HANYA kalau cuplikan menunjukkan orang itu MASIH kerja di perusahaan ini (bukan "ex-", "former", "mantan", atau perusahaan lain). JANGAN ganti dengan CEO/Direktur/jabatan lain yang bukan target - kalau gak nemu PIC di jabatan target, kosongin key_person.
-
-PRIORITAS KONTAK:
-- phone: (1) nomor kontak bisnis PIC kalau DIPUBLIKASIKAN secara publik oleh PIC itu sendiri atau perusahaannya (misal di halaman tim/kontak), kalau gak ada (2) telepon kantor/perusahaan yang tercantum publik.
-- email: (1) email bisnis PIC kalau tertulis publik, kalau gak ada (2) email HR/karir/recruitment (kalau jabatan target HR), kalau gak ada (3) email umum/info/sales perusahaan.
-
-ATURAN KERAS:
-- JANGAN mengarang atau menebak pola email (misal nama.belakang@domain) atau nomor telepon. Cuma boleh diisi kalau TERTULIS PERSIS di halaman/cuplikan yang kamu lihat.
-- Field yang gak ketemu dengan yakin = string kosong.
-
-Balas HANYA JSON object tanpa markdown:
-{"website":"","website_verified":false,"phone":"","phone_type":"pic|office|","email":"","email_type":"pic|hr|careers|general|sales|","key_person":"","key_person_title":"","pic_status":"confirmed|left|not_found","sources":"1 kalimat: halaman/sumber yang dipakai","score_contact_quality":0}
-pic_status: "confirmed" = PIC di key_person terbukti masih kerja di sini; "left" = PIC yang tercatat terbukti udah pindah dan gak nemu penggantinya; "not_found" = gak berhasil mastiin apa-apa.
-score_contact_quality 1-100 = seberapa lengkap & terverifikasi kontak hasil akhirnya.`;
+  const requestedRole = String(job?.params?.targetRole || "").trim();
+  const targetRole = requestedRole || gl.key_person_title || "pengambil keputusan pembelian yang relevan dengan produk";
+  const isHrTarget = HR_RE.test(targetRole);
 
   const abort = new AbortController();
   const deadline = setTimeout(() => abort.abort(), ENRICH_DEADLINE_MS);
-  let text;
   try {
-    text = await callClaudeWithContinuation({
-      // Target biaya ±$0,10/lead (29 Sep 2026, permintaan Nando). Diukur:
-      // Sonnet 5.5 + 5 search/4 fetch = ±$0,22; Sonnet 5.5 + 3 search/2
-      // fetch = ±$0,17 (mayoritas token dari hasil search). Tugas ini cuma
-      // ekstraksi kontak, jadi pakai Haiku 4.5 (setengah harga). Haiku 4.5
-      // gak dukung dynamic filtering, jadi pakai versi tool basic.
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
-      tools: [
-        { type: "web_search_20250305", name: "web_search", max_uses: 3 },
-        { type: "web_fetch_20250910", name: "web_fetch", max_uses: 2, max_content_tokens: 3000 },
-      ],
-    }, abort.signal);
+    const clean = (s) => String(s || "").trim();
+    const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+
+    // Tahap 1 - website yang sudah tercatat dibaca langsung (gratis).
+    let scraped = gl.website ? await scrapeWebsite(gl.website) : null;
+    let site = scraped?.reachable ? scraped.origin : "";
+
+    // Tahap 2 - satu pencarian AI: PIC (+ website/telepon/email yang belum ketemu).
+    const needWebsite = !site;
+    const ai = await askAi({
+      gl, targetRole, site: site || gl.website,
+      needWebsite, needPhone: !scraped?.phones?.length, needEmail: !scraped?.emails?.length,
+    }, abort.signal).catch((e) => { if (abort.signal.aborted) throw e; console.log("[enrich-generated-lead] AI gagal (lanjut tanpa PIC):", String(e)); return null; });
+
+    // Website baru dari AI -> baca juga (gratis) untuk telepon & email resmi.
+    if (needWebsite && ai?.website) {
+      const s2 = await scrapeWebsite(ai.website);
+      if (s2?.reachable) { scraped = s2; site = s2.origin; }
+    }
+
+    const domain = domainOf(site);
+    const picked = pickEmail(scraped?.emails || [], domain, isHrTarget);
+    const sitePhone = scraped?.phones?.[0] || "";
+    const aiPhone = cleanPhone(ai?.phone);
+    const aiEmail = clean(ai?.email).toLowerCase();
+
+    const phone = sitePhone || aiPhone || gl.phone || "";
+    // Email umum dari website (info@, help@) tidak menggantikan email lama
+    // yang sudah ada - email lama sering lebih spesifik (mis. email HR dari
+    // tahap generate). Email website hanya menggantikan kalau jenisnya cocok
+    // dengan jabatan target (HR / sales).
+    const keepOldEmail = !!gl.email && (!picked.email || picked.type === "general");
+    const email = keepOldEmail ? gl.email : (picked.email || (isEmail(aiEmail) && !JUNK_EMAIL_RE.test(aiEmail) ? aiEmail : "") || gl.email || "");
+
+    // PIC lama cuma dihapus kalau TERBUKTI udah pindah ("left"); kalau AI
+    // cuma gagal mastiin ("not_found"), data lama dipertahanin.
+    const pic = clean(ai?.key_person);
+    const picStatus = clean(ai?.pic_status);
+    let keyPerson = pic || (picStatus === "left" ? "" : (gl.key_person || ""));
+    let keyPersonTitle = pic ? clean(ai?.key_person_title) : (picStatus === "left" ? "" : (gl.key_person_title || ""));
+    // Jaring pengaman: PIC yang jabatannya ketulis "mantan/former/ex" jelas
+    // udah gak di situ - buang, walau AI-nya kelolosan ngisi.
+    if (FORMER_RE.test(keyPersonTitle)) { keyPerson = ""; keyPersonTitle = ""; }
+
+    const notes = [];
+    if (site) notes.push(`website resmi${scraped?.reachable ? " (terverifikasi, dibuka langsung)" : ""}`);
+    if (sitePhone) notes.push("telp kantor dari website");
+    else if (aiPhone) notes.push("telp dari pencarian web");
+    if (picked.email) notes.push(`${{ hr: "email HR", sales: "email sales", general: "email umum" }[picked.type] || "email"} dari website`);
+    else if (email && email !== gl.email) notes.push("email dari pencarian web");
+    if (pic) notes.push("PIC dari pencarian web");
+
+    // Skor kelengkapan kontak (tanpa AI): website terverifikasi, telepon,
+    // email, PIC.
+    const score = (scraped?.reachable ? 30 : site ? 15 : 0) + (phone ? 25 : 0) + (email ? 25 : 0) + (keyPerson ? 20 : 0);
+
+    const update = {
+      website: site || clean(ai?.website) || gl.website || "",
+      phone,
+      email,
+      key_person: keyPerson,
+      key_person_title: keyPersonTitle,
+      source_note: [gl.source_note, `Dilengkapi: ${notes.join("; ") || "data belum ditemukan"}`].filter(Boolean).join(" | ").slice(0, 600),
+      enrich_status: "done",
+      score_contact_quality: Math.max(1, score),
+    };
+    console.log("[enrich-generated-lead] hasil", JSON.stringify({ id: gl.id, website_read: !!scraped?.reachable, pages: scraped?.pages || 0, phone: !!phone, email: !!email, pic: !!keyPerson, ai: !!ai }));
+
+    const { data: updated, error: upErr } = await admin.from("generated_leads").update(update).eq("id", gl.id).eq("org_id", gl.org_id).select("*").single();
+    if (upErr) throw new Error("Gagal menyimpan hasil: " + upErr.message);
+    return updated;
   } catch (e) {
-    if (abort.signal.aborted) throw new Error("Kelamaan buka website perusahaannya (lewat 2 menit)");
+    if (abort.signal.aborted) throw new Error("Website perusahaan terlalu lama merespons (lebih dari 2 menit)");
     throw e;
   } finally {
     clearTimeout(deadline);
   }
-
-  let obj = null;
-  const x = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-  const a = x.indexOf("{"), e = x.lastIndexOf("}");
-  if (a !== -1 && e !== -1) { try { obj = JSON.parse(x.slice(a, e + 1)); } catch (_) {} }
-  if (!obj) throw new Error("AI gagal ngolah hasil pencarian");
-
-  const clean = (s) => String(s || "").trim();
-  const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-  const newEmail = clean(obj.email);
-  const pic = clean(obj.key_person);
-  const picStatus = clean(obj.pic_status);
-  // PIC lama cuma dihapus kalau TERBUKTI udah pindah ("left"); kalau AI
-  // cuma gagal mastiin ("not_found"), data lama dipertahanin.
-  let keyPerson = pic || (picStatus === "left" ? "" : (gl.key_person || ""));
-  let keyPersonTitle = pic ? clean(obj.key_person_title) : (picStatus === "left" ? "" : (gl.key_person_title || ""));
-  // Jaring pengaman: PIC yang jabatannya ketulis "mantan/former/ex" jelas
-  // udah gak di situ - buang, walau AI-nya kelolosan ngisi.
-  if (FORMER_RE.test(keyPersonTitle)) { keyPerson = ""; keyPersonTitle = ""; }
-  const phoneLabel = clean(obj.phone_type) === "pic" ? "telp PIC" : "telp kantor";
-  const emailLabel = { pic: "email PIC", hr: "email HR", careers: "email karir", general: "email umum", sales: "email sales" }[clean(obj.email_type)] || "email";
-
-  const update = {
-    website: clean(obj.website) || gl.website || "",
-    phone: clean(obj.phone) || gl.phone || "",
-    email: isEmail(newEmail) ? newEmail : (gl.email || ""),
-    key_person: keyPerson,
-    key_person_title: keyPersonTitle,
-    source_note: [
-      gl.source_note,
-      `Dilengkapi AI: ${clean(obj.sources) || "website resmi"}${obj.website_verified ? " (website terverifikasi)" : ""}${clean(obj.phone) ? `; ${phoneLabel}` : ""}${isEmail(newEmail) ? `; ${emailLabel}` : ""}`,
-    ].filter(Boolean).join(" | ").slice(0, 600),
-    enrich_status: "done",
-  };
-  const cq = Number(obj.score_contact_quality);
-  if (Number.isFinite(cq)) update.score_contact_quality = Math.max(1, Math.min(100, Math.round(cq)));
-
-  const { data: updated, error: upErr } = await admin.from("generated_leads").update(update).eq("id", gl.id).eq("org_id", gl.org_id).select("*").single();
-  if (upErr) throw new Error("Gagal nyimpen hasil: " + upErr.message);
-  return updated;
 }
 
 Deno.serve(async (req) => {
@@ -208,7 +372,7 @@ Deno.serve(async (req) => {
 
     if (isInternal) {
       const { data } = await admin.from("generated_leads").select("*").eq("id", glId).maybeSingle();
-      if (!data) return json({ error: "Lead hasil generate gak ketemu" }, 404);
+      if (!data) return json({ error: "Lead hasil generate tidak ditemukan" }, 404);
       gl = data;
     } else {
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: req.headers.get("Authorization") || "" } } });
@@ -218,7 +382,7 @@ Deno.serve(async (req) => {
       const isAdmin = !!ADMIN_EMAIL && userData.user.email === ADMIN_EMAIL;
 
       const { data: memberRow } = await supabase.from("organization_members").select("org_id").eq("user_id", userId).limit(1).maybeSingle();
-      if (!memberRow) return json({ error: "Organisasi gak ketemu" }, 400);
+      if (!memberRow) return json({ error: "Organisasi tidak ditemukan" }, 400);
       const { data: orgRow } = await supabase.from("organizations").select("plan").eq("id", memberRow.org_id).maybeSingle();
       const { data: settingsRow } = await supabase.from("settings").select("plan").eq("user_id", userId).maybeSingle();
       const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
@@ -227,12 +391,12 @@ Deno.serve(async (req) => {
 
       // Lewat client user (RLS) - cuma bisa baca hasil generate org sendiri.
       const { data, error: glErr } = await supabase.from("generated_leads").select("*").eq("id", glId).maybeSingle();
-      if (glErr || !data) return json({ error: "Lead hasil generate gak ketemu" }, 404);
+      if (glErr || !data) return json({ error: "Lead hasil generate tidak ditemukan" }, 404);
       gl = data;
 
       if (!isAdmin) {
         const { data: ok, error: rlErr } = await admin.rpc("reserve_edge_function_call", { p_user_id: userId, p_function_name: "enrich-generated-lead", p_window_start: wibDayStartUTC().toISOString(), p_max_calls: DAILY_LIMIT });
-        if (rlErr || !ok) return json({ error: `Kuota lengkapi kontak (${DAILY_LIMIT}x/hari) udah kepake. Coba lagi besok.` }, 429);
+        if (rlErr || !ok) return json({ error: `Kuota lengkapi kontak (${DAILY_LIMIT}x/hari) sudah terpakai. Silakan coba lagi besok.` }, 429);
       }
     }
 
@@ -243,6 +407,6 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.log("[enrich-generated-lead] gagal", authorizedId, String(e));
     if (authorizedId) { try { await admin.from("generated_leads").update({ enrich_status: "failed" }).eq("id", authorizedId); } catch (_) {} }
-    return json({ error: String(e) }, 500);
+    return json({ error: String(e?.message || e) }, 500);
   }
 });
