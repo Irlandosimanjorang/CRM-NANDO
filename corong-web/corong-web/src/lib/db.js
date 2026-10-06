@@ -809,6 +809,8 @@ export async function upsertLead(lead) {
     custom_field_1: lead.custom_field_1 || "", custom_field_2: lead.custom_field_2 || "", custom_field_3: lead.custom_field_3 || "",
     custom_field_4: lead.custom_field_4 || "", custom_field_5: lead.custom_field_5 || "",
     visit_date: lead.visit_date || null, visit_meet: lead.visit_meet || "", visit_agenda: lead.visit_agenda || "",
+    // Jenis visit (7 Okt 2026): offline (tatap muka, bawaan) atau online.
+    visit_mode: lead.visit_mode === "online" ? "online" : "offline",
     deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
     last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
   };

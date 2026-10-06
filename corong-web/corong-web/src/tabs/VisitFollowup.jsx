@@ -253,6 +253,8 @@ function PhotoCheckinModal({ pending, onClose, onDone }) {
 
 function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
   const todayVisits = useMemo(() => leads.filter((c) => c.visit_date === todayISO()), [leads]);
+  // Visit online tidak memakai GPS/check-in lokasi (7 Okt 2026).
+  const offlineVisitCount = todayVisits.filter((c) => c.visit_mode !== "online").length;
   const [myPos, setMyPos] = useState(null);
   const [geoError, setGeoError] = useState(null); // null | "denied" | "searching"
   const [checkingIn, setCheckingIn] = useState(null);
@@ -281,7 +283,7 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
     // Bukan Enterprise: gak perlu minta izin GPS browser sama sekali buat
     // fitur yang emang gak bisa dipake - jangan ganggu user Professional
     // dengan popup izin lokasi yang gak ada gunanya buat mereka.
-    if (!isEnterprise || todayVisits.length === 0 || !navigator.geolocation) return;
+    if (!isEnterprise || offlineVisitCount === 0 || !navigator.geolocation) return;
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         // Selalu update posisi kalau fix BARU ini udah cukup presisi
@@ -308,7 +310,7 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
     );
     return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
-  }, [todayVisits.length]);
+  }, [offlineVisitCount]);
 
   const gpsReady = !!(myPos && myPos.accuracy != null && myPos.accuracy <= CHECKIN_ACCURACY_M);
 
@@ -451,6 +453,17 @@ function TodayVisitsCard({ leads, onChanged, onEdit, isEnterprise }) {
       {geoError === "searching" && !myPos && <p className="text-xs text-amber-700 mb-2">Masih mencari sinyal GPS. Pastikan GPS/Lokasi di perangkat menyala; di dalam gedung pencarian bisa lebih lama.</p>}
       <div className="space-y-2">
         {todayVisits.map((c) => {
+          if (c.visit_mode === "online") {
+            return (
+              <div key={c.id} className="flex items-center justify-between gap-3 border border-slate-100 rounded-2xl p-3">
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate flex items-center gap-1.5">{c.name}<span className="shrink-0 text-[10px] font-bold px-1.5 rounded bg-sky-100 text-sky-700">Online</span></div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">Visit online, tidak perlu check-in lokasi</div>
+                </div>
+                <button onClick={() => setRecordingLead(c)} title="Rekam Meeting" className="shrink-0 p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-orange-600"><Mic size={14} /></button>
+              </div>
+            );
+          }
           const hasCoords = c.latitude != null && c.longitude != null;
           let distance = null;
           if (hasCoords && myPos && gpsReady) distance = Math.round(haversineMeters(myPos.lat, myPos.lng, c.latitude, c.longitude));
@@ -643,6 +656,7 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
   const [date, setDate] = useState(restoredLead ? (restored.date || todayISO()) : todayISO());
   const [meet, setMeet] = useState(restoredLead ? (restored.meet || "") : "");
   const [agenda, setAgenda] = useState(restoredLead ? (restored.agenda || "") : "");
+  const [mode, setMode] = useState(restoredLead && restored.mode === "online" ? "online" : "offline"); // jenis visit
   const [busy, setBusy] = useState(false);
   // "Poin Diskusi (AI)" - baca histori progress notes lead yang dipilih,
   // saranin 3-5 poin buat dibahas pas ketemu. Hasilnya CUMA SARAN - rep
@@ -657,8 +671,8 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
   // lead yang dipilih (draft kosong gak ada gunanya direstore).
   useEffect(() => {
     if (!sel) return;
-    saveOpenModal("visit", { leadId: sel.id, date, meet, agenda, suggestedPoints, appliedPoints });
-  }, [sel, date, meet, agenda, suggestedPoints, appliedPoints]);
+    saveOpenModal("visit", { leadId: sel.id, date, meet, agenda, mode, suggestedPoints, appliedPoints });
+  }, [sel, date, meet, agenda, mode, suggestedPoints, appliedPoints]);
 
   const suggestPoints = async () => {
     if (!sel) return;
@@ -674,11 +688,11 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
     setAppliedPoints((p) => ({ ...p, [i]: true }));
   };
   const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
-  const pick = (c) => { setSel(c); setQ(""); setMeet(c.visit_meet || c.key_person || ""); setAgenda(c.visit_agenda || ""); if (c.visit_date) setDate(c.visit_date); setSuggestedPoints(null); setSuggestError(""); setAppliedPoints({}); };
+  const pick = (c) => { setSel(c); setQ(""); setMeet(c.visit_meet || c.key_person || ""); setAgenda(c.visit_agenda || ""); if (c.visit_date) setDate(c.visit_date); setMode(c.visit_date && c.visit_mode === "online" ? "online" : "offline"); setSuggestedPoints(null); setSuggestError(""); setAppliedPoints({}); };
   const save = async () => {
     if (!sel) { alert("Pilih perusahaan terlebih dahulu."); return; }
     setBusy(true);
-    try { await db.upsertLead({ ...sel, visit_date: date, visit_meet: meet, visit_agenda: agenda }); onSaved(); }
+    try { await db.upsertLead({ ...sel, visit_date: date, visit_meet: meet, visit_agenda: agenda, visit_mode: mode }); onSaved(); }
     catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
   };
   // Tombol "Hapus Visit" (22 Sep 2026, permintaan Nando) - beda dari cuma
@@ -718,6 +732,13 @@ function AddVisitModal({ leads, onClose, onSaved, myLevel }) {
               <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal visit</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">Bertemu siapa</span><input className={inp} value={meet} onChange={(e) => setMeet(e.target.value)} placeholder="mis. Bu Rina (purchasing)" /></label>
             </div>
+            <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Jenis visit</span>
+              <select className={inp} value={mode} onChange={(e) => setMode(e.target.value)}>
+                <option value="offline">Offline (tatap muka)</option>
+                <option value="online">Online (video call atau telepon)</option>
+              </select>
+              {mode === "online" && <span className="mt-1 block text-[11px] text-slate-400">Visit online tidak memakai check-in lokasi GPS.</span>}
+            </label>
             <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Agenda</span><textarea className={inp} rows={2} value={agenda} onChange={(e) => setAgenda(e.target.value)} placeholder="mau bahas apa" /></label>
 
             <div className="mt-2 rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 p-3">
@@ -856,7 +877,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel, industry }
   // "Tambah visit", cuma di-prefill data visit lead ini biar user langsung
   // liat detail + bisa minta poin AI, bukan malah lompat ke kartu lead umum.
   const openVisitDetail = (c) => {
-    saveOpenModal("visit", { leadId: c.id, date: c.visit_date || todayISO(), meet: c.visit_meet || c.key_person || "", agenda: c.visit_agenda || "" });
+    saveOpenModal("visit", { leadId: c.id, date: c.visit_date || todayISO(), meet: c.visit_meet || c.key_person || "", agenda: c.visit_agenda || "", mode: c.visit_mode === "online" ? "online" : "offline" });
     setAdd(true);
   };
 
@@ -910,7 +931,7 @@ function VisitView({ leads, onEdit, onChanged, isEnterprise, myLevel, industry }
               <tbody>
                 {visits.map((c) => { const past = c.visit_date < todayISO(); const today = c.visit_date === todayISO(); const meet = c.visit_meet || c.key_person; return (
                   <tr key={c.id} className={`border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer ${past ? "opacity-50" : ""}`} onClick={() => openVisitDetail(c)}>
-                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{typeBadge(c.company_type) && <span className="text-[10px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
+                    <td className="px-3 py-2"><div className="font-medium flex items-center gap-1.5">{c.name}{c.visit_mode === "online" && <span className="text-[10px] font-bold px-1.5 rounded bg-sky-100 text-sky-700">Online</span>}{typeBadge(c.company_type) && <span className="text-[10px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(c.company_type)}</span>}</div></td>
                     <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
                     <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{c.product || "—"}</td>
                     <td className="px-3 py-2 text-xs"><span className={today ? "text-orange-600 font-medium" : "text-slate-600"}>{fmtDate(c.visit_date)}{today && " · hari ini"}</span></td>
