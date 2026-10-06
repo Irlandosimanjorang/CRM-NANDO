@@ -276,7 +276,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
               <li><b>Cari sinyal lagi berkembang</b> — lowongan kerja baru, pembukaan cabang, ekspansi — agar diprioritaskan ke yang sedang membutuhkan, bukan yang stagnan.</li>
               <li><b>Otomatis melewati yang sudah ada</b> di daftar lead Anda, agar tidak muncul ganda dan membuang kuota.</li>
               <li><b>Kalau hasilnya kesikit</b> (sebagian besar terlewati karena ganda), AI otomatis mencoba mencari lagi 1x dengan sudut pencarian berbeda.</li>
-              <li><b>Tiap lead dikasih skor 3 komponen</b> (kecocokan industri, kelengkapan kontak, sinyal kebutuhan membeli) + skor keseluruhan, diurutkan dari yang tertinggi.</li>
+              <li><b>Tiap lead diberi skor 3 komponen</b>: sinyal kebutuhan membeli, kecocokan industri, dan kelengkapan kontak (website terverifikasi, telepon, email, PIC). <b>Skor keseluruhan = 40% sinyal beli + 35% industri + 25% kontak</b>, dihitung ulang setelah kontak dilengkapi, dan diurutkan dari yang tertinggi.</li>
               <li><b>Kontak dilengkapi otomatis</b> - setelah perusahaan ditemukan, AI langsung membuka website resmi setiap perusahaan untuk memverifikasi website, mencari telepon & email (kontak bisnis PIC jika dipublikasikan; jika tidak ada, kontak kantor/HR/umum), dan memeriksa apakah PIC masih bekerja di sana atau sudah pindah.</li>
               <li>AI dilarang keras <b>ngarang data</b> — jika informasi seperti nama PIC tidak ditemukan di sumber publik, kolom dikosongkan, bukan ditebak.</li>
             </ul>

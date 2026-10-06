@@ -42,7 +42,11 @@ const cors = {
 // 10 (dulu 14) - tiap lead sekarang dilengkapi kontaknya otomatis & itu
 // biaya per lead, jadi dibatesin (29 Sep 2026, permintaan Nando).
 const MAX_LEADS = 10;
-const RETRY_MIN_THRESHOLD = 6;
+// Pencarian ulang kalau hasil baru < 8 (dulu < 6) dan waktu masih cukup.
+const RETRY_MIN_THRESHOLD = 8;
+// AI diminta lebih banyak calon dari yang disimpan, supaya setelah duplikat
+// dibuang masih bisa terisi 10 (6 Okt 2026: AI kasih 9, 2 duplikat -> 7).
+const CANDIDATE_TARGET = 14;
 const FIRST_PASS_MAX_SEARCH = 12;
 const RETRY_PASS_MAX_SEARCH = 6;
 // 300 (dulu 40, dan dulu cuma dipakai di pencarian ulang): 6 Okt 2026 org
@@ -69,7 +73,7 @@ async function quotaResetAt(admin, userId, feature) {
 }
 const fmtTanggal = (d) => d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
 
-const UNIVERSAL_INSTRUCTIONS = `Kamu riset lead sales B2B/B2C buat bisnis di Indonesia. Cari SAMPAI ${MAX_LEADS} perusahaan/calon customer yang berpotensi jadi lead, pake web search kamu buat nyari dari:
+const UNIVERSAL_INSTRUCTIONS = `Kamu riset lead sales B2B/B2C buat bisnis di Indonesia. Cari ${CANDIDATE_TARGET} perusahaan/calon customer yang berpotensi jadi lead (usahakan penuh ${CANDIDATE_TARGET} - sebagian bisa saja sudah ada di database user dan akan disaring), pake web search kamu buat nyari dari:
 - Hasil Google Maps yang publik (nama bisnis, alamat, telepon, website)
 - Halaman LinkedIn company page & profil personal yang ke-index Google (JANGAN buka linkedin.com langsung, cukup baca cuplikan/snippet hasil pencarian publiknya - sama kayak orang manual search di Google)
 - Instagram/TikTok bisnis yang websitenya nyantumin link itu (dari website resmi mereka, bukan buka platform sosmednya langsung)
@@ -159,6 +163,18 @@ function normalizeCompanyName(raw) {
     .replace(/\s+/g, " ")
     .trim();
 }
+// Skor keseluruhan = rumus pasti (6 Okt 2026, permintaan Nando): 40% sinyal
+// beli + 35% kecocokan industri + 25% kelengkapan kontak. Sebelumnya skor
+// besar ditebak AI sebelum kontak dilengkapi dan tidak pernah dihitung ulang,
+// jadi bisa lebih rendah dari ketiga komponennya. null = komponen AI tidak ada.
+function overallScore(industry, buying, contact) {
+  const n = (v) => (v === null || v === undefined || v === "" ? NaN : Number(v));
+  const ind = n(industry), buy = n(buying), con = n(contact);
+  if (!Number.isFinite(ind) || !Number.isFinite(buy)) return null;
+  const c = Number.isFinite(con) ? con : 0;
+  return Math.max(1, Math.min(100, Math.round(0.4 * buy + 0.35 * ind + 0.25 * c)));
+}
+
 // Kata umum yang sendirian bukan nama perusahaan - lead lama bernama
 // "Company"/"Indonesia" gak boleh bikin semua kandidat berisi kata itu
 // dianggap duplikat.
@@ -363,7 +379,9 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
     }
 
     const pass1Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: [...new Set(existingRawNames)], maxSearchUses: FIRST_PASS_MAX_SEARCH, passLabel: "pass1" });
-    let survivors = pass1Raw.filter((l) => !isDuplicateName(normalizeCompanyName(l.name), existingNormSet)).slice(0, MAX_LEADS);
+    const rank = (l) => overallScore(l.score_industry_match, l.score_buying_signal, l.score_contact_quality) ?? (Number(l.score) || 0);
+    const byScore = (a, b) => rank(b) - rank(a);
+    let survivors = pass1Raw.filter((l) => !isDuplicateName(normalizeCompanyName(l.name), existingNormSet)).sort(byScore).slice(0, MAX_LEADS);
     let dedupedCount = pass1Raw.length - survivors.length;
     console.log(`[generate-leads] pass1: ${pass1Raw.length} hasil AI, ${dedupedCount} dilewati (sudah ada), ${survivors.length} baru`);
     let retried = false;
@@ -388,7 +406,7 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
           survivors.push(l);
           survivorNormSet.add(norm);
         }
-        survivors.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+        survivors.sort(byScore);
       } catch (e) {
         console.log(`[generate-leads] pass2 dibatalkan/gagal (${String(e)}), pakai hasil pass1 aja (${survivors.length} lead)`);
       } finally {
@@ -418,7 +436,7 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
       score_industry_match: Number.isFinite(l.score_industry_match) ? Math.max(1, Math.min(100, Math.round(l.score_industry_match))) : null,
       score_contact_quality: Number.isFinite(l.score_contact_quality) ? Math.max(1, Math.min(100, Math.round(l.score_contact_quality))) : null,
       score_buying_signal: Number.isFinite(l.score_buying_signal) ? Math.max(1, Math.min(100, Math.round(l.score_buying_signal))) : null,
-      score: Number.isFinite(l.score) ? Math.max(1, Math.min(100, Math.round(l.score))) : 50,
+      score: overallScore(l.score_industry_match, l.score_buying_signal, l.score_contact_quality) ?? (Number.isFinite(l.score) ? Math.max(1, Math.min(100, Math.round(l.score))) : 50),
       enrich_status: "pending",
       enrich_started_at: new Date().toISOString(),
     }));

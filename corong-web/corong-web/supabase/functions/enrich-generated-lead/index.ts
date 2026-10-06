@@ -208,6 +208,18 @@ async function callClaudeWithContinuation(body, signal) {
 // "pending"). Dipotong sendiri lebih dulu biar statusnya jadi "failed" dan
 // layar Generate Leads berhenti menunggu.
 const ENRICH_DEADLINE_MS = 110 * 1000;
+// Skor keseluruhan = rumus pasti (6 Okt 2026, permintaan Nando): 40% sinyal
+// beli + 35% kecocokan industri + 25% kelengkapan kontak. Sebelumnya skor
+// besar ditebak AI sebelum kontak dilengkapi dan tidak pernah dihitung ulang,
+// jadi bisa lebih rendah dari ketiga komponennya. null = komponen AI tidak ada.
+function overallScore(industry, buying, contact) {
+  const n = (v) => (v === null || v === undefined || v === "" ? NaN : Number(v));
+  const ind = n(industry), buy = n(buying), con = n(contact);
+  if (!Number.isFinite(ind) || !Number.isFinite(buy)) return null;
+  const c = Number.isFinite(con) ? con : 0;
+  return Math.max(1, Math.min(100, Math.round(0.4 * buy + 0.35 * ind + 0.25 * c)));
+}
+
 const FORMER_RE = /\b(mantan|former|ex)\b|\bex-/i;
 const HR_RE = /\b(hr|hrd|human|people|talent|recruit|personalia|sdm)\b/i;
 
@@ -330,6 +342,10 @@ async function enrich(admin, gl) {
       source_note: [gl.source_note, `Dilengkapi: ${notes.join("; ") || "data belum ditemukan"}`].filter(Boolean).join(" | ").slice(0, 600),
       enrich_status: "done",
       score_contact_quality: Math.max(1, score),
+      // Skor keseluruhan dihitung ulang dengan kontak yang sudah dilengkapi.
+      ...(overallScore(gl.score_industry_match, gl.score_buying_signal, Math.max(1, score)) !== null
+        ? { score: overallScore(gl.score_industry_match, gl.score_buying_signal, Math.max(1, score)) }
+        : {}),
     };
     console.log("[enrich-generated-lead] hasil", JSON.stringify({ id: gl.id, website_read: !!scraped?.reachable, pages: scraped?.pages || 0, phone: !!phone, email: !!email, pic: !!keyPerson, ai: !!ai }));
 
