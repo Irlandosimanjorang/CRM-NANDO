@@ -15,6 +15,18 @@ import { terbilang, processSignatureFile, printHtml } from "../lib/docKit";
 
 const EARLY_BIRD_DEADLINE = new Date("2026-10-15T23:59:59+07:00"); // sama dengan Auth.jsx
 const PROFILE_KEY = "nexto-invoice-seller";
+
+// Unduh PDF langsung (7 Okt 2026): PDF dibuat di server (fungsi invoice-pdf),
+// bukan lewat dialog cetak browser. Berlaku untuk panel admin, email, dan halaman klien.
+export async function downloadInvoicePdf(inv) {
+  const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-pdf?t=${inv.public_token}`);
+  if (!r.ok) throw new Error((await r.text().catch(() => "")) || "Gagal membuat PDF.");
+  const url = URL.createObjectURL(await r.blob());
+  const a = document.createElement("a");
+  a.href = url; a.download = `${String(inv.number || "Invoice").replace(/[^A-Za-z0-9]+/g, "-")}.pdf`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
 export { terbilang, processSignatureFile, printHtml };
 
 // Harga per pengguna/bulan mengikuti PRICING_EARLY_BIRD / PRICING_NORMAL di
@@ -602,7 +614,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
       const { invoice } = await db.adminInvoices("create", { invoice: { company: draft.company, invoice_date: draft.date, due_date: draft.due, total, data: draft } });
       setViewing(invoice);
       setHistory((h) => [invoice, ...(h || []).filter((x) => x.id !== invoice.id)]);
-      printHtml(buildInvoiceHtml(invoice.data, { number: invoice.number, status: invoice.status }));
+      await downloadInvoicePdf(invoice).catch((e) => alert("Invoice tersimpan, tetapi PDF gagal diunduh: " + e.message));
     } catch (e) {
       alert("Gagal menyimpan invoice: " + e.message);
     } finally {
@@ -819,12 +831,12 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
               <div className="font-mono text-[17px] font-bold text-slate-50">{rp(total)}</div>
             </div>
             {viewing ? (
-              <button type="button" onClick={() => printHtml(html)} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400">Unduh PDF</button>
+              <button type="button" onClick={() => downloadInvoicePdf(viewing).catch((e) => alert("PDF gagal diunduh: " + e.message))} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400">Unduh PDF</button>
             ) : (
               <button type="button" disabled={busy} onClick={saveAndPrint} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:opacity-60">{busy ? "Menyimpan…" : "Simpan & unduh PDF"}</button>
             )}
           </div>
-          <p className="text-[11px] text-slate-500">Pada jendela cetak, pilih "Simpan sebagai PDF".</p>
+          <p className="text-[11px] text-slate-500">Berkas PDF langsung terunduh.</p>
           </div>
         </div>
 
@@ -887,6 +899,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
+                        {x.public_token && <button type="button" onClick={() => downloadInvoicePdf(x).catch((e) => alert("PDF gagal diunduh: " + e.message))} className="mr-3 font-semibold text-emerald-300 hover:text-emerald-200">Unduh</button>}
                         {x.status !== "void" && x.public_token && <button type="button" onClick={() => setSendingInv(x)} className="mr-3 font-semibold text-violet-300 hover:text-violet-200">Kirim</button>}
                         <button type="button" onClick={() => duplicate(x)} className="mr-3 font-semibold text-slate-400 hover:text-slate-200" title="Salin isi invoice ini ke form baru">Duplikat</button>
                         {viewing?.id === x.id

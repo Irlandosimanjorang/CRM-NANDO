@@ -4,6 +4,8 @@
 // Layout pakai <table> + style inline supaya rapi di Gmail/Outlook.
 
 export const PUBLIC_INVOICE_URL = "https://nexto.site/invoice?t=";
+// Unduhan PDF langsung (fungsi invoice-pdf): berfungsi di semua HP dan browser dalam aplikasi.
+export const PDF_INVOICE_URL = "https://cewggulyfshnbebcpyui.supabase.co/functions/v1/invoice-pdf?t=";
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const rp = (n) => "Rp" + Math.round(Number(n) || 0).toLocaleString("id-ID");
@@ -31,13 +33,14 @@ export function invoiceSubject(kind, inv, seller) {
 }
 
 // kind: invoice | receipt | due_minus3 | due_today | overdue_3 | overdue_7
-export function renderInvoiceEmail(kind, inv, seller = {}, note = "") {
+export function renderInvoiceEmail(kind, inv, seller = {}, note = "", attached = false) {
   const d = inv.data || {};
   const due = fmtTanggal(inv.due_date);
   const isReceipt = kind === "receipt";
   const paidOn = inv.paid_at ? fmtTanggal(new Date(new Date(inv.paid_at).getTime() + 7 * 3600000).toISOString().slice(0, 10)) : "";
   const activeUntil = d.activation?.expires_at ? fmtTanggal(new Date(new Date(d.activation.expires_at).getTime() + 7 * 3600000).toISOString().slice(0, 10)) : "";
   const link = PUBLIC_INVOICE_URL + inv.public_token;
+  const pdfLink = PDF_INVOICE_URL + inv.public_token;
   const greet = d.contact ? `Yth. ${esc(d.contact)},` : `Yth. ${esc(inv.company)},`;
   const row = (k, v, strong = false) => `<tr><td style="padding:7px 0;color:#5b6475;font-size:13px;">${k}</td><td style="padding:7px 0;text-align:right;font-size:13px;color:#1c2230;${strong ? "font-weight:700;" : ""}">${v}</td></tr>`;
   const bank = seller.account
@@ -91,9 +94,11 @@ export function renderInvoiceEmail(kind, inv, seller = {}, note = "") {
   </td></tr>` : ""}
   <tr><td style="padding:22px 28px 6px;">
     <a href="${link}" target="_blank" style="display:inline-block;background:#1c2230;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 20px;border-radius:5px;">${isReceipt ? "Lihat &amp; unduh invoice lunas" : "Lihat &amp; unduh invoice"}</a>
+    <a href="${pdfLink}" style="display:inline-block;margin-left:14px;color:#1c2230;font-size:13px;font-weight:700;text-decoration:underline;">Unduh PDF</a>
   </td></tr>
   <tr><td style="padding:14px 28px 24px;font-size:13px;line-height:1.6;color:#5b6475;">
     ${isReceipt ? "Simpan email ini sebagai bukti pembayaran. Jika ada pertanyaan, silakan balas email ini." : kind === "invoice" ? "Jika ada pertanyaan, silakan balas email ini." : "Jika pembayaran sudah dilakukan, mohon abaikan email ini atau balas dengan bukti transfer."}
+    ${attached ? `<p style="margin:10px 0 0;">Invoice dalam bentuk PDF juga terlampir pada email ini.</p>` : ""}
     ${sign.length ? `<p style="margin:14px 0 0;color:#1c2230;">Hormat kami,<br>${sign.join("<br>")}</p>` : ""}
   </td></tr>
 </table>
@@ -103,8 +108,9 @@ export function renderInvoiceEmail(kind, inv, seller = {}, note = "") {
 
 // Kirim lewat Resend. Balasan klien diarahkan ke email penagih (reply_to),
 // dan penagih mendapat salinan (bcc) supaya tahu email apa yang terkirim.
-export async function sendEmail({ apiKey, to, subject, html, replyTo, bcc }) {
+export async function sendEmail({ apiKey, to, subject, html, replyTo, bcc, attachments }) {
   const payload = { from: "Nexto <noreply@nexto.site>", to: [to], subject, html };
+  if (attachments && attachments.length) payload.attachments = attachments; // [{ filename, content: base64 }]
   if (replyTo) payload.reply_to = replyTo;
   if (bcc && bcc.toLowerCase() !== to.toLowerCase()) payload.bcc = [bcc];
   const resp = await fetch("https://api.resend.com/emails", {
@@ -117,4 +123,15 @@ export async function sendEmail({ apiKey, to, subject, html, replyTo, bcc }) {
     throw new Error(`Email gagal dikirim (${resp.status}): ${t.slice(0, 160)}`);
   }
   return true;
+}
+
+// Lampiran PDF (7 Okt 2026): diambil dari fungsi invoice-pdf lewat HTTP, jadi
+// pembuat PDF cukup ada di satu tempat. Gagal = email tetap terkirim tanpa lampiran.
+export async function invoicePdfAttachment(inv) {
+  const r = await fetch(PDF_INVOICE_URL + inv.public_token);
+  if (!r.ok) throw new Error(`PDF ${r.status}`);
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { filename: `Invoice-${String(inv.number || "Nexto").replace(/[^A-Za-z0-9]+/g, "-")}.pdf`, content: btoa(bin) };
 }

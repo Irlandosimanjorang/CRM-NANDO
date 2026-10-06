@@ -25,7 +25,7 @@
 // biasa. Masa aktif = tanggal akhir periode di invoice, pukul 23:59:59 WIB.
 // Satu invoice hanya bisa diaktifkan sekali (tercatat di data.activation).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { renderInvoiceEmail, invoiceSubject, sendEmail } from "./invoice_email.ts";
+import { renderInvoiceEmail, invoiceSubject, sendEmail, invoicePdfAttachment } from "./invoice_email.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -274,10 +274,18 @@ Deno.serve(async (req) => {
       if (inv.status === "void") return json({ error: "Invoice yang dibatalkan tidak dapat dikirim." }, 409);
       const seller = inv.data?.seller || {};
       const kind = inv.status === "paid" ? "receipt" : "invoice"; // Lunas -> bukti pembayaran, bukan tagihan
+      // Lampiran PDF (7 Okt 2026): dibuat di server; bila gagal, email tetap terkirim
+      // dengan tautan unduh langsung.
+      let attachments;
+      try {
+        attachments = [await invoicePdfAttachment(inv)];
+      } catch (e) {
+        console.error("[admin-invoices] lampiran PDF gagal:", String(e));
+      }
       await sendEmail({
-        apiKey: RESEND_API_KEY, to,
+        apiKey: RESEND_API_KEY, to, attachments,
         subject: invoiceSubject(kind, inv, seller),
-        html: renderInvoiceEmail(kind, inv, seller, String(body.note || "").slice(0, 1000)),
+        html: renderInvoiceEmail(kind, inv, seller, String(body.note || "").slice(0, 1000), !!attachments),
         replyTo: seller.email || ADMIN_EMAIL, bcc: seller.email || ADMIN_EMAIL,
       });
       const email_log = [...(inv.email_log || []), { type: kind, to, at: new Date().toISOString() }];

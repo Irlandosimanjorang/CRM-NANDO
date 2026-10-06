@@ -5,7 +5,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { buildInvoiceHtml } from "../components/EnterpriseInvoicePanel";
-import { printHtml } from "../lib/docKit";
 
 export default function InvoicePublic() {
   const token = new URLSearchParams(window.location.search).get("t") || "";
@@ -37,6 +36,8 @@ export default function InvoicePublic() {
 
   const inv = state.invoice;
   const html = inv ? buildInvoiceHtml(inv.data, { number: inv.number, status: inv.status, paidAt: inv.paid_at }) : "";
+  // Unduhan PDF langsung dari server (7 Okt 2026): tautan biasa, jadi berfungsi di HP dan browser dalam aplikasi.
+  const pdfUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-pdf?t=${encodeURIComponent(token)}`;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#eceef2]">
@@ -47,9 +48,9 @@ export default function InvoicePublic() {
             {inv && <div className="truncate text-[12px] text-slate-500">{inv.company}</div>}
           </div>
           {inv && (
-            <button type="button" onClick={() => printHtml(html)} className="shrink-0 rounded-md bg-slate-900 px-4 py-2 text-[13px] font-semibold text-white hover:bg-slate-700">
+            <a href={pdfUrl} download className="shrink-0 rounded-md bg-slate-900 px-4 py-2 text-[13px] font-semibold text-white hover:bg-slate-700">
               Unduh PDF
-            </button>
+            </a>
           )}
         </div>
       </header>
@@ -66,7 +67,7 @@ export default function InvoicePublic() {
             <div className="overflow-x-auto rounded-md border border-slate-300 bg-white shadow-sm">
               <iframe ref={frameRef} title="Invoice" srcDoc={html} onLoad={(e) => { const d = e.currentTarget.contentDocument; if (d) e.currentTarget.style.height = d.documentElement.scrollHeight + "px"; }} className="block h-[1120px] w-full min-w-[640px] bg-white" />
             </div>
-            <p className="mt-3 text-center text-[12px] text-slate-500">Pada jendela cetak, pilih "Simpan sebagai PDF" untuk menyimpan invoice ini.</p>
+            <p className="mt-3 text-center text-[12px] text-slate-500">Berkas PDF langsung terunduh saat tombol ditekan. Jika tidak terunduh, buka tautan ini di Chrome atau Safari.</p>
           </>
         )}
       </main>

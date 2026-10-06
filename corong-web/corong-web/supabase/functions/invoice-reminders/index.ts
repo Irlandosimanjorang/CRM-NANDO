@@ -9,7 +9,7 @@
 // Lunas/Dibatalkan, tanpa email klien, atau pengingatnya dimatikan admin
 // (reminders_enabled = false) dilewati. Penagih mendapat salinan (bcc).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { renderInvoiceEmail, invoiceSubject, sendEmail } from "./invoice_email.ts";
+import { renderInvoiceEmail, invoiceSubject, sendEmail, invoicePdfAttachment } from "./invoice_email.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -44,10 +44,16 @@ Deno.serve(async (req) => {
       if (!kind || !EMAIL_RE.test(to) || log.some((e) => e.type === kind)) { result.skipped++; continue; }
       const seller = inv.data?.seller || {};
       try {
+        let attachments;
+        try {
+          attachments = [await invoicePdfAttachment(inv)];
+        } catch (e) {
+          console.error("[invoice-reminders] lampiran PDF gagal:", String(e));
+        }
         await sendEmail({
-          apiKey: RESEND_API_KEY, to,
+          apiKey: RESEND_API_KEY, to, attachments,
           subject: invoiceSubject(kind, inv, seller),
-          html: renderInvoiceEmail(kind, inv, seller),
+          html: renderInvoiceEmail(kind, inv, seller, "", !!attachments),
           replyTo: seller.email || ADMIN_EMAIL, bcc: seller.email || ADMIN_EMAIL,
         });
         const email_log = [...log, { type: kind, to, at: new Date().toISOString() }];
