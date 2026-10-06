@@ -189,9 +189,10 @@ export async function buildInvoicePdf(inv) {
   const rowTop = y;
   const hItem = para(d.item || "Langganan Nexto", M, y, CW * 0.5, { font: bold, size: 10 });
   para(`${d.seats} ${d.unit || "pengguna"}, ${d.months} bulan`, M, y - hItem, CW * 0.5, { size: 9, color: GRAY });
-  text(String((Number(d.seats) || 0) * (Number(d.months) || 0)), colQ, rowTop, { size: 10, align: "right" });
-  text(rp(d.pricePerSeat), colP, rowTop, { size: 10, align: "right" });
-  text(`per ${d.unit || "pengguna"}/bulan`, colP, rowTop - 12, { size: 8, color: GRAY, align: "right" });
+  text(String(Number(d.seats) || 0), colQ, rowTop, { size: 10, align: "right" });
+  text(d.unit || "pengguna", colQ, rowTop - 12, { size: 8, color: GRAY, align: "right" });
+  text(rp((Number(d.pricePerSeat) || 0) * (Number(d.months) || 0)), colP, rowTop, { size: 10, align: "right" });
+  text(`per ${d.unit || "pengguna"}, ${Number(d.months) || 0} bulan`, colP, rowTop - 12, { size: 8, color: GRAY, align: "right" });
   text(rp(subtotal), colS, rowTop, { size: 10, align: "right" });
   y = rowTop - hItem - 22;
   rule(y); y -= 18;

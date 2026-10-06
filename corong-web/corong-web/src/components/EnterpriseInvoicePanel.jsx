@@ -195,8 +195,8 @@ export function buildInvoiceHtml(d, meta = {}) {
     <thead><tr><th>Deskripsi</th><th class="r">Jumlah</th><th class="r">Harga satuan</th><th class="r">Subtotal</th></tr></thead>
     <tbody><tr>
       <td class="d"><b>${esc(d.item)}</b><small>${d.seats} ${esc(d.unit)}, ${d.months} bulan</small></td>
-      <td class="r">${d.seats * d.months}</td>
-      <td class="r">${rp(d.pricePerSeat)}<small>per ${esc(d.unit)}/bulan</small></td>
+      <td class="r">${d.seats}<small>${esc(d.unit)}</small></td>
+      <td class="r">${rp((Number(d.pricePerSeat) || 0) * (Number(d.months) || 0))}<small>per ${esc(d.unit)}, ${d.months} bulan</small></td>
       <td class="r">${rp(subtotal)}</td>
     </tr></tbody>
   </table>
