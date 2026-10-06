@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, MessageCircle, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, Megaphone, LifeBuoy, Trash2, Users, Globe, FileText, Coins } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, Coins } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
@@ -282,74 +282,6 @@ function EmployeeDetailModal({ employee, onTrigger, triggering, onClose }) {
       </div>
     </div>,
     document.body
-  );
-}
-
-// Panel review draft konten NOVA - tiap draft nunjukkin gambar+caption, dan
-// kalau statusnya masih "pending" ada tombol Approve & Post / Reject. Approve
-// manggil content-action yang LANGSUNG coba publish ke Instagram (lihat
-// komentar di content-action edge function) - satu-satunya jalan konten NOVA
-// bisa tayang ke publik, gak ada yang otomatis dari cron content-drafter.
-function ContentDraftsPanel({ drafts, onReviewed }) {
-  const [busyId, setBusyId] = useState(null);
-  if (!drafts || drafts.length === 0) {
-    return <div className="mt-3 text-[11px] text-slate-500 font-mono">Belum ada draft konten - NOVA jalan tiap Senin, atau klik Panggil buat generate sekarang.</div>;
-  }
-  const doAction = async (id, action) => {
-    setBusyId(id);
-    try {
-      const result = await db.reviewContentDraft(id, action);
-      if (action === "approve" && result?.posted === false && result?.error) {
-        alert("Draft udah di-approve tapi BELUM ke-post:\n\n" + result.error);
-      }
-      onReviewed();
-    } catch (e) {
-      alert("Gagal proses draft: " + e.message);
-    } finally {
-      setBusyId(null);
-    }
-  };
-  const STATUS_STYLE = {
-    pending: "bg-amber-500/15 text-amber-300",
-    approved: "bg-sky-500/15 text-sky-300",
-    posted: "bg-emerald-500/15 text-emerald-300",
-    rejected: "bg-slate-500/15 text-slate-400",
-    failed: "bg-rose-500/15 text-rose-300",
-  };
-  return (
-    <div className="mt-3 grid gap-2">
-      {drafts.map((d) => (
-        <div key={d.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-2.5 flex gap-2.5">
-          {d.image_url && <img src={d.image_url} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0 border border-white/[0.08]" />}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className={`px-1.5 py-0.5 rounded uppercase tracking-wide text-[9px] font-bold ${STATUS_STYLE[d.status] || STATUS_STYLE.rejected}`}>{d.status}</span>
-              <span className="text-[10px] font-mono text-slate-600">{timeAgo(d.created_at)}</span>
-            </div>
-            <div className="text-[11px] text-slate-300 leading-relaxed">{d.caption.length > 140 ? `${d.caption.slice(0, 140)}…` : d.caption}</div>
-            {d.status === "approved" && d.error && <div className="mt-1.5 text-[10px] text-amber-400 font-mono">{d.error}</div>}
-            {d.status === "pending" && (
-              <div className="mt-2 flex gap-1.5">
-                <button
-                  onClick={() => doAction(d.id, "approve")}
-                  disabled={busyId === d.id}
-                  className="text-[10px] font-mono uppercase font-bold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors"
-                >
-                  {busyId === d.id ? "…" : "Approve & Post"}
-                </button>
-                <button
-                  onClick={() => doAction(d.id, "reject")}
-                  disabled={busyId === d.id}
-                  className="text-[10px] font-mono uppercase font-bold px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 disabled:opacity-50 transition-colors"
-                >
-                  Reject
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -1296,26 +1228,6 @@ export default function AdminDashboard() {
       ),
     },
     {
-      key: "nexa",
-      title: "NEXA",
-      subtitle: "Asisten Chat",
-      icon: MessageCircle,
-      accentColor: "#38bdf8",
-      glowClass: "shadow-[0_0_40px_-25px_rgba(56,189,248,0.6)]",
-      ok: true,
-      gaugeValue: status?.assistant?.last_activity ? 100 : 40,
-      noTrigger: true,
-      noTriggerNote: "jalan pas ada chat",
-      blurb: `Aktivitas terakhir ${timeAgo(status?.assistant?.last_activity)}.`,
-      statLabel: "PESAN HARI INI",
-      statValue: status?.assistant?.messages_today ?? 0,
-      content: (
-        <div className="text-[11px] text-slate-400 font-mono">
-          aktivitas terakhir <span className="text-slate-200">{timeAgo(status?.assistant?.last_activity)}</span> · <span className="text-slate-200 font-bold">{status?.assistant?.messages_today ?? 0}</span> pesan hari ini
-        </div>
-      ),
-    },
-    {
       key: "memo",
       title: "MEMO",
       subtitle: "Vector Memory",
@@ -1333,32 +1245,6 @@ export default function AdminDashboard() {
         <div className="text-[11px] text-slate-400 font-mono">
           <span className="text-slate-200 font-bold">{memoPending}</span> catatan 24 jam terakhir belum ke-embed
         </div>
-      ),
-    },
-    {
-      key: "nova",
-      title: "NOVA",
-      subtitle: "Marketing & Content",
-      icon: Megaphone,
-      accentColor: "#ec4899",
-      glowClass: "shadow-[0_0_40px_-25px_rgba(236,72,153,0.6)]",
-      ok: (status?.content_studio?.pending_count ?? 0) === 0,
-      gaugeValue: (status?.content_studio?.pending_count ?? 0) === 0 ? 100 : Math.max(30, 100 - (status.content_studio.pending_count) * 20),
-      triggerKey: "content-drafter",
-      blurb: "Nyiapin draft konten marketing buat direview.",
-      statLabel: "DRAFT PENDING",
-      statValue: status?.content_studio?.pending_count ?? 0,
-      content: (
-        <>
-          <div className="text-[11px] text-slate-400 font-mono">
-            {(status?.content_studio?.pending_count ?? 0) > 0 ? (
-              <span className="text-amber-400">{status.content_studio.pending_count} draft nunggu direview</span>
-            ) : (
-              <span className="text-emerald-400">gak ada draft yang nunggu</span>
-            )}
-          </div>
-          <ContentDraftsPanel drafts={status?.content_studio?.recent_drafts} onReviewed={() => load(true)} />
-        </>
       ),
     },
     {
