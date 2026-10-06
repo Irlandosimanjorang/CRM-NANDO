@@ -165,6 +165,45 @@ function isDuplicateName(candidateNorm, existingNormSet) {
   return false;
 }
 
+// Ambil array lead dari jawaban AI. Kalau jawaban terpotong di tengah
+// (array tidak tertutup), objek yang sudah lengkap tetap dipakai.
+function parseLeadArray(textOut) {
+  const x = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();
+  // Awal array lead = "[" yang langsung diikuti "{" (teks pengantar bisa
+  // memuat "[" lain).
+  let a = x.search(/\[\s*\{/);
+  if (a === -1) a = x.indexOf("[");
+  if (a === -1) return [];
+  const e = x.lastIndexOf("]");
+  if (e > a) {
+    try {
+      const all = JSON.parse(x.slice(a, e + 1));
+      if (Array.isArray(all)) return all;
+    } catch (_) { /* lanjut ke penyelamatan per objek */ }
+  }
+  const out = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = a + 1; i < x.length; i++) {
+    const ch = x[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === "\"") inStr = false;
+      continue;
+    }
+    if (ch === "\"") inStr = true;
+    else if (ch === "{") { if (depth === 0) start = i; depth++; }
+    else if (ch === "}" && depth > 0) {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try { out.push(JSON.parse(x.slice(start, i + 1))); } catch (_) { /* objek rusak dilewati */ }
+        start = -1;
+      }
+    }
+  }
+  return out;
+}
+
 async function callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames, maxSearchUses, passLabel, signal }) {
   let userRequest = `Kata kunci pencarian: "${keyword}"${province ? ` di ${province}, Indonesia (bisa nama provinsi atau kota spesifik - kalau ini nama kota, FOKUSIN ke kota itu aja, jangan diperluas ke provinsi sekitarnya)` : ` - CARI DI SELURUH INDONESIA (gak dikasih batasan provinsi/kota spesifik, jadi jangan sempitin sendiri ke 1 daerah aja, coba variasiin kota/wilayah biar hasilnya nyebar).`}.`;
   userRequest += ` Kalau kata kunci di atas NYEBUT NAMA PERUSAHAAN SPESIFIK (misal "seperti Halodoc, Gojek"), perusahaan yang disebut itu JUGA WAJIB dimasukin sebagai lead (kecuali ada di daftar "udah ada di database" di bawah) - itu target, bukan cuma contoh. Sisanya diisi perusahaan lain yang profilnya mirip.`;
@@ -219,7 +258,10 @@ async function callAiForLeads({ industryTerms, keyword, province, targetRole, pr
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: "claude-sonnet-5-5",
-        max_tokens: 4500,
+        // 16000 (dulu 4500): Sonnet 5.5 memakai sebagian jatah output untuk
+        // berpikir & menyaring hasil pencarian - 6 Okt 2026 jawaban terpotong
+        // (stop_reason max_tokens) sebelum daftar JSON selesai -> 0 lead.
+        max_tokens: 16000,
         system: [
           { type: "text", text: UNIVERSAL_INSTRUCTIONS, cache_control: { type: "ephemeral" } },
           { type: "text", text: `Konteks industri (${industryTerms.label}): ${industryTerms.context}`, cache_control: { type: "ephemeral" } },
@@ -240,15 +282,8 @@ async function callAiForLeads({ industryTerms, keyword, province, targetRole, pr
   }
   console.log(`[generate-leads] ${passLabel} selesai dalam ${Date.now() - callStartedAt}ms`);
   const textOut = (dat?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-  let parsed = [];
-  try {
-    let x = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();
-    const a = x.indexOf("["); const e = x.lastIndexOf("]");
-    if (a !== -1 && e !== -1) parsed = JSON.parse(x.slice(a, e + 1));
-  } catch (_) {
-    return [];
-  }
-  return parsed.filter((l) => l && l.name);
+  if (dat?.stop_reason === "max_tokens") console.log(`[generate-leads] ${passLabel} jawaban terpotong (max_tokens), ambil lead yang sudah lengkap`);
+  return parseLeadArray(textOut).filter((l) => l && l.name);
 }
 
 async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType }) {
