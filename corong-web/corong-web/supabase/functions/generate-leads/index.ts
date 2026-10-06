@@ -45,7 +45,12 @@ const MAX_LEADS = 10;
 const RETRY_MIN_THRESHOLD = 6;
 const FIRST_PASS_MAX_SEARCH = 12;
 const RETRY_PASS_MAX_SEARCH = 6;
-const MAX_EXCLUDE_NAMES_IN_PROMPT = 40;
+// 300 (dulu 40, dan dulu cuma dipakai di pencarian ulang): 6 Okt 2026 org
+// dengan ±430 lead PVC cuma dapet 1 lead baru - AI nemuin ulang pabrik yang
+// udah ada (Pralon, Maspion, dst) karena pencarian pertama gak dikasih tau
+// daftarnya, lalu 9 dari 10 kebuang sebagai duplikat. Sekarang daftar ini
+// dikirim sejak pencarian pertama (±6 token per nama, murah).
+const MAX_EXCLUDE_NAMES_IN_PROMPT = 300;
 const QUOTA_MAX_RUNS = 4;
 const HANDLER_HARD_LIMIT_MS = 150 * 1000;
 const RESPONSE_MARGIN_MS = 10 * 1000;
@@ -154,13 +159,21 @@ function normalizeCompanyName(raw) {
     .replace(/\s+/g, " ")
     .trim();
 }
+// Kata umum yang sendirian bukan nama perusahaan - lead lama bernama
+// "Company"/"Indonesia" gak boleh bikin semua kandidat berisi kata itu
+// dianggap duplikat.
+const GENERIC_NAME_WORDS = new Set(["company", "indonesia", "group", "grup", "industri", "industry", "industries", "plastik", "plastic", "international", "internasional", "jaya", "abadi", "makmur", "sejahtera", "mandiri", "utama", "persada", "perkasa", "sentosa", "sukses", "pabrik", "pvc", "upvc", "manufacturing", "trading", "corporation", "corp"]);
+const isGenericName = (norm) => norm.split(" ").every((w) => GENERIC_NAME_WORDS.has(w));
+// Cocok per kata utuh (bukan potongan huruf): "pralon" cocok dengan "pipa
+// pralon", tapi "indo" tidak cocok dengan "indofood".
+const containsWords = (hay, needle) => (" " + hay + " ").includes(" " + needle + " ");
 function isDuplicateName(candidateNorm, existingNormSet) {
   if (!candidateNorm) return false;
   if (existingNormSet.has(candidateNorm)) return true;
-  if (candidateNorm.length < 6) return false;
+  if (candidateNorm.length < 6 || isGenericName(candidateNorm)) return false;
   for (const ex of existingNormSet) {
-    if (ex.length < 6) continue;
-    if (candidateNorm.includes(ex) || ex.includes(candidateNorm)) return true;
+    if (ex.length < 6 || isGenericName(ex)) continue;
+    if (containsWords(candidateNorm, ex) || containsWords(ex, candidateNorm)) return true;
   }
   return false;
 }
@@ -299,8 +312,8 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
     const runStartedAt = new Date().toISOString();
 
     const [{ data: existingLeads }, { data: existingGen }] = await Promise.all([
-      admin.from("leads").select("name").eq("org_id", orgId),
-      admin.from("generated_leads").select("name").eq("org_id", orgId),
+      admin.from("leads").select("name").eq("org_id", orgId).order("created_at", { ascending: false }),
+      admin.from("generated_leads").select("name").eq("org_id", orgId).order("created_at", { ascending: false }),
     ]);
     const existingRawNames = [...(existingLeads || []), ...(existingGen || [])].map((r) => r.name).filter(Boolean);
     const existingNormSet = new Set(existingRawNames.map(normalizeCompanyName).filter(Boolean));
@@ -349,9 +362,10 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
       orgMemoryProfile = "";
     }
 
-    const pass1Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: [], maxSearchUses: FIRST_PASS_MAX_SEARCH, passLabel: "pass1" });
+    const pass1Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: [...new Set(existingRawNames)], maxSearchUses: FIRST_PASS_MAX_SEARCH, passLabel: "pass1" });
     let survivors = pass1Raw.filter((l) => !isDuplicateName(normalizeCompanyName(l.name), existingNormSet)).slice(0, MAX_LEADS);
     let dedupedCount = pass1Raw.length - survivors.length;
+    console.log(`[generate-leads] pass1: ${pass1Raw.length} hasil AI, ${dedupedCount} dilewati (sudah ada), ${survivors.length} baru`);
     let retried = false;
 
     const elapsedAfterPass1 = Date.now() - startedAt;
