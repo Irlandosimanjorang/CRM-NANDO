@@ -6,12 +6,20 @@ import GrokBotMcp from "./pages/GrokBotMcp.jsx";
 import PublicDemo from "./pages/PublicDemo.jsx";
 import InvoicePublic from "./pages/InvoicePublic.jsx";
 import { installClientErrorLog } from "./lib/clientErrorLog";
+import { reloadForNewVersion } from "./lib/staleBuild";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./index.css";
 
 // Catat alert "Gagal ..." yang dialami user ke client_error_log biar health
 // check bisa ngabarin kalau ada error berulang (lihat lib/clientErrorLog.js).
 installClientErrorLog();
+
+// Chunk versi lama gagal dimuat setelah deploy -> muat ulang sekali ke versi
+// terbaru (lihat lib/staleBuild.js). Event ini dipancarkan Vite untuk
+// kegagalan import dinamis & preload CSS.
+window.addEventListener("vite:preloadError", (e) => {
+  if (reloadForNewVersion()) e.preventDefault();
+});
 
 // Gak pake router library (app ini emang cuma "halaman" App/Auth) - path
 // publik yang butuh render terpisah dicek manual di sini, gak sentuh

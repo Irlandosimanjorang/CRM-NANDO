@@ -5,6 +5,7 @@
 // health check ngabarin lewat Telegram.
 import { Component } from "react";
 import { report } from "../lib/clientErrorLog";
+import { isStaleChunkError, reloadForNewVersion } from "../lib/staleBuild";
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -17,6 +18,9 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
+    // Versi lama setelah deploy -> langsung muat ulang ke versi terbaru
+    // (sekali), tidak perlu dilaporkan sebagai error.
+    if (isStaleChunkError(error) && reloadForNewVersion()) return;
     const where = this.props.name ? ` [${this.props.name}]` : "";
     const firstFrame = String(info?.componentStack || "").trim().split("\n")[0] || "";
     report(`Gagal tampil${where}: ${error?.message || error} ${firstFrame}`);
@@ -24,6 +28,19 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (!this.state.error) return this.props.children;
+    if (isStaleChunkError(this.state.error)) {
+      return (
+        <div className={this.props.fullScreen ? "min-h-screen bg-slate-50 flex items-center justify-center px-4" : "py-10 px-4 flex justify-center"}>
+          <div className="w-full max-w-md rounded-panel border border-slate-200 bg-white p-6">
+            <h2 className="text-lg font-bold text-ink">Nexto baru saja diperbarui</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">Muat ulang halaman untuk memakai versi terbaru. Data Anda tetap aman.</p>
+            <button onClick={() => window.location.reload()} className="mt-5 w-full rounded-inner bg-ink px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+              Muat ulang
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className={this.props.fullScreen ? "min-h-screen bg-slate-50 flex items-center justify-center px-4" : "py-10 px-4 flex justify-center"}>
         <div className="w-full max-w-md rounded-panel border border-slate-200 bg-white p-6">
