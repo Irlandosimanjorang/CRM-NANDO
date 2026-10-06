@@ -3,7 +3,7 @@
 // AI baca isi halamannya terus extract jadi draft lead baru - user tetep
 // review/edit dulu sebelum disimpen (BUKAN langsung nulis ke DB dari sini).
 //
-// Kuota flat 15x/bulan WIB buat semua plan berbayar (Standard+). Kuota
+// Kuota flat 10x/bulan (6 Okt 2026, dulu 15x) buat semua plan berbayar (Standard+). Kuota
 // dikembalikan kalau link gak bisa dibaca / proses gagal.
 //
 // === AUDIT (30 Sep 2026) ===
@@ -35,7 +35,7 @@ const cors = {
 };
 
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
-const MONTHLY_MAX = 15;
+const MONTHLY_MAX = 10;
 const MAX_CONTINUATIONS = 3;
 
 function wibMonthStartUTC(d = new Date()) {

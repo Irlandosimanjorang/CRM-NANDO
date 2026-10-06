@@ -3,7 +3,7 @@
 // terus minta Claude rapiin jadi catatan meeting yang terstruktur. Audio dihapus
 // dari storage abis selesai diproses (ga nyimpen rekaman mentah selamanya).
 //
-// Tier gate Professional+ (Enterprise ikut level 2), kuota 10x/bulan WIB per
+// Tier gate Professional+ (Enterprise ikut level 2), kuota 8x/bulan (6 Okt 2026, dulu 10x) per
 // user dengan reservasi atomic - kuota dikembalikan kalau proses gagal.
 //
 // === AUDIT ISTILAH INDUSTRI (30 Sep 2026) ===
@@ -173,10 +173,10 @@ Deno.serve(async (req) => {
     const industryKey = gateOrgResult.data?.industry || "b2b_general";
 
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const MAX_CALLS = 10;
+    const MAX_CALLS = 8;
     reservationId = await reserveMonthlySlot(admin, userData.user.id, "transcribe-meeting", MAX_CALLS);
     if (!reservationId) {
-      return new Response(JSON.stringify({ error: `Kuota Rekam Meeting (10x per bulan) sudah terpakai. ${await quotaRefillText(admin, userData.user.id, "transcribe-meeting")} Sementara itu, Anda dapat mencatat secara manual.` }), { status: 429, headers: cors });
+      return new Response(JSON.stringify({ error: `Kuota Rekam Meeting (${MAX_CALLS}x per bulan) sudah terpakai. ${await quotaRefillText(admin, userData.user.id, "transcribe-meeting")} Sementara itu, Anda dapat mencatat secara manual.` }), { status: 429, headers: cors });
     }
 
     const body = await req.json();

@@ -5,7 +5,7 @@
 // pas user beneran klik tombolnya, bukan otomatis.
 //
 // (Riwayat fix lama: draft disimpen ke ai_drafts SEBELUM return + dipake ulang
-// kalau masih <24 jam, tier gate Professional+, rate limit 5x generate baru
+// kalau masih <24 jam, tier gate Professional+, rate limit 3x generate baru
 // per hari WIB lewat RPC atomic, org_memory, max_tokens 900 biar gak
 // kepotong - detail lengkap ada di versi sebelumnya.)
 //
@@ -162,12 +162,12 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ...cachedResult, cached: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ---- RATE LIMIT - 5x GENERATE BARU per hari kalender WIB per user (cache
+    // ---- RATE LIMIT - 3x GENERATE BARU per hari (6 Okt 2026, dulu 5x) kalender WIB per user (cache
     // hit di atas gak kena hitungan ini).
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    reservationId = await reserveDaily(admin, userData.user.id, "draft-followup", 5);
+    reservationId = await reserveDaily(admin, userData.user.id, "draft-followup", 3);
     if (!reservationId) {
-      return new Response(JSON.stringify({ error: "Kuota AI Draft Follow-up (5x/hari) sudah terpakai. Silakan coba lagi besok, atau tulis pesan secara manual." }), { status: 429, headers: cors });
+      return new Response(JSON.stringify({ error: "Kuota AI Draft Follow-up (3x per hari) sudah terpakai. Silakan coba lagi besok, atau tulis pesan secara manual." }), { status: 429, headers: cors });
     }
 
     let industryKey = "b2b_general";
