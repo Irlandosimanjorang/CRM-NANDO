@@ -583,7 +583,12 @@ function fmtShortDate(iso) {
 // token & biaya nyata (tabel ai_usage), dan persen dari total limit. Persen
 // ditimbang biaya per fitur (Generate Leads lebih berat dari Tebak Alasan),
 // dihitung server di admin_ai_usage_report().
-const fmtRp = (n) => `Rp${Math.round(Number(n) || 0).toLocaleString("id-ID")}`;
+// Semua biaya ditampilkan dalam dolar (6 Okt 2026, permintaan Nando).
+const fmtUsd = (n) => {
+  const v = Number(n) || 0;
+  return `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: v > 0 && v < 1 ? 4 : 2 })}`;
+};
+const sumUsd = (accounts) => (accounts || []).reduce((s, a) => s + (Number(a.cost_usd) || 0), 0);
 const fmtTokens = (n) => {
   const v = Number(n) || 0;
   if (v >= 1e6) return `${(v / 1e6).toFixed(1)} jt`;
@@ -599,6 +604,58 @@ const AI_COST_PLAN_FILTERS = [
 ];
 const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales" };
 
+const PLAN_NAME = { standard: "Standard", professional: "Professional", enterprise: "Enterprise" };
+function AiPlanTotals({ totals }) {
+  const rows = totals.by_plan || [];
+  const other = totals.other || {};
+  const sum = (k) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0) + (Number(other[k]) || 0);
+  const cell = "py-1.5 pr-2 text-[10.5px] font-mono tabular-nums text-right";
+  return (
+    <div className="min-w-0 overflow-x-auto rounded-xl border border-white/[0.06]">
+      <table className="w-full text-left border-collapse min-w-[600px]">
+        <thead>
+          <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+            <th className="py-2 pl-3 pr-2 font-medium">Total per paket</th>
+            <th className="py-2 pr-2 font-medium text-right">Akun aktif</th>
+            <th className="py-2 pr-2 font-medium text-right">Token bulan ini</th>
+            <th className="py-2 pr-2 font-medium text-right">USD bulan ini</th>
+            <th className="py-2 pr-2 font-medium text-right">Token total</th>
+            <th className="py-2 pr-3 font-medium text-right">USD total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.plan} className="border-t border-white/[0.05]">
+              <td className="py-1.5 pl-3 pr-2 text-[11px] font-semibold text-slate-200">{PLAN_NAME[r.plan] || r.plan}</td>
+              <td className={`${cell} text-slate-300`}>{r.active_accounts}/{r.accounts}</td>
+              <td className={`${cell} text-slate-300`}>{fmtTokens(r.tokens_month)}</td>
+              <td className={`${cell} text-pink-200`}>{fmtUsd(r.usd_month)}</td>
+              <td className={`${cell} text-slate-300`}>{fmtTokens(r.tokens_all)}</td>
+              <td className={`${cell} pr-3 text-pink-200`}>{fmtUsd(r.usd_all)}</td>
+            </tr>
+          ))}
+          <tr className="border-t border-white/[0.05]">
+            <td className="py-1.5 pl-3 pr-2 text-[11px] text-slate-400" title="Pengguna gratis dan Chat Bantuan publik (tanpa akun)">Di luar akun berbayar</td>
+            <td className={`${cell} text-slate-500`}>-</td>
+            <td className={`${cell} text-slate-400`}>{fmtTokens(other.tokens_month)}</td>
+            <td className={`${cell} text-slate-400`}>{fmtUsd(other.usd_month)}</td>
+            <td className={`${cell} text-slate-400`}>{fmtTokens(other.tokens_all)}</td>
+            <td className={`${cell} pr-3 text-slate-400`}>{fmtUsd(other.usd_all)}</td>
+          </tr>
+          <tr className="border-t border-white/[0.12] bg-white/[0.02]">
+            <td className="py-2 pl-3 pr-2 text-[11px] font-bold text-slate-100">Semua</td>
+            <td className={`${cell} text-slate-200`}>{rows.reduce((s, r) => s + (Number(r.active_accounts) || 0), 0)}/{rows.reduce((s, r) => s + (Number(r.accounts) || 0), 0)}</td>
+            <td className={`${cell} font-bold text-slate-100`}>{fmtTokens(sum("tokens_month"))}</td>
+            <td className={`${cell} font-bold text-pink-200`}>{fmtUsd(sum("usd_month"))}</td>
+            <td className={`${cell} font-bold text-slate-100`}>{fmtTokens(sum("tokens_all"))}</td>
+            <td className={`${cell} pr-3 font-bold text-pink-200`}>{fmtUsd(sum("usd_all"))}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function AiCostPanel({ data }) {
   const [planFilter, setPlanFilter] = useState("all");
   const [query, setQuery] = useState("");
@@ -611,7 +668,9 @@ export function AiCostPanel({ data }) {
     (planFilter === "all" || a.plan === planFilter) &&
     (!q || [a.email, a.display_name, a.org_name].some((v) => (v || "").toLowerCase().includes(q)))
   );
-  const totalCost = accounts.reduce((s, a) => s + (Number(a.cost_rp) || 0), 0);
+  const totalCost = sumUsd(accounts);
+  const kurs = Number(data.kurs) || 17700;
+  const totals = data.totals;
   const totalTokens = accounts.reduce((s, a) => s + (Number(a.tokens) || 0), 0);
   const avgPct = accounts.length ? accounts.reduce((s, a) => s + (Number(a.pct_of_limit) || 0), 0) / accounts.length : 0;
   const nearLimit = accounts.filter((a) => Number(a.pct_of_limit) >= 85).length;
@@ -619,14 +678,16 @@ export function AiCostPanel({ data }) {
   return (
     <div className="grid gap-3 min-w-0">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <StatTile label="Biaya AI tercatat" value={fmtRp(totalCost)} accent="#f472b6" />
+        <StatTile label="Biaya AI tercatat" value={fmtUsd(totalCost)} accent="#f472b6" />
         <StatTile label="Total token" value={fmtTokens(totalTokens)} />
         <StatTile label="Rata-rata % limit" value={`${avgPct.toFixed(1)}%`} accent={pctColor(avgPct)} />
         <StatTile label="Akun ≥85% limit" value={nearLimit} accent={nearLimit ? "#f43f5e" : "#34d399"} />
       </div>
 
+      {totals && <AiPlanTotals totals={totals} />}
+
       <div className="text-[10px] text-slate-500 font-mono leading-relaxed">
-        Token & biaya nyata tercatat sejak {data.tracking_since ? new Date(data.tracking_since).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "pencatatan dimulai (belum ada pemakaian)"} (kurs Rp{Number(data.kurs || 0).toLocaleString("id-ID")}/USD).
+        Token & biaya nyata tercatat sejak {data.tracking_since ? new Date(data.tracking_since).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "pencatatan dimulai (belum ada pemakaian)"} (dolar AS).
         % limit = pemakaian × perkiraan biaya per fitur dibanding seluruh kuota paketnya, per siklus langganan berjalan.
       </div>
 
@@ -685,7 +746,7 @@ export function AiCostPanel({ data }) {
                     <td className="py-2 pr-2 text-[10.5px] font-mono text-slate-300 capitalize">{a.plan}</td>
                     <td className="py-2 pr-2 text-[10.5px] font-mono text-slate-400 whitespace-nowrap" title={a.period_source === "plan" ? "Siklus langganan" : "Bulan kalender (paket tanpa tanggal berakhir)"}>{fmtShortDate(a.period_end)}</td>
                     <td className="py-2 pr-2 text-[10.5px] font-mono text-slate-300 text-right tabular-nums">{fmtTokens(a.tokens)}</td>
-                    <td className="py-2 pr-2 text-[10.5px] font-mono text-pink-200 text-right tabular-nums">{fmtRp(a.cost_rp)}</td>
+                    <td className="py-2 pr-2 text-[10.5px] font-mono text-pink-200 text-right tabular-nums">{fmtUsd(a.cost_usd)}</td>
                     <td className="py-2 pr-3">
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 flex-1 rounded-full bg-white/[0.06] overflow-hidden">
@@ -699,7 +760,7 @@ export function AiCostPanel({ data }) {
                     <tr key={`${a.user_id}-detail`} className="bg-white/[0.015]">
                       <td colSpan={6} className="px-3 pb-3 pt-1">
                         <div className="text-[9.5px] text-slate-500 font-mono mb-1.5">
-                          Periode {fmtShortDate(a.period_start)} – {fmtShortDate(a.period_end)} · perkiraan pemakaian {fmtRp(a.est_used_rp)} dari maksimal {fmtRp(a.est_max_rp)}
+                          Periode {fmtShortDate(a.period_start)} – {fmtShortDate(a.period_end)} · perkiraan pemakaian {fmtUsd(a.est_used_rp / kurs)} dari maksimal {fmtUsd(a.est_max_rp / kurs)}
                         </div>
                         <table className="w-full text-left border-collapse">
                           <thead>
@@ -718,7 +779,7 @@ export function AiCostPanel({ data }) {
                                   {f.limit ? `${f.used}/${f.limit}` : "otomatis"}
                                 </td>
                                 <td className="py-1 pr-2 text-[10.5px] font-mono text-slate-400 text-right tabular-nums">{fmtTokens(f.tokens)}</td>
-                                <td className="py-1 text-[10.5px] font-mono text-slate-300 text-right tabular-nums">{fmtRp(f.cost_rp)}</td>
+                                <td className="py-1 text-[10.5px] font-mono text-slate-300 text-right tabular-nums">{fmtUsd(f.cost_usd)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1417,9 +1478,9 @@ export default function AdminDashboard() {
       noTrigger: true,
       noTriggerNote: "dicatat otomatis tiap panggilan AI",
       wide: true,
-      blurb: `${(status?.ai_usage?.accounts || []).length} akun berbayar, biaya AI tercatat ${fmtRp((status?.ai_usage?.accounts || []).reduce((s, a) => s + (Number(a.cost_rp) || 0), 0))}.`,
+      blurb: `${(status?.ai_usage?.accounts || []).length} akun berbayar, biaya AI tercatat ${fmtUsd(sumUsd(status?.ai_usage?.accounts))}.`,
       statLabel: "BIAYA AI TERCATAT",
-      statValue: fmtRp((status?.ai_usage?.accounts || []).reduce((s, a) => s + (Number(a.cost_rp) || 0), 0)),
+      statValue: fmtUsd(sumUsd(status?.ai_usage?.accounts)),
       content: <AiCostPanel data={status?.ai_usage} />,
     },
     {

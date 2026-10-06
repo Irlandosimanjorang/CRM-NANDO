@@ -22,6 +22,7 @@ declare
   v_month_start timestamptz := date_trunc('month', now() at time zone 'Asia/Jakarta') at time zone 'Asia/Jakarta';
   v_month_end timestamptz := (date_trunc('month', now() at time zone 'Asia/Jakarta') + interval '1 month') at time zone 'Asia/Jakarta';
   v_result jsonb;
+  v_totals jsonb;
 begin
   with members as (
     select m.user_id, m.org_id, m.role, o.name as org_name,
@@ -84,7 +85,8 @@ begin
       coalesce(ub.tokens, 0) as tokens, coalesce(ub.input_tokens, 0) as input_tokens,
       coalesce(ub.output_tokens, 0) as output_tokens, coalesce(ub.cache_tokens, 0) as cache_tokens,
       coalesce(ub.audio_seconds, 0) as audio_seconds,
-      round(coalesce(ub.cost_usd, 0) * v_kurs) as cost_rp
+      round(coalesce(ub.cost_usd, 0) * v_kurs) as cost_rp,
+      coalesce(ub.cost_usd, 0) as cost_usd
     from win w
     cross join feat f
     left join usage_by_feat ub on ub.user_id = w.user_id and ub.key = f.key
@@ -97,10 +99,11 @@ begin
         'pct', case when r.lim > 0 then round(100.0 * r.used / r.lim) end,
         'tokens', r.tokens, 'input_tokens', r.input_tokens, 'output_tokens', r.output_tokens,
         'cache_tokens', r.cache_tokens, 'audio_seconds', r.audio_seconds,
-        'cost_rp', r.cost_rp, 'est_rp_per_use', r.est_rp
+        'cost_rp', r.cost_rp, 'cost_usd', round(r.cost_usd, 4), 'est_rp_per_use', r.est_rp
       ) order by r.ord) filter (where r.lim is not null or r.kind = 'other' or r.cost_rp > 0) as features,
       sum(r.tokens) as tokens,
       sum(r.cost_rp) as cost_rp,
+      sum(r.cost_usd) as cost_usd,
       sum(case when r.lim is not null then least(r.used, r.lim) * r.est_rp else 0 end) as est_used_rp,
       sum(case when r.lim is not null then r.lim * r.est_rp else 0 end) as est_max_rp
     from rows r
@@ -110,7 +113,7 @@ begin
       'user_id', w.user_id, 'email', w.email, 'display_name', w.display_name,
       'org_name', w.org_name, 'role', w.role, 'plan', w.plan,
       'period_start', w.p_start, 'period_end', w.p_end, 'period_source', case when w.c is not null then 'plan' else 'month' end,
-      'tokens', pu.tokens, 'cost_rp', pu.cost_rp,
+      'tokens', pu.tokens, 'cost_rp', pu.cost_rp, 'cost_usd', round(pu.cost_usd, 4),
       'est_used_rp', pu.est_used_rp, 'est_max_rp', pu.est_max_rp,
       'pct_of_limit', case when pu.est_max_rp > 0 then round(100.0 * pu.est_used_rp / pu.est_max_rp, 1) else 0 end,
       'features', coalesce(pu.features, '[]'::jsonb)
@@ -119,8 +122,59 @@ begin
   from win w
   join per_user pu on pu.user_id = w.user_id;
 
+  -- Total per paket (6 Okt 2026, permintaan Nando: "secara total pemakaian ai
+  -- token berapa banyak, total duitnya in dollar"). Paket = paket akun saat
+  -- ini; satu akun dihitung sekali walau anggota beberapa organisasi.
+  with acc as (
+    select distinct on (m.user_id) m.user_id,
+      case when o.plan = 'enterprise' then 'enterprise'
+           when s.plan = 'premium' then 'professional'
+           when s.plan = 'standard' then 'standard'
+           else 'free' end as plan
+    from organization_members m
+    join organizations o on o.id = m.org_id
+    left join settings s on s.user_id = m.user_id
+    order by m.user_id, (o.plan = 'enterprise') desc
+  ),
+  per_acc as (
+    select acc.plan, acc.user_id,
+      coalesce(sum(a.input_tokens + a.output_tokens + a.cache_write_tokens + a.cache_read_tokens), 0) as tokens_all,
+      coalesce(sum(a.cost_usd), 0) as usd_all,
+      coalesce(sum(a.input_tokens + a.output_tokens + a.cache_write_tokens + a.cache_read_tokens) filter (where a.created_at >= v_month_start), 0) as tokens_month,
+      coalesce(sum(a.cost_usd) filter (where a.created_at >= v_month_start), 0) as usd_month,
+      count(a.id) as calls_all
+    from acc
+    left join ai_usage a on a.user_id = acc.user_id
+    where acc.plan <> 'free'
+    group by 1, 2
+  ),
+  by_plan as (
+    select plan, count(*) as accounts, count(*) filter (where calls_all > 0) as active_accounts,
+      sum(tokens_all) as tokens_all, sum(usd_all) as usd_all,
+      sum(tokens_month) as tokens_month, sum(usd_month) as usd_month
+    from per_acc group by plan
+  )
+  select jsonb_build_object(
+    'month_start', v_month_start,
+    'by_plan', coalesce((select jsonb_agg(jsonb_build_object(
+        'plan', x.plan, 'accounts', x.accounts, 'active_accounts', x.active_accounts,
+        'tokens_all', x.tokens_all, 'usd_all', round(x.usd_all, 4),
+        'tokens_month', x.tokens_month, 'usd_month', round(x.usd_month, 4),
+        'avg_usd_per_active', case when x.active_accounts > 0 then round(x.usd_all / x.active_accounts, 4) else 0 end
+      ) order by case x.plan when 'standard' then 1 when 'professional' then 2 else 3 end) from by_plan x), '[]'::jsonb),
+    -- di luar akun berbayar: pengguna gratis + Chat Bantuan publik (tanpa akun).
+    'other', (select jsonb_build_object(
+        'tokens_all', coalesce(sum(a.input_tokens + a.output_tokens + a.cache_write_tokens + a.cache_read_tokens), 0),
+        'usd_all', round(coalesce(sum(a.cost_usd), 0), 4),
+        'tokens_month', coalesce(sum(a.input_tokens + a.output_tokens + a.cache_write_tokens + a.cache_read_tokens) filter (where a.created_at >= v_month_start), 0),
+        'usd_month', round(coalesce(sum(a.cost_usd) filter (where a.created_at >= v_month_start), 0), 4))
+      from ai_usage a
+      where a.user_id is null or a.user_id not in (select user_id from per_acc))
+  ) into v_totals;
+
   return jsonb_build_object(
     'generated_at', now(),
+    'totals', v_totals,
     'kurs', v_kurs,
     'tracking_since', (select min(created_at) from ai_usage),
     'accounts', v_result
