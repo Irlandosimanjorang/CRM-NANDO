@@ -2,7 +2,8 @@
   "rewrites": [
     { "source": "/grok-bot", "destination": "/index.html" },
     { "source": "/demo", "destination": "/index.html" },
-    { "source": "/invoice", "destination": "/index.html" }
+    { "source": "/invoice", "destination": "/index.html" },
+    { "source": "/dokumen", "destination": "/index.html" }
   ],
   "headers": [
     {

@@ -4,7 +4,8 @@
 // tampilannya identik.
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { buildInvoiceHtml, printHtml } from "../components/EnterpriseInvoicePanel";
+import { buildInvoiceHtml } from "../components/EnterpriseInvoicePanel";
+import { printHtml } from "../lib/docKit";
 
 export default function InvoicePublic() {
   const token = new URLSearchParams(window.location.search).get("t") || "";

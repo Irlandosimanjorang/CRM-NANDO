@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
+import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock, FileText } from "lucide-react";
 import * as db from "../lib/db";
 import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle } from "../lib/helpers";
@@ -155,7 +155,7 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Tidak ada anggaran"
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, onCreateDoc }) {
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
   const [f, setF] = useState({ ...lead, ...(draft?.f || {}) });
@@ -708,6 +708,12 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
         <div className="flex items-center gap-2 mt-5">
           <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan</button>
           <button onClick={handleClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Batal</button>
+          {lead.id && myLevel >= 2 && onCreateDoc && (
+            <>
+              <button onClick={() => onCreateDoc("quotation", lead)} disabled={busy} title="Buat quotation untuk lead ini" className="text-sm px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 flex items-center gap-1.5"><FileText size={14} /> Quotation</button>
+              <button onClick={() => onCreateDoc("invoice", lead)} disabled={busy} title="Buat invoice untuk lead ini" className="text-sm px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 flex items-center gap-1.5"><FileText size={14} /> Invoice</button>
+            </>
+          )}
           {lead.id && <button onClick={del} disabled={busy} className="ml-auto text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-60 px-3 py-2 rounded-xl flex items-center gap-1.5"><Trash2 size={15} /> Hapus</button>}
         </div>
       </div>

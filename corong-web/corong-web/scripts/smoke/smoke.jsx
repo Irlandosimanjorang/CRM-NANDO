@@ -17,6 +17,10 @@ import Team from "../../src/tabs/Team";
 import LeadModal from "../../src/components/LeadModal";
 import EnterpriseInvoicePanel from "../../src/components/EnterpriseInvoicePanel";
 import { AiCostPanel } from "../../src/tabs/AdminDashboard";
+import Documents from "../../src/tabs/Documents";
+import DocEditor from "../../src/components/documents/DocEditor";
+import BrandSettings from "../../src/components/documents/BrandSettings";
+import { newDraft, DEFAULT_SETTINGS } from "../../src/lib/documents";
 
 const q = new URLSearchParams(location.search);
 const ind = q.get("ind"), role = q.get("role"), tab = q.get("tab");
@@ -36,6 +40,9 @@ window.__M = {
 };
 const canManage = role !== "sales", myLevel = ent ? 2 : 0;
 const noop = () => {};
+const docSettings = { ...DEFAULT_SETTINGS, seller: { name: "PT Contoh Sejahtera", address: "Jl. Merdeka No. 1, Jakarta", email: "finance@contoh.co.id", phone: "021-555-0101", npwp: "01.234.567.8-901.000", bank: "BCA", account: "1234567890", holder: "PT Contoh Sejahtera", signName: "Budi Santoso", signTitle: "Direktur" }, invoice_terms: "Pembayaran paling lambat pada tanggal jatuh tempo.", quotation_terms: "Harga belum termasuk ongkos kirim.", default_tax_on: true };
+const docDraft = { ...newDraft("quotation", docSettings, leads[0] || null), items: [{ code: "A-01", name: "Layanan implementasi", desc: "Termasuk pelatihan", qty: 2, unit: "paket", price: 7500000, discount_pct: 0 }, { code: "", name: "Lisensi tahunan", desc: "", qty: 10, unit: "user", price: 250000, discount_pct: 10 }] };
+const docIssued = { ...docDraft, id: "d1", number: "INV/2026/10/0007", kind: "invoice", status: "partial", issued_at: "2026-10-07T01:00:00Z", amount_paid: 5000000, public_token: "00000000-0000-0000-0000-000000000001", email_log: [{ type: "invoice", to: "sari@contoh.co.id", at: "2026-10-07T02:00:00Z" }], reminders_enabled: true, snapshot: { seller: docSettings.seller, accent: "#c2410c", footer: "" }, due_date: "2026-10-20", total: 20000000 };
 const views = {
   dashboard: <Dashboard myUid="u1" leads={leads} stages={stages} dealTransactions={demo.deals} settings={{}} onGo={noop} onOpenLead={noop} myLevel={myLevel} onChanged={noop} isEnterprise={ent} canManage={canManage} />,
   leads: <Leads leads={leads} stages={stages} settings={{}} industry={ind} customFieldLabels={{}} myLevel={myLevel} onChanged={noop} canManage={canManage} isEnterprise={ent} />,
@@ -58,6 +65,10 @@ const views = {
     { user_id: "a2", email: "budi@queenpacific.co.id", display_name: null, org_name: "PT Queen Pacific", role: "sales_rep", plan: "enterprise", period_start: "2026-10-06T17:00:00Z", period_end: "2026-11-06T17:00:00Z", period_source: "plan", tokens: 120400, cost_rp: 8800, cost_usd: 0.4972, est_used_rp: 60000, est_max_rp: 213955, pct_of_limit: 28, features: [
       { key: "lead-from-url", label: "Lead dari Link", used: 6, limit: 10, pct: 60, tokens: 120400, cost_rp: 8800, cost_usd: 0.4972 } ] },
     { user_id: "a3", email: "rina@majujaya.id", display_name: "Rina", org_name: "CV Maju Jaya", role: "owner", plan: "standard", period_start: "2026-09-24T02:10:00Z", period_end: "2026-10-24T02:10:00Z", period_source: "plan", tokens: 0, cost_rp: 0, cost_usd: 0.0000, est_used_rp: 110, est_max_rp: 53955, pct_of_limit: 0.2, features: [] } ] }} /></div>,
+  documents: <div style={{ padding: 24 }}><Documents leads={leads} canManage isEnterprise dummy onNotify={noop} /></div>,
+  docsettings: <div style={{ padding: 24 }}><BrandSettings settings={docSettings} canManage isEnterprise onSaved={noop} onNotify={noop} /></div>,
+  doceditor: <DocEditor doc={docDraft} settings={docSettings} leads={leads} isEnterprise docs={[]} onClose={noop} onChanged={noop} onOpenDoc={noop} onDuplicate={noop} onNotify={noop} />,
+  doceditor_issued: <DocEditor doc={docIssued} settings={docSettings} leads={leads} isEnterprise docs={[]} onClose={noop} onChanged={noop} onOpenDoc={noop} onDuplicate={noop} onNotify={noop} />,
   leadmodal: <LeadModal lead={leads[0]} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
   leadmodal_weird: <LeadModal lead={weird} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
 };
