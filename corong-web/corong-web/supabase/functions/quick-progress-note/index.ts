@@ -219,11 +219,13 @@ function parseObj(t) {
 }
 
 async function classifyVoiceCommand(transcript, leads, dateLabel, industryKey) {
-  const leadList = leads.map((l) => ({ id: l.id, name: l.name, key_person: l.key_person || "" }));
+  // Hemat token (6 Okt 2026): lead dikirim dengan nomor urut pendek, bukan UUID
+  // 36 karakter; nomor dipetakan balik ke id asli setelah AI menjawab.
+  const leadList = leads.map((l, i) => `${i + 1}|${l.name}|${l.key_person || ""}`).join("\n");
   const prompt = `Ini transkrip voice note singkat dari sales lapangan di bisnis ${industryContext(industryKey)}, di Indonesia. Tanggal SEKARANG: ${dateLabel.dateStr} (${dateLabel.isoDate}), pakai ini buat mikirin tanggal relatif ("besok", "minggu depan", dst).
 
-Daftar lead org ini:
-${JSON.stringify(leadList)}
+Daftar lead org ini (format: nomor|nama|kontak utama):
+${leadList}
 
 Tentuin SATU aksi yang paling sesuai maksud user dari pilihan ini:
 - "update_lead": update info lead yang SUDAH ADA di daftar (jadwal visit, next action, progress, kontak, dll) - INI DEFAULT kalau user cuma cerita update/progress biasa tanpa maksud lain yang eksplisit.
@@ -235,7 +237,7 @@ Tentuin SATU aksi yang paling sesuai maksud user dari pilihan ini:
 Balas HANYA JSON, tanpa markdown, PERSIS struktur ini (isi cuma field yang relevan sama aksi yang dipilih, field lain biarin default kayak contoh):
 {
   "action": "update_lead",
-  "lead_id": "<id dari daftar di atas, atau null kalau gak ada yang cukup yakin cocok / action create_lead>",
+  "lead_id": "<NOMOR dari daftar di atas, atau null kalau gak ada yang cukup yakin cocok / action create_lead>",
   "confidence": "high",
   "progress_note": "<ringkasan info baru dari transkrip INI SAJA, bahasa Indonesia baku yang rapi, pakai istilah bisnis di atas, buang basa-basi/pengulangan - kosongkan kalau gak ada info baru buat dicatet>",
   "updates": { "visit_date": null, "visit_agenda": null, "visit_meet": null, "next_action": null, "phone": null, "email": null, "website": null, "key_person": null, "key_person_title": null, "product": null, "city": null, "priority": null },
@@ -263,7 +265,19 @@ Transkrip: """${transcript}"""`;
   const dat = await resp.json();
   const t = (dat.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
   const parsed = parseObj(t);
-  if (parsed && typeof parsed.action === "string") return parsed;
+  if (parsed && typeof parsed.action === "string") {
+    // Petakan nomor urut kembali ke id lead asli (nomor di luar daftar = tidak
+    // cocok). Hanya angka murni yang diterima; kalau AI tetap membalas UUID,
+    // terima hanya bila UUID itu memang ada di daftar.
+    const raw = String(parsed.lead_id ?? "").trim();
+    if (/^\d+$/.test(raw)) {
+      const n = parseInt(raw, 10);
+      parsed.lead_id = n >= 1 && n <= leads.length ? leads[n - 1].id : null;
+    } else {
+      parsed.lead_id = leads.some((l) => l.id === raw) ? raw : null;
+    }
+    return parsed;
+  }
   // Fallback kalau AI gagal balas format JSON - transkrip mentah jadi
   // progress note biasa, user masih bisa pilih lead manual & edit.
   return { action: "update_lead", lead_id: null, confidence: "low", progress_note: transcript, updates: {}, cancel_visit: false, result: null, new_lead: null };

@@ -28,6 +28,9 @@
 //   user perempuan) -> bahasa Indonesia tanpa sapaan gender.
 // - Teks email harian dirapikan (bahasa baku).
 // - Org tanpa industri jatuh ke konteks B2B umum, bukan PVC.
+// === HEMAT BIAYA (6 Okt 2026, permintaan Nando) ===
+// AI Advisor hanya dijalankan untuk pengguna yang aktif 7 hari terakhir
+// (lihat isRecentlyActive). ?force=true dan ?user_id= tetap melewati filter.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -526,6 +529,28 @@ async function getAllUsers(admin) {
   return allUsers;
 }
 
+// Hemat biaya AI (6 Okt 2026, permintaan Nando): AI Advisor hanya dijalankan
+// untuk pengguna yang aktif dalam 7 hari terakhir. Aktif = login baru-baru
+// ini, akun baru (agar tetap dapat rekomendasi pertama), atau ada aktivitas
+// data (lead diubah, catatan progress, check-in). Pengguna yang kembali
+// setelah libur langsung masuk hitungan di run berikutnya; sementara itu
+// Dashboard memakai kartu cadangan (tanpa rekomendasi AI).
+const ACTIVE_WINDOW_DAYS = 7;
+async function isRecentlyActive(admin, u) {
+  const sinceMs = Date.now() - ACTIVE_WINDOW_DAYS * 86400000;
+  if (u.last_sign_in_at && Date.parse(u.last_sign_in_at) >= sinceMs) return true;
+  if (u.created_at && Date.parse(u.created_at) >= sinceMs) return true;
+  const since = new Date(sinceMs).toISOString();
+  const [leadsRes, notesRes, checkinsRes] = await Promise.all([
+    admin.from("leads").select("id", { count: "exact", head: true }).or(`user_id.eq.${u.id},assigned_to.eq.${u.id}`).gte("updated_at", since),
+    admin.from("progress_notes").select("id", { count: "exact", head: true }).eq("user_id", u.id).gte("created_at", since),
+    admin.from("visit_checkins").select("id", { count: "exact", head: true }).eq("user_id", u.id).gte("created_at", since),
+  ]);
+  // Gagal membaca = anggap aktif (lebih baik tetap kirim daripada melewatkan pengguna aktif).
+  if (leadsRes.error || notesRes.error || checkinsRes.error) return true;
+  return (leadsRes.count || 0) + (notesRes.count || 0) + (checkinsRes.count || 0) > 0;
+}
+
 Deno.serve((req) => AI_CTX.run({ req }, async () => {
   console.log("[digest] request received");
   if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
@@ -582,6 +607,11 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
         const myPlanLevel = orgPlanRow?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settingsRow?.plan] ?? 0);
         if (myPlanLevel < 1) {
           console.log("[digest] skip, plan Free (bukan Standard+):", u.id);
+          continue;
+        }
+        if (!forceRun && !onlyUserId && !(await isRecentlyActive(admin, u))) {
+          console.log("[digest] skip, tidak aktif", ACTIVE_WINDOW_DAYS, "hari terakhir:", u.id);
+          results.push({ user: u.email, skipped: "tidak_aktif" });
           continue;
         }
 
