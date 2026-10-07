@@ -1426,7 +1426,8 @@ export default function AdminDashboard() {
       wide: true,
       blurb: "Nyalakan fitur khusus hanya untuk klien tertentu.",
       statLabel: "KLIEN BERBAYAR",
-      statValue: new Set((status?.users_overview?.list || []).filter((u) => u.org_name && ["standard", "professional", "enterprise"].includes(u.plan)).map((u) => u.org_name)).size,
+      // Dihitung per OWNER berbayar (bukan per nama organisasi): banyak klien bernama sama, mis. "Organisasi Saya".
+      statValue: (status?.users_overview?.list || []).filter((u) => u.role === "owner" && ["standard", "professional", "enterprise"].includes(u.plan)).length,
       content: <OrgFeaturesPanel />,
     },
   ];
