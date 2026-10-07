@@ -6,8 +6,12 @@
 //
 // Body: { action: "list" }                                  -> organisasi + saklarnya
 //       { action: "set", org_id, key, enabled }             -> nyalakan/matikan satu fitur
+//       { action: "apply_preset", org_id, preset }           -> ganti seluruh saklar dengan isi preset
+//       { action: "copy_features", org_id, from_org_id }     -> salin saklar dari organisasi lain
 //
-// FEATURE_KEYS harus sama dengan ORG_FEATURES di src/lib/orgFeatures.js.
+// FEATURE_KEYS dan PRESETS harus sama dengan ORG_FEATURES dan ORG_PRESETS di
+// src/lib/orgFeatures.js. Preset hanya mengatur saklar fitur, tidak menyentuh
+// tahap pipeline atau field (itu milik tiap organisasi).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -22,6 +26,12 @@ const CORS = {
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FEATURE_KEYS = ["marketing_report", "lead_webhook"];
+const PRESETS = {
+  standar: [],
+  marketing: ["marketing_report", "lead_webhook"],
+  webhook: ["lead_webhook"],
+};
+const asFlags = (keys) => Object.fromEntries(keys.map((k) => [k, true]));
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -69,6 +79,32 @@ Deno.serve(async (req) => {
       const { error: upErr } = await admin.from("organizations").update({ features: next }).eq("id", org.id);
       if (upErr) throw upErr;
       console.log(`[admin-org-features] ${body.key}=${!!body.enabled} untuk org ${org.id} oleh ${userData.user.email}`);
+      return json({ org_id: org.id, features: next });
+    }
+
+    if (body.action === "apply_preset") {
+      if (!UUID_RE.test(String(body.org_id || ""))) return json({ error: "Organisasi tidak valid." }, 400);
+      if (!Object.prototype.hasOwnProperty.call(PRESETS, body.preset)) return json({ error: "Preset tidak dikenal." }, 400);
+      const next = asFlags(PRESETS[body.preset]);
+      const { data: org, error } = await admin.from("organizations").update({ features: next }).eq("id", body.org_id).select("id").maybeSingle();
+      if (error) throw error;
+      if (!org) return json({ error: "Organisasi tidak ditemukan." }, 404);
+      console.log(`[admin-org-features] preset ${body.preset} untuk org ${org.id} oleh ${userData.user.email}`);
+      return json({ org_id: org.id, features: next });
+    }
+
+    if (body.action === "copy_features") {
+      if (!UUID_RE.test(String(body.org_id || "")) || !UUID_RE.test(String(body.from_org_id || ""))) return json({ error: "Organisasi tidak valid." }, 400);
+      if (body.org_id === body.from_org_id) return json({ error: "Pilih organisasi sumber yang berbeda." }, 400);
+      const { data: src, error } = await admin.from("organizations").select("features").eq("id", body.from_org_id).maybeSingle();
+      if (error) throw error;
+      if (!src) return json({ error: "Organisasi sumber tidak ditemukan." }, 404);
+      // Hanya kunci yang dikenal dan bernilai true yang disalin.
+      const next = asFlags(FEATURE_KEYS.filter((k) => src.features?.[k] === true));
+      const { data: org, error: upErr } = await admin.from("organizations").update({ features: next }).eq("id", body.org_id).select("id").maybeSingle();
+      if (upErr) throw upErr;
+      if (!org) return json({ error: "Organisasi tujuan tidak ditemukan." }, 404);
+      console.log(`[admin-org-features] salin saklar dari ${body.from_org_id} ke ${org.id} oleh ${userData.user.email}`);
       return json({ org_id: org.id, features: next });
     }
 

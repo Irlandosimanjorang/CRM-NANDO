@@ -17,4 +17,19 @@ export const ORG_FEATURES = [
   { key: "lead_webhook", label: "Webhook lead", hint: "Lead masuk otomatis dari cekat.ai, Meta, atau TikTok", ready: false },
 ];
 
+// Preset = kumpulan saklar yang diterapkan sekaligus ke satu organisasi (mengganti
+// seluruh saklarnya). Harus sama dengan PRESETS di admin-org-features. Preset
+// hanya mengatur saklar fitur; tahap pipeline dan field tetap milik tiap organisasi.
+export const ORG_PRESETS = [
+  { key: "standar", label: "Standar", hint: "Tanpa fitur khusus", features: [] },
+  { key: "marketing", label: "Marketing & Iklan", hint: "Laporan marketing + webhook lead", features: ["marketing_report", "lead_webhook"] },
+  { key: "webhook", label: "Hanya webhook lead", hint: "Lead masuk otomatis dari sumber luar", features: ["lead_webhook"] },
+];
+
+// Preset yang persis sama dengan saklar organisasi sekarang (null kalau campuran/pengecualian).
+export const matchPreset = (features) => {
+  const on = Object.keys(features || {}).filter((k) => features[k] === true).sort().join(",");
+  return ORG_PRESETS.find((p) => [...p.features].sort().join(",") === on) || null;
+};
+
 export const hasOrgFeature = (org, key) => org?.features?.[key] === true;
