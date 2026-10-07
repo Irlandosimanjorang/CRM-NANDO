@@ -1230,7 +1230,7 @@ function IndustryDemoSwitcher({ org, onSwitched }) {
           <div className="fixed inset-0 z-[998]" onClick={() => setOpen(false)} />
           <div className="absolute left-0 top-full mt-1.5 w-56 bg-[#0b101a] border border-white/10 rounded-2xl shadow-float z-[999] overflow-hidden py-1.5">
             <div className="px-3 py-1.5 text-[9px] font-mono uppercase tracking-widest text-slate-600">Mode Demo - Pitching</div>
-            {Object.entries(INDUSTRY_TEMPLATES).map(([key, tpl]) => (
+            {Object.entries(INDUSTRY_TEMPLATES).filter(([, tpl]) => !tpl.adminOnly).map(([key, tpl]) => (
               <button
                 key={key}
                 onClick={() => doSwitch(key)}

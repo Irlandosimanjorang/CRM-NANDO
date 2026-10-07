@@ -287,6 +287,46 @@ export const INDUSTRY_TEMPLATES = {
   },
 };
 
+// Template khusus klien (8 Okt 2026): adminOnly = tidak tampil di pilihan industri
+// publik (onboarding, mode demo); hanya diterapkan admin lewat Command Center
+// (kartu FITUR KLIEN -> Template klien). Isinya DRAF awal, klien bebas mengubah
+// tahap pipeline dan nama field di Pengaturan.
+INDUSTRY_TEMPLATES.digital_ads = {
+  key: "digital_ads",
+  adminOnly: true,
+  label: "Bisnis Iklan Digital (Meta/TikTok)",
+  description: "Lead dari iklan Meta dan TikTok yang dijawab chatbot/CS, lalu diserahkan ke sales saat hot",
+  catalogExample: "Misal: layanan/produk yang diiklankan di Meta Ads dan TikTok Ads.",
+  quantityUnits: null,
+  stages: [
+    { key: "lead_masuk", label: "Lead Masuk", hex: "#94a3b8", type: "normal" },
+    { key: "dibalas_cs", label: "Dibalas Bot/CS", hex: "#60a5fa", type: "normal" },
+    { key: "hot_lead", label: "Hot Lead", hex: "#fbbf24", type: "normal" },
+    { key: "follow_up_sales", label: "Follow Up Sales", hex: "#f97316", type: "normal" },
+    { key: "negosiasi", label: "Negosiasi", hex: "#a78bfa", type: "normal" },
+    { key: "deal", label: "Deal / Menang", hex: "#10b981", type: "won" },
+    { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
+  ],
+  fieldLabels: { name: "Nama prospek", name_short: "Prospek", category: "Produk / layanan diminati" },
+  categories: ["Produk", "Layanan", "Lainnya"],
+  hiddenFields: [],
+  // Platform, kampanye, dan channel dipakai laporan marketing (budget per platform,
+  // biaya per lead dan per deal) dan webhook lead.
+  customFieldLabels: {
+    custom_field_1: "Platform iklan",
+    custom_field_2: "Kampanye / materi iklan",
+    custom_field_3: "Channel chat",
+    custom_field_4: "Status CS/bot",
+  },
+  customFieldOptions: {
+    custom_field_1: ["Meta (Facebook)", "Instagram", "TikTok", "Organik / WhatsApp", "Lainnya"],
+    custom_field_3: ["WhatsApp", "Instagram DM", "Messenger", "TikTok DM", "Telepon", "Lainnya"],
+    custom_field_4: ["Dijawab bot", "Diambil alih sales", "Hot, siap closing"],
+  },
+  aiContext: "Bisnis ini memasang iklan di Meta dan TikTok. Lead masuk lewat chat (WhatsApp, Instagram DM, Messenger, TikTok DM) dan dijawab chatbot/CS sampai hot, lalu diserahkan ke sales. Istilah relevan: platform iklan, kampanye, biaya per lead, hot lead, closing.",
+  genLeadsExample: { productSold: "produk atau layanan yang diiklankan", keyword: "calon pembeli yang tertarik dengan iklan", targetRole: "calon pembeli" },
+};
+
 export const DEFAULT_INDUSTRY = "pvc_chemical";
 
 export function getIndustryTemplate(industryKey) {

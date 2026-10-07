@@ -70,7 +70,7 @@ export default function IndustryDemo() {
 
       {/* Selector industri */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        {Object.values(INDUSTRY_TEMPLATES).map((t) => {
+        {Object.values(INDUSTRY_TEMPLATES).filter((t) => !t.adminOnly).map((t) => {
           const Icon = ICONS[t.key] || Boxes;
           const active = industry === t.key;
           return (

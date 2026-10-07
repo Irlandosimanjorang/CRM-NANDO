@@ -8,6 +8,15 @@
 //       { action: "set", org_id, key, enabled }             -> nyalakan/matikan satu fitur
 //       { action: "apply_preset", org_id, preset }           -> ganti seluruh saklar dengan isi preset
 //       { action: "copy_features", org_id, from_org_id }     -> salin saklar dari organisasi lain
+//       { action: "detail", org_id }                          -> ringkasan satu klien (paket, anggota, lead,
+//                                                                pipeline, saklar, invoice, quotation)
+//       { action: "apply_template", org_id, template }       -> terapkan template klien lengkap
+//         template = { industry, features: [kunci...], stages: [{ key, label, hex, type }] }
+//
+// apply_template: saklar fitur SELALU diterapkan. Pipeline + industri + label field
+// kustom HANYA diterapkan kalau organisasi belum punya lead sama sekali (termasuk
+// yang sudah dihapus); kalau sudah punya lead, mengganti pipeline bisa membuat lead
+// kehilangan tahapnya, jadi hanya saklar yang berubah dan hasilnya dilaporkan.
 //
 // FEATURE_KEYS dan PRESETS harus sama dengan ORG_FEATURES dan ORG_PRESETS di
 // src/lib/orgFeatures.js. Preset hanya mengatur saklar fitur, tidak menyentuh
@@ -31,6 +40,9 @@ const PRESETS = {
   marketing: ["marketing_report", "lead_webhook"],
   webhook: ["lead_webhook"],
 };
+const STAGE_KEY_RE = /^[a-z0-9_]{1,40}$/;
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const INDUSTRY_RE = /^[a-z0-9_]{2,40}$/;
 const asFlags = (keys) => Object.fromEntries(keys.map((k) => [k, true]));
 
 Deno.serve(async (req) => {
@@ -106,6 +118,81 @@ Deno.serve(async (req) => {
       if (!org) return json({ error: "Organisasi tujuan tidak ditemukan." }, 404);
       console.log(`[admin-org-features] salin saklar dari ${body.from_org_id} ke ${org.id} oleh ${userData.user.email}`);
       return json({ org_id: org.id, features: next });
+    }
+
+    if (body.action === "detail") {
+      if (!UUID_RE.test(String(body.org_id || ""))) return json({ error: "Organisasi tidak valid." }, 400);
+      const { data: org, error } = await admin.from("organizations")
+        .select("id, name, plan, plan_expires_at, member_limit, industry, custom_field_labels, features, owner_user_id, created_at")
+        .eq("id", body.org_id).maybeSingle();
+      if (error) throw error;
+      if (!org) return json({ error: "Organisasi tidak ditemukan." }, 404);
+      const [{ data: owner }, members, leadsLive, leadsAll, { data: stages }, { data: invs }, { data: quos }] = await Promise.all([
+        admin.auth.admin.getUserById(org.owner_user_id),
+        admin.from("organization_members").select("id", { count: "exact", head: true }).eq("org_id", org.id),
+        admin.from("leads").select("id", { count: "exact", head: true }).eq("org_id", org.id).is("deleted_at", null),
+        admin.from("leads").select("id", { count: "exact", head: true }).eq("org_id", org.id),
+        admin.from("stages").select("key, label, hex, type, position").eq("org_id", org.id).order("position"),
+        admin.from("admin_invoices").select("number, company, status, total, invoice_date, data").order("created_at", { ascending: false }).limit(300),
+        admin.from("admin_quotations").select("number, company, status, total, invoice_date, data").order("created_at", { ascending: false }).limit(300),
+      ]);
+      const ownerEmail = (owner?.user?.email || "").toLowerCase();
+      const mine = (r) => r.data?.activation?.org_id === org.id || (ownerEmail && String(r.data?.email || "").toLowerCase() === ownerEmail);
+      const brief = (r) => ({ number: r.number, company: r.company, status: r.status, total: r.total, date: r.invoice_date });
+      return json({
+        org: {
+          id: org.id, name: org.name, plan: org.plan, plan_expires_at: org.plan_expires_at, member_limit: org.member_limit,
+          industry: org.industry, custom_field_labels: org.custom_field_labels || {}, features: org.features || {},
+          owner_email: owner?.user?.email || null, created_at: org.created_at,
+        },
+        members: members.count || 0, leads: leadsLive.count || 0, leads_total: leadsAll.count || 0,
+        stages: stages || [],
+        invoices: (invs || []).filter(mine).map(brief),
+        quotations: (quos || []).filter(mine).map(brief),
+      });
+    }
+
+    if (body.action === "apply_template") {
+      if (!UUID_RE.test(String(body.org_id || ""))) return json({ error: "Organisasi tidak valid." }, 400);
+      const t = body.template || {};
+      if (!INDUSTRY_RE.test(String(t.industry || ""))) return json({ error: "Industri template tidak valid." }, 400);
+      const features = Array.isArray(t.features) ? t.features : [];
+      if (!features.every((k) => FEATURE_KEYS.includes(k))) return json({ error: "Template memuat fitur yang tidak dikenal." }, 400);
+      const stages = Array.isArray(t.stages) ? t.stages : [];
+      if (stages.length < 2 || stages.length > 15) return json({ error: "Template harus punya 2 sampai 15 tahap pipeline." }, 400);
+      const seen = new Set();
+      for (const st of stages) {
+        if (!STAGE_KEY_RE.test(String(st.key || "")) || seen.has(st.key)) return json({ error: "Kunci tahap pipeline tidak valid atau ganda." }, 400);
+        seen.add(st.key);
+        if (!String(st.label || "").trim() || String(st.label).length > 40) return json({ error: "Nama tahap pipeline tidak valid." }, 400);
+        if (!HEX_RE.test(String(st.hex || ""))) return json({ error: "Warna tahap pipeline tidak valid." }, 400);
+        if (!["normal", "won", "lost"].includes(st.type)) return json({ error: "Jenis tahap pipeline tidak valid." }, 400);
+      }
+      if (!stages.some((st) => st.type === "won")) return json({ error: "Pipeline harus punya minimal satu tahap Menang." }, 400);
+
+      const { data: org, error } = await admin.from("organizations").select("id, owner_user_id").eq("id", body.org_id).maybeSingle();
+      if (error) throw error;
+      if (!org) return json({ error: "Organisasi tidak ditemukan." }, 404);
+      const { count, error: cErr } = await admin.from("leads").select("id", { count: "exact", head: true }).eq("org_id", org.id);
+      if (cErr) throw cErr;
+
+      const result = { org_id: org.id, features: asFlags(features), pipeline_applied: false, leads_total: count || 0 };
+      if ((count || 0) === 0) {
+        const { error: delErr } = await admin.from("stages").delete().eq("org_id", org.id);
+        if (delErr) throw delErr;
+        const rows = stages.map((st, i) => ({ user_id: org.owner_user_id, org_id: org.id, key: st.key, label: String(st.label).trim(), hex: st.hex, type: st.type, position: i }));
+        const { error: insErr } = await admin.from("stages").insert(rows);
+        if (insErr) throw insErr;
+        const { error: upErr } = await admin.from("organizations").update({ industry: t.industry, custom_field_labels: {}, features: result.features }).eq("id", org.id);
+        if (upErr) throw upErr;
+        result.pipeline_applied = true;
+        result.industry = t.industry;
+      } else {
+        const { error: upErr } = await admin.from("organizations").update({ features: result.features }).eq("id", org.id);
+        if (upErr) throw upErr;
+      }
+      console.log(`[admin-org-features] template ${t.industry} untuk org ${org.id} (pipeline=${result.pipeline_applied}, leads=${count}) oleh ${userData.user.email}`);
+      return json(result);
     }
 
     return json({ error: "Aksi tidak dikenal." }, 400);

@@ -26,6 +26,15 @@ export const ORG_PRESETS = [
   { key: "webhook", label: "Hanya webhook lead", hint: "Lead masuk otomatis dari sumber luar", features: ["lead_webhook"] },
 ];
 
+// Template klien lengkap (8 Okt 2026): diterapkan admin ke satu organisasi dari
+// Command Center. Industri template (lihat INDUSTRY_TEMPLATES, adminOnly) membawa
+// tahap pipeline, nama field, dan pilihan dropdown; "features" = saklar fitur.
+// Pipeline + industri + label field hanya diterapkan ke organisasi yang belum punya
+// lead (dijaga di server); saklar fitur selalu diterapkan.
+export const ORG_TEMPLATES = [
+  { key: "iklan_digital", label: "Bisnis Iklan Digital (Meta/TikTok)", industry: "digital_ads", features: ["marketing_report", "lead_webhook"], hint: "Pipeline dari lead iklan sampai deal, field platform/kampanye/channel, plus fitur marketing" },
+];
+
 // Preset yang persis sama dengan saklar organisasi sekarang (null kalau campuran/pengecualian).
 export const matchPreset = (features) => {
   const on = Object.keys(features || {}).filter((k) => features[k] === true).sort().join(",");

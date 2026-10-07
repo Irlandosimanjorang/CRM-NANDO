@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import * as db from "../lib/db";
 import { ORG_FEATURES, ORG_PRESETS, matchPreset } from "../lib/orgFeatures";
 import { field } from "./EnterpriseInvoicePanel";
+import OrgDetail from "./OrgDetail";
 
 // Saklar fitur per organisasi (8 Okt 2026, permintaan Nando) - khusus admin
 // platform, di Command Center (kartu FITUR KLIEN). Satu baris per organisasi,
@@ -19,6 +20,7 @@ export default function OrgFeaturesPanel() {
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
   const [saving, setSaving] = useState(null); // "orgId:key"
+  const [detailId, setDetailId] = useState(null); // halaman satu klien (OrgDetail)
 
   const load = () => {
     setErr("");
@@ -86,6 +88,16 @@ export default function OrgFeaturesPanel() {
 
   const onCount = (key) => (orgs || []).filter((o) => o.features?.[key] === true).length;
 
+  if (detailId) {
+    return (
+      <OrgDetail
+        orgId={detailId}
+        onBack={() => setDetailId(null)}
+        onFeaturesChanged={(id, features) => setOrgs((list) => (list || []).map((x) => (x.id === id ? { ...x, features } : x)))}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-[12.5px] text-slate-400">
@@ -131,7 +143,7 @@ export default function OrgFeaturesPanel() {
                 {shown.map((o) => (
                   <tr key={o.id}>
                     <td className="max-w-[260px] px-4 py-2">
-                      <div className="truncate text-slate-200">{o.name || "Tanpa nama"}</div>
+                      <button type="button" onClick={() => setDetailId(o.id)} className="block max-w-full truncate text-left font-semibold text-emerald-300 hover:text-emerald-200 hover:underline" title="Buka halaman klien">{o.name || "Tanpa nama"}</button>
                       <div className="truncate text-[11px] text-slate-500" title={o.owner_email || ""}>{o.owner_email || "-"}</div>
                     </td>
                     <td className="px-2 py-2 text-slate-400">{PLAN_LABEL[o.plan] || "Gratis"}</td>

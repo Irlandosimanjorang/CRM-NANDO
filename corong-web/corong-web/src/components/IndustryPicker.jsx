@@ -45,7 +45,7 @@ export default function IndustryPicker({ onSelect, busy, onLogout }) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {Object.values(INDUSTRY_TEMPLATES).map((tpl) => {
+          {Object.values(INDUSTRY_TEMPLATES).filter((tpl) => !tpl.adminOnly).map((tpl) => {
             const Icon = ICONS[tpl.key] || Boxes;
             const active = picked === tpl.key;
             return (
