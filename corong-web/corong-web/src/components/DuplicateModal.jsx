@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Copy, Merge, CheckCircle2, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
-import { nameSimilarity, fmtDate } from "../lib/helpers";
+import { nameSimilarity, groupKey, fmtDate } from "../lib/helpers";
 
 const THRESHOLD = 0.72; // makin tinggi makin ketat
 
@@ -28,6 +28,9 @@ export default function DuplicateModal({ leads, onClose, onChanged }) {
     const out = [];
     for (let i = 0; i < leads.length; i++) {
       for (let j = i + 1; j < leads.length; j++) {
+        // Cabang dari grup yang sama wajar bernama mirip - bukan duplikat.
+        const gi = leads[i].parent_company, gj = leads[j].parent_company;
+        if (gi && gj && groupKey(gi) === groupKey(gj)) continue;
         const score = nameSimilarity(leads[i].name, leads[j].name);
         if (score >= THRESHOLD) out.push({ key: `${leads[i].id}-${leads[j].id}`, a: leads[i], b: leads[j], score });
       }

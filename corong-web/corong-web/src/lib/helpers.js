@@ -82,6 +82,9 @@ export const normalizeCompanyName = (s) => {
   x = x.replace(/\s+/g, " ").trim();
   return x;
 };
+// Kunci pengelompokan nama grup/induk perusahaan: "PT Maju Jaya" dan
+// "maju jaya" dianggap grup yang sama.
+export const groupKey = (s) => normalizeCompanyName(s) || String(s || "").trim().toLowerCase();
 const bigrams = (s) => { const arr = []; for (let i = 0; i < s.length - 1; i++) arr.push(s.slice(i, i + 2)); return arr; };
 export const nameSimilarity = (a, b) => {
   const na = normalizeCompanyName(a), nb = normalizeCompanyName(b);

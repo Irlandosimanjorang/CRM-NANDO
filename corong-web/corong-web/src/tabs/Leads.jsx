@@ -16,6 +16,8 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Building2,
   Users,
   Activity,
   Flame,
@@ -37,6 +39,7 @@ import {
   fmtRp,
   todayISO,
   nameSimilarity,
+  groupKey,
 } from "../lib/helpers";
 
 import LeadModal from "../components/LeadModal";
@@ -150,7 +153,13 @@ function findColIndex(headers, keys) {
   return null;
 }
 
-function guessNameColIndex(headers) {
+// Header kolom induk/grup ("Induk Perusahaan", "Parent Company") memuat kata
+// "perusahaan"/"company" - harus dikecualikan dari tebakan kolom NAMA, kalau
+// tidak kolom ini bisa terpilih sebagai nama lead.
+const PARENT_HEADER_KEYS = ["induk perusahaan", "perusahaan induk", "grup perusahaan", "group company", "parent company", "parent", "induk", "head office", "holding", "kantor pusat"];
+
+function guessNameColIndex(rawHeaders) {
+  const headers = rawHeaders.map((h) => (PARENT_HEADER_KEYS.some((k) => headerMatchesKey(h, k)) ? "" : h));
   for (const k of NAME_STRONG_KEYS) {
     const idx = headers.findIndex((h) => headerMatchesKey(h, k));
     if (idx !== -1) return idx;
@@ -173,6 +182,7 @@ const FIELD_KEY_MAP = {
   product: ["产品", "product", "produk"],
   city: ["城市", "city", "kota"],
   province: ["省", "province", "provinsi"],
+  parent_company: PARENT_HEADER_KEYS,
   website: ["网站", "website", "web"],
   background: ["公司背景", "background", "海关"],
   notes: ["备注", "catatan", "keterangan", "notes", "note", "remark", "riwayat", "progress"],
@@ -202,6 +212,26 @@ function guessMappingFromHeaders(headers) {
 // lewat ImportColumnMapModal - generic, jalan buat field custom_field_1..10
 // juga (bukan cuma field bawaan) karena cuma nurutin key apa aja yang ada
 // di `mapping`, gak hardcode daftar field.
+// Saran grup untuk baris import tanpa kolom induk: nama yang memuat kata
+// cabang ("... Cabang Bandung", "... Branch Surabaya", "... Kantor ...")
+// dipotong di kata itu, sisanya jadi nama induk. Cuma disarankan kalau
+// minimal 2 baris punya induk yang sama; user yang memutuskan (confirm).
+const BRANCH_WORD_RE = /\s*[-–,(]?\s*\b(cabang|cab\.?|branch|kantor|unit|outlet|depo|plant|site)\b.*$/i;
+function suggestParentGroups(rows) {
+  const groups = new Map(); // groupKey -> { label, rows[] }
+  for (const r of rows) {
+    if (r.parent_company) continue;
+    const base = String(r.name || "").replace(BRANCH_WORD_RE, "").trim();
+    if (!base || base === String(r.name || "").trim()) continue;
+    if (base.replace(/\b(pt|cv|ud|pd|tbk)\b\.?/gi, "").trim().length < 3) continue; // mis. "PT Unit Usaha" -> "PT"
+    const k = groupKey(base);
+    if (!k) continue;
+    if (!groups.has(k)) groups.set(k, { label: base, rows: [] });
+    groups.get(k).rows.push(r);
+  }
+  return [...groups.values()].filter((g) => g.rows.length >= 2);
+}
+
 function extractRowsFromMapping(dataRows, mapping, firstStage) {
   const get = (row, idx) => (idx === null || idx === undefined || idx === "") ? "" : String(row[idx] ?? "").trim();
   const out = [];
@@ -482,6 +512,27 @@ export default function Leads({
   // pernah beneran nge-filter apa-apa (dead code sisa refactor lama).
   // Sekarang beneran nge-filter lewat state fKpi ini.
   const [fKpi, setFKpi] = useState("");
+
+  // Tampilan grup (7 Okt 2026): lead dengan nama grup/induk yang sama
+  // dilipat jadi satu baris induk yang bisa dibuka. Pilihan disimpan per
+  // browser; gagal baca/tulis storage tidak mengganggu.
+  const [groupView, setGroupView] = useState(() => {
+    try { return localStorage.getItem("nexto_leads_group_view") === "1"; } catch { return false; }
+  });
+  const toggleGroupView = () => {
+    setGroupView((v) => {
+      const nv = !v;
+      try { localStorage.setItem("nexto_leads_group_view", nv ? "1" : "0"); } catch { /* abaikan */ }
+      return nv;
+    });
+    setPage(1);
+  };
+  const [openGroups, setOpenGroups] = useState(() => new Set());
+  const toggleGroupOpen = (k) => setOpenGroups((prev) => {
+    const next = new Set(prev);
+    if (next.has(k)) next.delete(k); else next.add(k);
+    return next;
+  });
 
   // Daftar anggota tim (buat filter "leads siapa" & reassign) - owner ATAU
   // manager yang butuh ini, karena RLS leads_role_access ngasih owner/manager
@@ -832,6 +883,7 @@ export default function Leads({
               c.key_person,
               c.product,
               c.sales_owner,
+              c.parent_company,
             ].map(
               (x) =>
                 (
@@ -901,11 +953,40 @@ export default function Leads({
   ]);
 
 
+  // "Unit" tampilan: satu lead biasa, atau satu grup (>= 2 lead berinduk
+  // sama). Halaman dihitung per unit supaya grup tidak terpotong pagination.
+  const units = useMemo(() => {
+    if (!groupView) return filtered.map((c) => ({ type: "lead", lead: c }));
+    const byKey = new Map();
+    for (const c of filtered) {
+      if (!c.parent_company) continue;
+      const k = groupKey(c.parent_company);
+      if (!byKey.has(k)) byKey.set(k, []);
+      byKey.get(k).push(c);
+    }
+    const out = [];
+    const emitted = new Set();
+    for (const c of filtered) {
+      const k = c.parent_company ? groupKey(c.parent_company) : "";
+      const members = k ? byKey.get(k) : null;
+      if (!members || members.length < 2) { out.push({ type: "lead", lead: c }); continue; }
+      if (emitted.has(k)) continue;
+      emitted.add(k);
+      out.push({ type: "group", key: k, label: members[0].parent_company, members });
+    }
+    return out;
+  }, [filtered, groupView]);
+
+  const parentOptions = useMemo(
+    () => [...new Set(leads.map((l) => (l.parent_company || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [leads]
+  );
+
   const totalPages =
     Math.max(
       1,
       Math.ceil(
-        filtered.length /
+        units.length /
           PAGE_SIZE
       )
     );
@@ -926,13 +1007,13 @@ export default function Leads({
         (page - 1) *
         PAGE_SIZE;
 
-      return filtered.slice(
+      return units.slice(
         start,
         start + PAGE_SIZE
       );
 
     }, [
-      filtered,
+      units,
       page,
     ]);
 
@@ -1007,6 +1088,25 @@ export default function Leads({
     const knownNames = leads.map((l) => l.name);
     const seenThisImport = new Set();
 
+    // Grup/induk perusahaan: baris dari grup yang sama wajar bernama mirip
+    // ("Maju Jaya Cabang Bandung" vs "... Surabaya"), jadi dikecualikan dari
+    // pengecekan nama mirip di bawah. Nama yang PERSIS sama tetap ditolak.
+    // Kalau file tidak punya kolom induk, tawarkan pengelompokan otomatis dari
+    // kata "cabang/branch/kantor/..." di nama (user yang memutuskan).
+    if (!leadRows.some((r) => r.parent_company)) {
+      const suggested = suggestParentGroups(leadRows);
+      if (suggested.length > 0) {
+        const total = suggested.reduce((n, g) => n + g.rows.length, 0);
+        const preview = suggested.slice(0, 5).map((g) => `${g.label} (${g.rows.length} cabang)`).join(", ");
+        if (confirm(`Terdeteksi ${total} lead yang tampak sebagai cabang dari ${suggested.length} perusahaan: ${preview}${suggested.length > 5 ? ", ..." : ""}.
+
+Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup)`)) {
+          for (const g of suggested) for (const r of g.rows) r.parent_company = g.label;
+        }
+      }
+    }
+    const parentOf = new Map(leads.map((l) => [l.name, l.parent_company ? groupKey(l.parent_company) : ""]));
+
     const toInsert = []; // { lead, notes }
     const duplicates = []; // { name, matchedName, score, source: "existing" | "this_import" }
 
@@ -1021,7 +1121,8 @@ export default function Leads({
         continue;
       }
 
-      const fuzzyMatchName = knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD);
+      const myParent = m.parent_company ? groupKey(m.parent_company) : "";
+      const fuzzyMatchName = knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD && !(myParent && parentOf.get(n) === myParent));
       if (fuzzyMatchName) {
         duplicates.push({ name, matchedName: fuzzyMatchName, score: nameSimilarity(fuzzyMatchName, name), source: originalLeadNames.has(fuzzyMatchName) ? "existing" : "this_import" });
         continue;
@@ -1029,6 +1130,7 @@ export default function Leads({
 
       seenThisImport.add(key);
       knownNames.push(name);
+      parentOf.set(name, myParent);
       const { notes, ...leadPayload } = m;
       toInsert.push({ lead: { ...leadPayload, name }, notes });
     }
@@ -1266,6 +1368,7 @@ export default function Leads({
       Terakhir_Dikontak: c.last_contact || "",
       Tipe: c.company_type,
       Website: c.website,
+      Grup_Induk: c.parent_company || "",
     }));
 
     const XLSX = await import("xlsx");
@@ -1275,7 +1378,7 @@ export default function Leads({
     ws["!cols"] = [
       { wch: 28 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
       { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
-      { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 24 },
+      { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 24 },
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Leads");
@@ -1656,6 +1759,16 @@ export default function Leads({
           </button>
 
 
+          <button
+            onClick={toggleGroupView}
+            aria-pressed={groupView}
+            title="Lipat cabang dari perusahaan yang sama menjadi satu baris"
+            className={`text-[12px] font-medium flex items-center gap-1.5 border rounded-inner px-3 py-1.5 ${groupView ? "border-brand-strong text-brand-strong bg-orange-50" : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:text-ink"}`}
+          >
+            <Building2 size={12} />
+            Kelompokkan per grup
+          </button>
+
           <span className="text-[12px] text-slate-500 self-center ml-auto tabular-nums">
 
             {filtered.length}
@@ -1677,24 +1790,51 @@ export default function Leads({
       <div
         className="mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
-        {pageItems.map((c) => (
-          <LeadCard
-            key={c.id}
-            c={c}
-            stages={stages}
-            productLabel={productLabel}
-            onEdit={setEdit}
-            onDelete={del}
-            onDraft={openDraftPopup}
-            onProgress={(lead) => { setProgressPopup({ lead, autoFocus: true }); saveOpenModal("progress", { leadId: lead.id }); }}
-            canManage={canManage}
-            members={members}
-            onReassign={async (leadId, uid) => {
-              try { await db.updateLeadAssignee(leadId, uid); onChanged(); }
-              catch (e) { alert("Gagal reassign: " + e.message); }
-            }}
-          />
-        ))}
+        {pageItems.flatMap((u) => {
+          const renderCard = (c) => (
+            <LeadCard
+              key={c.id}
+              c={c}
+              stages={stages}
+              productLabel={productLabel}
+              onEdit={setEdit}
+              onDelete={del}
+              onDraft={openDraftPopup}
+              onProgress={(lead) => { setProgressPopup({ lead, autoFocus: true }); saveOpenModal("progress", { leadId: lead.id }); }}
+              canManage={canManage}
+              members={members}
+              onReassign={async (leadId, uid) => {
+                try { await db.updateLeadAssignee(leadId, uid); onChanged(); }
+                catch (e) { alert("Gagal reassign: " + e.message); }
+              }}
+            />
+          );
+          if (u.type === "lead") return [renderCard(u.lead)];
+          const open = openGroups.has(u.key) || !!q;
+          const totalDeal = u.members.reduce((n, m) => n + (Number(m.deal_value) || 0), 0);
+          const wonCount = u.members.filter((m) => kpiWonStageKeys.includes(m.stage_key)).length;
+          const header = (
+            <button
+              key={"g-" + u.key}
+              type="button"
+              onClick={() => toggleGroupOpen(u.key)}
+              aria-expanded={open}
+              className="col-span-full flex items-center gap-3 rounded-panel border border-slate-200 bg-white px-4 py-3 text-left hover:bg-slate-50"
+            >
+              <span className="w-9 h-9 rounded-inner bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><Building2 size={17} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-semibold text-ink truncate">{u.label}</span>
+                <span className="block text-[12px] text-slate-500 tabular-nums">
+                  {u.members.length} cabang
+                  {wonCount > 0 ? ` · ${wonCount} deal` : ""}
+                  {totalDeal > 0 ? ` · total ${fmtRp(totalDeal)}` : ""}
+                </span>
+              </span>
+              {open ? <ChevronDown size={16} className="text-slate-400 shrink-0" /> : <ChevronRight size={16} className="text-slate-400 shrink-0" />}
+            </button>
+          );
+          return open ? [header, ...u.members.map(renderCard)] : [header];
+        })}
 
         {filtered.length === 0 && (
           <div className="col-span-full rounded-panel border border-dashed border-slate-200 bg-white p-8 text-center">
@@ -1880,6 +2020,7 @@ export default function Leads({
       {edit && (
 
         <LeadModal
+          parentOptions={parentOptions}
           lead={edit}
           stages={stages}
           settings={
