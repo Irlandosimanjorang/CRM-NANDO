@@ -14,16 +14,17 @@ import { terbilang, processSignatureFile, printHtml } from "../lib/docKit";
 // PDF dibuat lewat dialog cetak browser ("Simpan sebagai PDF").
 
 const EARLY_BIRD_DEADLINE = new Date("2026-10-15T23:59:59+07:00"); // sama dengan Auth.jsx
-const PROFILE_KEY = "nexto-invoice-seller";
+export const PROFILE_KEY = "nexto-invoice-seller";
 
 // Unduh PDF langsung (7 Okt 2026): PDF dibuat di server (fungsi invoice-pdf),
 // bukan lewat dialog cetak browser. Berlaku untuk panel admin, email, dan halaman klien.
-export async function downloadInvoicePdf(inv) {
-  const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-pdf?t=${inv.public_token}`);
+export async function downloadInvoicePdf(inv, kind = "invoice") {
+  const isQ = kind === "quotation";
+  const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-pdf?${isQ ? "k=q&" : ""}t=${inv.public_token}`);
   if (!r.ok) throw new Error((await r.text().catch(() => "")) || "Gagal membuat PDF.");
   const url = URL.createObjectURL(await r.blob());
   const a = document.createElement("a");
-  a.href = url; a.download = `${String(inv.number || "Invoice").replace(/[^A-Za-z0-9]+/g, "-")}.pdf`;
+  a.href = url; a.download = `${String(inv.number || (isQ ? "Quotation" : "Invoice")).replace(/[^A-Za-z0-9]+/g, "-")}.pdf`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
@@ -31,13 +32,13 @@ export { terbilang, processSignatureFile, printHtml };
 
 // Harga per pengguna/bulan mengikuti PRICING_EARLY_BIRD / PRICING_NORMAL di
 // Auth.jsx - kalau harga di sana berubah, samakan di sini.
-const PLANS = {
+export const PLANS = {
   standard: { label: "Standard", item: "Langganan Nexto Standard", unit: "pengguna", early: 59000, normal: 89000, minSeats: 1 },
   professional: { label: "Professional", item: "Langganan Nexto Professional", unit: "pengguna", early: 229000, normal: 249000, minSeats: 1 },
   enterprise: { label: "Enterprise", item: "Langganan Nexto Enterprise", unit: "anggota tim", early: 249000, normal: 279000, minSeats: 4 },
   custom: { label: "Custom", item: "", unit: "pengguna", early: 0, normal: 0, minSeats: 1 },
 };
-const priceOf = (plan) => (new Date() < EARLY_BIRD_DEADLINE ? PLANS[plan].early : PLANS[plan].normal);
+export const priceOf = (plan) => (new Date() < EARLY_BIRD_DEADLINE ? PLANS[plan].early : PLANS[plan].normal);
 
 const STATUS = {
   unpaid: { label: "Belum dibayar", color: "#b45309" },
@@ -45,15 +46,15 @@ const STATUS = {
   void: { label: "Dibatalkan", color: "#64748b" },
 };
 
-const rp = (n) => "Rp" + Math.round(Number(n) || 0).toLocaleString("id-ID");
-const isoDay = (d) => new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10);
-const addDays = (iso, n) => isoDay(new Date(new Date(iso + "T00:00:00+07:00").getTime() + n * 86400000));
+export const rp = (n) => "Rp" + Math.round(Number(n) || 0).toLocaleString("id-ID");
+export const isoDay = (d) => new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10);
+export const addDays = (iso, n) => isoDay(new Date(new Date(iso + "T00:00:00+07:00").getTime() + n * 86400000));
 // Akhir periode langganan (inklusif). Audit 2 Okt 2026: versi lama memakai
 // setMonth - mulai 31 Jan + 1 bulan meluber jadi 2 Mar (klien dapat hari
 // ekstra) dan bergantung zona waktu browser. Sekarang dihitung murni dari
 // tanggal: hari jatuh tempo berikutnya dikunci ke akhir bulan (31 Jan -> 28 Feb),
 // lalu dikurangi satu hari kecuali tanggalnya terpotong akhir bulan.
-const addMonths = (iso, n) => {
+export const addMonths = (iso, n) => {
   const [y, m, d] = iso.split("-").map(Number);
   const target = new Date(Date.UTC(y, m - 1 + n, 1));
   const ty = target.getUTCFullYear(), tm = target.getUTCMonth();
@@ -61,14 +62,14 @@ const addMonths = (iso, n) => {
   const end = d > lastDay ? new Date(Date.UTC(ty, tm, lastDay)) : new Date(Date.UTC(ty, tm, d - 1));
   return end.toISOString().slice(0, 10);
 };
-const fmtDate = (iso) => new Date(iso + "T00:00:00+07:00").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
-const fmtShort = (iso) => new Date(iso + "T00:00:00+07:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
+export const fmtDate = (iso) => new Date(iso + "T00:00:00+07:00").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
+export const fmtShort = (iso) => new Date(iso + "T00:00:00+07:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-const PROFILE_BASE = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", signName: "", signTitle: "", signImage: "", stampImage: "" };
+export const PROFILE_BASE = { name: "Nexto", address: "", email: "", phone: "", bank: "", account: "", holder: "", signName: "", signTitle: "", signImage: "", stampImage: "" };
 // Salinan lokal hanya cache (tampil instan & cadangan saat offline) - sumber
 // utamanya tabel admin_settings di server (lihat sinkronisasi di komponen).
-function loadProfile() {
+export function loadProfile() {
   const base = PROFILE_BASE;
   try {
     const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
@@ -79,7 +80,7 @@ function loadProfile() {
 }
 
 // Hitung semua angka dari data invoice (dipakai draf & invoice tersimpan).
-function computeTotals(d) {
+export function computeTotals(d) {
   const subtotal = (Number(d.seats) || 0) * (Number(d.pricePerSeat) || 0) * (Number(d.months) || 0);
   const raw = d.discountType === "percent" ? subtotal * (Number(d.discountValue) || 0) / 100 : Number(d.discountValue) || 0;
   const discount = Math.min(Math.max(0, Math.round(raw)), subtotal);
@@ -116,8 +117,13 @@ export function buildInvoiceHtml(d, meta = {}) {
         .filter(Boolean).map(([k, v]) => `<div class="row"><span>${k}</span><span${k === "No. rekening" ? ' class="acc"' : ""}>${esc(v)}</span></div>`).join("")
     : "";
   const logo = `${window.location.origin}/nexto-logo.png`;
+  const isQ = meta.kind === "quotation";
   const number = meta.number || "Draf";
-  const st = meta.status ? STATUS[meta.status] : null;
+  const QSTATUS = {
+    open: { label: "Menunggu persetujuan", color: "#b45309" }, accepted: { label: "Disetujui", color: "#15803d" },
+    rejected: { label: "Ditolak", color: "#64748b" }, void: { label: "Dibatalkan", color: "#64748b" }, expired: { label: "Kedaluwarsa", color: "#64748b" },
+  };
+  const st = meta.status ? (isQ ? QSTATUS[meta.status === "open" && d.due && d.due < isoDay(new Date()) ? "expired" : meta.status] : STATUS[meta.status]) : null;
   const discountLabel = d.discountLabel?.trim() || "Diskon";
   // Gaya invoice akuntansi: label huruf biasa, garis tipis, total ditandai
   // garis tebal, oranye Nexto hanya untuk angka total.
@@ -181,15 +187,15 @@ export function buildInvoiceHtml(d, meta = {}) {
       <div class="from"><b>${esc(seller.name || "Nexto")}</b>${sellerLines.map((l) => `${esc(l)}<br>`).join("")}</div>
     </div>
     <div class="title">
-      <h1>Invoice</h1>
+      <h1>${isQ ? "Quotation" : "Invoice"}</h1>
       <div class="no">${esc(number)}</div>
       ${st ? `<div class="st" style="color:${st.color}">${st.label}${meta.status === "paid" && meta.paidAt ? `, ${fmtShort(meta.paidAt.slice(0, 10))}` : ""}</div>` : ""}
     </div>
   </div>
   <div class="facts">
-    <div><div class="k">Ditagihkan kepada</div><div class="v">${esc(d.company || "Nama perusahaan")}${d.contact ? `<small>${esc(d.contact)}</small>` : ""}${d.address ? `<small>${esc(d.address).replace(/\n/g, "<br>")}</small>` : ""}${d.email ? `<small>${esc(d.email)}</small>` : ""}</div></div>
-    <div><div class="k">Tanggal invoice</div><div class="v">${fmtDate(d.date)}</div><div class="k" style="margin-top:10px">Jatuh tempo</div><div class="v">${fmtDate(d.due)}</div>${d.po ? `<div class="k" style="margin-top:10px">Nomor PO</div><div class="v">${esc(d.po)}</div>` : ""}</div>
-    <div><div class="k">Periode langganan</div><div class="v">${fmtDate(d.start)}<small>sampai ${fmtDate(d.end)}</small></div></div>
+    <div><div class="k">${isQ ? "Ditujukan kepada" : "Ditagihkan kepada"}</div><div class="v">${esc(d.company || "Nama perusahaan")}${d.contact ? `<small>${esc(d.contact)}</small>` : ""}${d.address ? `<small>${esc(d.address).replace(/\n/g, "<br>")}</small>` : ""}${d.email ? `<small>${esc(d.email)}</small>` : ""}</div></div>
+    <div><div class="k">${isQ ? "Tanggal penawaran" : "Tanggal invoice"}</div><div class="v">${fmtDate(d.date)}</div><div class="k" style="margin-top:10px">${isQ ? "Berlaku sampai" : "Jatuh tempo"}</div><div class="v">${fmtDate(d.due)}</div>${d.po ? `<div class="k" style="margin-top:10px">Nomor PO</div><div class="v">${esc(d.po)}</div>` : ""}</div>
+    <div><div class="k">${isQ ? "Perkiraan periode" : "Periode langganan"}</div><div class="v">${fmtDate(d.start)}<small>sampai ${fmtDate(d.end)}</small></div></div>
   </div>
   <table>
     <thead><tr><th>Deskripsi</th><th class="r">Jumlah</th><th class="r">Harga satuan</th><th class="r">Subtotal</th></tr></thead>
@@ -203,21 +209,21 @@ export function buildInvoiceHtml(d, meta = {}) {
   <div class="sum">
     <div class="row"><span>Subtotal</span><span>${rp(subtotal)}</span></div>
     ${discount > 0 ? `<div class="row"><span>${esc(discountLabel)}${d.discountType === "percent" ? ` (${Number(d.discountValue)}%)` : ""}</span><span>-${rp(discount)}</span></div>` : ""}
-    <div class="row grand"><span>Total tagihan</span><span>${rp(total)}</span></div>
+    <div class="row grand"><span>${isQ ? "Total penawaran" : "Total tagihan"}</span><span>${rp(total)}</span></div>
   </div>
   <div class="words">Terbilang: ${terbilang(total)}</div>
   ${(() => { const s = subscriptionDetail(d); return `<div class="subs"><h2>Detail langganan</h2><div class="grid">
     <div><div class="k">Paket</div><div class="v">${esc(s.plan)}<small>${esc(s.price)}</small></div></div>
     <div><div class="k">Jumlah anggota</div><div class="v">${esc(s.people)}<small>${esc(s.peopleNote)}</small></div></div>
     <div><div class="k">Durasi</div><div class="v">${esc(s.duration)}${s.period ? `<small>${esc(s.period)}</small>` : ""}</div></div>
-    <div><div class="k">Akun Nexto</div><div class="v" style="word-break:break-all">${esc(s.account || "-")}<small>Aktif setelah pembayaran diterima</small></div></div>
+    <div><div class="k">Akun Nexto</div><div class="v" style="word-break:break-all">${esc(s.account || "-")}<small>${isQ ? "Aktif setelah invoice dibayar" : "Aktif setelah pembayaran diterima"}</small></div></div>
   </div></div>`; })()}
   <div class="bottom">
     <div class="pay">
-      <h2>Cara pembayaran</h2>
-      ${d.payLink ? `<div class="row"><span>Pembayaran online</span><a href="${esc(d.payLink)}">${esc(d.payLink)}</a></div>` : ""}
+      <h2>${isQ ? "Ketentuan penawaran" : "Cara pembayaran"}</h2>
+      ${isQ ? `<p>Penawaran berlaku sampai ${fmtDate(d.due)}.<br>Harga dalam Rupiah.<br>Setelah penawaran disetujui, kami menerbitkan invoice untuk pembayaran. Paket aktif setelah pembayaran diterima.</p>` : `${d.payLink ? `<div class="row"><span>Pembayaran online</span><a href="${esc(d.payLink)}">${esc(d.payLink)}</a></div>` : ""}
       ${bank}
-      <p>${meta.number ? `Cantumkan nomor ${esc(number)} pada berita pembayaran.` : "Nomor invoice dibuat saat invoice disimpan."}</p>
+      <p>${meta.number ? `Cantumkan nomor ${esc(number)} pada berita pembayaran.` : "Nomor invoice dibuat saat invoice disimpan."}</p>`}
       ${d.note ? `<h2 style="margin-top:18px">Catatan</h2><div>${esc(d.note).replace(/\n/g, "<br>")}</div>` : ""}
     </div>
     <div class="sign">
@@ -227,12 +233,12 @@ export function buildInvoiceHtml(d, meta = {}) {
       ${seller.signTitle ? `<div class="role">${esc(seller.signTitle)}</div>` : ""}
     </div>
   </div>
-  <div class="foot"><span>Terima kasih telah menggunakan Nexto.</span><span>${esc(number)}</span></div>
+  <div class="foot"><span>${isQ ? "Terima kasih atas kepercayaan Anda kepada Nexto." : "Terima kasih telah menggunakan Nexto."}</span><span>${esc(number)}</span></div>
 </div></body></html>`;
 }
 
-const field = "w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none disabled:opacity-60";
-const lbl = "mb-1 block text-[11px] font-semibold text-slate-400";
+export const field = "w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none disabled:opacity-60";
+export const lbl = "mb-1 block text-[11px] font-semibold text-slate-400";
 
 const CURRENT_PLAN_LABEL = { enterprise: "Enterprise", standard: "Standard", premium: "Professional" };
 const fmtWib = (iso) => (iso ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }) : "-");
@@ -341,7 +347,7 @@ function ActivateDialog({ invoice, onClose, onDone }) {
 // rekening tujuan, dan tombol ke halaman invoice (nexto.site/invoice?t=...).
 // Pengingat jatuh tempo otomatis diatur di sini juga.
 const EMAIL_LABEL = { invoice: "Invoice dikirim", receipt: "Bukti pembayaran dikirim", due_minus3: "Pengingat 3 hari sebelum jatuh tempo", due_today: "Pengingat hari jatuh tempo", overdue_3: "Pengingat 3 hari lewat jatuh tempo", overdue_7: "Pengingat 7 hari lewat jatuh tempo" };
-const fmtStamp = (iso) => new Date(iso).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
+export const fmtStamp = (iso) => new Date(iso).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 
 function SendDialog({ invoice, onClose, onChange }) {
   const log = invoice.email_log || [];

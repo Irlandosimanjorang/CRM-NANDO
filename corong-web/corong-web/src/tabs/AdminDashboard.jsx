@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, Coins } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, Coins } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
+import QuotationPanel from "../components/QuotationPanel";
 
 // Dashboard admin platform - versi "mission control" - CUMA keliatan buat
 // email admin (dicek di App.jsx + server-side di admin-status/admin-trigger).
@@ -1388,6 +1389,25 @@ export default function AdminDashboard() {
       statLabel: "KLIEN ENTERPRISE",
       statValue: new Set((status?.users_overview?.list || []).filter((u) => u.plan === "enterprise" && u.org_name).map((u) => u.org_name)).size,
       content: <EnterpriseInvoicePanel users={status?.users_overview?.list} />,
+    },
+    {
+      // Quotation langganan Nexto (8 Okt 2026, permintaan Nando): penawaran harga
+      // ke calon klien, bisa dikirim lewat email dan dijadikan invoice sekali klik.
+      key: "quotation",
+      title: "QUOTATION",
+      subtitle: "Penawaran harga",
+      icon: FileSignature,
+      accentColor: "#38bdf8",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(56,189,248,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "buat penawaran untuk calon klien",
+      wide: true,
+      blurb: "Penawaran harga langganan, bisa dijadikan invoice.",
+      statLabel: "PENAWARAN",
+      statValue: "Siap",
+      content: <QuotationPanel users={status?.users_overview?.list} />,
     },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];

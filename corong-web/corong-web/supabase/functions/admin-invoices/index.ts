@@ -17,6 +17,12 @@
 //                                                        invoice Lunas dikirim sebagai bukti pembayaran
 //       { action: "set_reminders", id, enabled }      -> nyalakan/matikan pengingat jatuh tempo
 //
+// Quotation (8 Okt 2026): body.kind = "quotation" mengarahkan list / create /
+// set_status / send / mark_converted ke tabel admin_quotations. Status quotation:
+// open | accepted | rejected | void. Quotation tidak punya pengingat dan tidak
+// mengaktifkan paket; "mark_converted" mencatat nomor invoice hasil konversi
+// (satu quotation hanya bisa dikonversi sekali).
+//
 // Aktivasi paket dari invoice (2 Okt 2026, permintaan Nando): Enterprise
 // biasanya custom jumlah anggota (bukan 4 seperti di Mayar), jadi admin
 // mengaktifkan langsung dari invoice yang sudah Lunas. Kolom yang diubah SAMA
@@ -26,6 +32,7 @@
 // Satu invoice hanya bisa diaktifkan sekali (tercatat di data.activation).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { renderInvoiceEmail, invoiceSubject, sendEmail, invoicePdfAttachment } from "./invoice_email.ts";
+import { renderQuotationEmail, quotationSubject, quotationPdfAttachment } from "./quotation_email.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -145,6 +152,77 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const body = await req.json().catch(() => ({}));
+
+    if (body.kind === "quotation" && ["list", "create", "set_status", "send", "mark_converted"].includes(body.action)) {
+      const QCOLS = "id, number, company, invoice_date, due_date, total, status, data, created_at, public_token, email_log";
+      if (body.action === "list") {
+        const { data, error } = await admin.from("admin_quotations").select(QCOLS)
+          .order("year", { ascending: false }).order("seq", { ascending: false }).limit(300);
+        if (error) throw error;
+        return json({ invoices: data || [] });
+      }
+      if (body.action === "create") {
+        const q = body.invoice || {};
+        const company = String(q.company || "").trim().slice(0, 200);
+        if (!company) return json({ error: "Nama perusahaan wajib diisi." }, 400);
+        if (!DATE_RE.test(q.invoice_date || "") || !DATE_RE.test(q.due_date || "")) return json({ error: "Tanggal penawaran atau masa berlaku tidak valid." }, 400);
+        if (q.due_date < q.invoice_date) return json({ error: "Masa berlaku tidak boleh sebelum tanggal penawaran." }, 400);
+        const total = Number(q.total);
+        if (!Number.isFinite(total) || total < 0) return json({ error: "Total tidak valid." }, 400);
+        const data = { ...(q.data || {}) };
+        delete data.activation; delete data.converted; // hanya diisi server
+        const { data: row, error } = await admin.rpc("create_admin_quotation", {
+          p_company: company, p_date: q.invoice_date, p_valid_until: q.due_date, p_total: total, p_data: data,
+        });
+        if (error) throw error;
+        return json({ invoice: row });
+      }
+      if (body.action === "set_status") {
+        if (!["open", "accepted", "rejected", "void"].includes(body.status)) return json({ error: "Status tidak valid." }, 400);
+        const { data: cur } = await admin.from("admin_quotations").select("status, data").eq("id", body.id).maybeSingle();
+        if (!cur) return json({ error: "Quotation tidak ditemukan." }, 404);
+        if (cur.data?.converted && body.status !== "accepted") return json({ error: "Quotation ini sudah dijadikan invoice, jadi statusnya tetap Disetujui." }, 409);
+        const { data, error } = await admin.from("admin_quotations").update({ status: body.status }).eq("id", body.id).select("id, status").maybeSingle();
+        if (error) throw error;
+        return json({ invoice: data });
+      }
+      if (body.action === "mark_converted") {
+        const num = String(body.invoice_number || "").slice(0, 60);
+        if (!num) return json({ error: "Nomor invoice wajib diisi." }, 400);
+        const { data: cur } = await admin.from("admin_quotations").select("status, data").eq("id", body.id).maybeSingle();
+        if (!cur) return json({ error: "Quotation tidak ditemukan." }, 404);
+        if (cur.data?.converted) return json({ error: `Quotation ini sudah dijadikan invoice ${cur.data.converted.invoice_number}.` }, 409);
+        const converted = { invoice_number: num, at: new Date().toISOString() };
+        const { data, error } = await admin.from("admin_quotations")
+          .update({ status: "accepted", data: { ...cur.data, converted } })
+          .eq("id", body.id).is("data->converted", null).select("id, status, data").maybeSingle();
+        if (error) throw error;
+        if (!data) return json({ error: "Quotation ini baru saja dikonversi. Muat ulang riwayat." }, 409);
+        return json({ invoice: data });
+      }
+      if (body.action === "send") {
+        const to = String(body.to || "").trim().toLowerCase();
+        if (!EMAIL_RE.test(to)) return json({ error: "Alamat email tujuan tidak valid." }, 400);
+        if (!RESEND_API_KEY) return json({ error: "Layanan email belum dikonfigurasi (RESEND_API_KEY)." }, 500);
+        const { data: q, error } = await admin.from("admin_quotations").select(QCOLS).eq("id", body.id).maybeSingle();
+        if (error) throw error;
+        if (!q) return json({ error: "Quotation tidak ditemukan." }, 404);
+        if (q.status === "void") return json({ error: "Quotation yang dibatalkan tidak dapat dikirim." }, 409);
+        const seller = q.data?.seller || {};
+        let attachments;
+        try { attachments = [await quotationPdfAttachment(q)]; } catch (e) { console.error("[admin-invoices] lampiran PDF quotation gagal:", String(e)); }
+        await sendEmail({
+          apiKey: RESEND_API_KEY, to, attachments,
+          subject: quotationSubject(q, seller),
+          html: renderQuotationEmail(q, seller, String(body.note || "").slice(0, 1000), !!attachments),
+          replyTo: seller.email || ADMIN_EMAIL, bcc: seller.email || ADMIN_EMAIL,
+        });
+        const email_log = [...(q.email_log || []), { type: "quotation", to, at: new Date().toISOString() }];
+        const { error: upErr } = await admin.from("admin_quotations").update({ email_log }).eq("id", q.id);
+        if (upErr) throw upErr;
+        return json({ invoice: { id: q.id, email_log } });
+      }
+    }
 
     if (body.action === "list") {
       const { data, error } = await admin
