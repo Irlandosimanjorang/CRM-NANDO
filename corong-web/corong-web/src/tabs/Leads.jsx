@@ -74,6 +74,8 @@ import {
   getCategories,
   isFieldHidden,
   getCustomFieldSlots,
+  CUSTOM_FIELD_KEYS,
+  MAX_CUSTOM_FIELDS,
   getCompanyTypeOptions,
 } from "../lib/industryTemplates";
 
@@ -197,7 +199,7 @@ function guessMappingFromHeaders(headers) {
 // Dari MAPPING kolom (index) -> field, bangun objek lead per baris data.
 // Dipake buat SEMUA sumber mapping: tebakan header, hasil AI
 // (smart-import-map-ts), MAUPUN pemetaan yang user tentuin/betulin sendiri
-// lewat ImportColumnMapModal - generic, jalan buat field custom_field_1..5
+// lewat ImportColumnMapModal - generic, jalan buat field custom_field_1..10
 // juga (bukan cuma field bawaan) karena cuma nurutin key apa aja yang ada
 // di `mapping`, gak hardcode daftar field.
 function extractRowsFromMapping(dataRows, mapping, firstStage) {
@@ -1149,7 +1151,7 @@ export default function Leads({
         initialMapping: guessedMapping,
         initialDataStartRow: guessedDataStartRow,
         usedAiGuess,
-        // Slot custom_field_1..5 yang UDAH ada namanya (dari template industri
+        // Slot custom_field_1..10 yang UDAH ada namanya (dari template industri
         // atau import sebelumnya) - ditawarin sebagai pilihan langsung di
         // dropdown, biar import berikutnya dengan kolom yang sama gak perlu
         // bikin ulang custom field baru.
@@ -1166,11 +1168,11 @@ export default function Leads({
     if (!manualMapRequest) return;
     const { rawRows, firstStage, usedAiGuess } = manualMapRequest;
 
-    // ---- RESOLVE "+ Custom..." ke slot custom_field_1..5 ----
+    // ---- RESOLVE "+ Custom..." ke slot custom_field_1..10 ----
     // Label yang PERSIS sama (case-insensitive) dengan slot yang udah ada
     // dipakai ulang slotnya (biar import berulang kali dengan kolom yang
     // sama nyambung ke field yang sama, gak numpuk field baru tiap import).
-    // Label baru dikasih slot kosong pertama yang ketemu. Cuma ada 5 slot -
+    // Label baru dikasih slot kosong pertama yang ketemu. Cuma ada 10 slot -
     // kalau abis, import DIBATALIN (bukan diem-diem buang datanya) biar user
     // sadar & bisa pilih mau reuse slot lain atau lewatin kolom itu.
     // Label bawaan template industri IKUT dihitung (1 Okt 2026). Dulu cuma
@@ -1196,8 +1198,7 @@ export default function Leads({
         continue;
       }
 
-      const freeSlotKey = ["custom_field_1", "custom_field_2", "custom_field_3", "custom_field_4", "custom_field_5"]
-        .find((k) => !usedSlotKeys.has(k));
+      const freeSlotKey = CUSTOM_FIELD_KEYS.find((k) => !usedSlotKeys.has(k));
 
       if (!freeSlotKey) {
         overflow.push(label);
@@ -1212,7 +1213,7 @@ export default function Leads({
 
     if (overflow.length > 0) {
       alert(
-        `Maks 5 kolom custom per organisasi dan semua slot sudah terpakai. Kolom ini tidak mendapat slot: ${overflow.join(", ")}. Gunakan nama yang SAMA PERSIS dengan salah satu custom field yang sudah ada, atau lewati kolom tersebut.`
+        `Maks ${MAX_CUSTOM_FIELDS} kolom custom per organisasi dan semua slot sudah terpakai. Kolom ini tidak mendapat slot: ${overflow.join(", ")}. Gunakan nama yang SAMA PERSIS dengan salah satu custom field yang sudah ada, atau lewati kolom tersebut.`
       );
       return;
     }

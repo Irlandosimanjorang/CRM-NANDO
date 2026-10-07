@@ -340,7 +340,13 @@ export function isFieldHidden(industryKey, fieldName) {
   return (tpl.hiddenFields || []).includes(fieldName);
 }
 
-// 5 slot field bebas (custom_field_1..5 di tabel leads) - tiap template industri
+// Daftar slot field bebas: custom_field_1..10 di tabel leads (dinaikkan dari 5
+// ke 10 pada 7 Okt 2026, permintaan Nando). Satu-satunya tempat angka batas ini
+// ditentukan - import Excel, form lead, dan penyimpanan lead memakai daftar ini.
+export const CUSTOM_FIELD_KEYS = Array.from({ length: 10 }, (_, i) => `custom_field_${i + 1}`);
+export const MAX_CUSTOM_FIELDS = CUSTOM_FIELD_KEYS.length;
+
+// 10 slot field bebas (custom_field_1..10 di tabel leads) - tiap template industri
 // bisa "ngasih nama" ke slot ini (misal Property: "Luas tanah"). Kalau template
 // gak ngedefinisiin nama buat slot tertentu, slot itu disembunyiin di form -
 // biar gak keliatan "field kosong gak jelas" pas industri gak butuh semuanya.
@@ -353,7 +359,7 @@ export function isFieldHidden(industryKey, fieldName) {
 export function getCustomFieldSlots(industryKey, orgOverrides) {
   const tpl = getIndustryTemplate(industryKey);
   const labels = { ...(tpl.customFieldLabels || {}), ...(orgOverrides || {}) };
-  return ["custom_field_1", "custom_field_2", "custom_field_3", "custom_field_4", "custom_field_5"]
+  return CUSTOM_FIELD_KEYS
     .filter((key) => labels[key])
     .map((key) => {
       // Pilihan dropdown cuma berlaku kalau slot masih pakai label bawaan

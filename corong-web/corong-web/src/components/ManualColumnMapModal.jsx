@@ -33,7 +33,7 @@ function clearManualMapDraft() {
 //
 // Kolom yang gak punya padanan di field bawaan (misal "Production Lines" di
 // Excel-nya user) bisa dipilih "+ Custom..." - nanti dikasih nama sendiri,
-// disimpen sebagai custom_field_1..5 (slot bebas yang UDAH ADA di tabel
+// disimpen sebagai custom_field_1..10 (slot bebas yang UDAH ADA di tabel
 // leads, cuma dulu cuma bisa dinamain lewat kode/template industri - lihat
 // organizations.custom_field_labels & handleManualMapConfirm di Leads.jsx).
 const BASE_FIELD_OPTIONS = [

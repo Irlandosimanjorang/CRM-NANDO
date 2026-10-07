@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import { getIndustryTemplate } from "./industryTemplates";
+import { getIndustryTemplate, CUSTOM_FIELD_KEYS } from "./industryTemplates";
 import { todayISO } from "./helpers";
 import { compressImage } from "./imageCompress";
 
@@ -411,7 +411,7 @@ export async function setOrgName(name) {
   if (error) throw error;
 }
 
-// Nambahin/nge-update nama slot custom_field_1..5 punya org - dipake pas user
+// Nambahin/nge-update nama slot custom_field_1..10 punya org - dipake pas user
 // klik "+ Custom..." di ManualColumnMapModal buat namain kolom Excel yang gak
 // ada padanannya di field bawaan (misal "Production Lines"). MERGE ke label
 // yang udah ada (bukan replace total), biar slot lain yang udah dinamain
@@ -803,11 +803,10 @@ export async function upsertLead(lead) {
     // biar gak nge-nudge lead yang customernya udah eksplisit minta waktu.
     wait_until: lead.wait_until || null,
     tonnage_unit: lead.tonnage_unit || "ton",
-    // 5 slot field bebas - namanya ditentuin per industri (lihat customFieldLabels
+    // 10 slot field bebas - namanya ditentuin per industri (lihat customFieldLabels
     // di industryTemplates.js), kolom fisiknya generic biar gak perlu migrasi tiap
     // ada industri baru.
-    custom_field_1: lead.custom_field_1 || "", custom_field_2: lead.custom_field_2 || "", custom_field_3: lead.custom_field_3 || "",
-    custom_field_4: lead.custom_field_4 || "", custom_field_5: lead.custom_field_5 || "",
+    ...Object.fromEntries(CUSTOM_FIELD_KEYS.map((k) => [k, lead[k] || ""])),
     visit_date: lead.visit_date || null, visit_meet: lead.visit_meet || "", visit_agenda: lead.visit_agenda || "",
     // Jenis visit (7 Okt 2026): offline (tatap muka, bawaan) atau online.
     visit_mode: lead.visit_mode === "online" ? "online" : "offline",
