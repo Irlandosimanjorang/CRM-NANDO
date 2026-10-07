@@ -1790,6 +1790,12 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       <div
         className="mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
+        {groupView && filtered.length > 0 && !units.some((u) => u.type === "group") && (
+          <div className="col-span-full rounded-inner border border-orange-200 bg-orange-50 px-4 py-3 text-[12.5px] text-slate-700">
+            Belum ada lead yang dikelompokkan. Isi kolom <b>Grup / induk perusahaan</b> di form lead (klik ikon pensil), atau gunakan kolom induk saat import Excel. Lead dengan nama grup yang sama (minimal 2) akan dilipat jadi satu baris.
+          </div>
+        )}
+
         {pageItems.flatMap((u) => {
           const renderCard = (c) => (
             <LeadCard
