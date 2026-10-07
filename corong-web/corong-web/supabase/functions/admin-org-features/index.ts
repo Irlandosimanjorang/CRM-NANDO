@@ -12,6 +12,15 @@
 //                                                                pipeline, saklar, invoice, quotation)
 //       { action: "apply_template", org_id, template }       -> terapkan template klien lengkap
 //         template = { industry, features: [kunci...], stages: [{ key, label, hex, type }] }
+//       { action: "backup_list", org_id }                     -> cadangan konfigurasi organisasi (terbaru dulu)
+//       { action: "backup_create", org_id, label? }          -> buat cadangan sekarang
+//       { action: "backup_restore", backup_id }               -> pulihkan pipeline + pengaturan dari cadangan
+//
+// Cadangan = konfigurasi saja (pipeline, industri, label field, saklar), bukan lead
+// (tabel org_config_backups; fungsi snapshot_org_config / restore_org_config). apply_template
+// membuat cadangan otomatis sebelum mengubah apa pun; pemulihan membuat cadangan
+// pengaman dari kondisi sekarang dan ditolak kalau lead masih memakai tahap yang tidak
+// ada di cadangan.
 //
 // apply_template: saklar fitur SELALU diterapkan. Pipeline + industri + label field
 // kustom HANYA diterapkan kalau organisasi belum punya lead sama sekali (termasuk
@@ -176,7 +185,11 @@ Deno.serve(async (req) => {
       const { count, error: cErr } = await admin.from("leads").select("id", { count: "exact", head: true }).eq("org_id", org.id);
       if (cErr) throw cErr;
 
-      const result = { org_id: org.id, features: asFlags(features), pipeline_applied: false, leads_total: count || 0 };
+      // Cadangan otomatis sebelum mengubah apa pun.
+      const { data: backupId, error: bErr } = await admin.rpc("snapshot_org_config", { p_org_id: org.id, p_label: `otomatis sebelum template ${t.industry}` });
+      if (bErr) throw bErr;
+
+      const result = { org_id: org.id, features: asFlags(features), pipeline_applied: false, leads_total: count || 0, backup_id: backupId };
       if ((count || 0) === 0) {
         const { error: delErr } = await admin.from("stages").delete().eq("org_id", org.id);
         if (delErr) throw delErr;
@@ -193,6 +206,37 @@ Deno.serve(async (req) => {
       }
       console.log(`[admin-org-features] template ${t.industry} untuk org ${org.id} (pipeline=${result.pipeline_applied}, leads=${count}) oleh ${userData.user.email}`);
       return json(result);
+    }
+
+    if (body.action === "backup_list") {
+      if (!UUID_RE.test(String(body.org_id || ""))) return json({ error: "Organisasi tidak valid." }, 400);
+      const { data, error } = await admin.from("org_config_backups").select("id, label, created_at, data").eq("org_id", body.org_id).order("created_at", { ascending: false }).limit(30);
+      if (error) throw error;
+      return json({
+        backups: (data || []).map((b) => ({
+          id: b.id, label: b.label, created_at: b.created_at,
+          industry: b.data?.org?.industry || null, stages: (b.data?.stages || []).length, leads_total: b.data?.leads_total ?? null,
+          features: b.data?.org?.features || {},
+        })),
+      });
+    }
+
+    if (body.action === "backup_create") {
+      if (!UUID_RE.test(String(body.org_id || ""))) return json({ error: "Organisasi tidak valid." }, 400);
+      const label = String(body.label || "").trim().slice(0, 200) || "manual";
+      const { data: id, error } = await admin.rpc("snapshot_org_config", { p_org_id: body.org_id, p_label: label });
+      if (error) throw error;
+      console.log(`[admin-org-features] cadangan ${id} untuk org ${body.org_id} oleh ${userData.user.email}`);
+      return json({ backup_id: id });
+    }
+
+    if (body.action === "backup_restore") {
+      if (!UUID_RE.test(String(body.backup_id || ""))) return json({ error: "Cadangan tidak valid." }, 400);
+      const { data, error } = await admin.rpc("restore_org_config", { p_backup_id: body.backup_id });
+      // Penolakan yang disengaja (lead masih memakai tahap lain) dikirim apa adanya, bukan 500.
+      if (error) return json({ error: String(error.message || "Gagal memulihkan cadangan.") }, 409);
+      console.log(`[admin-org-features] pulihkan cadangan ${body.backup_id} oleh ${userData.user.email}`);
+      return json(data);
     }
 
     return json({ error: "Aksi tidak dikenal." }, 400);

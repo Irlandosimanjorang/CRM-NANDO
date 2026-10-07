@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import * as db from "../lib/db";
 import { ORG_FEATURES, ORG_TEMPLATES } from "../lib/orgFeatures";
 import { INDUSTRY_TEMPLATES, getCustomFieldSlots } from "../lib/industryTemplates";
-import { rp, fmtShort, field, lbl } from "./EnterpriseInvoicePanel";
+import { rp, fmtShort, fmtStamp, field, lbl } from "./EnterpriseInvoicePanel";
 
 // Halaman satu klien di Command Center (8 Okt 2026, permintaan Nando): paket,
 // anggota, jumlah lead, pipeline, field, saklar fitur, invoice, dan quotation
@@ -20,6 +20,10 @@ export default function OrgDetail({ orgId, onBack, onFeaturesChanged }) {
   const [err, setErr] = useState("");
   const [tplKey, setTplKey] = useState(ORG_TEMPLATES[0]?.key || "");
   const [busy, setBusy] = useState(false);
+  const [backups, setBackups] = useState(null);
+
+  const loadBackups = () => db.adminOrgFeatures("backup_list", { org_id: orgId }).then((r) => setBackups(r.backups || [])).catch(() => setBackups([]));
+  useEffect(() => { loadBackups(); }, [orgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = () => {
     setErr("");
@@ -46,6 +50,33 @@ export default function OrgDetail({ orgId, onBack, onFeaturesChanged }) {
     finally { setBusy(false); }
   };
 
+  const createBackup = async () => {
+    const label = window.prompt("Catatan untuk cadangan ini (opsional):", "manual");
+    if (label === null) return;
+    setBusy(true);
+    try { await db.adminOrgFeatures("backup_create", { org_id: o.id, label: label.trim() || "manual" }); await loadBackups(); }
+    catch (e) { alert("Gagal membuat cadangan: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  const restoreBackup = async (b) => {
+    const msg = [
+      `Pulihkan konfigurasi ${o.name || "organisasi"} (${o.owner_email || ""}) ke cadangan "${b.label || "tanpa catatan"}" (${fmtStamp(b.created_at)})?`,
+      "",
+      `Pipeline menjadi ${b.stages} tahap, industri "${INDUSTRY_TEMPLATES[b.industry]?.label || b.industry || "-"}", plus label field dan saklar fitur dari cadangan itu.`,
+      "Lead, paket, dan anggota tidak berubah. Sebelum dipulihkan, kondisi sekarang dicadangkan otomatis.",
+    ].join("\n");
+    if (!window.confirm(msg)) return;
+    setBusy(true);
+    try {
+      const r = await db.adminOrgFeatures("backup_restore", { backup_id: b.id });
+      await loadBackups();
+      load();
+      alert(`Konfigurasi dipulihkan (${r.stages} tahap pipeline).`);
+    } catch (e) { alert("Gagal memulihkan: " + e.message); }
+    finally { setBusy(false); }
+  };
+
   const applyTemplate = async () => {
     if (!tpl) return;
     const ind = INDUSTRY_TEMPLATES[tpl.industry];
@@ -68,6 +99,7 @@ export default function OrgDetail({ orgId, onBack, onFeaturesChanged }) {
       });
       onFeaturesChanged?.(o.id, r.features);
       load();
+      loadBackups();
       alert(r.pipeline_applied ? "Template diterapkan: pipeline, industri, field, dan saklar fitur." : "Saklar fitur diterapkan. Pipeline dan field tidak diubah karena organisasi sudah punya lead.");
     } catch (e) { alert("Gagal menerapkan template: " + e.message); }
     finally { setBusy(false); }
@@ -154,6 +186,23 @@ export default function OrgDetail({ orgId, onBack, onFeaturesChanged }) {
           )}
         </Section>
       </div>
+
+      <Section title={`Cadangan konfigurasi (${backups ? backups.length : 0})`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="min-w-[220px] flex-1 text-[12px] text-slate-400">Salinan pipeline, industri, label field, dan saklar fitur (bukan lead). Dibuat otomatis sebelum template diterapkan; bisa juga dibuat manual sebelum perubahan besar.</p>
+          <button type="button" onClick={createBackup} disabled={busy} className="rounded-lg border border-slate-600 px-3 py-1.5 text-[12.5px] font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50">Buat cadangan</button>
+        </div>
+        {backups === null ? <p className="mt-2 text-[12.5px] text-slate-500">Memuat…</p> : backups.length === 0 ? <p className="mt-2 text-[12.5px] text-slate-500">Belum ada cadangan.</p> : (
+          <ul className="mt-2 max-h-[220px] divide-y divide-slate-800 overflow-auto text-[12.5px]">
+            {backups.map((b) => (
+              <li key={b.id} className="flex items-center justify-between gap-3 py-1.5">
+                <span className="min-w-0"><span className="block truncate text-slate-200">{b.label || "tanpa catatan"}</span><span className="block text-[11px] text-slate-500">{fmtStamp(b.created_at)}, {b.stages} tahap{b.leads_total != null ? `, ${b.leads_total} lead saat itu` : ""}</span></span>
+                <button type="button" onClick={() => restoreBackup(b)} disabled={busy} className="shrink-0 rounded-md border border-amber-400/50 px-2 py-1 text-[12px] font-semibold text-amber-200 hover:bg-amber-500/15 disabled:opacity-50">Pulihkan</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {[["Invoice", d.invoices, INV_STATUS], ["Quotation", d.quotations, QUO_STATUS]].map(([title, rows, map]) => (
