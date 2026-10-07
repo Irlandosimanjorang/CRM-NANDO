@@ -1425,8 +1425,8 @@ export default function AdminDashboard() {
       noTriggerNote: "nyalakan fitur khusus per klien",
       wide: true,
       blurb: "Nyalakan fitur khusus hanya untuk klien tertentu.",
-      statLabel: "ORGANISASI",
-      statValue: new Set((status?.users_overview?.list || []).filter((u) => u.org_name).map((u) => u.org_name)).size,
+      statLabel: "KLIEN BERBAYAR",
+      statValue: new Set((status?.users_overview?.list || []).filter((u) => u.org_name && ["standard", "professional", "enterprise"].includes(u.plan)).map((u) => u.org_name)).size,
       content: <OrgFeaturesPanel />,
     },
   ];

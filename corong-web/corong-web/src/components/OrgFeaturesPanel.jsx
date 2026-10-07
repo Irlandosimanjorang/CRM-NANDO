@@ -13,13 +13,14 @@ import OrgDetail from "./OrgDetail";
 // menyalin saklar dari organisasi lain; keduanya MENGGANTI seluruh saklar
 // organisasi itu, jadi selalu ada konfirmasi yang menyebut apa yang berubah.
 
-const PLAN_LABEL = { enterprise: "Enterprise", standard: "Standard", premium: "Professional" };
+const PLAN_LABEL = { enterprise: "Enterprise", standard: "Standard", professional: "Professional", premium: "Professional" };
 
 export default function OrgFeaturesPanel() {
   const [orgs, setOrgs] = useState(null);
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
   const [saving, setSaving] = useState(null); // "orgId:key"
+  const [showFree, setShowFree] = useState(false); // default: hanya klien berbayar (Standard sampai Enterprise)
   const [detailId, setDetailId] = useState(null); // halaman satu klien (OrgDetail)
 
   const load = () => {
@@ -30,8 +31,9 @@ export default function OrgFeaturesPanel() {
 
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return (orgs || []).filter((o) => !s || `${o.name || ""} ${o.owner_email || ""}`.toLowerCase().includes(s));
-  }, [orgs, q]);
+    return (orgs || []).filter((o) => (showFree || o.paid) && (!s || `${o.name || ""} ${o.owner_email || ""}`.toLowerCase().includes(s)));
+  }, [orgs, q, showFree]);
+  const hiddenFree = (orgs || []).filter((o) => !o.paid).length;
 
   const toggle = async (org, key, enabled) => {
     const id = `${org.id}:${key}`;
@@ -117,9 +119,14 @@ export default function OrgFeaturesPanel() {
         ))}
       </div>
 
-      <div>
-        <input className={field} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama organisasi atau email owner" aria-label="Cari organisasi" />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <input className={`${field} min-w-[240px] flex-1`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama organisasi atau email owner" aria-label="Cari organisasi" />
+        <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-slate-300">
+          <input type="checkbox" className="h-4 w-4 accent-emerald-400" checked={showFree} onChange={(e) => setShowFree(e.target.checked)} />
+          Tampilkan juga yang Gratis ({hiddenFree})
+        </label>
       </div>
+      <p className="text-[11.5px] text-slate-500">Secara bawaan hanya klien berbayar (Standard, Professional, Enterprise dengan masa aktif berjalan) yang tampil.</p>
 
       <div className="rounded-xl border border-slate-700">
         {orgs === null ? (
@@ -127,7 +134,7 @@ export default function OrgFeaturesPanel() {
         ) : err ? (
           <p className="px-4 py-4 text-[12px] text-rose-300">Gagal memuat: {err}</p>
         ) : shown.length === 0 ? (
-          <p className="px-4 py-4 text-[12px] text-slate-500">Tidak ada organisasi yang cocok.</p>
+          <p className="px-4 py-4 text-[12px] text-slate-500">Tidak ada klien berbayar yang cocok.{!showFree && hiddenFree > 0 ? " Centang \"Tampilkan juga yang Gratis\" untuk melihat organisasi lain." : ""}</p>
         ) : (
           <div className="max-h-[420px] overflow-auto overscroll-contain">
             <table className="w-full min-w-[820px] text-[12.5px]">
@@ -146,7 +153,7 @@ export default function OrgFeaturesPanel() {
                       <button type="button" onClick={() => setDetailId(o.id)} className="block max-w-full truncate text-left font-semibold text-emerald-300 hover:text-emerald-200 hover:underline" title="Buka halaman klien">{o.name || "Tanpa nama"}</button>
                       <div className="truncate text-[11px] text-slate-500" title={o.owner_email || ""}>{o.owner_email || "-"}</div>
                     </td>
-                    <td className="px-2 py-2 text-slate-400">{PLAN_LABEL[o.plan] || "Gratis"}</td>
+                    <td className="px-2 py-2 text-slate-400">{PLAN_LABEL[o.plan_effective] || "Gratis"}</td>
                     <td className="px-2 py-2">
                       <select
                         className="w-[150px] rounded-md border border-slate-600 bg-slate-900 px-1.5 py-1 text-[12px] text-slate-200 disabled:opacity-60"

@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
     if (body.action === "list") {
       const { data: orgs, error } = await admin.from("organizations")
-        .select("id, name, plan, industry, owner_user_id, features, created_at")
+        .select("id, name, plan, plan_expires_at, industry, owner_user_id, features, created_at")
         .order("created_at", { ascending: false }).limit(300);
       if (error) throw error;
       // Email owner (untuk membedakan organisasi yang namanya sama, mis. "Organisasi Saya").
@@ -80,12 +80,27 @@ Deno.serve(async (req) => {
           if (data?.user?.email) emails.set(id, data.user.email);
         }));
       }
+      // Klien berbayar (8 Okt 2026): Enterprise tercatat di organisasi, Standard/Professional
+      // di settings milik owner. Paket yang masa aktifnya sudah lewat tidak dihitung berbayar.
+      const { data: sets } = await admin.from("settings").select("user_id, plan, plan_expires_at").in("user_id", ids);
+      const setBy = new Map((sets || []).map((r) => [r.user_id, r]));
+      const live = (iso) => !iso || new Date(iso).getTime() > Date.now();
+      const effective = (o) => {
+        if (o.plan === "enterprise" && live(o.plan_expires_at)) return "enterprise";
+        const st = setBy.get(o.owner_user_id);
+        if (st?.plan === "premium" && live(st.plan_expires_at)) return "professional";
+        if (st?.plan === "standard" && live(st.plan_expires_at)) return "standard";
+        return null;
+      };
       return json({
         keys: FEATURE_KEYS,
-        orgs: (orgs || []).map((o) => ({
-          id: o.id, name: o.name, plan: o.plan, industry: o.industry, created_at: o.created_at,
-          owner_email: emails.get(o.owner_user_id) || null, features: o.features || {},
-        })),
+        orgs: (orgs || []).map((o) => {
+          const plan_effective = effective(o);
+          return {
+            id: o.id, name: o.name, plan: o.plan, plan_effective, paid: !!plan_effective, industry: o.industry, created_at: o.created_at,
+            owner_email: emails.get(o.owner_user_id) || null, features: o.features || {},
+          };
+        }),
       });
     }
 
