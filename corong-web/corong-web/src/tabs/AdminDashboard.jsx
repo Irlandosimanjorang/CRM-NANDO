@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, Coins } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Coins } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
 import QuotationPanel from "../components/QuotationPanel";
+import OrgFeaturesPanel from "../components/OrgFeaturesPanel";
 
 // Dashboard admin platform - versi "mission control" - CUMA keliatan buat
 // email admin (dicek di App.jsx + server-side di admin-status/admin-trigger).
@@ -1408,6 +1409,25 @@ export default function AdminDashboard() {
       statLabel: "PENAWARAN",
       statValue: "Siap",
       content: <QuotationPanel users={status?.users_overview?.list} />,
+    },
+    {
+      // Saklar fitur per organisasi (8 Okt 2026, permintaan Nando): fitur khusus
+      // dinyalakan hanya untuk klien tertentu (kolom organizations.features).
+      key: "org-features",
+      title: "FITUR KLIEN",
+      subtitle: "Saklar per organisasi",
+      icon: ToggleRight,
+      accentColor: "#34d399",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "nyalakan fitur khusus per klien",
+      wide: true,
+      blurb: "Nyalakan fitur khusus hanya untuk klien tertentu.",
+      statLabel: "ORGANISASI",
+      statValue: new Set((status?.users_overview?.list || []).filter((u) => u.org_name).map((u) => u.org_name)).size,
+      content: <OrgFeaturesPanel />,
     },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];

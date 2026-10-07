@@ -8,4 +8,13 @@
 // supaya yang tahu alamatnya tidak bisa memakainya walau menunya tersembunyi.
 // Menyalakan untuk satu klien (jalankan sebagai admin):
 //   update organizations set features = features || '{"marketing_report": true}' where id = '<org id>';
+// Daftar fitur yang bisa dinyalakan per organisasi (tampil di Command Center,
+// kartu FITUR KLIEN). Kunci HARUS sama dengan FEATURE_KEYS di
+// supabase/functions/admin-org-features. ready=false: fiturnya belum dibangun,
+// saklar boleh dinyalakan lebih awal tetapi belum ada efeknya.
+export const ORG_FEATURES = [
+  { key: "marketing_report", label: "Laporan Marketing", hint: "Lead per platform, budget iklan, biaya per lead dan per deal", ready: false },
+  { key: "lead_webhook", label: "Webhook lead", hint: "Lead masuk otomatis dari cekat.ai, Meta, atau TikTok", ready: false },
+];
+
 export const hasOrgFeature = (org, key) => org?.features?.[key] === true;

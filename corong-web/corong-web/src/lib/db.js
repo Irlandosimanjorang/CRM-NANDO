@@ -602,6 +602,18 @@ export async function deleteMyAccount() {
 // (dicek server-side di Edge Function-nya, bukan cuma disembunyiin di UI). ----
 // Invoice langganan Nexto (admin, 2 Okt 2026) - lewat edge function
 // admin-invoices (cek ADMIN_EMAIL di server). action: list | create | set_status.
+// Saklar fitur per organisasi (8 Okt 2026) - hanya admin platform (Command Center).
+export async function adminOrgFeatures(action, payload = {}) {
+  const { data, error } = await supabase.functions.invoke("admin-org-features", { body: { action, ...payload } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal memproses saklar fitur");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export async function adminInvoices(action, payload = {}) {
   const { data, error } = await supabase.functions.invoke("admin-invoices", { body: { action, ...payload } });
   if (error) {

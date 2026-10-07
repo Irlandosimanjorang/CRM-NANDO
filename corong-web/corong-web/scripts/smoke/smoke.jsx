@@ -17,6 +17,7 @@ import Team from "../../src/tabs/Team";
 import LeadModal from "../../src/components/LeadModal";
 import EnterpriseInvoicePanel from "../../src/components/EnterpriseInvoicePanel";
 import QuotationPanel from "../../src/components/QuotationPanel";
+import OrgFeaturesPanel from "../../src/components/OrgFeaturesPanel";
 import { AiCostPanel } from "../../src/tabs/AdminDashboard";
 
 const q = new URLSearchParams(location.search);
@@ -51,6 +52,7 @@ const views = {
   advisor: <Advisor leads={leads} stages={stages} onOpen={noop} dummy={!ent} demoRecs={demo.advisorRecs} />,
   industrydemo: <IndustryDemo />,
   settings: <Settings settings={{}} stages={stages} leads={leads} onChanged={noop} userEmail="uji@example.com" locked={false} />,
+  orgfeatures: <div style={{ background: "#05070c", padding: 24 }}><OrgFeaturesPanel /></div>,
   quotation: <div id="modal-scroll" className="max-h-[85vh] overflow-y-auto overscroll-contain" style={{ background: "#05070c", padding: 24 }}><QuotationPanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }]} /></div>,
   invoice: <div id="modal-scroll" className="max-h-[85vh] overflow-y-auto overscroll-contain" style={{ background: "#05070c", padding: 24 }}><EnterpriseInvoicePanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }, { plan: "free", org_name: "Org Free", role: "owner" }, { plan: "professional", org_name: "CV Maju Jaya", role: "owner", display_name: "Pak Budi", email: "budi@majujaya.id" }]} /></div>,
   aicost: <div style={{ background: "#05070c", padding: 24 }}><AiCostPanel data={{ kurs: 17700, totals: { by_plan: [{ plan: "standard", accounts: 1, active_accounts: 0, tokens_all: 0, usd_all: 0, tokens_month: 0, usd_month: 0 }, { plan: "enterprise", accounts: 2, active_accounts: 2, tokens_all: 1963610, usd_all: 5.9, tokens_month: 1963610, usd_month: 5.9 }], other: { tokens_all: 4200, usd_all: 0.0077, tokens_month: 4200, usd_month: 0.0077 } }, tracking_since: "2026-10-06T11:00:00Z", accounts: [
