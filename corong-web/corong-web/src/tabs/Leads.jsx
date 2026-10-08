@@ -126,6 +126,8 @@ const NAME_QUALIFIER_BLACKLIST = [
   "telepon", "hp", "wa", "website", "web", "city", "kota", "province",
   "provinsi", "price", "harga", "qty", "quantity", "jumlah", "total",
   "supplier", "usage", "line", "position", "jabatan",
+  // Kolom orang yang dihubungi (8 Okt 2026): "Nama PIC" sebelumnya terbaca sebagai nama lead.
+  "pic", "contact", "kontak", "person", "penanggung", "narahubung", "cp",
 ];
 
 // BUG DITEMUKAN (8 Sep 2026): matching pake .includes() polos bikin "product"
@@ -137,7 +139,7 @@ const NAME_QUALIFIER_BLACKLIST = [
 // dikecualiin dari aturan batas kata ini (gak ada spasi antar kata di CJK,
 // jadi tetep pake substring biasa).
 function headerMatchesKey(header, key) {
-  const h = String(header ?? "").toLowerCase();
+  const h = String(header ?? "").toLowerCase().replace(/\./g, "").replace(/e-mail/g, "email");
   const k = key.toLowerCase();
   if (!/^[a-z0-9 ]+$/.test(k)) return h.includes(k);
   const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -145,9 +147,9 @@ function headerMatchesKey(header, key) {
   return re.test(h);
 }
 
-function findColIndex(headers, keys) {
+function findColIndex(headers, keys, used) {
   for (const k of keys) {
-    const idx = headers.findIndex((h) => headerMatchesKey(h, k));
+    const idx = headers.findIndex((h, i) => !(used && used.has(i)) && headerMatchesKey(h, k));
     if (idx !== -1) return idx;
   }
   return null;
@@ -176,8 +178,8 @@ function guessNameColIndex(rawHeaders) {
 
 const FIELD_KEY_MAP = {
   email: ["邮箱", "email"],
-  phone: ["电话", "phone", "telepon", "wa", "hp"],
-  key_person: ["联系人", "key person", "contact", "pic", "nama kontak"],
+  phone: ["电话", "phone", "telepon", "telp", "wa", "whatsapp", "hp", "handphone", "mobile"],
+  key_person: ["联系人", "nama pic", "pic", "person in charge", "penanggung jawab", "narahubung", "contact person", "contact name", "key person", "nama kontak", "kontak person", "cp", "contact"],
   key_person_title: ["jabatan", "job title", "position", "title"],
   product: ["产品", "product", "produk"],
   city: ["城市", "city", "kota"],
@@ -195,13 +197,15 @@ const FIELD_KEY_MAP = {
 // tebakan ini "keliatan yakin", sekarang gak ada lagi jalur silent kayak
 // gitu - meleset di sini paling-paling cuma bikin user perlu benerin
 // dropdown, bukan bikin data salah masuk).
-function guessMappingFromHeaders(headers) {
+export function guessMappingFromHeaders(headers) {
   const mapping = {};
   const nameIdx = guessNameColIndex(headers);
   if (nameIdx !== null) mapping.name = nameIdx;
+  // Satu kolom hanya untuk satu field (mis. "Contact Phone" tidak direbut field kontak).
+  const used = new Set(nameIdx !== null ? [nameIdx] : []);
   for (const [field, keys] of Object.entries(FIELD_KEY_MAP)) {
-    const idx = findColIndex(headers, keys);
-    if (idx !== null && idx !== mapping.name) mapping[field] = idx;
+    const idx = findColIndex(headers, keys, used);
+    if (idx !== null) { mapping[field] = idx; used.add(idx); }
   }
   return mapping;
 }
