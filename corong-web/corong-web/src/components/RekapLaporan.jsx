@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Download, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
@@ -188,13 +189,32 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
     </Panel>
   );
 
+  // Kalender bulanan untuk tampilan layar penuh: tiap tanggal berisi kotak berwarna, satu per lead yang bergerak hari itu.
+  const calCells = useMemo(() => {
+    const lead = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+    const total = Math.ceil((lead + daysInMonth) / 7) * 7;
+    return Array.from({ length: total }, (_, i) => {
+      const dt = new Date(year, month - 1, 1 - lead + i);
+      return { iso: `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`, day: dt.getDate(), inMonth: dt.getMonth() === month - 1, weekend: dt.getDay() === 0 || dt.getDay() === 6 };
+    });
+  }, [year, month, daysInMonth]);
+  const calItems = useMemo(() => {
+    const m = new Map();
+    for (const l of d.master) {
+      const byDay = d.events.get(l.id);
+      if (!byDay) continue;
+      for (const [day, evs] of byDay) (m.get(day) || m.set(day, []).get(day)).push({ lead: l, evs });
+    }
+    return m;
+  }, [d]);
+
   // Blok timeline: dipakai di halaman biasa (dalam Panel) dan di layar penuh (menutupi seluruh layar).
   const timeline = (isFull) => {
     if (isFull) {
       // Layar penuh: hanya kolom tanggal, melebar sampai semua tanggal terlihat tanpa menggeser. Nama lead
       // muncul di popup saat kursor diarahkan ke kotak berwarna.
       const showTip = (e, lead, day, evs) => { const b = e.currentTarget.getBoundingClientRect(); setTip({ x: b.left + b.width / 2, top: b.top, bottom: b.bottom, lead, day, evs }); };
-      return (
+      const overlay = (
         <div className="fixed inset-0 z-[80] flex flex-col bg-white">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
             <div>
@@ -207,43 +227,44 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
             <span className="font-semibold text-slate-700">Warna tahap</span>
             {stages.map((st) => <span key={st.key} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: st.hex }} />{st.label}</span>)}
           </div>
-          <div className="flex-1 overflow-auto p-4">
-            {masterRows.length === 0 ? (
-              <EmptyState>Belum ada lead pada bulan ini.</EmptyState>
-            ) : (
-              <table className="w-full table-fixed border-collapse">
-                <thead className="sticky top-0 z-[1] bg-white">
-                  <tr>
-                    {weeks.map(([x, y], i) => <th key={i} colSpan={y - x + 1} className="border-l border-slate-200 px-1 pb-1 pt-0 text-center text-[11px] font-semibold text-slate-500 first:border-l-0">Minggu ke-{i + 1} ({x}–{y} {MONTHS[month - 1].slice(0, 3)})</th>)}
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    {Array.from({ length: daysInMonth }, (_, i) => (
-                      <th key={i} className={cn("py-1 text-center text-[11px] font-semibold text-slate-600", [0, 7, 14, 21].includes(i) && "border-l border-slate-200")}>
-                        <div>{i + 1}</div><div className="font-normal text-slate-400">{dayLetter(i + 1)}</div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {masterRows.map((r) => (
-                    <tr key={r.lead.id}>
-                      {Array.from({ length: daysInMonth }, (_, k) => {
-                        const evs = d.events.get(r.lead.id)?.get(k + 1);
-                        const meta = evs ? stageMeta[evs[evs.length - 1].key] : null;
-                        return (
-                          <td key={k} onMouseEnter={evs ? (e) => showTip(e, r.lead, k + 1, evs) : undefined} onMouseLeave={() => setTip(null)} onClick={evs ? (e) => (tip && tip.lead.id === r.lead.id && tip.day === k + 1 ? setTip(null) : showTip(e, r.lead, k + 1, evs)) : undefined} className={cn("p-[3px]", evs && "cursor-pointer", [0, 7, 14, 21].includes(k) && "border-l border-slate-200")}>
-                            <div className="h-7 w-full rounded-[5px]" style={meta ? { background: meta.hex } : undefined} />
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+          {masterRows.length === 0 ? (
+            <div className="p-6"><EmptyState>Belum ada lead pada bulan ini.</EmptyState></div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3">
+              <div className="grid grid-cols-7 border-b border-slate-200">
+                {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((w, i) => <div key={w} className={cn("py-1.5 text-center text-[11px] font-semibold", i >= 5 ? "text-slate-400" : "text-slate-500")}>{w}</div>)}
+              </div>
+              <div className="grid min-h-0 flex-1 grid-cols-7 overflow-hidden border-l border-slate-100" style={{ gridTemplateRows: `repeat(${calCells.length / 7}, minmax(0, 1fr))` }}>
+                {calCells.map((c) => {
+                  const items = c.inMonth ? calItems.get(c.day) || [] : [];
+                  return (
+                    <div key={c.iso} className={cn("min-h-0 overflow-hidden border-b border-r border-slate-100 p-1.5", !c.inMonth && "bg-slate-50/70", c.inMonth && c.weekend && "bg-slate-50/40")}>
+                      <div className={cn("text-[11px] font-semibold tabular-nums", c.inMonth ? "text-ink" : "text-slate-300")}>{c.day}</div>
+                      {items.length > 0 && (
+                        <div className="mt-1 flex flex-wrap content-start gap-1">
+                          {items.map((it, i) => (
+                            <span
+                              key={i}
+                              role="img"
+                              aria-label={`${it.lead.name}: ${stageMeta[it.evs[it.evs.length - 1].key]?.label || ""}`}
+                              onMouseEnter={(e) => showTip(e, it.lead, c.day, it.evs)}
+                              onMouseLeave={() => setTip(null)}
+                              onClick={(e) => (tip && tip.lead.id === it.lead.id && tip.day === c.day ? setTip(null) : showTip(e, it.lead, c.day, it.evs))}
+                              className="h-4 w-4 cursor-pointer rounded-[4px]"
+                              style={{ background: stageMeta[it.evs[it.evs.length - 1].key]?.hex }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       );
+      return typeof document !== "undefined" ? createPortal(overlay, document.body) : overlay;
     }
     const Wrap = isFull ? "div" : Panel;
     return (
@@ -332,11 +353,11 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
       {d.sections.map((s) => <Table key={s.key} s={s} />)}
       {d.prior.map((s) => <Table key={s.key} s={s} />)}
 
-      {tip && (() => {
+      {tip && typeof document !== "undefined" && (() => {
         const up = tip.top > 190;
         const left = Math.min(Math.max(tip.x, 150), (typeof window !== "undefined" ? window.innerWidth : 1200) - 150);
         const date = new Date(year, month - 1, tip.day);
-        return (
+        return createPortal(
           <div role="tooltip" className="pointer-events-none fixed z-[90] w-[272px] rounded-inner border border-slate-200 bg-white p-3 shadow-float" style={{ left, top: up ? tip.top - 8 : tip.bottom + 8, transform: up ? "translate(-50%, -100%)" : "translate(-50%, 0)" }}>
             <div className="truncate text-[12.5px] font-bold text-ink">{tip.lead.name}</div>
             <div className="text-[11px] text-slate-500">{DAYS_LONG[date.getDay()]}, {tip.day} {MONTHS[month - 1]} {year}</div>
@@ -361,7 +382,8 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
               {String(tip.lead.custom_field_1 || "").trim() && <span>SPH <b className="text-slate-700">{String(tip.lead.custom_field_1).trim()}</b></span>}
               {tip.lead.company_type && <span>{tip.lead.company_type}</span>}
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
 
