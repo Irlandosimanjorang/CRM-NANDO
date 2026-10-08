@@ -169,7 +169,7 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div role="group" aria-label="Cara menghitung deal" className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold">
+        <div role="group" aria-label="Cara menghitung deal" title={basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk pada periode ini." : "Deal dan omzet dari semua lead yang deal-nya tutup pada periode ini."} className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold">
           {[["cohort", "Lead masuk periode ini"], ["deal", "Deal tutup periode ini"]].map(([k, label]) => (
             <button key={k} type="button" onClick={() => setBasis(k)} aria-pressed={basis === k} className={`rounded-full px-3.5 py-1.5 ${basis === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink"} ${focus}`}>{label}</button>
           ))}
@@ -181,7 +181,6 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
           </div>
         )}
       </div>
-      <p className="-mt-2 text-[11.5px] leading-relaxed text-slate-500">{basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk pada periode ini. Deal yang belum tertutup belum terhitung." : "Lead tetap yang masuk pada periode ini. Deal dan omzet dari semua lead yang deal-nya tutup pada periode ini, kapan pun lead itu masuk."} Biaya dari file Meta (termasuk Instagram), TikTok, atau Google; omzet dari nilai transaksi deal.</p>
 
       {notice && <p className="rounded-inner bg-emerald-50 px-4 py-2.5 text-[12px] text-emerald-800">{notice}</p>}
       {loadErr && <p className="rounded-inner bg-rose-50 px-4 py-2.5 text-[12px] text-rose-700">Data iklan tidak dapat dimuat: {loadErr}</p>}

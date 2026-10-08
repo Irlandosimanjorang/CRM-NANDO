@@ -343,7 +343,6 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Report data retail dan project</h2>
-          <p className="mt-0.5 text-[11.5px] text-slate-500">Urutan seperti laporan Excel: tabel induk dengan timeline harian, daftar per tahap, proyek bulan lalu, lalu ringkasan bobot.</p>
         </div>
         <button type="button" onClick={download} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"><Download size={14} /> Unduh Excel</button>
       </div>
