@@ -82,6 +82,32 @@ export const normalizeCompanyName = (s) => {
   x = x.replace(/\s+/g, " ").trim();
   return x;
 };
+// Key person + Jabatan berpasangan (8 Okt 2026): kolom key_person dan key_person_title
+// tetap 2 kolom teks, masing-masing dipisah koma dan DISEJAJARKAN menurut urutan
+// ("Budi, Sari" + "CEO, CFO" = Budi CEO, Sari CFO). Data lama tetap terbaca: kalau
+// jumlah jabatan LEBIH BANYAK dari jumlah nama (mis. satu orang berjabatan
+// "Manager, Sales"), seluruh teks jabatan dianggap milik orang pertama, tidak dipecah.
+export const MAX_KEY_PEOPLE = 5;
+export function parsePeople(keyPerson, keyTitle) {
+  const names = String(keyPerson || "").split(",").map((x) => x.trim());
+  let titles = String(keyTitle || "").split(",").map((x) => x.trim());
+  if (titles.length > names.length) titles = [String(keyTitle || "").trim()];
+  const n = Math.max(names.length, titles.length, 1);
+  return Array.from({ length: n }, (_, i) => ({ name: names[i] || "", title: titles[i] || "" }));
+}
+// Gabung lagi jadi dua teks. Satu orang: disimpan apa adanya. Beberapa orang: koma di dalam
+// nama/jabatan diganti " / " supaya urutannya tidak bergeser.
+export function joinPeople(rows) {
+  if (rows.length <= 1) return { key_person: rows[0]?.name || "", key_person_title: rows[0]?.title || "" };
+  const clean = (x) => String(x || "").replace(/\s*,\s*/g, " / ").trim();
+  return { key_person: rows.map((r) => clean(r.name)).join(", "), key_person_title: rows.map((r) => clean(r.title)).join(", ") };
+}
+// Dipakai saat menyimpan: buang baris yang nama dan jabatannya sama-sama kosong, maksimal 5 orang.
+export function normalizePeopleForSave(keyPerson, keyTitle) {
+  const rows = parsePeople(keyPerson, keyTitle).filter((r) => r.name || r.title).slice(0, MAX_KEY_PEOPLE);
+  return joinPeople(rows.length ? rows : [{ name: "", title: "" }]);
+}
+
 // Kunci pengelompokan nama grup/induk perusahaan: "PT Maju Jaya" dan
 // "maju jaya" dianggap grup yang sama.
 export const groupKey = (s) => normalizeCompanyName(s) || String(s || "").trim().toLowerCase();

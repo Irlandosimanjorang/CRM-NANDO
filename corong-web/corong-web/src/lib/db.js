@@ -1,6 +1,6 @@
 import { supabase } from "./supabaseClient";
 import { getIndustryTemplate, CUSTOM_FIELD_KEYS } from "./industryTemplates";
-import { todayISO } from "./helpers";
+import { todayISO, normalizePeopleForSave } from "./helpers";
 import { compressImage } from "./imageCompress";
 
 // Bersihin kolom telepon/WA: cuma boleh angka + karakter pemisah wajar (+, -, spasi,
@@ -806,7 +806,7 @@ export async function upsertLead(lead) {
     assigned_to: lead.assigned_to || uid,
     name: lead.name, category: lead.category, stage_key: lead.stage_key,
     company_type: lead.company_type || "", email: lead.email || "", phone: sanitizePhone(lead.phone),
-    key_person: lead.key_person || "", key_person_title: lead.key_person_title || "",
+    ...normalizePeopleForSave(lead.key_person, lead.key_person_title),
     product: lead.product || "", city: lead.city || "", province: lead.province || "",
     // Grup / induk perusahaan (7 Okt 2026): cabang-cabang satu perusahaan berbagi nama ini.
     parent_company: (lead.parent_company || "").trim(),

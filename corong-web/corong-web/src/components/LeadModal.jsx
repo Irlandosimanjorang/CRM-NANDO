@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import PaymentTermsCard from "./PaymentTermsCard";
-import { fmtDate, stageMeta, chipStyle } from "../lib/helpers";
+import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
 
@@ -50,6 +50,43 @@ function MultiField({ label, value, onChange, placeholder, max }) {
         )}
       </div>
     </Field>
+  );
+}
+
+// Key person + Jabatan per orang (8 Okt 2026, permintaan Nando): satu baris = satu orang
+// (nama dan jabatannya), maksimal 5. Penyimpanan tetap 2 kolom teks (lihat parsePeople).
+function PeopleField({ nameLabel, titleLabel, keyPerson, keyTitle, onChange }) {
+  const rows = parsePeople(keyPerson, keyTitle);
+  const full = rows.length >= MAX_KEY_PEOPLE;
+  const commit = (next) => { const j = joinPeople(next); onChange(j.key_person, j.key_person_title); };
+  const setAt = (idx, patch) => commit(rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 pr-7">
+        <span className="block text-xs font-medium text-slate-600">{nameLabel}</span>
+        <span className="block text-xs font-medium text-slate-600">{titleLabel}</span>
+      </div>
+      <div className="mt-1 flex flex-col gap-1.5">
+        {rows.map((r, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <div className="grid flex-1 grid-cols-2 gap-3">
+              <input className={inpRow} aria-label={`${nameLabel} ${i + 1}`} value={r.name} onChange={(e) => setAt(i, { name: e.target.value })} />
+              <input className={inpRow} aria-label={`${titleLabel} ${i + 1}`} value={r.title} onChange={(e) => setAt(i, { title: e.target.value })} />
+            </div>
+            {rows.length > 1 ? (
+              <button type="button" onClick={() => commit(rows.filter((_, k) => k !== i))} className="shrink-0 p-1 text-slate-400 hover:text-rose-500" aria-label={`Hapus ${nameLabel} ${i + 1}`}><X size={14} /></button>
+            ) : <span className="w-[22px] shrink-0" />}
+          </div>
+        ))}
+        {full ? (
+          <span className="self-start text-[11px] text-slate-400">Maksimal {MAX_KEY_PEOPLE}</span>
+        ) : (
+          <button type="button" onClick={() => commit([...rows, { name: "", title: "" }])} className="self-start flex items-center gap-1 text-[11px] font-medium text-orange-600 hover:text-orange-700">
+            <Plus size={12} /> Tambah
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -593,11 +630,18 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             <Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field>
           </div>
           {(!hidden("key_person") || !hidden("key_person_title")) && (
+            !hidden("key_person") && !hidden("key_person_title") ? (
+              <PeopleField
+                nameLabel={lbl("key_person", "Key person")} titleLabel={lbl("key_person_title", "Jabatan")}
+                keyPerson={f.key_person} keyTitle={f.key_person_title}
+                onChange={(name, title) => { set("key_person", name); set("key_person_title", title); }}
+              />
+            ) : (
             <div className="grid grid-cols-2 gap-3">
               {!hidden("key_person") && <MultiField label={lbl("key_person", "Key person")} value={f.key_person} onChange={(v) => set("key_person", v)} max={5} />}
               {!hidden("key_person_title") && <Field label={lbl("key_person_title", "Jabatan")}><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field>}
             </div>
-          )}
+          ))}
           <Field label="Kota"><input className={inp} value={f.city || ""} onChange={(e) => set("city", e.target.value)} /></Field>
           <Field label="Grup / induk perusahaan (opsional)">
             <input className={inp} list="lead-parent-options" value={f.parent_company || ""} onChange={(e) => set("parent_company", e.target.value)} placeholder="Isi jika ini kantor cabang, mis. PT Maju Jaya" />
