@@ -1301,7 +1301,14 @@ export async function bulkInsertLeads(leads) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
   const up = await namesUppercase();
-  const rows = leads.map((l) => ({ user_id: uid, org_id: orgId, assigned_to: l.assigned_to || uid, ...l, name: upperIf(up, l.name), phone: sanitizePhone(l.phone) }));
+  // Insert massal: baris yang tidak memuat sebuah kolom dikirim sebagai NULL, padahal parent_company
+  // dan group_holding NOT NULL. Hirarki hanya mengisi sebagian baris, jadi kedua kolom itu SELALU
+  // diisi di semua baris ("" kalau kosong) supaya semua baris punya kunci yang sama.
+  const rows = leads.map((l) => ({
+    user_id: uid, org_id: orgId, assigned_to: l.assigned_to || uid, ...l,
+    name: upperIf(up, l.name), phone: sanitizePhone(l.phone),
+    parent_company: l.parent_company || "", group_holding: l.group_holding || "",
+  }));
   const { data, error } = await supabase.from("leads").insert(rows).select("id, name");
   if (error) throw error;
   return data;
