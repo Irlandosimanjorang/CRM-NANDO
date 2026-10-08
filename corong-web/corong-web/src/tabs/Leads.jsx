@@ -40,7 +40,6 @@ import {
   todayISO,
   nameSimilarity,
   groupKey,
-  chipStyle,
 } from "../lib/helpers";
 
 import LeadModal from "../components/LeadModal";
@@ -338,46 +337,40 @@ function isHotLead(lead, hotKeys) {
    BAGAN HOLDING / PERUSAHAAN / ANAK PERUSAHAAN (8 Okt 2026)
    Pohon dari atas ke bawah: Holding > Perusahaan > Anak perusahaan.
    node = { lead|null, label, role: "holding"|"perusahaan"|"anak", children[] }.
+   Tiap node adalah KARTU lead asli versi kecil (semua tombolnya tetap ada);
    lead null = nama grup yang belum punya lead sendiri (kotak putus-putus).
+   Lencana peran menempel di tepi atas kartu.
 ========================================================= */
 const ORG_ROLE = {
-  holding: { label: "Holding", box: "border-slate-800 bg-slate-800 text-white", tag: "bg-white text-slate-800 border border-slate-300" },
-  perusahaan: { label: "Perusahaan", box: "border-orange-300 bg-white text-ink", tag: "bg-orange-500 text-white" },
-  anak: { label: "Anak perusahaan", box: "border-slate-200 bg-white text-ink", tag: "bg-slate-200 text-slate-700" },
+  holding: { label: "Holding", tag: "bg-slate-800 text-white" },
+  perusahaan: { label: "Perusahaan", tag: "bg-orange-500 text-white" },
+  anak: { label: "Anak perusahaan", tag: "bg-slate-200 text-slate-700" },
 };
 
-function OrgNode({ node, stages, onOpen, upper }) {
-  const c = node.lead;
+function OrgNode({ node, renderLead, upper }) {
   const role = ORG_ROLE[node.role];
-  const meta = c ? stageMeta(stages, c.stage_key) : null;
+  const c = node.lead;
   const name = upper ? String(node.label || "").toUpperCase() : node.label;
   return (
-    <button
-      type="button"
-      disabled={!c}
-      onClick={() => c && onOpen(c)}
-      title={c ? "Buka lead" : "Belum ada lead dengan nama ini"}
-      className={`relative w-[200px] rounded-xl border px-3 pb-2.5 pt-4 text-left shadow-sm ${role.box} ${c ? "hover:shadow-md" : "border-dashed opacity-80"}`}
-    >
-      <span className={`absolute -top-2.5 left-3 rounded px-1.5 py-0.5 text-[10px] font-semibold ${role.tag}`}>{role.label}</span>
-      <div className="line-clamp-2 text-[13px] font-semibold leading-snug">{name}</div>
+    <div className="relative w-[272px] pt-3">
+      <span className={`absolute left-4 top-0.5 z-10 rounded px-1.5 py-0.5 text-[10px] font-semibold shadow-sm ${role.tag}`}>{role.label}</span>
       {c ? (
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
-          <span className="truncate rounded-full border px-2 py-0.5 font-medium" style={chipStyle(meta.hex)}>{meta.label}</span>
-          <span className={`truncate ${node.role === "holding" ? "text-slate-300" : "text-slate-500"}`}>{c.city || ""}</span>
-        </div>
+        <div className={node.role === "holding" ? "rounded-panel ring-2 ring-slate-700" : ""}>{renderLead(c)}</div>
       ) : (
-        <div className="mt-1.5 text-[11px] text-slate-400">Belum ada data lead</div>
+        <div className="rounded-panel border border-dashed border-slate-300 bg-white px-4 pb-4 pt-5 text-[13px] font-semibold text-slate-700">
+          {name}
+          <div className="mt-1 text-[11px] font-normal text-slate-400">Belum ada lead dengan nama ini</div>
+        </div>
       )}
-    </button>
+    </div>
   );
 }
 
-function OrgBranch({ node, stages, onOpen, upper }) {
+function OrgBranch({ node, renderLead, upper }) {
   const kids = node.children || [];
   return (
     <div className="flex flex-col items-center">
-      <OrgNode node={node} stages={stages} onOpen={onOpen} upper={upper} />
+      <OrgNode node={node} renderLead={renderLead} upper={upper} />
       {kids.length > 0 && (
         <>
           <div className="h-5 w-px bg-slate-300" />
@@ -388,7 +381,7 @@ function OrgBranch({ node, stages, onOpen, upper }) {
                 {kids.length > 1 && (
                   <span className={`absolute top-0 h-px bg-slate-300 ${i === 0 ? "left-1/2 right-0" : i === kids.length - 1 ? "left-0 right-1/2" : "left-0 right-0"}`} />
                 )}
-                <OrgBranch node={ch} stages={stages} onOpen={onOpen} upper={upper} />
+                <OrgBranch node={ch} renderLead={renderLead} upper={upper} />
               </div>
             ))}
           </div>
@@ -398,7 +391,7 @@ function OrgBranch({ node, stages, onOpen, upper }) {
   );
 }
 
-function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign, uppercaseNames, badge }) {
+function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign, uppercaseNames, compact }) {
   // Progress bar mulai dari 0% terus animasi jalan ke posisi asli begitu
   // kartu ini muncul di layar - kesan "hidup", bukan langsung nongol jadi.
   const [barReady, setBarReady] = useState(false);
@@ -436,19 +429,18 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
       onClick={() => onEdit(c)}
       className="rounded-panel border border-slate-200/80 bg-white cursor-pointer overflow-hidden transition-colors hover:border-slate-300"
     >
-      <div className="p-4 sm:p-5">
+      <div className={compact ? "p-3" : "p-4 sm:p-5"}>
         {/* HEADER */}
         <div className="flex items-start gap-3">
-          <div className="w-[38px] h-[38px] rounded-inner flex items-center justify-center text-white font-bold text-[13px] shrink-0" style={{ background: avatarColor(c.name) }}>
+          <div className={`${compact ? "w-[30px] h-[30px] text-[11px]" : "w-[38px] h-[38px] text-[13px]"} rounded-inner flex items-center justify-center text-white font-bold shrink-0`} style={{ background: avatarColor(c.name) }}>
             {initials(c.name)}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <div className="font-display font-bold text-ink text-[15px] leading-snug tracking-[-0.02em] truncate">{uppercaseNames ? String(c.name || "").toUpperCase() : c.name}</div>
-              {badge && <span className="mt-0.5 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">{badge}</span>}
+              <div className={`font-display font-bold text-ink ${compact ? "text-[13px]" : "text-[15px]"} leading-snug tracking-[-0.02em] truncate`}>{uppercaseNames ? String(c.name || "").toUpperCase() : c.name}</div>
               {isHotLead(c, hotStageKeys(stages)) && <Flame size={14} className="text-orange-500 shrink-0" fill="currentColor" aria-label="Hot" />}
             </div>
-            <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
+            <div className={`${compact ? "text-[11px]" : "text-[12.5px]"} text-slate-500 mt-0.5 truncate`}>{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             {c.verified ? <ShieldCheck size={18} className="text-emerald-500" /> : <ShieldAlert size={18} className="text-slate-300" />}
@@ -461,13 +453,13 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
         </div>
 
         {/* TAHAP PIPELINE */}
-        <div className="mt-4">
+        <div className={compact ? "mt-2" : "mt-4"}>
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: `${sm.hex}17`, color: sm.hex }}>
               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: sm.hex }} />
               {sm.label}
             </span>
-            <span className="text-[11px] text-slate-500 shrink-0">Tahap {stageNumber} dari {Math.max(stages.length, 1)}</span>
+            {!compact && <span className="text-[11px] text-slate-500 shrink-0">Tahap {stageNumber} dari {Math.max(stages.length, 1)}</span>}
           </div>
           <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
             <div className="h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${barReady ? progressPercent : 0}%`, background: sm.hex }} />
@@ -475,7 +467,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
         </div>
 
         {/* KONTAK / PRODUK */}
-        <div className="mt-4 flex items-stretch gap-4">
+        <div className={`${compact ? "mt-2" : "mt-4"} flex items-stretch gap-4`}>
           <div className="flex-1 min-w-0">
             <div className="text-[11px] text-slate-500">{c.phone ? "Telepon" : "Key person"}</div>
             <div className="text-[13px] text-slate-700 mt-0.5 truncate">{c.phone || c.key_person || "-"}</div>
@@ -496,7 +488,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
 
         {/* NEXT ACTION - hal yang paling penting di kartu ini. Urgensi kontak
             ditandai titik + teks berwarna (bukan garis aksen di tepi kartu). */}
-        <div className="mt-4 rounded-inner bg-slate-50 px-3 py-2.5">
+        <div className={`${compact ? "mt-2 py-2" : "mt-4 py-2.5"} rounded-inner bg-slate-50 px-3`}>
           <div className="text-[11px] font-semibold text-slate-500">Langkah berikutnya</div>
           <div className={`mt-0.5 text-[13px] font-medium line-clamp-2 ${c.next_action ? "text-slate-800" : "text-slate-500"}`}>{c.next_action || "Belum ada rencana tindak lanjut"}</div>
           <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium" style={{ color: urgency.text }}>
@@ -506,7 +498,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
         </div>
 
         {/* FOOTER ACTIONS */}
-        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className={`${compact ? "mt-2 pt-1.5 [&_a]:!p-1.5 [&_button]:!p-1.5" : "mt-4 pt-3"} border-t border-slate-100 flex items-center gap-1`} onClick={(e) => e.stopPropagation()}>
           {/* Telepon & WhatsApp dipisah (1 Okt 2026). Dulu ikon telepon diam-diam
               membuka WhatsApp, termasuk ke nomor kantor yang gak punya WA.
               Badge WA cuma muncul kalau ada nomor HP. */}
@@ -563,7 +555,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
         {/* PROGRESS UPDATE */}
         <button
           onClick={(e) => { e.stopPropagation(); onProgress(c); }}
-          className="mt-2.5 w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border border-dashed border-slate-300 bg-white rounded-inner px-3 py-2 hover:border-brand-line hover:bg-brand-soft hover:text-brand-strong transition-colors"
+          className={`${compact ? "mt-1.5 !py-1.5" : "mt-2.5"} w-full flex items-center gap-2 text-left text-[12px] text-slate-500 border border-dashed border-slate-300 bg-white rounded-inner px-3 py-2 hover:border-brand-line hover:bg-brand-soft hover:text-brand-strong transition-colors`}
           title="Update progress harian"
         >
           <ClipboardList size={13} className="shrink-0 text-slate-500" />
@@ -1972,10 +1964,10 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
         {(() => {
           const GRID = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4";
-          const renderCard = (c, badge) => (
+          const renderCard = (c, compact = false) => (
             <LeadCard
               key={c.id}
-              badge={badge}
+              compact={compact}
               uppercaseNames={uppercaseNames}
               c={c}
               stages={stages}
@@ -2053,7 +2045,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
                 {h.open && (
                   <div className="overflow-x-auto rounded-panel border border-slate-200 bg-white px-4 py-6">
                     <div className="mx-auto w-fit min-w-max">
-                      <OrgBranch node={chartOf(u)} stages={stages} onOpen={setEdit} upper={uppercaseNames} />
+                      <OrgBranch node={chartOf(u)} renderLead={(lead) => renderCard(lead, true)} upper={uppercaseNames} />
                     </div>
                   </div>
                 )}
