@@ -57,6 +57,14 @@ const BASE_FIELD_OPTIONS = [
 const NEW_CUSTOM_VALUE = "__new_custom__";
 
 const MAX_PREVIEW_ROWS = 12;
+// Peran per baris (mode "Tandai hirarki"): holding > perusahaan > anak.
+const ROW_ROLES = [
+  { value: "", label: "—" },
+  { value: "holding", label: "Holding" },
+  { value: "perusahaan", label: "Perusahaan" },
+  { value: "anak", label: "Anak" },
+  { value: "mandiri", label: "Mandiri" },
+];
 
 export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
   const { rawRows, sheetName, initialMapping = {}, initialDataStartRow = 0, usedAiGuess, existingCustomSlots = [] } = request;
@@ -81,13 +89,17 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
   });
   const [dataStartRow, setDataStartRow] = useState(() => mapDraft?.dataStartRow ?? initialDataStartRow);
   const [customLabels, setCustomLabels] = useState(() => mapDraft?.customLabels || {}); // colIdx -> label yang diketik user
+  // Mode tandai hirarki (8 Okt 2026): pilih peran tiap baris (Holding/Perusahaan/Anak) langsung di tabel.
+  const [hierMode, setHierMode] = useState(() => !!mapDraft?.hierMode);
+  const [follow, setFollow] = useState(() => mapDraft?.follow !== false); // baris tanpa tanda ikut jadi anak
+  const [rowRoles, setRowRoles] = useState(() => mapDraft?.rowRoles || {}); // indeks baris mentah -> peran
 
   // Auto-simpen koreksi manual tiap berubah - lihat komentar MANUAL_MAP_DRAFT_KEY.
   useEffect(() => {
     try {
-      localStorage.setItem(MANUAL_MAP_DRAFT_KEY, JSON.stringify({ sheetName, assign, dataStartRow, customLabels, savedAt: Date.now() }));
+      localStorage.setItem(MANUAL_MAP_DRAFT_KEY, JSON.stringify({ sheetName, assign, dataStartRow, customLabels, hierMode, follow, rowRoles, savedAt: Date.now() }));
     } catch (_) {}
-  }, [sheetName, assign, dataStartRow, customLabels]);
+  }, [sheetName, assign, dataStartRow, customLabels, hierMode, follow, rowRoles]);
 
   const autoGuessed = initialMapping && initialMapping.name !== undefined && initialMapping.name !== null;
 
@@ -112,7 +124,14 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
   };
 
   const hasName = assign.includes("name");
-  const preview = rawRows.slice(0, MAX_PREVIEW_ROWS);
+  // Mode hirarki menampilkan SEMUA baris (bisa digulir) supaya setiap baris bisa ditandai.
+  const preview = hierMode ? rawRows.slice(0, 1000) : rawRows.slice(0, MAX_PREVIEW_ROWS);
+  const roleCount = (r) => Object.entries(rowRoles).filter(([i, v]) => v === r && Number(i) >= dataStartRow).length;
+  const setRole = (rowIdx, role) => setRowRoles((prev) => {
+    const next = { ...prev };
+    if (role) next[rowIdx] = role; else delete next[rowIdx];
+    return next;
+  });
 
   const handleConfirm = () => {
     const mapping = {};
@@ -136,7 +155,15 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
     }
 
     clearManualMapDraft();
-    onConfirm(mapping, dataStartRow, customEntries);
+    // Peran per baris -> indeks baris DATA (setelah baris judul dibuang).
+    const levels = {};
+    if (hierMode) {
+      for (const [i, role] of Object.entries(rowRoles)) {
+        const di = Number(i) - dataStartRow;
+        if (role && di >= 0) levels[di] = role;
+      }
+    }
+    onConfirm(mapping, dataStartRow, customEntries, hierMode ? { levels, follow } : undefined);
   };
 
   const handleCancel = () => { clearManualMapDraft(); onCancel(); };
@@ -163,11 +190,30 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
         </p>
         <p className="text-xs text-amber-600 flex items-center gap-1 mb-3"><AlertTriangle size={12} /> Wajib memilih satu kolom sebagai "Nama Lead / Perusahaan". Kolom yang tidak memiliki padanan dapat dipilih "+ Custom..." dan diberi nama sendiri.</p>
 
-        <div className="overflow-x-auto max-w-full border border-slate-200 rounded-2xl">
+        <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+          <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-slate-700">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-orange-600" checked={hierMode} onChange={(e) => setHierMode(e.target.checked)} />
+            <span>Tandai Holding / Perusahaan / Anak perusahaan per baris
+              <span className="block text-[11.5px] font-normal text-slate-500">Muncul pilihan di sisi kiri tiap baris. Tandai baris yang menjadi Holding atau Perusahaan; baris tanpa tanda di bawahnya otomatis jadi anak perusahaannya.</span>
+            </span>
+          </label>
+          {hierMode && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-600">
+              <label className="flex cursor-pointer items-center gap-1.5">
+                <input type="checkbox" className="h-3.5 w-3.5 accent-orange-600" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
+                Baris tanpa tanda ikut jadi anak dari perusahaan/holding di atasnya
+              </label>
+              <span className="tabular-nums text-slate-500">Ditandai: {roleCount("holding")} holding, {roleCount("perusahaan")} perusahaan, {roleCount("anak")} anak, {roleCount("mandiri")} mandiri</span>
+              {Object.keys(rowRoles).length > 0 && <button type="button" onClick={() => setRowRoles({})} className="font-semibold text-orange-700 hover:text-orange-800">Hapus semua tanda</button>}
+            </div>
+          )}
+        </div>
+
+        <div className={`overflow-x-auto max-w-full border border-slate-200 rounded-2xl ${hierMode ? "max-h-[55vh] overflow-y-auto" : ""}`}>
           <table className="text-xs w-full border-collapse">
-            <thead>
+            <thead className={hierMode ? "sticky top-0 z-20" : ""}>
               <tr>
-                <th className="sticky left-0 bg-slate-50 border-b border-slate-200 p-2 text-left w-10 z-10">#</th>
+                <th className="sticky left-0 bg-slate-50 border-b border-slate-200 p-2 text-left w-10 z-10">{hierMode ? "Peran" : "#"}</th>
                 {Array.from({ length: numCols }).map((_, colIdx) => (
                   <th key={colIdx} className="border-b border-l border-slate-200 p-1.5 min-w-[150px] bg-slate-50 align-top">
                     <select
@@ -207,7 +253,17 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
                   title="Klik untuk menandai: data asli dimulai dari baris ini"
                 >
                   <td className="sticky left-0 bg-white border-b border-slate-100 p-2 text-slate-400 font-mono">
-                    {rowIdx === dataStartRow ? "→" : rowIdx}
+                    {hierMode && rowIdx >= dataStartRow ? (
+                      <select
+                        value={rowRoles[rowIdx] || ""}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setRole(rowIdx, e.target.value)}
+                        aria-label={`Peran baris ${rowIdx}`}
+                        className={`w-[104px] rounded-lg border px-1 py-1 text-[11px] font-sans ${rowRoles[rowIdx] === "holding" ? "border-slate-800 bg-slate-800 text-white" : rowRoles[rowIdx] === "perusahaan" ? "border-orange-400 bg-orange-50 text-orange-800" : rowRoles[rowIdx] ? "border-slate-300 bg-slate-100 text-slate-700" : "border-slate-200 bg-white text-slate-400"}`}
+                      >
+                        {ROW_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                      </select>
+                    ) : (rowIdx === dataStartRow ? "→" : rowIdx)}
                   </td>
                   {Array.from({ length: numCols }).map((_, colIdx) => (
                     <td key={colIdx} className="border-b border-l border-slate-100 p-1.5 text-slate-700 truncate max-w-[160px]">
@@ -221,7 +277,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
         </div>
         <p className="text-[11px] text-slate-400 mt-1.5">
           Klik salah satu baris di atas untuk menandai baris tersebut sebagai awal DATA ASLI (baris judul/header di atasnya akan dilewati).
-          {rawRows.length > MAX_PREVIEW_ROWS && ` Cuma ${MAX_PREVIEW_ROWS} baris pertama ditampilkan di sini, sisanya (${rawRows.length - MAX_PREVIEW_ROWS} baris lagi) tetap ikut diproses.`}
+          {!hierMode && rawRows.length > MAX_PREVIEW_ROWS && ` Cuma ${MAX_PREVIEW_ROWS} baris pertama ditampilkan di sini, sisanya (${rawRows.length - MAX_PREVIEW_ROWS} baris lagi) tetap ikut diproses.`}
         </p>
         {existingCustomSlots.length > 0 && (
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><Sparkles size={11} /> Field custom yang sudah ada: {existingCustomSlots.map((s) => s.label).join(", ")}.</p>

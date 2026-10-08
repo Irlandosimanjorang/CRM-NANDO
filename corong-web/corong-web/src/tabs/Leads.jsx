@@ -249,17 +249,22 @@ function suggestParentGroups(rows) {
 export function normalizeLevel(text) {
   const t = String(text || "").toLowerCase();
   if (!t.trim()) return "";
+  if (/mandiri|berdiri sendiri|standalone/.test(t)) return "mandiri";
   if (/holding|group|grup/.test(t) && !/anak|cabang/.test(t)) return "holding";
   if (/anak|cabang|subsid|branch|outlet/.test(t)) return "anak";
   if (/perusahaan|company|induk|parent|\bpt\b/.test(t)) return "perusahaan";
   return "";
 }
-function deriveHierarchy(rows) {
+// follow = true (mode tandai per baris): baris TANPA tanda yang berada di bawah sebuah
+// perusahaan/holding otomatis menjadi anaknya; peran "Mandiri" memutus konteks itu.
+function deriveHierarchy(rows, follow = false) {
   let holding = "";
   let company = "";
   for (const r of rows) {
-    const lv = normalizeLevel(r.entity_level);
+    let lv = normalizeLevel(r.entity_level);
     delete r.entity_level;
+    if (lv === "mandiri") { holding = ""; company = ""; continue; }
+    if (!lv && follow && (holding || company)) lv = "anak";
     if (lv === "holding") { holding = r.name; company = ""; r._groupRow = true; continue; }
     if (lv === "perusahaan") { company = r.name; r._groupRow = true; if (holding && !r.group_holding) r.group_holding = holding; continue; }
     if (lv === "anak") {
@@ -270,10 +275,13 @@ function deriveHierarchy(rows) {
   return rows;
 }
 
-export function extractRowsFromMapping(dataRows, mapping, firstStage) {
+// opts.levels: { <indeks baris data>: "holding" | "perusahaan" | "anak" | "mandiri" } dari penanda
+// per baris di layar import (menang atas kolom peran); opts.follow: lihat deriveHierarchy.
+export function extractRowsFromMapping(dataRows, mapping, firstStage, opts = {}) {
   const get = (row, idx) => (idx === null || idx === undefined || idx === "") ? "" : String(row[idx] ?? "").trim();
   const out = [];
-  for (const row of dataRows) {
+  for (let ri = 0; ri < dataRows.length; ri++) {
+    const row = dataRows[ri];
     const name = get(row, mapping.name);
     if (!name || /^(xxx|yyyy-mm-dd|mr\/ms xxx)$/i.test(name.trim())) continue;
     const obj = { name, category: "Lainnya", stage_key: firstStage, source: "import" };
@@ -281,9 +289,10 @@ export function extractRowsFromMapping(dataRows, mapping, firstStage) {
       if (field === "name") continue;
       obj[field] = get(row, idx);
     }
+    if (opts.levels && opts.levels[ri]) obj.entity_level = opts.levels[ri];
     out.push(obj);
   }
-  return deriveHierarchy(out);
+  return deriveHierarchy(out, !!opts.follow);
 }
 
 
@@ -1363,7 +1372,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
     }
   };
 
-  const handleManualMapConfirm = async (mapping, dataStartRow, customEntries) => {
+  const handleManualMapConfirm = async (mapping, dataStartRow, customEntries, hierarchy) => {
     if (!manualMapRequest) return;
     const { rawRows, firstStage, usedAiGuess } = manualMapRequest;
 
@@ -1424,7 +1433,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         await db.mergeCustomFieldLabels(newLabelAssignments);
       }
       const dataRows = rawRows.slice(Math.max(0, dataStartRow));
-      const leadRows = extractRowsFromMapping(dataRows, finalMapping, firstStage);
+      const leadRows = extractRowsFromMapping(dataRows, finalMapping, firstStage, hierarchy || {});
       await finalizeImport(leadRows, usedAiGuess);
     } catch (e) {
       alert("Gagal import: " + e.message);
