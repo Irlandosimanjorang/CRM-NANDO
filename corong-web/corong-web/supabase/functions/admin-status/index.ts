@@ -69,7 +69,7 @@ const FEATURE_CATALOG = [
   { key: "chatbot_messages", label: "Chatbot NEXA (Teks & Voice Note)", tier: "professional", scope: "user", window: "day", limit: 17, metered: true, functionName: null, usesChatMessages: true },
   { key: "customer_state", label: "Customer State (AI)", tier: "professional", scope: "user", window: "month", limit: null, metered: false, note: "Nempel ke data lead yang udah ada, bukan panggilan AI on-demand terpisah." },
   { key: "competitor_analysis", label: "Analisa Kompetitor", tier: "professional", scope: "user", window: "month", limit: null, metered: false, note: "CRUD data kompetitor - gak ada panggilan AI sama sekali." },
-  { key: "verify_selfie_photo", label: "Verifikasi Selfie GPS Check-in", tier: "enterprise", scope: "user", window: "month", limit: 60, metered: true, functionName: "verify-selfie-photo", requiresEnterpriseOrg: true },
+  { key: "verify_selfie_photo", label: "Verifikasi Selfie GPS Check-in", tier: "enterprise", scope: "user", window: "month", limit: 15, metered: true, functionName: "verify-selfie-photo", requiresEnterpriseOrg: true },
   { key: "nova_content", label: "NOVA - Konten Marketing", tier: "internal", scope: "platform", window: "week", limit: null, metered: false, note: "Otomatis mingguan buat marketing Nexto sendiri, bukan kuota per akun customer." },
   { key: "sasa_chat", label: "SASA - Customer Support", tier: "internal", scope: "platform", window: "none", limit: null, metered: false, note: "Chat visitor landing page, gak dibatesin by design." },
 ];

@@ -5,7 +5,7 @@
 //
 // Riwayat (detail di versi sebelumnya): v2 wajib WAJAH (bukan cuma tangan),
 // fail-open kalau layanan verifikasi sendiri gagal (diputuskan di client),
-// rate limit 60x/bulan WIB per user (atomic via reserve_edge_function_call),
+// rate limit 15x/bulan WIB per user (atomic via reserve_edge_function_call),
 // photo_url wajib dari storage project ini (anti SSRF), plan gate Enterprise
 // di server, model Sonnet 5.5.
 //
@@ -186,10 +186,10 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       return new Response(JSON.stringify({ error: "Verifikasi foto check-in tersedia khusus paket Enterprise." }), { status: 403, headers: cors });
     }
 
-    // RATE LIMIT - 60x/bulan kalender WIB per user.
-    reservationId = await reserveMonthly(admin, userId, "verify-selfie-photo", 60);
+    // RATE LIMIT - 15x/bulan kalender WIB per user.
+    reservationId = await reserveMonthly(admin, userId, "verify-selfie-photo", 15);
     if (!reservationId) {
-      return new Response(JSON.stringify({ error: `Kuota verifikasi foto (60x per bulan) sudah terpakai. ${await quotaRefillText(admin, userId, "verify-selfie-photo")}` }), { status: 429, headers: cors });
+      return new Response(JSON.stringify({ error: `Kuota verifikasi foto (15x per bulan) sudah terpakai. ${await quotaRefillText(admin, userId, "verify-selfie-photo")}` }), { status: 429, headers: cors });
     }
 
     const imgResp = await fetch(photo_url);

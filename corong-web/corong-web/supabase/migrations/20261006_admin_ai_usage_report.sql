@@ -52,7 +52,7 @@ begin
     ('transcribe-meeting', 'Rekam Meeting', null, 8, 8, 4100, 'quota', 4),
     ('draft-followup', 'Draft Follow-up', null, 90, 90, 180, 'daily', 5),
     ('lead-from-url', 'Lead dari Link', 10, 10, 10, 1270, 'quota', 6),
-    ('verify-selfie-photo', 'Verifikasi Selfie', null, null, 60, 75, 'quota', 7),
+    ('verify-selfie-photo', 'Verifikasi Selfie', null, null, 15, 75, 'quota', 7),
     ('summarize-lead-needs', 'Ringkasan Kebutuhan', null, null, 15, 230, 'quota', 8),
     ('suggest-categories', 'Rapihin Data', 4, 4, 4, 370, 'quota', 9),
     ('suggest-visit-points', 'Poin Diskusi', 10, 10, 10, 110, 'quota', 10),
