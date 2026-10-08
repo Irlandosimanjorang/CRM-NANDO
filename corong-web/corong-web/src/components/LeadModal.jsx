@@ -16,7 +16,8 @@ function Field({ label, children }) { return <label className="block"><span clas
 // yang udah ada di Telepon/WA - jadi gak butuh migrasi tabel. Tombol "+"
 // nambahin input baru, "x" buang satu (18 Sep 2026, permintaan Nando: mau
 // bisa nambahin lebih dari 1 email/key person per lead, berlaku semua plan).
-function MultiField({ label, value, onChange, placeholder }) {
+// max (opsional): batas jumlah nilai - tombol Tambah hilang saat penuh (Key person maks 5, 8 Okt 2026).
+function MultiField({ label, value, onChange, placeholder, max }) {
   const parts = (value || "").split(",").map((s) => s.trim());
   const items = parts.some((s) => s !== "") ? parts : [""];
   const setAt = (idx, v) => {
@@ -25,7 +26,8 @@ function MultiField({ label, value, onChange, placeholder }) {
     onChange(next.join(", "));
   };
   const removeAt = (idx) => onChange(items.filter((_, i) => i !== idx).join(", "));
-  const add = () => onChange([...items, ""].join(", "));
+  const full = !!max && items.length >= max;
+  const add = () => { if (!full) onChange([...items, ""].join(", ")); };
   return (
     <Field label={label}>
       <div className="mt-1 flex flex-col gap-1.5">
@@ -39,9 +41,13 @@ function MultiField({ label, value, onChange, placeholder }) {
             )}
           </div>
         ))}
-        <button type="button" onClick={add} className="self-start flex items-center gap-1 text-[11px] font-medium text-orange-600 hover:text-orange-700">
-          <Plus size={12} /> Tambah
-        </button>
+        {full ? (
+          <span className="self-start text-[11px] text-slate-400">Maksimal {max}</span>
+        ) : (
+          <button type="button" onClick={add} className="self-start flex items-center gap-1 text-[11px] font-medium text-orange-600 hover:text-orange-700">
+            <Plus size={12} /> Tambah
+          </button>
+        )}
       </div>
     </Field>
   );
@@ -588,7 +594,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           </div>
           {(!hidden("key_person") || !hidden("key_person_title")) && (
             <div className="grid grid-cols-2 gap-3">
-              {!hidden("key_person") && <MultiField label={lbl("key_person", "Key person")} value={f.key_person} onChange={(v) => set("key_person", v)} />}
+              {!hidden("key_person") && <MultiField label={lbl("key_person", "Key person")} value={f.key_person} onChange={(v) => set("key_person", v)} max={5} />}
               {!hidden("key_person_title") && <Field label={lbl("key_person_title", "Jabatan")}><input className={inp} value={f.key_person_title || ""} onChange={(e) => set("key_person_title", e.target.value)} /></Field>}
             </div>
           )}
