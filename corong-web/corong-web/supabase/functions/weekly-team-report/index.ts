@@ -86,13 +86,14 @@ Deno.serve(async (req) => {
   const range = lastWeekRange();
 
   try {
-    let q = admin.from("organizations").select("id, name").eq("plan", "enterprise");
+    let q = admin.from("organizations").select("id, name, features").eq("plan", "enterprise");
     if (onlyOrg) q = q.eq("id", onlyOrg);
     const { data: orgs, error } = await q;
     if (error) throw error;
 
     const results = [];
-    for (const org of orgs || []) {
+    // Saklar features.weekly_report_off = true: organisasi tidak menerima laporan mingguan (mis. saat masih berisi data dummy).
+    for (const org of (orgs || []).filter((o) => o.features?.weekly_report_off !== true)) {
       const { data: report, error: rErr } = await admin.rpc("team_weekly_report", { p_org: org.id, p_from: range.from.toISOString(), p_to: range.to.toISOString() });
       if (rErr) { results.push({ org: org.id, error: rErr.message }); continue; }
 
