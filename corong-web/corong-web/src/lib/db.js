@@ -1292,6 +1292,33 @@ export async function transcribeQuickVoiceNote(storagePath) {
   return invokeWithMessage("quick-progress-note", { storagePath }, "Gagal memproses catatan suara"); // { transcript, action, progress_note, lead_id, lead_name, confidence, updates, cancel_visit, result, new_lead, quota }
 }
 
+// ---- BIAYA IKLAN (tab Laporan: impor dari Meta/TikTok/Google Ads) ----
+export async function listAdSpend(fromISO, toISO) {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("ad_spend").select("platform, campaign, day, spend, impressions, clicks, results")
+    .eq("org_id", orgId).gte("day", fromISO).lte("day", toISO).order("day", { ascending: true }).limit(20000);
+  if (error) throw error;
+  return data || [];
+}
+
+// Impor ulang baris yang sama (platform + kampanye + tanggal) memperbarui angkanya, bukan menggandakan.
+export async function importAdSpend(rows) {
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const orgId = await getMyOrgId();
+  const payload = rows.map((r) => ({ org_id: orgId, created_by: uid, platform: r.platform, campaign: r.campaign || "", day: r.day, spend: r.spend, impressions: r.impressions || 0, clicks: r.clicks || 0, results: r.results || 0 }));
+  for (let i = 0; i < payload.length; i += 500) {
+    const { error } = await supabase.from("ad_spend").upsert(payload.slice(i, i + 500), { onConflict: "org_id,platform,campaign,day" });
+    if (error) throw error;
+  }
+  return payload.length;
+}
+
+export async function deleteAdSpendRange(fromISO, toISO) {
+  const orgId = await getMyOrgId();
+  const { error } = await supabase.from("ad_spend").delete().eq("org_id", orgId).gte("day", fromISO).lte("day", toISO);
+  if (error) throw error;
+}
+
 // ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----
 export async function getDealTransactions() {
   const { data, error } = await supabase.from("deal_transactions").select("*").order("deal_date", { ascending: false });

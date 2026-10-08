@@ -359,7 +359,7 @@ INDUSTRY_TEMPLATES.bsb_upvc = {
     custom_field_2: "Sumber lead",
   },
   customFieldOptions: {
-    custom_field_2: ["Meta", "Bu Tiara", "Customer datang", "Database", "Migi", "Lainnya"],
+    custom_field_2: ["Meta", "Instagram", "TikTok", "Google", "Bu Tiara", "Customer datang", "Database", "Migi", "Lainnya"],
   },
   aiContext: "Bisnis ini menjual produk uPVC, WPC, dan alumunium (jendela, pintu, panel) untuk rumah, kantor, dan proyek. Pelanggan: owner, kontraktor, purchasing, pabrik. Alur: data masuk, SPH terlayang (penawaran harga dengan nomor SPH), hot progress (menunggu gambar atau survei), proyek deal, deal kontrak, proses SO, pengiriman. Istilah relevan: SPH, SO, survei, gambar kerja, workshop, termin.",
   genLeadsExample: { productSold: "jendela dan pintu uPVC, WPC, alumunium", keyword: "kontraktor atau developer yang sedang membangun rumah atau gedung", targetRole: "Owner, Kontraktor, atau Purchasing" },

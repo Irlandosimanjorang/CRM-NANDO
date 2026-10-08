@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil, Check } from "lucide-react";
 import * as db from "../lib/db";
+import AdsAnalysis from "./AdsAnalysis";
 import { fmtRp } from "../lib/helpers";
 
 // Laporan bulanan sales (9 Okt 2026, permintaan klien BSB): meniru laporan Excel mereka.
@@ -12,7 +13,7 @@ const ymOf = (iso) => String(iso || "").slice(0, 7);
 const pct = (v, base) => (base > 0 ? `${((v / base) * 100).toFixed(2).replace(/\.00$/, "")}%` : "0%");
 const num = (v) => Number(v) || 0;
 
-export default function MonthlyReport({ leads = [], stages = [], dealTransactions = [], org, canEditTarget = false, onChanged }) {
+export default function MonthlyReport({ leads = [], stages = [], dealTransactions = [], org, canEditTarget = false, canImport = false, onChanged }) {
   const now = new Date();
   const [ym, setYm] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const [editing, setEditing] = useState(false);
@@ -78,6 +79,7 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
   const td = "px-3 py-2 text-[13px] text-slate-800";
 
   return (
+    <div className="space-y-5">
     <section className="rounded-panel border border-slate-200 bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -164,5 +166,7 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
         <p className="mt-2 text-[11px] text-slate-500">Kotak biru = ada deal pada tanggal itu. Angka +n = jumlah data masuk.</p>
       </div>
     </section>
+    <AdsAnalysis leads={leads} stages={stages} org={org} ym={ym} canImport={canImport} />
+    </div>
   );
 }

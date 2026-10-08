@@ -1087,7 +1087,7 @@ export default function App() {
                 )}
                 {visitedTabs.has("laporan") && reportOn && (
                   <div style={{ display: effectiveTab === "laporan" ? "block" : "none" }}>
-                    <MonthlyReport leads={leads} stages={stageList} dealTransactions={dealTransactions} org={org} canEditTarget={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} onChanged={reload} />
+                    <MonthlyReport leads={leads} stages={stageList} dealTransactions={dealTransactions} org={org} canEditTarget={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} canImport={canManage} onChanged={reload} />
                   </div>
                 )}
                 {visitedTabs.has("team") && isEnterprise && canManage && (
