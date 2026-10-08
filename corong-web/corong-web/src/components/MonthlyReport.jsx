@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil, Check, Printer } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Printer } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
@@ -59,6 +59,10 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const [mode, setMode] = useState("month"); // today | week | month | custom
   const [cFrom, setCFrom] = useState(`${todayIso.slice(0, 7)}-01`);
   const [cTo, setCTo] = useState(todayIso);
+  const [pickOpen, setPickOpen] = useState(false);
+  const [dFrom, setDFrom] = useState("");
+  const [dTo, setDTo] = useState("");
+  const pickRef = useRef(null);
   const [srcF, setSrcF] = useState("all");
   const [stF, setStF] = useState("all");
   const [viewRaw, setView] = useState("penjualan");
@@ -83,6 +87,14 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   }, [members, allLeads]);
   const scopeId = personal ? "all" : marketers.some((m) => m.id === memberId) ? memberId : "all";
   const scopeName = marketers.find((m) => m.id === scopeId)?.name || "";
+
+  useEffect(() => {
+    if (!pickOpen) return undefined;
+    const off = (e) => { if (pickRef.current && !pickRef.current.contains(e.target)) setPickOpen(false); };
+    const esc = (e) => { if (e.key === "Escape") setPickOpen(false); };
+    document.addEventListener("mousedown", off); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", off); document.removeEventListener("keydown", esc); };
+  }, [pickOpen]);
 
   // Rentang tanggal terpilih. Target dan forecast hanya berlaku untuk satu bulan penuh (mode "month").
   const isoOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -300,24 +312,34 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             ["week", "Minggu", mode === "week"],
             ["month", "Bulan ini", fullMonth && ymSel === todayIso.slice(0, 7)],
             ["last", "Bulan lalu", fullMonth && ymSel === prevYm],
-            ["custom", "Custom", mode === "custom"],
           ].map(([k, label, on]) => (
             <button key={k} type="button" aria-pressed={on} onClick={() => { if (k === "month") { setMode("month"); setYm(todayIso.slice(0, 7)); } else if (k === "last") { setMode("month"); setYm(prevYm); } else setMode(k); }} className={cn("rounded-full px-3 py-1", focus, on ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{label}</button>
           ))}
         </div>
-        {fullMonth ? (
-          <div className="flex h-8 items-center gap-0.5">
-            <button type="button" onClick={() => go(-1)} aria-label="Bulan sebelumnya" className={cn("rounded-full p-1 text-slate-500 hover:bg-slate-100", focus)}><ChevronLeft size={16} /></button>
-            <div className="min-w-[104px] text-center text-[13px] font-semibold text-ink">{MONTHS[month - 1]} {year}</div>
-            <button type="button" onClick={() => go(1)} aria-label="Bulan berikutnya" className={cn("rounded-full p-1 text-slate-500 hover:bg-slate-100", focus)}><ChevronRight size={16} /></button>
-          </div>
-        ) : mode === "custom" ? (
-          <div className="flex h-8 items-center gap-1.5 text-[12px] text-slate-400">
-            <input type="date" value={cFrom} max={cTo || undefined} onChange={(e) => setCFrom(e.target.value)} aria-label="Dari tanggal" className="h-8 rounded-full border border-slate-200 bg-white px-2.5 text-[12px] text-ink" />
-            <span>-</span>
-            <input type="date" value={cTo} min={cFrom || undefined} onChange={(e) => setCTo(e.target.value)} aria-label="Sampai tanggal" className="h-8 rounded-full border border-slate-200 bg-white px-2.5 text-[12px] text-ink" />
-          </div>
-        ) : <div className="flex h-8 items-center text-[13px] font-semibold text-ink" title={view === "rekap" ? "Rekap menampilkan bulan penuh dari periode ini" : undefined}>{periodLabel}</div>}
+        <div className="relative flex h-8 items-center gap-0.5" ref={pickRef}>
+          {fullMonth && <button type="button" onClick={() => go(-1)} aria-label="Bulan sebelumnya" className={cn("rounded-full p-1 text-slate-500 hover:bg-slate-100", focus)}><ChevronLeft size={16} /></button>}
+          <button type="button" aria-haspopup="dialog" aria-expanded={pickOpen} onClick={() => { setDFrom(range.from); setDTo(range.to); setPickOpen((o) => !o); }} title="Pilih rentang tanggal" className={cn("inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[13px] font-semibold text-ink hover:bg-slate-100", focus, mode === "custom" && "bg-slate-100")}>
+            {periodLabel}<ChevronDown size={14} className="text-slate-400" />
+          </button>
+          {fullMonth && <button type="button" onClick={() => go(1)} aria-label="Bulan berikutnya" className={cn("rounded-full p-1 text-slate-500 hover:bg-slate-100", focus)}><ChevronRight size={16} /></button>}
+          {pickOpen && (
+            <div role="dialog" aria-label="Pilih rentang tanggal" className="absolute left-0 top-full z-30 mt-2 w-[280px] rounded-panel border border-slate-200 bg-white p-4 shadow-float">
+              <div className="text-[12px] font-semibold text-ink">Rentang tanggal</div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="text-[11px] text-slate-500">Dari
+                  <input type="date" value={dFrom} max={dTo || undefined} onChange={(e) => setDFrom(e.target.value)} className="mt-1 h-9 w-full rounded-inner border border-slate-200 bg-white px-2 text-[12px] text-ink" />
+                </label>
+                <label className="text-[11px] text-slate-500">Sampai
+                  <input type="date" value={dTo} min={dFrom || undefined} onChange={(e) => setDTo(e.target.value)} className="mt-1 h-9 w-full rounded-inner border border-slate-200 bg-white px-2 text-[12px] text-ink" />
+                </label>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <button type="button" onClick={() => setPickOpen(false)} className={cn("h-8 rounded-full px-3 text-[12px] font-semibold text-slate-600 hover:bg-slate-100", focus)}>Batal</button>
+                <button type="button" disabled={!dFrom || !dTo || dFrom > dTo} onClick={() => { setCFrom(dFrom); setCTo(dTo); setMode("custom"); setPickOpen(false); }} className={cn("h-8 rounded-full bg-ink px-4 text-[12px] font-semibold text-white disabled:opacity-40", focus)}>Terapkan</button>
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {view !== "iklan" && (
