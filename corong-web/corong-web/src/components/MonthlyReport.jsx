@@ -188,6 +188,22 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     return a + b;
   }, [leads, stages, dealTransactions, year, month, fullMonth]);
 
+  // Aktivitas tiap marketing pada periode yang sama (RPC tab Team; hanya owner/manager Enterprise, selain itu kolom disembunyikan).
+  // Aktivitas = kunjungan + lead di-update + lead baru + pindah tahap. Deal tidak dihitung sebagai aktivitas.
+  const [act, setAct] = useState(null);
+  useEffect(() => {
+    if (personal || view !== "penjualan") return undefined;
+    let alive = true;
+    const f = new Date(`${range.from}T00:00:00+07:00`), t = new Date(`${range.to}T23:59:59.999+07:00`);
+    db.getTeamActivity(f, t).then((r) => {
+      if (!alive) return;
+      const m = {};
+      for (const x of r?.members || []) m[x.user_id] = (Number(x.visits) || 0) + (Number(x.leads_updated) || 0) + (Number(x.new_leads) || 0) + (Number(x.stage_moves) || 0);
+      setAct(m);
+    }).catch(() => { if (alive) setAct(null); });
+    return () => { alive = false; };
+  }, [personal, view, range.from, range.to]);
+
   // Perbandingan antar marketing (selalu dari seluruh data, tidak ikut pilihan marketing di atas).
   const team = useMemo(() => {
     const wonKeys = new Set(stages.filter((x) => x.type === "won").map((x) => x.key));
@@ -202,12 +218,13 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
       return {
         ...m,
         masuk: ls.filter((l) => inR(l.created_at)).length,
+        aktivitas: act ? (act[m.id] ?? 0) : null,
         sph: sph.length, hot: hot.length, hotValue: sumV(hot, (l) => l.deal_value),
         deals: txs.length + viaLead.length,
         omzet: sumV(txs, (t) => t.deal_value) + sumV(viaLead, (l) => l.deal_value),
       };
     }).sort((a, b) => b.omzet - a.omzet);
-  }, [marketers, fLeads, fTx, stages, ym, range]);
+  }, [marketers, fLeads, fTx, stages, ym, range, act]);
 
   // Saat pertama dibuka (atau pindah bulan) pilih hari terbaru yang punya aktivitas, bukan hari kosong.
   const [autoFor, setAutoFor] = useState("");
@@ -286,7 +303,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
 <div><span class="m">Data masuk</span><b>${r.masuk.length}</b></div><div><span class="m">SPH belum diproses</span><b>${r.sphCount}</b><span class="m">${esc(fmtRp(r.sphValue))}</span></div>
 <div><span class="m">Hot progress</span><b>${r.hotCount}</b><span class="m">${esc(fmtRp(r.hotValue))}</span></div><div><span class="m">Deal</span><b>${deals.length}</b></div></div>
 <h2>Deal ${esc(periodWord)}</h2>${deals.length ? `<table><thead><tr><th>Tanggal</th><th>Nama</th><th class="r">Nilai</th></tr></thead><tbody>${rows(deals.map((d) => [String(d.date).slice(0, 10), d.name, fmtRp(d.value)]))}</tbody></table>` : '<div class="m">Belum ada deal pada bulan ini.</div>'}
-${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><table><thead><tr><th>Marketing</th><th class="r">Lead masuk</th><th class="r">SPH</th><th class="r">Hot</th><th class="r">Deal</th><th class="r">Omzet</th><th class="r">Capaian target</th></tr></thead><tbody>${rows(team.map((m) => [m.name, m.masuk, m.sph, m.hot, m.deals, fmtRp(m.omzet), targetOf(m.id) > 0 ? pct(m.omzet, targetOf(m.id)) : "-"]))}</tbody></table>` : ""}
+${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><table><thead><tr><th>Marketing</th>${act ? '<th class="r">Aktivitas</th>' : ""}<th class="r">Lead masuk</th><th class="r">SPH</th><th class="r">Hot</th><th class="r">Deal</th><th class="r">Omzet</th><th class="r">Capaian target</th></tr></thead><tbody>${rows(team.map((m) => [m.name, ...(act ? [m.aktivitas] : []), m.masuk, m.sph, m.hot, m.deals, fmtRp(m.omzet), targetOf(m.id) > 0 ? pct(m.omzet, targetOf(m.id)) : "-"]))}</tbody></table>` : ""}
 <div class="m" style="margin-top:18px">Dicetak ${new Date().toLocaleString("id-ID")} dari Nexto.</div></body></html>`;
     const w = window.open("", "_blank");
     if (!w) { alert("Pop-up diblokir peramban. Izinkan pop-up untuk situs ini lalu coba lagi."); return; }
@@ -545,10 +562,10 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             <Panel className="overflow-hidden">
               <div className="px-5 pb-1 pt-4"><PanelHeader title="Hasil per marketing" meta={`Pipeline dan omzet ${periodLabel}. Target, forecast, dan aktivitas tiap orang ada di tab Team. Klik nama untuk membuka report-nya.`} /></div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[860px] border-collapse">
+                <table className="w-full min-w-[980px] border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
-                      <th className="px-5 py-2.5 text-left">Marketing</th><th className="px-3 py-2.5 text-right">Lead masuk</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th><th className="px-3 py-2.5 text-right">Omzet</th><th className="px-3 py-2.5 text-right">Capaian target</th><th className="px-3 py-2.5 text-left">Status</th><th className="w-[200px] px-5 py-2.5 text-left">Kontribusi omzet tim</th>
+                      <th className="px-5 py-2.5 text-left">Marketing</th>{act && <th className="px-3 py-2.5 text-right">Aktivitas</th>}<th className="px-3 py-2.5 text-right">Lead masuk</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th>{act && <th className="px-3 py-2.5 text-right" title="Rata-rata aktivitas untuk satu deal">Aktivitas per deal</th>}<th className="px-3 py-2.5 text-right">Omzet</th><th className="px-3 py-2.5 text-right">Capaian target</th><th className="px-3 py-2.5 text-left">Status</th><th className="w-[200px] px-5 py-2.5 text-left">Kontribusi omzet tim</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -557,10 +574,12 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                       return (
                         <tr key={m.id}>
                           <td className="px-5 py-2.5"><button type="button" onClick={() => setMemberId(m.id)} className={cn("text-[12.5px] font-semibold text-ink hover:text-brand-strong", focus)}>{m.name}</button></td>
+                          {act && <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.aktivitas}</td>}
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.masuk}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.sph}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.hot}{m.hot > 0 && <span className="ml-1 text-slate-400">({short(m.hotValue)})</span>}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.deals}</td>
+                          {act && <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums text-slate-600">{m.deals > 0 ? Math.round(m.aktivitas / m.deals) : "-"}</td>}
                           <td className="px-3 py-2.5 text-right text-[12.5px] font-semibold tabular-nums text-emerald-700">{fmtRp(m.omzet)}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{fullMonth && targetOf(m.id) > 0 ? <span className={m.omzet >= targetOf(m.id) ? "font-semibold text-emerald-700" : "text-slate-700"}>{pct(m.omzet, targetOf(m.id))}</span> : <span className="text-slate-400">-</span>}</td>
                           <td className="px-3 py-2.5">{!fullMonth ? <span className="text-slate-400">-</span> : (() => { const st = targetStatus({ actual: m.omzet, target: targetOf(m.id), isNow: ym === todayIso.slice(0, 7), isPast: ym < todayIso.slice(0, 7), elapsed: now.getDate(), daysInMonth }); return <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1", TONES[st.tone])}>{st.label === "Berpotensi tidak mencapai target" ? "Berisiko" : st.label}</span>; })()}</td>
