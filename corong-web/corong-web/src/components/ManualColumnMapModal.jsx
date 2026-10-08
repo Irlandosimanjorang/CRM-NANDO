@@ -47,6 +47,7 @@ const BASE_FIELD_OPTIONS = [
   { value: "product", label: "Produk" },
   { value: "city", label: "Kota" },
   { value: "province", label: "Provinsi" },
+  { value: "entity_level", label: "Peran baris (Holding / Perusahaan / Anak)" },
   { value: "group_holding", label: "Holding / Group" },
   { value: "parent_company", label: "Perusahaan Induk" },
   { value: "website", label: "Website" },

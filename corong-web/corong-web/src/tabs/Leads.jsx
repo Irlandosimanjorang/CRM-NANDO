@@ -128,6 +128,7 @@ const NAME_QUALIFIER_BLACKLIST = [
   "supplier", "usage", "line", "position", "jabatan",
   // Kolom orang yang dihubungi (8 Okt 2026): "Nama PIC" sebelumnya terbaca sebagai nama lead.
   "pic", "contact", "kontak", "person", "penanggung", "narahubung", "cp",
+  "level", "peran", "tingkat",
 ];
 
 // BUG DITEMUKAN (8 Sep 2026): matching pake .includes() polos bikin "product"
@@ -158,7 +159,9 @@ function findColIndex(headers, keys, used) {
 // Header kolom induk/grup ("Induk Perusahaan", "Parent Company") memuat kata
 // "perusahaan"/"company" - harus dikecualikan dari tebakan kolom NAMA, kalau
 // tidak kolom ini bisa terpilih sebagai nama lead.
-const HOLDING_HEADER_KEYS = ["holding company", "holding", "business group", "grup usaha", "group usaha", "induk usaha", "holding group", "group"];
+const HOLDING_HEADER_KEYS = ["holding company", "holding", "business group", "grup usaha", "group usaha", "induk usaha", "holding group"];
+// Kolom peran baris (Holding / Perusahaan / Anak) - hirarki disusun dari urutan baris.
+const LEVEL_HEADER_KEYS = ["level", "peran", "tingkat", "hirarki", "hierarki", "entity type", "tipe entitas", "jenis entitas"];
 const PARENT_HEADER_KEYS = ["induk perusahaan", "perusahaan induk", "grup perusahaan", "group company", "parent company", "parent", "induk", "head office", "kantor pusat"];
 
 function guessNameColIndex(rawHeaders) {
@@ -185,6 +188,7 @@ const FIELD_KEY_MAP = {
   product: ["产品", "product", "produk"],
   city: ["城市", "city", "kota"],
   province: ["省", "province", "provinsi"],
+  entity_level: LEVEL_HEADER_KEYS,
   group_holding: HOLDING_HEADER_KEYS,
   parent_company: PARENT_HEADER_KEYS,
   website: ["网站", "website", "web"],
@@ -238,7 +242,35 @@ function suggestParentGroups(rows) {
   return [...groups.values()].filter((g) => g.rows.length >= 2);
 }
 
-function extractRowsFromMapping(dataRows, mapping, firstStage) {
+// Kolom peran baris (8 Okt 2026): tiap baris daftar adalah satu perusahaan; kolom ini menandai
+// apakah ia Holding, Perusahaan, atau Anak. Hirarki disusun dari URUTAN baris: baris Holding
+// membuka holding baru, baris Perusahaan membuka perusahaan baru di bawah holding itu, baris
+// Anak menjadi anak perusahaan terakhir. Kolom holding/induk yang diisi eksplisit tidak ditimpa.
+export function normalizeLevel(text) {
+  const t = String(text || "").toLowerCase();
+  if (!t.trim()) return "";
+  if (/holding|group|grup/.test(t) && !/anak|cabang/.test(t)) return "holding";
+  if (/anak|cabang|subsid|branch|outlet/.test(t)) return "anak";
+  if (/perusahaan|company|induk|parent|\bpt\b/.test(t)) return "perusahaan";
+  return "";
+}
+function deriveHierarchy(rows) {
+  let holding = "";
+  let company = "";
+  for (const r of rows) {
+    const lv = normalizeLevel(r.entity_level);
+    delete r.entity_level;
+    if (lv === "holding") { holding = r.name; company = ""; r._groupRow = true; continue; }
+    if (lv === "perusahaan") { company = r.name; r._groupRow = true; if (holding && !r.group_holding) r.group_holding = holding; continue; }
+    if (lv === "anak") {
+      if (holding && !r.group_holding) r.group_holding = holding;
+      if (company && !r.parent_company) r.parent_company = company;
+    }
+  }
+  return rows;
+}
+
+export function extractRowsFromMapping(dataRows, mapping, firstStage) {
   const get = (row, idx) => (idx === null || idx === undefined || idx === "") ? "" : String(row[idx] ?? "").trim();
   const out = [];
   for (const row of dataRows) {
@@ -251,7 +283,7 @@ function extractRowsFromMapping(dataRows, mapping, firstStage) {
     }
     out.push(obj);
   }
-  return out;
+  return deriveHierarchy(out);
 }
 
 
@@ -969,29 +1001,36 @@ export default function Leads({
     if (!groupView) return filtered.map((c) => ({ type: "lead", lead: c }));
     // Satu tingkat: lead dikelompokkan menurut perusahaan induk (>= 2 lead jadi grup).
     const groupByParent = (list, scope) => {
+      // Lead yang namanya sama dengan nama sebuah perusahaan induk ikut jadi anggota grup itu.
+      const parentKeys = new Set(list.filter((c) => c.parent_company).map((c) => groupKey(c.parent_company)));
+      const parentOf = (c) => (c.parent_company ? groupKey(c.parent_company) : (parentKeys.has(groupKey(c.name)) ? groupKey(c.name) : ""));
       const byKey = new Map();
       for (const c of list) {
-        if (!c.parent_company) continue;
-        const k = groupKey(c.parent_company);
+        const k = parentOf(c);
+        if (!k) continue;
         if (!byKey.has(k)) byKey.set(k, []);
         byKey.get(k).push(c);
       }
       const out = [];
       const emitted = new Set();
       for (const c of list) {
-        const k = c.parent_company ? groupKey(c.parent_company) : "";
+        const k = parentOf(c);
         const members = k ? byKey.get(k) : null;
         if (!members || members.length < 2) { out.push({ type: "lead", lead: c }); continue; }
         if (emitted.has(k)) continue;
         emitted.add(k);
-        out.push({ type: "group", key: scope + "p:" + k, label: members[0].parent_company, members });
+        out.push({ type: "group", key: scope + "p:" + k, label: members.find((m) => m.parent_company)?.parent_company || members[0].name, members });
       }
       return out;
     };
+    // Lead yang NAMANYA sama dengan nama sebuah holding ikut menjadi anggota holding itu
+    // (baris holding dari Excel adalah lead juga).
+    const holdingKeys = new Set(filtered.filter((c) => c.group_holding).map((c) => groupKey(c.group_holding)));
+    const holdingOf = (c) => (c.group_holding ? groupKey(c.group_holding) : (holdingKeys.has(groupKey(c.name)) ? groupKey(c.name) : ""));
     const byHolding = new Map();
     for (const c of filtered) {
-      if (!c.group_holding) continue;
-      const k = groupKey(c.group_holding);
+      const k = holdingOf(c);
+      if (!k) continue;
       if (!byHolding.has(k)) byHolding.set(k, []);
       byHolding.get(k).push(c);
     }
@@ -1000,7 +1039,7 @@ export default function Leads({
     const noHolding = [];
     const order = []; // urutan kemunculan: "H:<kunci>" atau indeks lead tanpa holding
     for (const c of filtered) {
-      const hk = c.group_holding ? groupKey(c.group_holding) : "";
+      const hk = holdingOf(c);
       const hm = hk ? byHolding.get(hk) : null;
       if (hm && hm.length >= 2) {
         if (!emittedH.has(hk)) { emittedH.add(hk); order.push({ h: hk }); }
@@ -1017,7 +1056,7 @@ export default function Leads({
       if (o.h) {
         const members = byHolding.get(o.h);
         const children = groupByParent(members, "h:" + o.h + "/");
-        out.push({ type: "holding", key: "h:" + o.h, label: members[0].group_holding, members, children });
+        out.push({ type: "holding", key: "h:" + o.h, label: members.find((m) => m.group_holding)?.group_holding || members[0].name, members, children });
       } else {
         const u = looseByFirstLead.get(o.lead.id);
         if (u && !emittedLoose.has(u)) { emittedLoose.add(u); out.push(u); }
@@ -1159,7 +1198,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         }
       }
     }
-    const keysOfRow = (r) => [r.parent_company, r.group_holding].filter(Boolean).map(groupKey);
+    const keysOfRow = (r) => [r.parent_company, r.group_holding, r._groupRow ? r.name : ""].filter(Boolean).map(groupKey);
     const parentOf = new Map(leads.map((l) => [l.name, keysOfRow(l)]));
 
     const toInsert = []; // { lead, notes }
@@ -1186,7 +1225,10 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       seenThisImport.add(key);
       knownNames.push(name);
       parentOf.set(name, myKeys);
-      const { notes, ...leadPayload } = m;
+      const notes = m.notes;
+      const leadPayload = { ...m };
+      delete leadPayload.notes;
+      delete leadPayload._groupRow; // penanda internal, bukan kolom database
       toInsert.push({ lead: { ...leadPayload, name }, notes });
     }
 
