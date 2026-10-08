@@ -205,7 +205,7 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
             <Panel className="overflow-hidden">
               <div className="grid grid-cols-7 border-b border-slate-200/80">
                 {WEEKDAYS.map((w, i) => (
-                  <div key={w} className={cn("px-2 py-2 text-center text-[11px] font-semibold", i >= 5 ? "text-slate-400" : "text-slate-500")}>{w}</div>
+                  <div key={w} className={cn("px-2 py-1.5 text-center text-[11px] font-semibold", i >= 5 ? "text-slate-400" : "text-slate-500")}>{w}</div>
                 ))}
               </div>
               <div className="grid grid-cols-7 [&>*]:border-b [&>*]:border-r [&>*]:border-slate-100 [&>*:nth-child(7n)]:border-r-0">
@@ -214,10 +214,10 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
                   const masuk = r.masukByDay[c.iso] || [];
                   const isToday = c.iso === todayIso, isSel = c.iso === selected;
                   const chips = [
-                    ...deals.slice(0, 2).map((d, i) => ({ k: `d${i}`, tone: "deal", text: `${truncate(d.name, 14)} · ${short(d.value)}` })),
+                    ...deals.slice(0, 1).map((d, i) => ({ k: `d${i}`, tone: "deal", text: `${truncate(d.name, 14)} · ${short(d.value)}` })),
                     ...(masuk.length ? [{ k: "m", tone: "masuk", text: `${masuk.length} data masuk` }] : []),
                   ];
-                  const hidden = deals.length - Math.min(2, deals.length);
+                  const hidden = deals.length - Math.min(1, deals.length);
                   return (
                     <div
                       key={c.iso}
@@ -227,18 +227,18 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
                       aria-pressed={isSel}
                       onClick={() => pick(c)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(c); } }}
-                      className={cn("min-h-[64px] cursor-pointer p-1 text-left outline-none transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand sm:min-h-[104px] sm:p-1.5", c.weekend && "bg-slate-50/60", isSel ? "bg-brand-soft/60" : "hover:bg-slate-50")}
+                      className={cn("min-h-[48px] cursor-pointer p-1 text-left outline-none transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand sm:min-h-[72px]", c.weekend && "bg-slate-50/60", isSel ? "bg-brand-soft/60" : "hover:bg-slate-50")}
                     >
                       <div className="flex justify-center sm:justify-start">
-                        <span className={cn("inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] font-semibold tabular-nums", isToday ? "bg-brand-strong text-white" : c.inMonth ? "text-ink" : "text-slate-300")}>{c.day}</span>
+                        <span className={cn("inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums", isToday ? "bg-brand-strong text-white" : c.inMonth ? "text-ink" : "text-slate-300")}>{c.day}</span>
                       </div>
                       {c.inMonth && (
                         <>
-                          <div className="mt-1 hidden space-y-0.5 sm:block">
+                          <div className="mt-0.5 hidden space-y-px sm:block">
                             {chips.map((ch) => (
-                              <div key={ch.k} className={cn("truncate rounded-[5px] px-1.5 py-0.5 text-[10.5px] font-semibold leading-4", ch.tone === "deal" ? "bg-emerald-600 text-white" : "bg-brand-soft text-brand-strong")}>{ch.text}</div>
+                              <div key={ch.k} className={cn("truncate rounded-[4px] px-1.5 text-[10px] font-semibold leading-[15px]", ch.tone === "deal" ? "bg-emerald-600 text-white" : "bg-brand-soft text-brand-strong")}>{ch.text}</div>
                             ))}
-                            {hidden > 0 && <div className="px-1.5 text-[10.5px] font-medium text-slate-500">+{hidden} deal lagi</div>}
+                            {hidden > 0 && <div className="px-1.5 text-[10px] font-medium leading-3 text-slate-500">+{hidden} deal lagi</div>}
                           </div>
                           <div className="mt-1 flex justify-center gap-0.5 sm:hidden">
                             {deals.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />}
