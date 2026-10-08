@@ -21,7 +21,7 @@ const rpOrDash = (v) => (v === null ? "-" : fmtRp(Math.round(v)));
 // Meta dan Instagram satu akun iklan (Meta Ads), jadi dibandingkan sebagai satu kelompok.
 const groupOf = (p) => (p === "Instagram" ? "Meta" : p);
 
-export default function AdsAnalysis({ leads = [], stages = [], dealTransactions = [], org, ym, from: fromProp, to: toProp, periodLabel = "", canImport, onChanged }) {
+export default function AdsAnalysis({ leads = [], stages = [], dealTransactions = [], org, ym, from: fromProp, to: toProp, canImport, onChanged }) {
   // "cohort": lead yang masuk periode ini beserta deal-nya kapan pun. "deal": deal yang tutup periode ini dari lead kapan pun masuknya.
   const [basis, setBasis] = useState("cohort");
   const [year, month] = ym.split("-").map(Number);
@@ -168,15 +168,11 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="max-w-xl space-y-2">
-          <p className="text-[12px] text-slate-500">Biaya iklan dari file Meta (termasuk Instagram), TikTok, atau Google dibandingkan dengan lead dan deal di Nexto per sumber. Omzet dihitung dari nilai transaksi deal.{periodLabel ? <> Periode: <b className="text-slate-700">{periodLabel}</b>.</> : null}</p>
-          <div role="group" aria-label="Cara menghitung deal" className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 text-[12px] font-semibold">
-            {[["cohort", "Lead masuk periode ini"], ["deal", "Deal tutup periode ini"]].map(([k, label]) => (
-              <button key={k} type="button" onClick={() => setBasis(k)} aria-pressed={basis === k} className={`rounded-full px-3 py-1.5 ${basis === k ? "bg-ink text-white" : "text-slate-600 hover:text-ink"} ${focus}`}>{label}</button>
-            ))}
-          </div>
-          <p className="text-[11px] text-slate-400">{basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk periode ini. Deal yang belum tertutup belum terhitung." : "Lead tetap yang masuk periode ini. Deal dan omzet dari semua lead yang deal-nya tutup periode ini, kapan pun lead itu masuk. Cocok untuk melihat uang yang benar-benar masuk periode ini terhadap biaya iklan periode ini."}</p>
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-panel border border-slate-200/80 bg-white px-3.5 py-2">
+        <div role="group" aria-label="Cara menghitung deal" className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold">
+          {[["cohort", "Lead masuk periode ini"], ["deal", "Deal tutup periode ini"]].map(([k, label]) => (
+            <button key={k} type="button" onClick={() => setBasis(k)} aria-pressed={basis === k} className={`rounded-full px-3.5 py-1.5 ${basis === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink"} ${focus}`}>{label}</button>
+          ))}
         </div>
         {canImport && (
           <div className="flex items-center gap-2">
@@ -185,6 +181,7 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
           </div>
         )}
       </div>
+      <p className="-mt-2 px-1 text-[11.5px] leading-relaxed text-slate-500">{basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk pada periode ini. Deal yang belum tertutup belum terhitung." : "Lead tetap yang masuk pada periode ini. Deal dan omzet dari semua lead yang deal-nya tutup pada periode ini, kapan pun lead itu masuk."} Biaya dari file Meta (termasuk Instagram), TikTok, atau Google; omzet dari nilai transaksi deal.</p>
 
       {notice && <p className="rounded-inner bg-emerald-50 px-4 py-2.5 text-[12px] text-emerald-800">{notice}</p>}
       {loadErr && <p className="rounded-inner bg-rose-50 px-4 py-2.5 text-[12px] text-rose-700">Data iklan tidak dapat dimuat: {loadErr}</p>}

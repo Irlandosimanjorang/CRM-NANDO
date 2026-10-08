@@ -295,9 +295,12 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {view === "penjualan" && <button type="button" onClick={printReport} className={cn("inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}><Printer size={13} /> Cetak / PDF</button>}
-            <div className="flex rounded-full border border-slate-200 bg-white p-0.5 text-[12px] font-semibold" role="group" aria-label="Periode">
+        </div>
+      </div>
+
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-panel border border-slate-200/80 bg-white px-3.5 py-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold" role="group" aria-label="Periode">
               {[
                 ["today", "Hari ini", mode === "today"],
                 ["week", "Minggu ini", mode === "week"],
@@ -305,41 +308,41 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                 ["last", "Bulan lalu", fullMonth && ymSel === prevYm],
                 ["custom", "Custom", mode === "custom"],
               ].map(([k, label, on]) => (
-                <button key={k} type="button" aria-pressed={on} onClick={() => { if (k === "month") { setMode("month"); setYm(todayIso.slice(0, 7)); } else if (k === "last") { setMode("month"); setYm(prevYm); } else setMode(k); }} className={cn("rounded-full px-3 py-1", focus, on ? "bg-ink text-white" : "text-slate-600 hover:text-ink")}>{label}</button>
+                <button key={k} type="button" aria-pressed={on} onClick={() => { if (k === "month") { setMode("month"); setYm(todayIso.slice(0, 7)); } else if (k === "last") { setMode("month"); setYm(prevYm); } else setMode(k); }} className={cn("rounded-full px-3 py-1", focus, on ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{label}</button>
               ))}
             </div>
             {fullMonth ? (
-              <div className="flex items-center gap-0.5">
+              <div className="flex h-8 min-w-[232px] items-center gap-0.5">
                 <button type="button" onClick={() => go(-1)} aria-label="Bulan sebelumnya" className={cn("rounded-full p-1.5 text-slate-600 hover:bg-slate-100", focus)}><ChevronLeft size={18} /></button>
                 <button type="button" onClick={() => go(1)} aria-label="Bulan berikutnya" className={cn("rounded-full p-1.5 text-slate-600 hover:bg-slate-100", focus)}><ChevronRight size={18} /></button>
                 <div className="min-w-[116px] font-display text-[15px] font-bold tracking-[-0.02em] text-ink">{MONTHS[month - 1]} {year}</div>
               </div>
             ) : mode === "custom" ? (
-              <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
+              <div className="flex h-8 min-w-[232px] items-center gap-1.5 text-[12px] text-slate-500">
                 <input type="date" value={cFrom} max={cTo || undefined} onChange={(e) => setCFrom(e.target.value)} aria-label="Dari tanggal" className="rounded-inner border border-slate-200 bg-white px-2 py-1 text-[12px] text-ink" />
                 <span>sampai</span>
                 <input type="date" value={cTo} min={cFrom || undefined} onChange={(e) => setCTo(e.target.value)} aria-label="Sampai tanggal" className="rounded-inner border border-slate-200 bg-white px-2 py-1 text-[12px] text-ink" />
               </div>
-            ) : <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">{periodLabel}</div>}
+            ) : <div className="flex h-8 min-w-[232px] items-center font-display text-[14px] font-bold tracking-[-0.02em] text-ink">{periodLabel}</div>}
           </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {view !== "iklan" && (
+            <>
+              <select value={srcF} onChange={(e) => setSrcF(e.target.value)} aria-label="Filter sumber lead" className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                <option value="all">Semua sumber</option>
+                {sourceOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <select value={stF} onChange={(e) => setStF(e.target.value)} aria-label="Filter tahap" className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                <option value="all">Semua tahap</option>
+                {stages.map((st) => <option key={st.key} value={st.key}>{st.label}</option>)}
+              </select>
+              <button type="button" tabIndex={filtered ? 0 : -1} aria-hidden={!filtered} onClick={() => { setSrcF("all"); setStF("all"); }} className={cn("rounded-full px-2 py-1 text-[12px] font-semibold text-brand-strong hover:underline", focus, !filtered && "invisible")}>Hapus filter</button>
+            </>
+          )}
+            {view === "penjualan" && <button type="button" onClick={printReport} className={cn("inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}><Printer size={13} /> Cetak / PDF</button>}
         </div>
       </div>
-
-      {view !== "iklan" && (
-        <div className="flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
-          <span className="font-semibold">Filter</span>
-          <select value={srcF} onChange={(e) => setSrcF(e.target.value)} aria-label="Filter sumber lead" className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-            <option value="all">Semua sumber</option>
-            {sourceOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
-          <select value={stF} onChange={(e) => setStF(e.target.value)} aria-label="Filter tahap" className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700">
-            <option value="all">Semua tahap</option>
-            {stages.map((st) => <option key={st.key} value={st.key}>{st.label}</option>)}
-          </select>
-          {filtered && <button type="button" onClick={() => { setSrcF("all"); setStF("all"); }} className={cn("rounded-full px-2.5 py-1 font-semibold text-brand-strong hover:underline", focus)}>Hapus filter</button>}
-          {view === "rekap" && !fullMonth && <span className="text-[11px] text-slate-400">Rekap menampilkan bulan penuh dari periode ini.</span>}
-        </div>
-      )}
+      {view === "rekap" && !fullMonth && <p className="-mt-2 px-1 text-[11px] text-slate-400">Rekap menampilkan bulan penuh dari periode ini.</p>}
 
       {!personal && view !== "iklan" && marketers.length > 0 && (
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Pilih marketing">
@@ -349,6 +352,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
         </div>
       )}
 
+      <div className="min-h-[60vh]">
       {view === "rekap" ? (
         <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={scopeId === "all" ? (org?.name || "") : scopeName} target={target} personal={personal} members={members} />
       ) : view === "iklan" ? (
@@ -565,6 +569,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
