@@ -145,17 +145,26 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ym, autoFor]);
 
-  // Target: bawaan per orang (monthly_target), bisa ditimpa per marketing (member_targets). Target tim = jumlah target para marketing.
-  const defaultTarget = num(org?.monthly_target);
-  const memberTargets = org?.member_targets || {};
-  const targetOf = (uid) => (memberTargets[uid] !== undefined ? num(memberTargets[uid]) : defaultTarget);
-  const target = personal ? 0 : scopeId === "all" ? (marketers.length ? marketers.reduce((s, m) => s + targetOf(m.id), 0) : defaultTarget) : targetOf(scopeId);
+  // Target dibaca dari sistem target tab Team (sales_targets per marketing per bulan) supaya satu sumber.
+  // Target tim = jumlah target para marketing. Diubah per marketing (di sini saat satu marketing dipilih, atau di tab Team).
+  const [targets, setTargets] = useState({});
+  const [tTick, setTTick] = useState(0);
+  useEffect(() => {
+    if (personal) { setTargets({}); return undefined; }
+    let alive = true;
+    db.getTeamTargets(`${ym}-01`).then((rows) => { if (alive) setTargets(Object.fromEntries((rows || []).map((x) => [x.user_id, num(x.target)]))); }).catch(() => { if (alive) setTargets({}); });
+    return () => { alive = false; };
+  }, [ym, personal, tTick]);
+  const targetOf = (uid) => num(targets[uid]);
+  const target = personal ? 0 : scopeId === "all" ? marketers.reduce((s, m) => s + targetOf(m.id), 0) : targetOf(scopeId);
   const reached = target > 0 ? Math.min(100, (r.dealValue / target) * 100) : 0;
   const saveTarget = async () => {
     setSaving(true); setErr("");
     try {
       const amount = Number(String(targetInput).replace(/\D/g, "")) || 0;
-      if (scopeId === "all") await db.setMonthlyTarget(amount); else await db.setMemberTarget(scopeId, amount);
+      if (scopeId === "all") throw new Error("Pilih satu marketing untuk mengubah targetnya.");
+      await db.setSalesTarget(scopeId, `${ym}-01`, amount);
+      setTTick((x) => x + 1);
       setEditing(false);
       onChanged?.();
     } catch (e) { setErr(String(e?.message || e)); }
@@ -184,7 +193,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">{personal ? "Laporan saya" : "Laporan"}</h1>
+          <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">{personal ? "Report saya" : "Report"}</h1>
           <p className="mt-0.5 text-[12px] text-slate-500">{view === "penjualan" ? (personal ? "Penjualan dari lead milik Anda dan kalender deal." : "Penjualan tim, target omzet, dan kalender deal.") : view === "rekap" ? "Daftar lead per tahap seperti laporan Excel." : "Biaya iklan dan lead per platform."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -232,9 +241,9 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
                 ) : (
                   <>
                     <div className="text-[12px] text-slate-500">{scopeId === "all" ? "Target tim" : `Target ${scopeName}`} {target ? fmtRp(target) : "belum diisi"}{target > 0 && <span className="ml-1.5 font-semibold text-ink">{pct(r.dealValue, target)}</span>}</div>
-                    {scopeId === "all" && marketers.length > 0 && <div className="text-[11px] text-slate-400">{marketers.length} marketing, bawaan {fmtRp(defaultTarget)} per orang</div>}
-                    {canEditTarget && (
-                      <button type="button" onClick={() => { setTargetInput(String((scopeId === "all" ? defaultTarget : target) || "")); setEditing(true); }} className={cn("mt-1 inline-flex items-center gap-1 rounded-full text-[12px] font-semibold text-brand-strong hover:text-orange-800", focus)}><Pencil size={12} /> {scopeId === "all" ? "Ubah target per marketing" : target ? "Ubah target" : "Isi target"}</button>
+                    {scopeId === "all" && marketers.length > 0 && <div className="text-[11px] text-slate-400">Jumlah target {marketers.length} marketing, diatur per orang di tab Team</div>}
+                    {canEditTarget && scopeId !== "all" && (
+                      <button type="button" onClick={() => { setTargetInput(String(target || "")); setEditing(true); }} className={cn("mt-1 inline-flex items-center gap-1 rounded-full text-[12px] font-semibold text-brand-strong hover:text-orange-800", focus)}><Pencil size={12} /> {target ? "Ubah target" : "Isi target"}</button>
                     )}
                   </>
                 )}
@@ -345,32 +354,31 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
 
           {!personal && scopeId === "all" && team.length > 0 && (
             <Panel className="overflow-hidden">
-              <div className="px-5 pb-1 pt-4"><PanelHeader title="Perbandingan marketing" meta={`Pencapaian tiap orang pada ${MONTHS[month - 1]}. Klik nama untuk membuka laporannya.`} /></div>
+              <div className="px-5 pb-1 pt-4"><PanelHeader title="Hasil per marketing" meta={`Pipeline dan omzet ${MONTHS[month - 1]}. Target, forecast, dan aktivitas tiap orang ada di tab Team. Klik nama untuk membuka report-nya.`} /></div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] border-collapse">
+                <table className="w-full min-w-[640px] border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
-                      <th className="px-5 py-2.5 text-left">Marketing</th><th className="px-3 py-2.5 text-right">Data masuk</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th><th className="px-3 py-2.5 text-right">Omzet</th><th className="w-[200px] px-5 py-2.5 text-left">Pencapaian target</th>
+                      <th className="px-5 py-2.5 text-left">Marketing</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th><th className="px-3 py-2.5 text-right">Omzet</th><th className="w-[200px] px-5 py-2.5 text-left">Kontribusi omzet tim</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {team.map((m) => {
-                      const t = targetOf(m.id);
+                      const totalOmzet = team.reduce((t, x) => t + x.omzet, 0);
                       return (
                         <tr key={m.id}>
                           <td className="px-5 py-2.5"><button type="button" onClick={() => setMemberId(m.id)} className={cn("text-[12.5px] font-semibold text-ink hover:text-brand-strong", focus)}>{m.name}</button></td>
-                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.masuk}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.sph}</td>
-                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.hot}</td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.hot}{m.hot > 0 && <span className="ml-1 text-slate-400">({short(m.hotValue)})</span>}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.deals}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] font-semibold tabular-nums text-emerald-700">{fmtRp(m.omzet)}</td>
                           <td className="px-5 py-2.5">
-                            {t > 0 ? (
+                            {totalOmzet > 0 ? (
                               <div className="flex items-center gap-2">
-                                <Meter value={Math.min(100, (m.omzet / t) * 100)} max={100} tone="good" className="h-1.5 flex-1" />
-                                <span className="w-12 text-right text-[12px] tabular-nums text-slate-600">{pct(m.omzet, t)}</span>
+                                <Meter value={(m.omzet / totalOmzet) * 100} max={100} tone="good" className="h-1.5 flex-1" />
+                                <span className="w-12 text-right text-[12px] tabular-nums text-slate-600">{pct(m.omzet, totalOmzet)}</span>
                               </div>
-                            ) : <span className="text-[12px] text-slate-400">Target belum diisi</span>}
+                            ) : <span className="text-[12px] text-slate-400">-</span>}
                           </td>
                         </tr>
                       );

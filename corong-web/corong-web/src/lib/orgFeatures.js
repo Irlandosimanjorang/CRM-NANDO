@@ -15,7 +15,7 @@
 export const ORG_FEATURES = [
   { key: "marketing_report", label: "Laporan Marketing", hint: "Lead per platform, budget iklan, biaya per lead dan per deal", ready: false },
   { key: "lead_webhook", label: "Webhook lead", hint: "Lead masuk otomatis dari cekat.ai, Meta, atau TikTok", ready: false },
-  { key: "monthly_report", label: "Laporan bulanan sales", hint: "Tab Laporan: ringkasan SPH, hot progress, deal, target omzet, dan kalender deal per tanggal", ready: true },
+  { key: "monthly_report", label: "Report bulanan sales", hint: "Tab Report: ringkasan SPH, hot progress, deal, target omzet, dan kalender deal per tanggal", ready: true },
   { key: "owner_monitor", label: "Owner sebagai pemantau", hint: "Owner hanya melihat Dashboard, Leads, Team, dan Pengaturan; rekomendasi NEX AI dan daily digest dimatikan untuk owner. Anggota tim tidak berubah", ready: true },
 ];
 

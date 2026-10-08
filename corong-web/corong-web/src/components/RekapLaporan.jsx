@@ -134,7 +134,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
     ws["!cols"] = [{ wch: 5 }, { wch: 13 }, { wch: 30 }, { wch: 13 }, { wch: 16 }, { wch: 20 }, { wch: 28 }, { wch: 15 }, { wch: 40 }, { wch: 16 }, ...Array.from({ length: daysInMonth }, () => ({ wch: 13 }))];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `${MONTHS[month - 1]} ${year}`);
-    XLSX.writeFile(wb, `Laporan-${(orgName || "sales").replace(/[^A-Za-z0-9]+/g, "-")}-${ym}.xlsx`);
+    XLSX.writeFile(wb, `Report-${(orgName || "sales").replace(/[^A-Za-z0-9]+/g, "-")}-${ym}.xlsx`);
   };
 
   const th = "px-3 py-2.5 text-left text-[10.5px] font-semibold tracking-[0.04em] text-slate-500";

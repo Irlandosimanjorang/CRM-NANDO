@@ -84,7 +84,7 @@ const ADMIN_NAV_ITEM = { key: "adminops", label: "Command Center", short: "AI Op
 const TEAM_NAV_ITEM = { key: "team", label: "Team", short: "Team", icon: UserCheck };
 // Tab "Laporan" (9 Okt 2026): laporan bulanan sales (SPH, hot progress, deal, target omzet,
 // kalender deal). Hanya untuk organisasi dengan saklar monthly_report (mis. BSB); owner dan tim.
-const REPORT_NAV_ITEM = { key: "laporan", label: "Laporan", short: "Laporan", icon: BarChart3 };
+const REPORT_NAV_ITEM = { key: "laporan", label: "Report", short: "Report", icon: BarChart3 };
 
 // ---- COST/BUG FIX (5 Sep 2026) ----
 // SEMUA tab sekarang selalu di-mount (gak pernah di-unmount pas pindah tab),
