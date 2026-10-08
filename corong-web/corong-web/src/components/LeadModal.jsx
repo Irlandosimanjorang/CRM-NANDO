@@ -198,7 +198,7 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Tidak ada anggaran"
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [] }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], uppercaseNames = false }) {
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
   const [f, setF] = useState({ ...lead, ...(draft?.f || {}) });
@@ -544,7 +544,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               )}
             </div>
           )}
-          <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
+          <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", uppercaseNames ? e.target.value.toUpperCase() : e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={getFieldLabel(industry, "category", "Kategori")}>
               <select

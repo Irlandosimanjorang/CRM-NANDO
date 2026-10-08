@@ -286,7 +286,7 @@ function isHotLead(lead, hotKeys) {
   return p === "hot" || p === "high" || hotKeys.includes(lead.stage_key);
 }
 
-function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign }) {
+function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign, uppercaseNames }) {
   // Progress bar mulai dari 0% terus animasi jalan ke posisi asli begitu
   // kartu ini muncul di layar - kesan "hidup", bukan langsung nongol jadi.
   const [barReady, setBarReady] = useState(false);
@@ -332,7 +332,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <div className="font-display font-bold text-ink text-[15px] leading-snug tracking-[-0.02em] truncate">{c.name}</div>
+              <div className="font-display font-bold text-ink text-[15px] leading-snug tracking-[-0.02em] truncate">{uppercaseNames ? String(c.name || "").toUpperCase() : c.name}</div>
               {isHotLead(c, hotStageKeys(stages)) && <Flame size={14} className="text-orange-500 shrink-0" fill="currentColor" aria-label="Hot" />}
             </div>
             <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
@@ -496,6 +496,7 @@ export default function Leads({
   onChanged,
   canManage,
   isEnterprise,
+  uppercaseNames = false,
 }) {
 
   const [q, setQ] =
@@ -1800,6 +1801,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
           const renderCard = (c) => (
             <LeadCard
               key={c.id}
+              uppercaseNames={uppercaseNames}
               c={c}
               stages={stages}
               productLabel={productLabel}
@@ -2026,6 +2028,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       {edit && (
 
         <LeadModal
+          uppercaseNames={uppercaseNames}
           parentOptions={parentOptions}
           lead={edit}
           stages={stages}

@@ -15,6 +15,7 @@
 export const ORG_FEATURES = [
   { key: "marketing_report", label: "Laporan Marketing", hint: "Lead per platform, budget iklan, biaya per lead dan per deal", ready: false },
   { key: "lead_webhook", label: "Webhook lead", hint: "Lead masuk otomatis dari cekat.ai, Meta, atau TikTok", ready: false },
+  { key: "lead_name_uppercase", label: "Nama lead HURUF BESAR", hint: "Nama lead baru atau yang diedit disimpan huruf besar semua; daftar Leads menampilkannya huruf besar", ready: true },
 ];
 
 // Preset = kumpulan saklar yang diterapkan sekaligus ke satu organisasi (mengganti
