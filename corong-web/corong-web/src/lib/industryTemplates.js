@@ -327,6 +327,44 @@ INDUSTRY_TEMPLATES.digital_ads = {
   genLeadsExample: { productSold: "produk atau layanan yang diiklankan", keyword: "calon pembeli yang tertarik dengan iklan", targetRole: "calon pembeli" },
 };
 
+// Template khusus BSB (9 Okt 2026): penjualan produk uPVC / WPC / alumunium (jendela, pintu)
+// ke owner, kontraktor, purchasing, dan pabrik. Alur mengikuti laporan bulanan sales mereka:
+// Data Masuk -> SPH Terlayang -> Hot Progress -> Proyek Deal -> Deal Kontrak -> Proses SO -> Pengiriman,
+// atau No Deal. Tahap setelah Proyek Deal bertipe "won" supaya tetap terhitung deal.
+INDUSTRY_TEMPLATES.bsb_upvc = {
+  key: "bsb_upvc",
+  adminOnly: true,
+  label: "Proyek uPVC / WPC / Alumunium (BSB)",
+  description: "Penjualan jendela, pintu, dan WPC ke owner, kontraktor, purchasing, dan pabrik, dengan SPH per proyek",
+  catalogExample: "Misal: jendela dan pintu uPVC, panel WPC, dan alumunium untuk rumah, kantor, dan proyek kontraktor.",
+  quantityUnits: null,
+  stages: [
+    { key: "data_masuk", label: "Data Masuk", hex: "#94a3b8", type: "normal" },
+    { key: "sph_terlayang", label: "SPH Terlayang", hex: "#60a5fa", type: "normal" },
+    { key: "hot_progress", label: "Hot Progress", hex: "#f97316", type: "normal" },
+    { key: "proyek_deal", label: "Proyek Deal", hex: "#2563eb", type: "won" },
+    { key: "deal_kontrak", label: "Deal Kontrak", hex: "#10b981", type: "won" },
+    { key: "proses_so", label: "Proses SO", hex: "#a78bfa", type: "won" },
+    { key: "pengiriman", label: "Pengiriman", hex: "#0d9488", type: "won" },
+    { key: "no_deal", label: "No Deal", hex: "#f43f5e", type: "lost" },
+  ],
+  fieldLabels: { name: "Nama pelanggan", name_short: "Pelanggan", company_type: "Tipe pelanggan", product: "Produk", city: "Alamat / lokasi proyek", next_action: "Keterangan / langkah berikutnya" },
+  categories: ["Rumah pribadi", "Kantor / gedung", "Ruko / kos-kosan", "Proyek kontraktor", "Pabrik / industri", "Lainnya"],
+  companyTypeOptions: [
+    { v: "", label: "—" }, { v: "Owner", label: "Owner" }, { v: "Kontraktor", label: "Kontraktor" }, { v: "Purchasing", label: "Purchasing" }, { v: "Pabrik", label: "Pabrik" }, { v: "Lainnya", label: "Lainnya" },
+  ],
+  hiddenFields: [],
+  customFieldLabels: {
+    custom_field_1: "No. SPH / Invoice",
+    custom_field_2: "Sumber lead",
+  },
+  customFieldOptions: {
+    custom_field_2: ["Meta", "Bu Tiara", "Customer datang", "Database", "Migi", "Lainnya"],
+  },
+  aiContext: "Bisnis ini menjual produk uPVC, WPC, dan alumunium (jendela, pintu, panel) untuk rumah, kantor, dan proyek. Pelanggan: owner, kontraktor, purchasing, pabrik. Alur: data masuk, SPH terlayang (penawaran harga dengan nomor SPH), hot progress (menunggu gambar atau survei), proyek deal, deal kontrak, proses SO, pengiriman. Istilah relevan: SPH, SO, survei, gambar kerja, workshop, termin.",
+  genLeadsExample: { productSold: "jendela dan pintu uPVC, WPC, alumunium", keyword: "kontraktor atau developer yang sedang membangun rumah atau gedung", targetRole: "Owner, Kontraktor, atau Purchasing" },
+};
+
 export const DEFAULT_INDUSTRY = "pvc_chemical";
 
 export function getIndustryTemplate(industryKey) {

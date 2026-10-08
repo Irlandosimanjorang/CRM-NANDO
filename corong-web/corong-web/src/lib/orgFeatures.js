@@ -15,6 +15,7 @@
 export const ORG_FEATURES = [
   { key: "marketing_report", label: "Laporan Marketing", hint: "Lead per platform, budget iklan, biaya per lead dan per deal", ready: false },
   { key: "lead_webhook", label: "Webhook lead", hint: "Lead masuk otomatis dari cekat.ai, Meta, atau TikTok", ready: false },
+  { key: "monthly_report", label: "Laporan bulanan sales", hint: "Di Dashboard: ringkasan SPH, hot progress, deal, target omzet, dan kalender deal per tanggal", ready: true },
   { key: "owner_monitor", label: "Owner sebagai pemantau", hint: "Owner hanya melihat Dashboard, Leads, Team, dan Pengaturan; rekomendasi NEX AI dan daily digest dimatikan untuk owner. Anggota tim tidak berubah", ready: true },
 ];
 
@@ -36,6 +37,7 @@ export const ORG_PRESETS = [
 // Pipeline + industri + label field hanya diterapkan ke organisasi yang belum punya
 // lead (dijaga di server); saklar fitur selalu diterapkan.
 export const ORG_TEMPLATES = [
+  { key: "bsb_upvc", label: "Proyek uPVC / WPC / Alumunium (BSB)", industry: "bsb_upvc", features: ["monthly_report"], hint: "Pipeline Data Masuk sampai Pengiriman, tipe pelanggan, nomor SPH, sumber lead, plus laporan bulanan" },
   { key: "iklan_digital", label: "Bisnis Iklan Digital (Meta/TikTok)", industry: "digital_ads", features: ["marketing_report", "lead_webhook"], hint: "Pipeline dari lead iklan sampai deal, field platform/kampanye/channel, plus fitur marketing" },
 ];
 

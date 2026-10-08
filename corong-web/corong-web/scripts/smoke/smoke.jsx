@@ -19,6 +19,8 @@ import EnterpriseInvoicePanel from "../../src/components/EnterpriseInvoicePanel"
 import QuotationPanel from "../../src/components/QuotationPanel";
 import OrgFeaturesPanel from "../../src/components/OrgFeaturesPanel";
 import AddonTokensPanel from "../../src/components/AddonTokensPanel";
+import MonthlyReport from "../../src/components/MonthlyReport";
+import { INDUSTRY_TEMPLATES } from "../../src/lib/industryTemplates";
 import { AiCostPanel } from "../../src/tabs/AdminDashboard";
 
 const q = new URLSearchParams(location.search);
@@ -60,6 +62,7 @@ const views = {
   advisor: <Advisor leads={leads} stages={stages} onOpen={noop} dummy={!ent} demoRecs={demo.advisorRecs} />,
   industrydemo: <IndustryDemo />,
   settings: <Settings settings={{}} stages={stages} leads={leads} onChanged={noop} userEmail="uji@example.com" locked={false} />,
+  report: (() => { const st = INDUSTRY_TEMPLATES.bsb_upvc.stages; const d = (day) => `2026-10-${String(day).padStart(2, "0")}T03:00:00Z`; const L = (id, stage, v, c, dd) => ({ id, name: id, stage_key: stage, deal_value: v, created_at: d(c), updated_at: d(c), deal_date: dd ? `2026-10-${String(dd).padStart(2, "0")}` : null }); const ls = [L("Andi", "sph_terlayang", 14500000, 1), L("Charles", "sph_terlayang", 22200000, 1), L("Agus", "sph_terlayang", 7300000, 2), L("Yaya", "sph_terlayang", 4500000, 3), L("Marc", "hot_progress", 98000000, 3), L("Robby", "proyek_deal", 52000000, 1, 6), L("Saifur", "proyek_deal", 1000000, 7, 7), L("Iqbal", "no_deal", 13000000, 5)]; return <div style={{ background: "#f4f5f7", padding: 24, maxWidth: 760 }}><MonthlyReport leads={ls} stages={st} dealTransactions={[]} org={{ monthly_target: 500000000 }} canEditTarget onChanged={noop} /></div>; })(),
   addons: <div style={{ background: "#05070c", padding: 24 }}><AddonTokensPanel /></div>,
   orgfeatures: <div style={{ background: "#05070c", padding: 24 }}><OrgFeaturesPanel /></div>,
   quotation: <div id="modal-scroll" className="max-h-[85vh] overflow-y-auto overscroll-contain" style={{ background: "#05070c", padding: 24 }}><QuotationPanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }]} /></div>,

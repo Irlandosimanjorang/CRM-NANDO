@@ -24,6 +24,13 @@ export async function getMyOrgId() {
 }
 export function clearOrgCache() { cachedOrgId = null; }
 
+// Target omzet bulanan (laporan bulanan sales). Hanya owner yang lolos kebijakan update organisasi.
+export async function setMonthlyTarget(amount) {
+  const orgId = await getMyOrgId();
+  const { error } = await supabase.from("organizations").update({ monthly_target: Math.max(0, Math.floor(Number(amount) || 0)) }).eq("id", orgId);
+  if (error) throw error;
+}
+
 export async function getMyOrg() {
   const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("organizations").select("*").eq("id", orgId).single();
