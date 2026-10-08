@@ -47,6 +47,7 @@ import DuplicateModal from "../components/DuplicateModal";
 import ImportSummaryModal from "../components/ImportSummaryModal";
 import ManualColumnMapModal from "../components/ManualColumnMapModal";
 import AiDraftPopup from "../components/AiDraftPopup";
+import { useAiOff } from "../lib/aiOff";
 import ProgressPopup from "../components/ProgressPopup";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 
@@ -392,6 +393,7 @@ function OrgBranch({ node, renderLead, upper }) {
 }
 
 function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign, uppercaseNames, compact }) {
+  const aiOff = useAiOff();
   // Progress bar mulai dari 0% terus animasi jalan ke posisi asli begitu
   // kartu ini muncul di layar - kesan "hidup", bukan langsung nongol jadi.
   const [barReady, setBarReady] = useState(false);
@@ -519,9 +521,11 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
             </a>
           )}
 
+          {!aiOff && (
           <button onClick={(e) => onDraft(c, e.currentTarget.getBoundingClientRect())} className="p-2 rounded-lg text-ai hover:bg-ai-soft" title="Draft follow-up (AI)" aria-label="Draft follow-up (AI)">
             <Sparkles size={15} />
           </button>
+          )}
 
           {/* Reassign - owner ATAU manager yang liat ini, biar bisa mindahin
               lead punya sales_rep A ke sales_rep B kapan aja (misal si A
@@ -713,6 +717,7 @@ export default function Leads({
   // website/Instagram/Google Maps calon customer, AI baca isinya & extract
   // jadi draft lead. Hasil CUMA buka LeadModal ke-prefill (lewat setEdit),
   // belum nulis ke DB - user tetep review/edit dulu kayak alur "Lead" biasa.
+  const aiOff = useAiOff();
   const [showLinkGen, setShowLinkGen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkBusy, setLinkBusy] = useState(false);
@@ -1387,7 +1392,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       let guessedDataStartRow = 1;
       let usedAiGuess = false;
 
-      if (guessedMapping.name === undefined || guessedMapping.name === null) {
+      if (!aiOff && (guessedMapping.name === undefined || guessedMapping.name === null)) {
         try {
           const sample = rawRows.slice(0, 8);
           const { data_start_row, mapping } = await db.smartImportMap(sample);
@@ -1909,6 +1914,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
           </button>
 
+          {!aiOff && (
           <button
             onClick={() => {
               if (myLevel < 1) {
@@ -1923,6 +1929,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             {myLevel < 1 ? <Lock size={12} /> : <LinkIcon size={12} />}
             Generate dari link
           </button>
+          )}
 
 
           <button

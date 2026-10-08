@@ -16,6 +16,7 @@ import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // flicker Suspense tanpa beneran ngirit apa-apa (chunk-nya bakal langsung
 // diambil ulang beberapa detik kemudian).
 import { hasOrgFeature, OWNER_MONITOR_TABS } from "./lib/orgFeatures";
+import { AiOffContext } from "./lib/aiOff";
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
 import SettingsTab from "./tabs/Settings";
@@ -743,6 +744,7 @@ export default function App() {
   const navItems = settings?.is_platform_admin ? [...monitorNav, ADMIN_NAV_ITEM] : monitorNav;
 
   return (
+    <AiOffContext.Provider value={monitorOwner}>
     <div className="nexto-app min-h-screen text-slate-900 flex overflow-x-hidden">
       <style>{`
         .nexto-app {
@@ -1166,7 +1168,7 @@ export default function App() {
           Nando 22 Sep 2026) - biar gak numpuk sama konten/tombol tab lain.
           Ditaro di ATAS bottom nav mobile (yang fixed bottom-3) biar gak
           numpuk sama itu juga. */}
-      {!editLead && !tourSteps && !quickVoiceOpen && myLevel >= 1 && effectiveTab === "dashboard" && (
+      {!monitorOwner && !editLead && !tourSteps && !quickVoiceOpen && myLevel >= 1 && effectiveTab === "dashboard" && (
         <div className="fixed z-40 bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14">
           {/* Ring sonar halus - echo dari animasi idle di dalem modal
               NEX Pro sendiri, biar tombolnya kerasa "hidup" (bukan icon
@@ -1189,6 +1191,7 @@ export default function App() {
         <QuickVoiceNoteModal leads={leads} stages={stageList} settings={settings} isEnterprise={isEnterprise} canManage={canManage} onClose={() => setQuickVoiceOpen(false)} onSaved={() => { setQuickVoiceOpen(false); reload(); }} />
       )}
     </div>
+    </AiOffContext.Provider>
   );
 }
 

@@ -1,3 +1,4 @@
+import { useAiOff } from "../lib/aiOff";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
@@ -200,6 +201,7 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Tidak ada anggaran"
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
 export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true }) {
+  const aiOff = useAiOff();
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
   const [f, setF] = useState({ ...lead, ...(draft?.f || {}) });
@@ -495,7 +497,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <p className="mt-2 text-[10px] text-slate-400">Dihitung otomatis dari progress notes - update tiap lead ini kena analisis NEX AI Advisor.</p>
             </div>
           )}
-          {lead.id && (
+          {lead.id && !aiOff && (
             <div className="border border-emerald-200 bg-emerald-50/60 rounded-2xl p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
@@ -599,6 +601,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <Field label="Detail (opsional)">
                 <textarea className={inp + " min-h-[70px]"} value={outcomeReason} onChange={(e) => setOutcomeReason(e.target.value)} placeholder="Ceritakan singkat alasannya..." />
               </Field>
+              {!aiOff && (
               <button
                 onClick={guessOutcome}
                 disabled={outcomeGuessing || !lead.id || !isProfessional}
@@ -608,6 +611,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 {outcomeGuessing ? <Loader2 size={12} className="animate-spin" /> : !isProfessional ? <Lock size={12} /> : <Sparkles size={12} />}
                 {!isProfessional ? "Tebak dengan AI (Professional)" : "Tebak dengan AI dari progress notes"}
               </button>
+              )}
               <p className="text-[10px] text-slate-400">Tersimpan sebagai "Outcome Memory" - NEX AI Advisor akan mempelajari pola ini untuk rekomendasi lead lain ke depannya.</p>
             </div>
           )}
