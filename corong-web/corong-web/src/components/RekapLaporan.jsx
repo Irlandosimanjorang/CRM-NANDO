@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Download, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Download, Maximize2, Minimize2, X } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { Panel, PanelHeader, EmptyState } from "../ui";
@@ -26,7 +26,6 @@ const sourceOf = (l) => Object.entries(l).find(([k, v]) => /^custom_field_\d+$/.
 const wibDate = (ts) => new Date(new Date(ts).getTime() + 7 * 3600000).toISOString().slice(0, 10);
 const pctOf = (v, base) => (base > 0 ? `${((v / base) * 100).toFixed(2).replace(/\.?0+$/, "")}%` : "0%");
 const cn = (...v) => v.filter(Boolean).join(" ");
-const ZOOMS = [0.7, 0.85, 1, 1.25, 1.5, 1.8];
 const DAYS_LONG = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const timeWib = (ts) => { const d = new Date(new Date(ts).getTime() + 7 * 3600000); return `${pad(d.getUTCHours())}.${pad(d.getUTCMinutes())} WIB`; };
 
@@ -40,10 +39,9 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
   const daysInMonth = new Date(year, month, 0).getDate();
   const from = `${ym}-01`, to = `${ym}-${pad(daysInMonth)}`;
   const [changes, setChanges] = useState([]);
-  const [zoomIdx, setZoomIdx] = useState(2); // 100%
   const [full, setFull] = useState(false); // timeline tampil layar penuh
   const [tip, setTip] = useState(null); // popup detail sel timeline
-  const zoom = ZOOMS[zoomIdx];
+  const zoom = 1;
   useEffect(() => {
     if (!full) return undefined;
     const onKey = (e) => { if (e.key === "Escape") { setTip(null); setFull(false); } };
@@ -287,11 +285,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-5 py-3 text-[11.5px] text-slate-600">
           <span className="font-semibold text-slate-700">Warna tahap</span>
           {stages.map((s) => <span key={s.key} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.hex }} />{s.label}</span>)}
-          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-1 py-0.5 text-slate-600" role="group" aria-label="Zoom timeline">
-            <button type="button" onClick={() => setZoomIdx((z) => Math.max(0, z - 1))} disabled={zoomIdx === 0} aria-label="Perkecil" className="rounded-full p-1 hover:bg-slate-100 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><ZoomOut size={14} /></button>
-            <button type="button" onClick={() => setZoomIdx(2)} title="Kembali ke 100%" className="min-w-[40px] text-center text-[11px] font-semibold tabular-nums hover:text-ink">{Math.round(zoom * 100)}%</button>
-            <button type="button" onClick={() => setZoomIdx((z) => Math.min(ZOOMS.length - 1, z + 1))} disabled={zoomIdx === ZOOMS.length - 1} aria-label="Perbesar" className="rounded-full p-1 hover:bg-slate-100 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><ZoomIn size={14} /></button>
-            <span className="mx-0.5 h-4 w-px bg-slate-200" aria-hidden="true" />
+          <span className="ml-auto inline-flex items-center rounded-full border border-slate-200 bg-white p-0.5 text-slate-600">
             <button type="button" onClick={() => { setTip(null); setFull((f) => !f); }} aria-label={isFull ? "Tutup layar penuh" : "Layar penuh"} title={isFull ? "Tutup layar penuh (Esc)" : "Buka layar penuh"} className="rounded-full p-1 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{isFull ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
           </span>
         </div>
