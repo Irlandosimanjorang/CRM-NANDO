@@ -100,6 +100,7 @@ export default function QuotationPanel({ users = [] }) {
   const [address, setAddress] = useState("");
   const [plan, setPlan] = useState("enterprise");
   const [customItem, setCustomItem] = useState("");
+  const [freeSeats, setFreeSeats] = useState(0);
   const [seats, setSeats] = useState(PLANS.enterprise.minSeats);
   const [months, setMonths] = useState(1);
   const [pricePerSeat, setPricePerSeat] = useState(priceOf("enterprise"));
@@ -156,7 +157,7 @@ export default function QuotationPanel({ users = [] }) {
     company: company.trim(), contact: contact.trim(), email: email.trim(), address: address.trim(),
     plan, item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item, unit: PLANS[plan].unit,
     ...(plan === "custom" ? { activatePlan } : {}),
-    seats: Math.max(1, Number(seats) || 1), months: Number(months) || 1, pricePerSeat: Number(pricePerSeat) || 0,
+    seats: Math.max(1, Number(seats) || 1), freeSeats: (plan === "enterprise" || (plan === "custom" && activatePlan === "enterprise")) ? Math.min(5, Math.max(0, Math.floor(Number(freeSeats) || 0))) : 0, months: Number(months) || 1, pricePerSeat: Number(pricePerSeat) || 0,
     discountLabel: discountLabel.trim(), discountType, discountValue: Number(discountValue) || 0,
     date, due: addDays(date, Number(validDays) || 0), start, end: addMonths(start, Number(months) || 1),
     note: note.trim(),
@@ -244,7 +245,7 @@ export default function QuotationPanel({ users = [] }) {
     setCompany(d.company || ""); setContact(d.contact || ""); setEmail(d.email || ""); setAddress(d.address || "");
     const pl = PLANS[d.plan] ? d.plan : "custom";
     setPlan(pl); setCustomItem(pl === "custom" ? (d.item || "") : "");
-    setSeats(d.seats || PLANS[pl].minSeats); setMonths(d.months || 1); setPricePerSeat(d.pricePerSeat ?? priceOf(pl === "custom" ? "enterprise" : pl));
+    setSeats(d.seats || PLANS[pl].minSeats); setFreeSeats(d.freeSeats || 0); setMonths(d.months || 1); setPricePerSeat(d.pricePerSeat ?? priceOf(pl === "custom" ? "enterprise" : pl));
     setDiscountLabel(d.discountLabel || ""); setDiscountType(d.discountType || "amount"); setDiscountValue(d.discountValue ? String(d.discountValue) : "");
     setNote(d.note || ""); setDate(today); setStart(today);
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -307,6 +308,13 @@ export default function QuotationPanel({ users = [] }) {
                     </div>
                     <div><label className={lbl}>Harga/{PLANS[plan].unit === "anggota tim" ? "anggota" : "pengguna"}</label><input type="number" min="0" step="1000" className={field} value={pricePerSeat} onChange={(e) => setPricePerSeat(e.target.value)} /></div>
                   </div>
+                  {(plan === "enterprise" || (plan === "custom" && activatePlan === "enterprise")) && (
+                    <div>
+                      <label className={lbl}>Kursi gratis (owner/manager)</label>
+                      <input type="number" min="0" max="5" className={field} value={freeSeats} onChange={(e) => setFreeSeats(e.target.value)} />
+                      <p className="mt-1 text-[11.5px] text-slate-500">Tidak ditagih, tetapi menambah batas anggota. Isi 1 bila owner hanya memantau lewat dashboard dan seluruh tim sudah dihitung di Jumlah.</p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-[1fr_96px_110px] gap-3">
                     <div><label className={lbl}>Diskon (opsional)</label><input className={field} value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} placeholder="Misal: Diskon early bird" /></div>
                     <div>

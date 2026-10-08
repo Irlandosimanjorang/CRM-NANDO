@@ -94,10 +94,11 @@ export function subscriptionDetail(d) {
   const key = d.plan === "custom" ? d.activatePlan : d.plan;
   const team = key === "enterprise";
   const seats = Number(d.seats) || 1, months = Number(d.months) || 1;
+  const free = team ? Math.max(0, Math.floor(Number(d.freeSeats) || 0)) : 0;
   return {
     plan: PLAN_NAME[key] ? `Nexto ${PLAN_NAME[key]}` : (d.item || "Layanan Nexto"),
-    people: team ? `${seats} anggota tim` : `${seats} pengguna`,
-    peopleNote: team ? "Termasuk akun owner; anggota bergabung lewat kode undangan" : seats > 1 ? "Setiap pengguna memakai akun masing-masing" : "Satu akun pengguna",
+    people: team ? (free ? `${seats} anggota tim + ${free} kursi owner/manager (gratis)` : `${seats} anggota tim`) : `${seats} pengguna`,
+    peopleNote: team ? (free ? "Kursi owner/manager tidak ditagih; anggota tim bergabung lewat kode undangan" : "Termasuk akun owner; anggota bergabung lewat kode undangan") : seats > 1 ? "Setiap pengguna memakai akun masing-masing" : "Satu akun pengguna",
     duration: `${months} bulan`,
     period: d.start && d.end ? `${fmtDate(d.start)} sampai ${fmtDate(d.end)}` : "",
     price: `${rp(d.pricePerSeat)} per ${team ? "anggota" : "pengguna"}/bulan`,
@@ -200,7 +201,7 @@ export function buildInvoiceHtml(d, meta = {}) {
   <table>
     <thead><tr><th>Deskripsi</th><th class="r">Jumlah</th><th class="r">Harga satuan</th><th class="r">Subtotal</th></tr></thead>
     <tbody><tr>
-      <td class="d"><b>${esc(d.item)}</b><small>${d.seats} ${esc(d.unit)}, ${d.months} bulan</small></td>
+      <td class="d"><b>${esc(d.item)}</b><small>${d.seats} ${esc(d.unit)}, ${d.months} bulan${Number(d.freeSeats) > 0 ? ` (+ ${Number(d.freeSeats)} kursi owner/manager gratis)` : ""}</small></td>
       <td class="r">${d.seats}<small>${esc(d.unit)}</small></td>
       <td class="r">${rp((Number(d.pricePerSeat) || 0) * (Number(d.months) || 0))}<small>per ${esc(d.unit)}, ${d.months} bulan</small></td>
       <td class="r">${rp(subtotal)}</td>
@@ -282,7 +283,7 @@ function ActivateDialog({ invoice, onClose, onDone }) {
   const curExp = ent ? pv?.org?.plan_expires_at : pv?.current?.plan_expires_at;
   const rows = pv?.user ? [
     ["Paket", CURRENT_PLAN_LABEL[curPlan] || "Gratis", pv.planLabel],
-    ...(ent && pv.org ? [["Kuota anggota", `${curPlan === "enterprise" ? pv.org.member_limit : 1} (terisi ${pv.org.members})`, `${pv.seats} anggota`]] : []),
+    ...(ent && pv.org ? [["Kuota anggota", `${curPlan === "enterprise" ? pv.org.member_limit : 1} (terisi ${pv.org.members})`, `${pv.memberLimit || pv.seats} anggota`]] : []),
     ["Aktif sampai", curPlan ? fmtWib(curExp) : "-", `${fmtWib(pv.expires_at)}, 23.59 WIB`],
   ] : [];
   const canActivate = pv && !loading && !saving && pv.problems.length === 0 && email.trim().toLowerCase() === pv.email && (!isCustom || pv.plan === asPlan);
@@ -479,6 +480,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const [plan, setPlan] = useState("enterprise");
   const [customItem, setCustomItem] = useState("");
   const [activatePlan, setActivatePlan] = useState("enterprise"); // paket Nexto untuk invoice Custom
+  const [freeSeats, setFreeSeats] = useState(0);
   const [seats, setSeats] = useState(PLANS.enterprise.minSeats);
   const [months, setMonths] = useState(1);
   const [pricePerSeat, setPricePerSeat] = useState(priceOf("enterprise"));
@@ -585,7 +587,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     company: company.trim(), contact: contact.trim(), email: email.trim(), address: address.trim(), po: po.trim(),
     plan, item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item, unit: plan === "custom" && activatePlan === "enterprise" ? "anggota tim" : PLANS[plan].unit,
     ...(plan === "custom" ? { activatePlan } : {}),
-    seats: Math.max(1, Number(seats) || 1), months: Number(months) || 1, pricePerSeat: Number(pricePerSeat) || 0,
+    seats: Math.max(1, Number(seats) || 1), freeSeats: (plan === "enterprise" || (plan === "custom" && activatePlan === "enterprise")) ? Math.min(5, Math.max(0, Math.floor(Number(freeSeats) || 0))) : 0, months: Number(months) || 1, pricePerSeat: Number(pricePerSeat) || 0,
     discountLabel: discountLabel.trim(), discountType, discountValue: Number(discountValue) || 0,
     date, due: addDays(date, Number(dueDays) || 0), start, end: addMonths(start, Number(months) || 1),
     note: note.trim(),
@@ -657,7 +659,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     setCompany(d.company || ""); setContact(d.contact || ""); setEmail(d.email || ""); setAddress(d.address || ""); setPo(d.po || "");
     const pl = PLANS[d.plan] ? d.plan : "custom";
     setPlan(pl); setCustomItem(pl === "custom" ? (d.item || "") : ""); setActivatePlan(d.activatePlan || "enterprise");
-    setSeats(d.seats || PLANS[pl].minSeats); setMonths(d.months || 1); setPricePerSeat(d.pricePerSeat ?? priceOf(pl === "custom" ? "enterprise" : pl));
+    setSeats(d.seats || PLANS[pl].minSeats); setFreeSeats(d.freeSeats || 0); setMonths(d.months || 1); setPricePerSeat(d.pricePerSeat ?? priceOf(pl === "custom" ? "enterprise" : pl));
     setDiscountLabel(d.discountLabel || ""); setDiscountType(d.discountType || "amount"); setDiscountValue(d.discountValue ? String(d.discountValue) : "");
     setNote(d.note || ""); setDate(today); setStart(today);
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -757,6 +759,13 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                   </div>
                   <div><label className={lbl}>Harga/{PLANS[plan].unit === "anggota tim" ? "anggota" : "pengguna"}</label><input type="number" min="0" step="1000" className={field} value={pricePerSeat} onChange={(e) => setPricePerSeat(e.target.value)} /></div>
                 </div>
+                {(plan === "enterprise" || (plan === "custom" && activatePlan === "enterprise")) && (
+                  <div>
+                    <label className={lbl}>Kursi gratis (owner/manager)</label>
+                    <input type="number" min="0" max="5" className={field} value={freeSeats} onChange={(e) => setFreeSeats(e.target.value)} />
+                    <p className="mt-1 text-[11.5px] text-slate-500">Tidak ditagih, tetapi menambah batas anggota. Isi 1 bila owner hanya memantau lewat dashboard dan seluruh tim sudah dihitung di Jumlah.</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-[1fr_96px_110px] gap-3">
                   <div><label className={lbl}>Diskon (opsional)</label><input className={field} value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} placeholder="Misal: Diskon early bird" /></div>
                   <div>

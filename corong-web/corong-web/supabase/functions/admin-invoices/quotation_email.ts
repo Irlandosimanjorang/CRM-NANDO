@@ -19,6 +19,7 @@ export function renderQuotationEmail(q, seller = {}, note = "", attached = false
   const key = d.plan === "custom" ? d.activatePlan : d.plan;
   const team = key === "enterprise";
   const seats = Number(d.seats) || 1, months = Number(d.months) || 1;
+  const free = team ? Math.max(0, Math.floor(Number(d.freeSeats) || 0)) : 0;
   const sign = [seller.signName, seller.signTitle, seller.name].filter(Boolean).map(esc);
   return `<!DOCTYPE html><html lang="id"><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#1c2230;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;"><tr><td align="center" style="padding:28px 12px;">
@@ -38,7 +39,7 @@ export function renderQuotationEmail(q, seller = {}, note = "", attached = false
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e3e6eb;">
       ${row("Ditujukan kepada", esc(q.company))}
       ${row("Paket", PLAN_NAME[key] ? `Nexto ${PLAN_NAME[key]}` : esc(d.item || "Layanan Nexto"))}
-      ${row("Jumlah", team ? `${seats} anggota tim (termasuk owner)` : `${seats} pengguna`)}
+      ${row("Jumlah", team ? (free ? `${seats} anggota tim + ${free} kursi owner/manager (gratis)` : `${seats} anggota tim (termasuk owner)`) : `${seats} pengguna`)}
       ${row("Durasi", `${months} bulan`)}
       ${row("Harga", `${rp(d.pricePerSeat)} per ${team ? "anggota" : "pengguna"}/bulan`)}
       ${row("Tanggal penawaran", tgl(q.invoice_date))}

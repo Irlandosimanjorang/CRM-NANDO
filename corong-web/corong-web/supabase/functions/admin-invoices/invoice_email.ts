@@ -51,9 +51,10 @@ export function renderInvoiceEmail(kind, inv, seller = {}, note = "", attached =
   const key = d.plan === "custom" ? d.activatePlan : d.plan;
   const team = key === "enterprise";
   const seats = Number(d.seats) || 1, months = Number(d.months) || 1;
+  const free = team ? Math.max(0, Math.floor(Number(d.freeSeats) || 0)) : 0;
   const sub = [
     row("Paket", PLAN_NAME[key] ? `Nexto ${PLAN_NAME[key]}` : esc(d.item || "Layanan Nexto")),
-    row("Jumlah anggota", team ? `${seats} anggota tim (termasuk owner)` : `${seats} pengguna`),
+    row("Jumlah anggota", team ? (free ? `${seats} anggota tim + ${free} kursi owner/manager (gratis)` : `${seats} anggota tim (termasuk owner)`) : `${seats} pengguna`),
     row("Durasi", `${months} bulan`),
     d.start && d.end ? row("Periode", `${fmtTanggal(d.start)} sampai ${fmtTanggal(d.end)}`) : "",
     row("Harga", `${rp(d.pricePerSeat)} per ${team ? "anggota" : "pengguna"}/bulan`),

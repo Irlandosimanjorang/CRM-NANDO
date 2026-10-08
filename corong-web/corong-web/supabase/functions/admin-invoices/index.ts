@@ -81,12 +81,15 @@ async function planActivation(admin, id, emailOverride, planOverride) {
     ? (PLAN_LABEL[planOverride] ? planOverride : PLAN_LABEL[d.activatePlan] ? d.activatePlan : "enterprise")
     : d.plan;
   const seats = Math.max(1, Math.floor(Number(d.seats) || 1));
+  // Kursi gratis (owner/manager): tidak ditagih, hanya menambah batas anggota organisasi (khusus Enterprise).
+  const freeSeats = plan === "enterprise" ? Math.min(5, Math.max(0, Math.floor(Number(d.freeSeats) || 0))) : 0;
+  const memberLimit = seats + freeSeats;
   const email = String(emailOverride || d.email || "").trim().toLowerCase();
   const expiresAt = DATE_RE.test(d.end || "") ? new Date(`${d.end}T23:59:59+07:00`).toISOString() : null;
 
   const out = {
     invoice: { id: inv.id, number: inv.number, status: inv.status, data: d },
-    plan, planLabel: PLAN_LABEL[plan] || "Custom", seats, email, expires_at: expiresAt,
+    plan, planLabel: PLAN_LABEL[plan] || "Custom", seats, freeSeats, memberLimit, email, expires_at: expiresAt,
     user: null, org: null, current: null, problems, warnings,
   };
 
@@ -118,7 +121,7 @@ async function planActivation(admin, id, emailOverride, planOverride) {
     const { count, error: cErr } = await admin.from("organization_members").select("id", { count: "exact", head: true }).eq("org_id", org.id);
     if (cErr) throw cErr;
     out.org = { ...org, members: count || 0 };
-    if ((count || 0) > seats) problems.push(`Organisasi ini sudah memiliki ${count} anggota, lebih banyak dari ${seats} anggota di invoice.`);
+    if ((count || 0) > memberLimit) problems.push(`Organisasi ini sudah memiliki ${count} anggota, lebih banyak dari ${memberLimit} anggota di invoice.`);
     if (org.plan === "enterprise" && !org.plan_expires_at) {
       warnings.push("Enterprise organisasi ini saat ini TANPA batas waktu. Setelah diaktifkan, masa aktifnya berakhir sesuai tanggal di invoice dan organisasi turun ke Free otomatis setelahnya.");
     }
@@ -300,7 +303,7 @@ Deno.serve(async (req) => {
       if (!locked) return json({ error: "Invoice ini baru saja diaktifkan atau statusnya berubah. Muat ulang riwayat invoice." }, 409);
 
       const { error: applyErr } = p.plan === "enterprise"
-        ? await admin.from("organizations").update({ plan: "enterprise", member_limit: p.seats, plan_expires_at: p.expires_at, plan_expiry_reminder_sent_at: null }).eq("id", p.org.id)
+        ? await admin.from("organizations").update({ plan: "enterprise", member_limit: p.memberLimit, plan_expires_at: p.expires_at, plan_expiry_reminder_sent_at: null }).eq("id", p.org.id)
         : await admin.from("settings").update({ plan: p.plan === "professional" ? "premium" : "standard", plan_expires_at: p.expires_at, plan_expiry_reminder_sent_at: null }).eq("user_id", p.user.id);
       if (applyErr) {
         // Gagal menerapkan -> lepas kunci supaya bisa dicoba lagi.

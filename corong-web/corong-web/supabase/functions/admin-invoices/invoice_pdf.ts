@@ -62,10 +62,11 @@ function subscriptionDetail(d) {
   const key = d.plan === "custom" ? d.activatePlan : d.plan;
   const team = key === "enterprise";
   const seats = Number(d.seats) || 1, months = Number(d.months) || 1;
+  const free = team ? Math.max(0, Math.floor(Number(d.freeSeats) || 0)) : 0;
   return {
     plan: PLAN_NAME[key] ? `Nexto ${PLAN_NAME[key]}` : (d.item || "Layanan Nexto"),
-    people: team ? `${seats} anggota tim` : `${seats} pengguna`,
-    peopleNote: team ? "Termasuk akun owner; anggota bergabung lewat kode undangan" : seats > 1 ? "Setiap pengguna memakai akun masing-masing" : "Satu akun pengguna",
+    people: team ? (free ? `${seats} anggota tim + ${free} kursi owner/manager (gratis)` : `${seats} anggota tim`) : `${seats} pengguna`,
+    peopleNote: team ? (free ? "Kursi owner/manager tidak ditagih; anggota tim bergabung lewat kode undangan" : "Termasuk akun owner; anggota bergabung lewat kode undangan") : seats > 1 ? "Setiap pengguna memakai akun masing-masing" : "Satu akun pengguna",
     duration: `${months} bulan`,
     period: d.start && d.end ? `${fmtDate(d.start)} sampai ${fmtDate(d.end)}` : "",
     price: `${rp(d.pricePerSeat)} per ${team ? "anggota" : "pengguna"}/bulan`,
@@ -197,7 +198,7 @@ export async function buildInvoicePdf(inv) {
   y -= 6; rule(y, M, W - M, 0.9, INK); y -= 18;
   const rowTop = y;
   const hItem = para(d.item || "Langganan Nexto", M, y, CW * 0.5, { font: bold, size: 10 });
-  para(`${d.seats} ${d.unit || "pengguna"}, ${d.months} bulan`, M, y - hItem, CW * 0.5, { size: 9, color: GRAY });
+  para(`${d.seats} ${d.unit || "pengguna"}, ${d.months} bulan${Number(d.freeSeats) > 0 ? ` (+ ${Number(d.freeSeats)} kursi owner/manager gratis)` : ""}`, M, y - hItem, CW * 0.5, { size: 9, color: GRAY });
   text(String(Number(d.seats) || 0), colQ, rowTop, { size: 10, align: "right" });
   text(d.unit || "pengguna", colQ, rowTop - 12, { size: 8, color: GRAY, align: "right" });
   text(rp((Number(d.pricePerSeat) || 0) * (Number(d.months) || 0)), colP, rowTop, { size: 10, align: "right" });
