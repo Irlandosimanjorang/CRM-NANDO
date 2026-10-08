@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Upload, Trash2 } from "lucide-react";
+import { Panel, PanelHeader, StatRow, Stat, EmptyState } from "../ui";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
@@ -85,30 +86,31 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
     try { await db.deleteAdSpendRange(from, to); setTick((t) => t + 1); } catch (e) { alert(String(e?.message || e)); }
   };
 
-  const th = "px-3 py-2 text-right text-[11px] font-semibold text-slate-500 whitespace-nowrap";
-  const td = "px-3 py-2 text-right text-[12.5px] tabular-nums text-slate-800 whitespace-nowrap";
+  const th = "px-4 py-2.5 text-right text-[11px] font-semibold text-slate-500 whitespace-nowrap";
+  const td = "px-4 py-2.5 text-right text-[12.5px] tabular-nums text-slate-800 whitespace-nowrap";
+  const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
   const PieBlock = ({ title, data, money }) => (
-    <div className="rounded-lg border border-slate-200 p-3">
-      <div className="text-[12px] font-semibold text-slate-700">{title}</div>
+    <div className="p-5">
+      <h3 className="text-[13px] font-bold tracking-[-0.01em] text-ink">{title}</h3>
       {data.length === 0 ? <div className="py-10 text-center text-[12px] text-slate-400">Belum ada data</div> : (
-        <div className="mt-1 flex flex-col items-center gap-2 sm:flex-row">
+        <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
           <div className="h-36 w-36 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={data} dataKey="value" nameKey="name" innerRadius={34} outerRadius={64} paddingAngle={2} stroke="none" isAnimationActive={false}>
+                <Pie data={data} dataKey="value" nameKey="name" innerRadius={36} outerRadius={66} paddingAngle={2} stroke="none" isAnimationActive={false}>
                   {data.map((d, i) => <Cell key={d.name} fill={colorOf(d.name, i)} />)}
                 </Pie>
                 <Tooltip formatter={(v) => (money ? fmtRp(v) : `${v} lead`)} />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <ul className="w-full space-y-1 text-[12px]">
+          <ul className="w-full space-y-1.5 text-[12px]">
             {data.map((d, i) => {
               const total = data.reduce((s, x) => s + x.value, 0);
               return (
                 <li key={d.name} className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-slate-700"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: colorOf(d.name, i) }} />{d.name}</span>
+                  <span className="flex items-center gap-1.5 font-medium text-slate-700"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: colorOf(d.name, i) }} />{d.name}</span>
                   <span className="tabular-nums text-slate-600">{money ? fmtRp(d.value) : d.value} <span className="text-slate-400">({Math.round((d.value / total) * 100)}%)</span></span>
                 </li>
               );
@@ -120,84 +122,77 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
   );
 
   return (
-    <section className="rounded-panel border border-slate-200 bg-white p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-[16px] font-bold tracking-tight text-slate-900">Iklan dan sumber lead</h2>
-          <p className="mt-1 text-[12px] text-slate-500">Biaya iklan dari file Meta, TikTok, atau Google, dibandingkan dengan lead dan deal di Nexto per sumber. Lead dihitung dari yang dibuat pada bulan ini.</p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-xl text-[12px] text-slate-500">Biaya iklan dari file Meta, TikTok, atau Google dibandingkan dengan lead dan deal di Nexto per sumber. Lead dihitung dari yang dibuat pada bulan ini.</p>
         {canImport && (
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setShowImport(true)} className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white hover:bg-slate-800"><Upload size={14} /> Impor data iklan</button>
-            {hasAds && <button type="button" onClick={wipe} className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-[12px] text-slate-600 hover:bg-slate-50" title="Hapus data iklan bulan ini"><Trash2 size={14} /></button>}
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setShowImport(true)} className={`inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 ${focus}`}><Upload size={14} /> Impor data iklan</button>
+            {hasAds && <button type="button" onClick={wipe} className={`rounded-full border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50 hover:text-rose-600 ${focus}`} title="Hapus data iklan bulan ini" aria-label="Hapus data iklan bulan ini"><Trash2 size={14} /></button>}
           </div>
         )}
       </div>
 
-      {notice && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800">{notice}</p>}
-      {loadErr && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[12px] text-rose-700">Data iklan tidak dapat dimuat: {loadErr}</p>}
-      {!a.slot && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800">Pipeline organisasi ini belum punya isian "Sumber lead", jadi platform lead dibaca dari kolom sumber bawaan.</p>}
+      {notice && <p className="rounded-inner bg-emerald-50 px-4 py-2.5 text-[12px] text-emerald-800">{notice}</p>}
+      {loadErr && <p className="rounded-inner bg-rose-50 px-4 py-2.5 text-[12px] text-rose-700">Data iklan tidak dapat dimuat: {loadErr}</p>}
+      {!a.slot && <p className="rounded-inner bg-amber-50 px-4 py-2.5 text-[12px] text-amber-800">Pipeline organisasi ini belum punya isian "Sumber lead", jadi platform lead dibaca dari kolom sumber bawaan.</p>}
 
-      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          ["Biaya iklan", fmtRp(Math.round(a.tot.spend)), null],
-          ["Lead dari iklan", int(a.tot.leads), `Biaya per lead ${rpOrDash(safeDiv(a.tot.spend, a.tot.leads))}`],
-          ["Deal dari iklan", int(a.tot.deals), `Biaya per deal ${rpOrDash(safeDiv(a.tot.spend, a.tot.deals))}`],
-          ["Omzet dari iklan", fmtRp(Math.round(a.tot.value)), a.tot.spend > 0 ? `ROAS ${a.tot.value > 0 ? (a.tot.value / a.tot.spend).toFixed(1) : "0"}x` : null],
-        ].map(([k, v, sub]) => (
-          <div key={k} className="rounded-lg border border-slate-200 p-3">
-            <div className="text-[11px] font-semibold text-slate-500">{k}</div>
-            <div className="mt-1 text-[17px] font-bold tabular-nums text-slate-900">{v}</div>
-            {sub && <div className="mt-0.5 text-[11px] text-slate-500">{sub}</div>}
-          </div>
-        ))}
-      </div>
+      <StatRow>
+        <Stat value={fmtRp(Math.round(a.tot.spend))} label="Biaya iklan" tone="ink" className="[&>div:first-child]:text-[20px] sm:[&>div:first-child]:text-[22px]" />
+        <Stat value={int(a.tot.leads)} label="Lead dari iklan" hint={`Biaya per lead ${rpOrDash(safeDiv(a.tot.spend, a.tot.leads))}`} tone="brand" />
+        <Stat value={int(a.tot.deals)} label="Deal dari iklan" hint={`Biaya per deal ${rpOrDash(safeDiv(a.tot.spend, a.tot.deals))}`} tone="good" />
+        <Stat value={fmtRp(Math.round(a.tot.value))} label="Omzet dari iklan" hint={a.tot.spend > 0 ? `ROAS ${a.tot.value > 0 ? (a.tot.value / a.tot.spend).toFixed(1) : "0"}x` : undefined} tone="good" className="[&>div:first-child]:text-[20px] sm:[&>div:first-child]:text-[22px]" />
+      </StatRow>
 
-      {!hasAds && <p className="mt-3 text-[12px] text-slate-500">Belum ada data iklan untuk bulan ini{canImport ? ". Klik Impor data iklan untuk mengunggah file dari Ads Manager." : ". Owner atau manager dapat mengimpornya."}</p>}
-
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <PieBlock title="Lead per sumber" data={leadPie} />
-        <PieBlock title="Biaya iklan per platform" data={spendPie} money />
-      </div>
-      {a.noSource > 0 && <p className="mt-2 text-[11px] text-amber-700">{a.noSource} dari {a.cohortCount} lead bulan ini belum diisi "Sumber lead", jadi tidak masuk hitungan platform.</p>}
-
-      {a.adRows.length > 0 && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full min-w-[640px] border-collapse">
-            <thead className="bg-slate-50">
-              <tr><th className={`${th} !text-left`}>Platform</th><th className={th}>Biaya</th><th className={th}>Klik</th><th className={th}>Lead</th><th className={th}>Biaya/lead</th><th className={th}>Deal</th><th className={th}>Biaya/deal</th><th className={th}>Omzet</th><th className={th}>ROAS</th></tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {a.adRows.map((r, i) => (
-                <tr key={r.platform}>
-                  <td className="px-3 py-2 text-[12.5px] font-medium text-slate-800"><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: colorOf(r.platform, i) }} />{r.platform}</td>
-                  <td className={td}>{fmtRp(Math.round(r.spend))}</td><td className={td}>{int(r.clicks)}</td><td className={td}>{r.leads}</td>
-                  <td className={td}>{rpOrDash(safeDiv(r.spend, r.leads))}</td><td className={td}>{r.deals}</td><td className={td}>{rpOrDash(safeDiv(r.spend, r.deals))}</td>
-                  <td className={td}>{fmtRp(Math.round(r.value))}</td><td className={td}>{r.value > 0 ? `${(r.value / r.spend).toFixed(1)}x` : "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {!hasAds && (
+        <EmptyState>Belum ada data iklan untuk bulan ini. {canImport ? "Klik Impor data iklan untuk mengunggah file dari Ads Manager." : "Owner atau manager dapat mengimpornya."}</EmptyState>
       )}
 
-      {a.insights.length > 0 && (
-        <ul className="mt-3 space-y-1 rounded-lg bg-slate-50 p-3 text-[12px] text-slate-700">
-          {a.insights.map((t, i) => <li key={i}>{t}</li>)}
-        </ul>
+      <Panel className="grid md:grid-cols-2 md:divide-x md:divide-slate-100">
+        <PieBlock title="Lead per sumber" data={leadPie} />
+        <PieBlock title="Biaya iklan per platform" data={spendPie} money />
+      </Panel>
+      {a.noSource > 0 && <p className="-mt-2 px-1 text-[11px] text-amber-700">{a.noSource} dari {a.cohortCount} lead bulan ini belum diisi "Sumber lead", jadi tidak masuk hitungan platform.</p>}
+
+      {a.adRows.length > 0 && (
+        <Panel className="overflow-hidden">
+          <div className="px-5 pb-1 pt-4"><PanelHeader title="Per platform" meta="Biaya iklan dibandingkan lead, deal, dan omzet dari sumber yang sama" /></div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100"><th className={`${th} !text-left`}>Platform</th><th className={th}>Biaya</th><th className={th}>Klik</th><th className={th}>Lead</th><th className={th}>Biaya/lead</th><th className={th}>Deal</th><th className={th}>Biaya/deal</th><th className={th}>Omzet</th><th className={th}>ROAS</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {a.adRows.map((r, i) => (
+                  <tr key={r.platform}>
+                    <td className="px-4 py-2.5 text-[12.5px] font-semibold text-ink"><span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: colorOf(r.platform, i) }} />{r.platform}</td>
+                    <td className={td}>{fmtRp(Math.round(r.spend))}</td><td className={td}>{int(r.clicks)}</td><td className={td}>{r.leads}</td>
+                    <td className={td}>{rpOrDash(safeDiv(r.spend, r.leads))}</td><td className={td}>{r.deals}</td><td className={td}>{rpOrDash(safeDiv(r.spend, r.deals))}</td>
+                    <td className={td}>{fmtRp(Math.round(r.value))}</td><td className={td}>{r.value > 0 ? `${(r.value / r.spend).toFixed(1)}x` : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {a.insights.length > 0 && (
+            <ul className="space-y-1 border-t border-slate-100 bg-slate-50/60 px-5 py-3 text-[12px] text-slate-700">
+              {a.insights.map((t, i) => <li key={i}>{t}</li>)}
+            </ul>
+          )}
+        </Panel>
       )}
 
       {a.campaigns.length > 0 && (
-        <div className="mt-4">
-          <div className="mb-1 text-[12px] font-semibold text-slate-700">Kampanye dengan biaya terbesar</div>
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+        <Panel className="overflow-hidden">
+          <div className="px-5 pb-1 pt-4"><PanelHeader title="Kampanye dengan biaya terbesar" meta="Angka hasil berasal dari file platform iklan" /></div>
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] border-collapse">
-              <thead className="bg-slate-50"><tr><th className={`${th} !text-left`}>Kampanye</th><th className={`${th} !text-left`}>Platform</th><th className={th}>Biaya</th><th className={th}>Klik</th><th className={th}>Biaya/klik</th><th className={th}>Hasil (dari file)</th></tr></thead>
+              <thead><tr className="border-b border-slate-100"><th className={`${th} !text-left`}>Kampanye</th><th className={`${th} !text-left`}>Platform</th><th className={th}>Biaya</th><th className={th}>Klik</th><th className={th}>Biaya/klik</th><th className={th}>Hasil</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {a.campaigns.map((c, i) => (
                   <tr key={i}>
-                    <td className="max-w-[240px] truncate px-3 py-2 text-[12.5px] text-slate-800" title={c.campaign}>{c.campaign}</td>
-                    <td className="px-3 py-2 text-[12.5px] text-slate-600">{c.platform}</td>
+                    <td className="max-w-[240px] truncate px-4 py-2.5 text-[12.5px] font-medium text-ink" title={c.campaign}>{c.campaign}</td>
+                    <td className="px-4 py-2.5 text-[12.5px] text-slate-600">{c.platform}</td>
                     <td className={td}>{fmtRp(Math.round(c.spend))}</td><td className={td}>{int(c.clicks)}</td>
                     <td className={td}>{rpOrDash(safeDiv(c.spend, c.clicks))}</td><td className={td}>{int(c.reported)}</td>
                   </tr>
@@ -205,7 +200,7 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
               </tbody>
             </table>
           </div>
-        </div>
+        </Panel>
       )}
 
       {showImport && (
@@ -215,6 +210,6 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
           else setNotice(`${r?.count || 0} baris biaya iklan diimpor.`);
         }} />
       )}
-    </section>
+    </div>
   );
 }
