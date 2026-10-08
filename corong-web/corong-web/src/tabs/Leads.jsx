@@ -333,7 +333,7 @@ function isHotLead(lead, hotKeys) {
   return p === "hot" || p === "high" || hotKeys.includes(lead.stage_key);
 }
 
-function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign, uppercaseNames }) {
+function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign, uppercaseNames, badge }) {
   // Progress bar mulai dari 0% terus animasi jalan ke posisi asli begitu
   // kartu ini muncul di layar - kesan "hidup", bukan langsung nongol jadi.
   const [barReady, setBarReady] = useState(false);
@@ -380,6 +380,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <div className="font-display font-bold text-ink text-[15px] leading-snug tracking-[-0.02em] truncate">{uppercaseNames ? String(c.name || "").toUpperCase() : c.name}</div>
+              {badge && <span className="mt-0.5 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">{badge}</span>}
               {isHotLead(c, hotStageKeys(stages)) && <Flame size={14} className="text-orange-500 shrink-0" fill="currentColor" aria-label="Hot" />}
             </div>
             <div className="text-[12.5px] text-slate-500 mt-0.5 truncate">{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
@@ -1071,7 +1072,8 @@ export default function Leads({
         if (u && !emittedLoose.has(u)) { emittedLoose.add(u); out.push(u); }
       }
     }
-    return out;
+    // Grup dan holding di atas, lead yang tidak berkelompok di bawahnya (dengan judul sendiri).
+    return [...out.filter((u) => u.type !== "lead"), ...out.filter((u) => u.type === "lead")];
   }, [filtered, groupView]);
 
   const holdingOptions = useMemo(
@@ -1903,10 +1905,12 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
           </div>
         )}
 
-        {pageItems.flatMap((u) => {
-          const renderCard = (c) => (
+        {(() => {
+          const GRID = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4";
+          const renderCard = (c, badge) => (
             <LeadCard
               key={c.id}
+              badge={badge}
               uppercaseNames={uppercaseNames}
               c={c}
               stages={stages}
@@ -1923,8 +1927,8 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               }}
             />
           );
-          if (u.type === "lead") return [renderCard(u.lead)];
-          const groupHeader = (g, kind, subtitle, nested = false) => {
+          const isSelf = (lead, label) => groupKey(lead.name) === groupKey(label);
+          const header = (g, kind, subtitle) => {
             const open = openGroups.has(g.key) || !!q;
             const totalDeal = g.members.reduce((n, m) => n + (Number(m.deal_value) || 0), 0);
             const wonCount = g.members.filter((m) => kpiWonStageKeys.includes(m.stage_key)).length;
@@ -1937,11 +1941,11 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
                   type="button"
                   onClick={() => toggleGroupOpen(g.key)}
                   aria-expanded={open}
-                  className={`col-span-full flex items-center gap-3 rounded-panel border px-4 py-3 text-left hover:bg-slate-50 ${nested ? "sm:ml-6" : ""} ${isHolding ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white"}`}
+                  className={`flex w-full items-center gap-3 rounded-panel border px-4 py-3 text-left hover:bg-slate-50 ${isHolding ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white"}`}
                 >
                   <span className={`w-9 h-9 rounded-inner flex items-center justify-center shrink-0 ${isHolding ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500"}`}><Building2 size={17} /></span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold text-ink truncate">{g.label}{isHolding && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10.5px] font-semibold text-slate-600">Holding / Group</span>}</span>
+                    <span className="block text-[14px] font-semibold text-ink truncate">{g.label}<span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10.5px] font-semibold text-slate-600">{isHolding ? "Holding / Group" : "Perusahaan"}</span></span>
                     <span className="block text-[12px] text-slate-500 tabular-nums">
                       {subtitle}
                       {wonCount > 0 ? ` · ${wonCount} deal` : ""}
@@ -1953,21 +1957,58 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               ),
             };
           };
-          if (u.type === "group") {
-            const h = groupHeader(u, "parent", `${u.members.length} anak perusahaan`);
-            return h.open ? [h.node, ...u.members.map(renderCard)] : [h.node];
-          }
-          // holding: header holding, lalu anak-anaknya (perusahaan induk bisa dilipat lagi)
-          const companies = u.children.length;
-          const hh = groupHeader(u, "holding", `${companies} perusahaan · ${u.members.length} lead`);
-          if (!hh.open) return [hh.node];
-          const inner = u.children.flatMap((ch) => {
-            if (ch.type === "lead") return [renderCard(ch.lead)];
-            const ph = groupHeader(ch, "parent", `${ch.members.length} anak perusahaan`, true);
-            return ph.open ? [ph.node, ...ch.members.map(renderCard)] : [ph.node];
+          // Perusahaan + anak-anaknya: kartu ada DI DALAM kotak ini (garis di kiri menandai isinya).
+          const parentBlock = (g, nested) => {
+            const anak = g.members.filter((m) => !isSelf(m, g.label)).length;
+            const h = header(g, "parent", `${anak} anak perusahaan`);
+            const self = g.members.filter((m) => isSelf(m, g.label));
+            const others = g.members.filter((m) => !isSelf(m, g.label));
+            return (
+              <div key={"b-" + g.key} className="col-span-full space-y-3">
+                {h.node}
+                {h.open && (
+                  <div className={`border-l-2 ${nested ? "border-slate-300" : "border-slate-200"} pl-3 sm:pl-4`}>
+                    <div className={GRID}>{[...self.map((c) => renderCard(c, "Perusahaan")), ...others.map((c) => renderCard(c, "Anak perusahaan"))]}</div>
+                  </div>
+                )}
+              </div>
+            );
+          };
+          const holdingBlock = (u) => {
+            const selfLeads = u.members.filter((m) => isSelf(m, u.label));
+            const standalone = u.children.filter((ch) => ch.type === "lead" && !isSelf(ch.lead, u.label)).map((ch) => ch.lead);
+            const groups = u.children.filter((ch) => ch.type === "group");
+            const perusahaan = groups.length + standalone.length;
+            const hh = header(u, "holding", `${perusahaan} perusahaan · ${u.members.length} lead`);
+            return (
+              <div key={"b-" + u.key} className="col-span-full space-y-3">
+                {hh.node}
+                {hh.open && (
+                  <div className="space-y-3 border-l-2 border-slate-400 pl-3 sm:pl-4">
+                    {(selfLeads.length > 0 || standalone.length > 0) && (
+                      <div className={GRID}>{[...selfLeads.map((c) => renderCard(c, "Holding")), ...standalone.map((c) => renderCard(c, "Perusahaan"))]}</div>
+                    )}
+                    {groups.map((g) => parentBlock(g, true))}
+                  </div>
+                )}
+              </div>
+            );
+          };
+          const hasGroups = units.some((x) => x.type !== "lead");
+          let dividerShown = false;
+          return pageItems.flatMap((u) => {
+            if (u.type === "group") return [parentBlock(u, false)];
+            if (u.type === "holding") return [holdingBlock(u)];
+            if (groupView && hasGroups && !dividerShown) {
+              dividerShown = true;
+              return [
+                <div key="no-group" className="col-span-full pt-2 text-[12px] font-semibold text-slate-500">Lead tanpa grup</div>,
+                renderCard(u.lead),
+              ];
+            }
+            return [renderCard(u.lead)];
           });
-          return [hh.node, ...inner];
-        })}
+        })()}
 
         {filtered.length === 0 && (
           <div className="col-span-full rounded-panel border border-dashed border-slate-200 bg-white p-8 text-center">
