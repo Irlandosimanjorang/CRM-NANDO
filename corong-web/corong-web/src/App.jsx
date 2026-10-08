@@ -539,7 +539,7 @@ export default function App() {
     if (loading || !org) return;
     const allowed = new Set([...NAV.map((n) => n.key), "advisor", "industridemo"]);
     if (isEnterprise && canManage) allowed.add(TEAM_NAV_ITEM.key);
-    if (hasOrgFeature(org, "monthly_report") && canManage) allowed.add(REPORT_NAV_ITEM.key);
+    if (hasOrgFeature(org, "monthly_report")) allowed.add(REPORT_NAV_ITEM.key);
     if (settings?.is_platform_admin) allowed.add(ADMIN_NAV_ITEM.key);
     if (!allowed.has(tab) || (monitorOwner && !OWNER_MONITOR_TABS.includes(tab) && !(settings?.is_platform_admin && tab === ADMIN_NAV_ITEM.key))) setTab("dashboard");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -742,8 +742,9 @@ export default function App() {
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
   // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
   // Customer biasa (99.9% user) gak akan pernah liat item ini nongol sama sekali.
-  // Tab Laporan hanya untuk owner dan manager (sama seperti Team); anggota tim biasa tidak melihatnya.
-  const reportOn = hasOrgFeature(org, "monthly_report") && canManage;
+  // Tab Laporan: semua anggota organisasi. Owner dan manager melihat seluruh tim (plus Iklan dan target);
+  // anggota biasa melihat laporan lead miliknya sendiri (aturan akses lead Nexto).
+  const reportOn = hasOrgFeature(org, "monthly_report");
   const baseNav = NAV.flatMap((n) => {
     const out = [n];
     if (n.key === "leads" && reportOn) out.push(REPORT_NAV_ITEM);
@@ -1088,7 +1089,7 @@ export default function App() {
                 )}
                 {visitedTabs.has("laporan") && reportOn && (
                   <div style={{ display: effectiveTab === "laporan" ? "block" : "none" }}>
-                    <MonthlyReport leads={leads} stages={stageList} dealTransactions={dealTransactions} org={org} canEditTarget={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} canImport={canManage} onChanged={reload} onOpenLead={setEditLead} />
+                    <MonthlyReport leads={leads} stages={stageList} dealTransactions={dealTransactions} org={org} canEditTarget={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} canImport={canManage} canManage={canManage} onChanged={reload} onOpenLead={setEditLead} />
                   </div>
                 )}
                 {visitedTabs.has("team") && isEnterprise && canManage && (

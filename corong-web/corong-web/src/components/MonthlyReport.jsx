@@ -34,11 +34,14 @@ function short(n) {
 const truncate = (s, n) => (String(s).length > n ? `${String(s).slice(0, n - 1)}…` : String(s));
 const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
-export default function MonthlyReport({ leads = [], stages = [], dealTransactions = [], org, canEditTarget = false, canImport = false, onChanged, onOpenLead }) {
+export default function MonthlyReport({ leads = [], stages = [], dealTransactions = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead }) {
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const [ym, setYm] = useState(todayIso.slice(0, 7));
-  const [view, setView] = useState("penjualan");
+  const [viewRaw, setView] = useState("penjualan");
+  // Anggota biasa: laporan lead miliknya saja, tanpa tab Iklan dan target tim.
+  const personal = !canManage;
+  const view = personal && viewRaw === "iklan" ? "penjualan" : viewRaw;
   const [selected, setSelected] = useState(todayIso);
   const [editing, setEditing] = useState(false);
   const [targetInput, setTargetInput] = useState("");
@@ -140,12 +143,12 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">Laporan</h1>
-          <p className="mt-0.5 text-[12px] text-slate-500">{view === "penjualan" ? "Penjualan tim, target omzet, dan kalender deal." : view === "rekap" ? "Daftar lead per tahap seperti laporan Excel." : "Biaya iklan dan lead per platform."}</p>
+          <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">{personal ? "Laporan saya" : "Laporan"}</h1>
+          <p className="mt-0.5 text-[12px] text-slate-500">{view === "penjualan" ? (personal ? "Penjualan dari lead milik Anda dan kalender deal." : "Penjualan tim, target omzet, dan kalender deal.") : view === "rekap" ? "Daftar lead per tahap seperti laporan Excel." : "Biaya iklan dan lead per platform."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <div className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold" role="tablist" aria-label="Jenis laporan">
-            {[["penjualan", "Penjualan"], ["rekap", "Rekap per tahap"], ["iklan", "Iklan dan sumber lead"]].map(([k, l]) => (
+            {[["penjualan", "Penjualan"], ["rekap", "Rekap per tahap"], ...(personal ? [] : [["iklan", "Iklan dan sumber lead"]])].map(([k, l]) => (
               <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
             ))}
           </div>
@@ -159,7 +162,7 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
       </div>
 
       {view === "rekap" ? (
-        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={org?.name || ""} target={num(org?.monthly_target)} />
+        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={org?.name || ""} target={personal ? 0 : num(org?.monthly_target)} personal={personal} />
       ) : view === "iklan" ? (
         <AdsAnalysis leads={leads} stages={stages} org={org} ym={ym} canImport={canImport} onChanged={onChanged} />
       ) : (
@@ -167,9 +170,10 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
           <Panel className="p-5">
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <div className="min-w-0">
-                <div className="text-[12px] font-semibold text-slate-600">Omzet bulan ini</div>
+                <div className="text-[12px] font-semibold text-slate-600">{personal ? "Omzet Anda bulan ini" : "Omzet bulan ini"}</div>
                 <div className="mt-1.5 font-display text-[34px] font-bold leading-none tracking-[-0.04em] tabular-nums text-emerald-600">{fmtRp(r.dealValue)}</div>
               </div>
+              {!personal && (
               <div className="sm:text-right">
                 {editing ? (
                   <div className="flex items-center gap-2">
@@ -186,8 +190,9 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
                 )}
                 {err && <div className="mt-1 text-[11px] text-rose-600">{err}</div>}
               </div>
+              )}
             </div>
-            <Meter value={reached} max={100} tone="good" className="mt-4 h-2" />
+            {!personal && <Meter value={reached} max={100} tone="good" className="mt-4 h-2" />}
           </Panel>
 
           <StatRow>

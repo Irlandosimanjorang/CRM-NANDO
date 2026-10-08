@@ -31,7 +31,7 @@ const COLS = [
   ["ALAMAT", ""], ["NO SPH / INVOICE", "whitespace-nowrap"], ["NILAI", "text-right whitespace-nowrap"], ["KETERANGAN", "min-w-[190px]"], ["SUMBER", ""],
 ];
 
-export default function RekapLaporan({ leads = [], stages = [], dealTransactions = [], ym, orgName = "", target = 0 }) {
+export default function RekapLaporan({ leads = [], stages = [], dealTransactions = [], ym, orgName = "", target = 0, personal = false }) {
   const [year, month] = ym.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
   const from = `${ym}-01`, to = `${ym}-${pad(daysInMonth)}`;
@@ -112,8 +112,8 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
     ["Deal", d.sections[2].rows.length + d.sections[3].rows.length, d.dealAll, d.sphAll ? (d.dealAll / d.sphAll) * 100 : 0],
     ["No deal", d.sections[4].rows.length, d.lostAll, d.sphAll ? (d.lostAll / d.sphAll) * 100 : 0],
     ["Data yang belum diproses dari SPH dan hot progress (deal dan no deal)", d.sections[0].rows.length - d.sections[1].rows.length - d.sections[2].rows.length - d.sections[3].rows.length, d.pending, d.sphAll ? (d.pending / d.sphAll) * 100 : 0],
-    ["Key personal indicator / target omzet", null, target, target ? 100 : null],
-    ["Omzet tercapai di bulan ini", null, d.dealAll, target ? (d.dealAll / target) * 100 : null],
+    ...(personal ? [] : [["Key personal indicator / target omzet", null, target, target ? 100 : null]]),
+    ["Omzet tercapai di bulan ini", null, d.dealAll, !personal && target ? (d.dealAll / target) * 100 : null],
   ];
 
   const download = async () => {
