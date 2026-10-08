@@ -40,6 +40,7 @@ import {
   todayISO,
   nameSimilarity,
   groupKey,
+  chipStyle,
 } from "../lib/helpers";
 
 import LeadModal from "../components/LeadModal";
@@ -331,6 +332,70 @@ function hotStageKeys(stages) {
 function isHotLead(lead, hotKeys) {
   const p = String(lead.priority || "").toLowerCase();
   return p === "hot" || p === "high" || hotKeys.includes(lead.stage_key);
+}
+
+/* =========================================================
+   BAGAN HOLDING / PERUSAHAAN / ANAK PERUSAHAAN (8 Okt 2026)
+   Pohon dari atas ke bawah: Holding > Perusahaan > Anak perusahaan.
+   node = { lead|null, label, role: "holding"|"perusahaan"|"anak", children[] }.
+   lead null = nama grup yang belum punya lead sendiri (kotak putus-putus).
+========================================================= */
+const ORG_ROLE = {
+  holding: { label: "Holding", box: "border-slate-800 bg-slate-800 text-white", tag: "bg-white text-slate-800 border border-slate-300" },
+  perusahaan: { label: "Perusahaan", box: "border-orange-300 bg-white text-ink", tag: "bg-orange-500 text-white" },
+  anak: { label: "Anak perusahaan", box: "border-slate-200 bg-white text-ink", tag: "bg-slate-200 text-slate-700" },
+};
+
+function OrgNode({ node, stages, onOpen, upper }) {
+  const c = node.lead;
+  const role = ORG_ROLE[node.role];
+  const meta = c ? stageMeta(stages, c.stage_key) : null;
+  const name = upper ? String(node.label || "").toUpperCase() : node.label;
+  return (
+    <button
+      type="button"
+      disabled={!c}
+      onClick={() => c && onOpen(c)}
+      title={c ? "Buka lead" : "Belum ada lead dengan nama ini"}
+      className={`relative w-[200px] rounded-xl border px-3 pb-2.5 pt-4 text-left shadow-sm ${role.box} ${c ? "hover:shadow-md" : "border-dashed opacity-80"}`}
+    >
+      <span className={`absolute -top-2.5 left-3 rounded px-1.5 py-0.5 text-[10px] font-semibold ${role.tag}`}>{role.label}</span>
+      <div className="line-clamp-2 text-[13px] font-semibold leading-snug">{name}</div>
+      {c ? (
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
+          <span className="truncate rounded-full border px-2 py-0.5 font-medium" style={chipStyle(meta.hex)}>{meta.label}</span>
+          <span className={`truncate ${node.role === "holding" ? "text-slate-300" : "text-slate-500"}`}>{c.city || ""}</span>
+        </div>
+      ) : (
+        <div className="mt-1.5 text-[11px] text-slate-400">Belum ada data lead</div>
+      )}
+    </button>
+  );
+}
+
+function OrgBranch({ node, stages, onOpen, upper }) {
+  const kids = node.children || [];
+  return (
+    <div className="flex flex-col items-center">
+      <OrgNode node={node} stages={stages} onOpen={onOpen} upper={upper} />
+      {kids.length > 0 && (
+        <>
+          <div className="h-5 w-px bg-slate-300" />
+          <div className="flex items-start">
+            {kids.map((ch, i) => (
+              <div key={(ch.lead?.id || ch.label) + ":" + i} className="relative flex flex-col items-center px-2 pt-5">
+                <span className="absolute left-1/2 top-0 h-5 w-px bg-slate-300" />
+                {kids.length > 1 && (
+                  <span className={`absolute top-0 h-px bg-slate-300 ${i === 0 ? "left-1/2 right-0" : i === kids.length - 1 ? "left-0 right-1/2" : "left-0 right-0"}`} />
+                )}
+                <OrgBranch node={ch} stages={stages} onOpen={onOpen} upper={upper} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgress, canManage, members, onReassign, uppercaseNames, badge }) {
@@ -1945,7 +2010,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
                 >
                   <span className={`w-9 h-9 rounded-inner flex items-center justify-center shrink-0 ${isHolding ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500"}`}><Building2 size={17} /></span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold text-ink truncate">{g.label}<span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10.5px] font-semibold text-slate-600">{isHolding ? "Holding / Group" : "Perusahaan"}</span></span>
+                    <span className="block text-[14px] font-semibold text-ink truncate">{g.label}</span>
                     <span className="block text-[12px] text-slate-500 tabular-nums">
                       {subtitle}
                       {wonCount > 0 ? ` · ${wonCount} deal` : ""}
@@ -1957,38 +2022,39 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               ),
             };
           };
-          // Perusahaan + anak-anaknya: kartu ada DI DALAM kotak ini (garis di kiri menandai isinya).
-          const parentBlock = (g, nested) => {
-            const anak = g.members.filter((m) => !isSelf(m, g.label)).length;
-            const h = header(g, "parent", `${anak} anak perusahaan`);
-            const self = g.members.filter((m) => isSelf(m, g.label));
-            const others = g.members.filter((m) => !isSelf(m, g.label));
-            return (
-              <div key={"b-" + g.key} className="col-span-full space-y-3">
-                {h.node}
-                {h.open && (
-                  <div className={`border-l-2 ${nested ? "border-slate-300" : "border-slate-200"} pl-3 sm:pl-4`}>
-                    <div className={GRID}>{[...self.map((c) => renderCard(c, "Perusahaan")), ...others.map((c) => renderCard(c, "Anak perusahaan"))]}</div>
-                  </div>
-                )}
-              </div>
-            );
+          // Bagan (pohon) untuk satu grup: node tiap baris berlencana peran di tepi atasnya.
+          const chartOf = (u) => {
+            const anakLeaf = (lead) => ({ lead, label: lead.name, role: "anak", children: [] });
+            const companyNode = (g) => ({
+              lead: g.members.find((m) => isSelf(m, g.label)) || null,
+              label: g.label,
+              role: "perusahaan",
+              children: g.members.filter((m) => !isSelf(m, g.label)).map(anakLeaf),
+            });
+            if (u.type === "group") return companyNode(u);
+            const kids = u.children
+              .map((ch) => (ch.type === "group" ? companyNode(ch) : (isSelf(ch.lead, u.label) ? null : { lead: ch.lead, label: ch.lead.name, role: "perusahaan", children: [] })))
+              .filter(Boolean);
+            return { lead: u.members.find((m) => isSelf(m, u.label)) || null, label: u.label, role: "holding", children: kids };
           };
-          const holdingBlock = (u) => {
-            const selfLeads = u.members.filter((m) => isSelf(m, u.label));
-            const standalone = u.children.filter((ch) => ch.type === "lead" && !isSelf(ch.lead, u.label)).map((ch) => ch.lead);
-            const groups = u.children.filter((ch) => ch.type === "group");
-            const perusahaan = groups.length + standalone.length;
-            const hh = header(u, "holding", `${perusahaan} perusahaan · ${u.members.length} lead`);
+          const chartBlock = (u) => {
+            const isHolding = u.type === "holding";
+            let subtitle;
+            if (isHolding) {
+              const perusahaan = u.children.filter((ch) => !(ch.type === "lead" && isSelf(ch.lead, u.label))).length;
+              subtitle = `${perusahaan} perusahaan · ${u.members.length} lead`;
+            } else {
+              subtitle = `${u.members.filter((m) => !isSelf(m, u.label)).length} anak perusahaan`;
+            }
+            const h = header(u, isHolding ? "holding" : "parent", subtitle);
             return (
               <div key={"b-" + u.key} className="col-span-full space-y-3">
-                {hh.node}
-                {hh.open && (
-                  <div className="space-y-3 border-l-2 border-slate-400 pl-3 sm:pl-4">
-                    {(selfLeads.length > 0 || standalone.length > 0) && (
-                      <div className={GRID}>{[...selfLeads.map((c) => renderCard(c, "Holding")), ...standalone.map((c) => renderCard(c, "Perusahaan"))]}</div>
-                    )}
-                    {groups.map((g) => parentBlock(g, true))}
+                {h.node}
+                {h.open && (
+                  <div className="overflow-x-auto rounded-panel border border-slate-200 bg-white px-4 py-6">
+                    <div className="mx-auto w-fit min-w-max">
+                      <OrgBranch node={chartOf(u)} stages={stages} onOpen={setEdit} upper={uppercaseNames} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -1997,8 +2063,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
           const hasGroups = units.some((x) => x.type !== "lead");
           let dividerShown = false;
           return pageItems.flatMap((u) => {
-            if (u.type === "group") return [parentBlock(u, false)];
-            if (u.type === "holding") return [holdingBlock(u)];
+            if (u.type === "group" || u.type === "holding") return [chartBlock(u)];
             if (groupView && hasGroups && !dividerShown) {
               dividerShown = true;
               return [
