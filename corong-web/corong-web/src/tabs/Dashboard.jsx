@@ -4,8 +4,6 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { NextoRobotHead } from "../Auth";
 import * as db from "../lib/db";
 import CompanyPerformanceCard from "../components/CompanyPerformanceCard";
-import MonthlyReport from "../components/MonthlyReport";
-import { hasOrgFeature } from "../lib/orgFeatures";
 import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../ui";
 import { todayISO } from "../lib/helpers";
 import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
@@ -26,12 +24,9 @@ export default function Dashboard({
   settings = {},
   onGo,
   onOpenLead,
-  onChanged,
   isEnterprise = false,
   canManage = false,
   hideAiRecs = false,
-  org = null,
-  isOwner = false,
   myUid = null,
 }) {
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
@@ -250,10 +245,6 @@ export default function Dashboard({
           permintaan calon klien "Sales bisa lihat dashboard perusahaan
           secara umum"). Ditaruh paling atas biar keliatan tiap buka app. */}
       {isEnterprise && !canManage && <CompanyPerformanceCard />}
-
-      {hasOrgFeature(org, "monthly_report") && (
-        <MonthlyReport leads={leads} stages={stages} dealTransactions={dealTransactions} org={org} canEditTarget={isOwner} onChanged={onChanged} />
-      )}
 
       {/* NEX AI - satu-satunya permukaan gelap di Dashboard (titik fokus).
           Ungu = warna khusus AI. */}

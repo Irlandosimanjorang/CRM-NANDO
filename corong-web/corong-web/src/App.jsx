@@ -17,6 +17,7 @@ import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // diambil ulang beberapa detik kemudian).
 import { hasOrgFeature, OWNER_MONITOR_TABS } from "./lib/orgFeatures";
 import { AiOffContext } from "./lib/aiOff";
+import MonthlyReport from "./components/MonthlyReport";
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
 import SettingsTab from "./tabs/Settings";
@@ -52,7 +53,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck, BarChart3,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -81,6 +82,9 @@ const ADMIN_NAV_ITEM = { key: "adminops", label: "Command Center", short: "AI Op
 // disisipin setelah "Visit & Follow-up". Rekap aktivitas-nya dijaga ulang di
 // RPC get_team_activity (server nolak selain owner/manager Enterprise).
 const TEAM_NAV_ITEM = { key: "team", label: "Team", short: "Team", icon: UserCheck };
+// Tab "Laporan" (9 Okt 2026): laporan bulanan sales (SPH, hot progress, deal, target omzet,
+// kalender deal). Hanya untuk organisasi dengan saklar monthly_report (mis. BSB); owner dan tim.
+const REPORT_NAV_ITEM = { key: "laporan", label: "Laporan", short: "Laporan", icon: BarChart3 };
 
 // ---- COST/BUG FIX (5 Sep 2026) ----
 // SEMUA tab sekarang selalu di-mount (gak pernah di-unmount pas pindah tab),
@@ -535,6 +539,7 @@ export default function App() {
     if (loading || !org) return;
     const allowed = new Set([...NAV.map((n) => n.key), "advisor", "industridemo"]);
     if (isEnterprise && canManage) allowed.add(TEAM_NAV_ITEM.key);
+    if (hasOrgFeature(org, "monthly_report")) allowed.add(REPORT_NAV_ITEM.key);
     if (settings?.is_platform_admin) allowed.add(ADMIN_NAV_ITEM.key);
     if (!allowed.has(tab) || (monitorOwner && !OWNER_MONITOR_TABS.includes(tab) && !(settings?.is_platform_admin && tab === ADMIN_NAV_ITEM.key))) setTab("dashboard");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -737,9 +742,13 @@ export default function App() {
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
   // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
   // Customer biasa (99.9% user) gak akan pernah liat item ini nongol sama sekali.
-  const baseNav = isEnterprise && canManage
-    ? NAV.flatMap((n) => (n.key === "visitfollowup" ? [n, TEAM_NAV_ITEM] : [n]))
-    : NAV;
+  const reportOn = hasOrgFeature(org, "monthly_report");
+  const baseNav = NAV.flatMap((n) => {
+    const out = [n];
+    if (n.key === "leads" && reportOn) out.push(REPORT_NAV_ITEM);
+    if (n.key === "visitfollowup" && isEnterprise && canManage) out.push(TEAM_NAV_ITEM);
+    return out;
+  });
   const monitorNav = monitorOwner ? baseNav.filter((n) => OWNER_MONITOR_TABS.includes(n.key)) : baseNav;
   const navItems = settings?.is_platform_admin ? [...monitorNav, ADMIN_NAV_ITEM] : monitorNav;
 
@@ -1049,7 +1058,7 @@ export default function App() {
                   rekam meeting, dst) yang lagi jalan di tab manapun GAK KEPUTUS
                   cuma gara-gara user pindah tab pas nungguin. ---- */}
               <div style={{ display: effectiveTab === "dashboard" ? "block" : "none" }}>
-                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} hideAiRecs={monitorOwner} org={org} isOwner={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} myUid={session?.user?.id} />
+                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} hideAiRecs={monitorOwner} myUid={session?.user?.id} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
                 <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
@@ -1074,6 +1083,11 @@ export default function App() {
                     <PreviewLock locked={isLocked("visitfollowup")} minLevel={TAB_MIN_LEVEL.visitfollowup}>
                       <VisitFollowup leads={isLocked("visitfollowup") ? demo.leads : leads} onEdit={setEditLead} onChanged={reload} onNotify={pushToast} isEnterprise={org?.plan === "enterprise"} myLevel={myLevel} industry={org?.industry} />
                     </PreviewLock>
+                  </div>
+                )}
+                {visitedTabs.has("laporan") && reportOn && (
+                  <div style={{ display: effectiveTab === "laporan" ? "block" : "none" }}>
+                    <MonthlyReport leads={leads} stages={stageList} dealTransactions={dealTransactions} org={org} canEditTarget={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} onChanged={reload} />
                   </div>
                 )}
                 {visitedTabs.has("team") && isEnterprise && canManage && (
