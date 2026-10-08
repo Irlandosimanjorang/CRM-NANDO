@@ -17,7 +17,7 @@ const int = (v) => num(v).toLocaleString("id-ID");
 const safeDiv = (a, b) => (b > 0 ? a / b : null);
 const rpOrDash = (v) => (v === null ? "-" : fmtRp(Math.round(v)));
 
-export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImport }) {
+export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImport, onChanged }) {
   const [year, month] = ym.split("-").map(Number);
   const from = `${ym}-01`;
   const to = `${ym}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
@@ -25,6 +25,7 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
   const [loadErr, setLoadErr] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [tick, setTick] = useState(0);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -133,6 +134,7 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
         )}
       </div>
 
+      {notice && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800">{notice}</p>}
       {loadErr && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[12px] text-rose-700">Data iklan tidak dapat dimuat: {loadErr}</p>}
       {!a.slot && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800">Pipeline organisasi ini belum punya isian "Sumber lead", jadi platform lead dibaca dari kolom sumber bawaan.</p>}
 
@@ -206,7 +208,13 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
         </div>
       )}
 
-      {showImport && <AdsImportModal ym={ym} onClose={() => setShowImport(false)} onDone={() => { setShowImport(false); setTick((t) => t + 1); }} />}
+      {showImport && (
+        <AdsImportModal ym={ym} leads={leads} stages={stages} org={org} onClose={() => setShowImport(false)} onDone={(r) => {
+          setShowImport(false); setTick((t) => t + 1);
+          if (r?.kind === "lead") { setNotice(`${r.count} lead dari iklan sudah dibuat di tab Leads (tahap pertama).`); onChanged?.(); }
+          else setNotice(`${r?.count || 0} baris biaya iklan diimpor.`);
+        }} />
+      )}
     </section>
   );
 }

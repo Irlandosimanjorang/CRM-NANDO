@@ -166,7 +166,7 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
         <p className="mt-2 text-[11px] text-slate-500">Kotak biru = ada deal pada tanggal itu. Angka +n = jumlah data masuk.</p>
       </div>
     </section>
-    <AdsAnalysis leads={leads} stages={stages} org={org} ym={ym} canImport={canImport} />
+    <AdsAnalysis leads={leads} stages={stages} org={org} ym={ym} canImport={canImport} onChanged={onChanged} />
     </div>
   );
 }

@@ -130,3 +130,91 @@ export function buildAdRows(aoa, headerRow, mapping, { platform, fallbackDay }) 
   }
   return { rows: [...merged.values()], skipped };
 }
+
+// ---------------------------------------------------------------------------
+// Data LEAD dari iklan (Meta Instant Form / Leads Center, TikTok Lead Gen, Google lead form):
+// ekspor yang berisi kontak, bukan biaya. Diubah jadi lead Nexto (tahap pertama, sumber = platform).
+// ---------------------------------------------------------------------------
+const LEAD_KEYS = {
+  name: ["full_name", "full name", "nama lengkap", "lead name", "contact name", "nama", "name"],
+  company: ["company_name", "company name", "nama perusahaan", "perusahaan", "business name", "company"],
+  phone: ["phone_number", "phone number", "nomor telepon", "no. hp", "no hp", "whatsapp", "telepon", "phone", "mobile", "hp"],
+  email: ["email address", "e-mail", "email"],
+  city: ["city", "kota", "alamat", "address", "location", "lokasi"],
+  campaign: ["campaign_name", "campaign name", "nama kampanye", "kampanye", "campaign", "form name", "ad name"],
+  day: ["created_time", "created time", "date created", "submitted", "created", "tanggal", "date", "waktu"],
+  notes: ["catatan", "keterangan", "message", "pesan", "notes", "comment"],
+  platform: ["publisher platform", "platform", "sumber", "source"],
+};
+
+export function guessLeadColumns(headers) {
+  const norm = headers.map((h) => String(h ?? "").trim().toLowerCase());
+  const out = {};
+  const used = new Set();
+  for (const [field, keys] of Object.entries(LEAD_KEYS)) {
+    let hit = -1;
+    for (const pass of [0, 1, 2]) {
+      for (const k of keys) {
+        hit = norm.findIndex((h, idx) => {
+          if (!h || used.has(idx)) return false;
+          if (pass === 0) return h === k;
+          return pass === 1 ? h.startsWith(k) : h.includes(k);
+        });
+        if (hit >= 0) break;
+      }
+      if (hit >= 0) break;
+    }
+    if (hit >= 0) { out[field] = hit; used.add(hit); }
+  }
+  return out;
+}
+
+export function findLeadHeaderRow(aoa) {
+  for (let i = 0; i < Math.min(aoa.length, 15); i++) {
+    const row = aoa[i] || [];
+    if (row.filter((c) => String(c ?? "").trim()).length < 2) continue;
+    const g = guessLeadColumns(row);
+    if (g.name !== undefined || g.phone !== undefined) return i;
+  }
+  return 0;
+}
+
+const phoneKey = (p) => String(p ?? "").replace(/\D/g, "").slice(-9);
+
+// existing = lead yang sudah ada di Nexto (untuk deteksi duplikat lewat nomor telepon atau nama persis).
+export function buildLeadRows(aoa, headerRow, mapping, { platform, stageKey, slotKey, existing = [] }) {
+  const seenPhone = new Set(existing.map((l) => phoneKey(l.phone)).filter(Boolean));
+  const seenName = new Set(existing.map((l) => String(l.name || "").trim().toLowerCase()).filter(Boolean));
+  const rows = [];
+  let duplicates = 0, empty = 0;
+  for (let i = headerRow + 1; i < aoa.length; i++) {
+    const r = aoa[i] || [];
+    if (!r.some((c) => String(c ?? "").trim())) continue;
+    const get = (f) => (mapping[f] === undefined || mapping[f] === null || mapping[f] === "" ? "" : r[Number(mapping[f])]);
+    const person = String(get("name") ?? "").trim();
+    const company = String(get("company") ?? "").trim();
+    const name = company || person;
+    let phone = String(get("phone") ?? "").trim().replace(/^p:/i, "");
+    // Excel sering membuang angka 0 di depan nomor lokal (812... -> harusnya 0812...).
+    if (/^8d{8,11}$/.test(phone)) phone = "0" + phone;
+    if (!name) { empty++; continue; }
+    const pk = phoneKey(phone);
+    const nk = name.toLowerCase();
+    if ((pk && seenPhone.has(pk)) || seenName.has(nk)) { duplicates++; continue; }
+    if (pk) seenPhone.add(pk);
+    seenName.add(nk);
+    const rowPlatform = normalizePlatform(get("platform")) || platform;
+    const campaign = String(get("campaign") ?? "").trim();
+    const day = mapping.day !== undefined && mapping.day !== "" ? parseDay(get("day")) : null;
+    const lead = {
+      name, category: "Lainnya", stage_key: stageKey, source: slotKey ? "ads" : rowPlatform,
+      phone, email: String(get("email") ?? "").trim(), city: String(get("city") ?? "").trim(),
+      key_person: company ? person : "",
+    };
+    if (slotKey) lead[slotKey] = rowPlatform;
+    if (day) lead.created_at = `${day}T09:00:00+07:00`;
+    const note = [`Masuk dari iklan ${rowPlatform}${campaign ? `, kampanye ${campaign}` : ""}.`, String(get("notes") ?? "").trim()].filter(Boolean).join(" ");
+    rows.push({ lead, note });
+  }
+  return { rows, duplicates, empty };
+}
