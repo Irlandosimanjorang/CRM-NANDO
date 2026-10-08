@@ -11,6 +11,7 @@ import Deal from "../../src/tabs/Deal";
 import VisitFollowup from "../../src/tabs/VisitFollowup";
 import Kompetitor from "../../src/tabs/Kompetitor";
 import Nex from "../../src/tabs/Nex";
+import QuickVoiceNoteModal from "../../src/components/QuickVoiceNoteModal";
 import Advisor from "../../src/tabs/Advisor";
 import IndustryDemo from "../../src/tabs/IndustryDemo";
 import Team from "../../src/tabs/Team";
@@ -62,6 +63,7 @@ const views = {
   team: <Team leads={leads} stages={stages} dealTransactions={demo.deals} onOpenLead={noop} canManage={canManage} />,
   kompetitor: <Kompetitor competitors={demo.competitors} onChanged={noop} />,
   nex: <Nex dummy={!ent} settings={{}} />,
+  nexpro: <QuickVoiceNoteModal leads={leads} stages={stages} settings={{}} onClose={noop} onSaved={noop} isEnterprise={ent} canManage={canManage} />,
   advisor: <Advisor leads={leads} stages={stages} onOpen={noop} dummy={!ent} demoRecs={demo.advisorRecs} />,
   industrydemo: <IndustryDemo />,
   settings: <Settings settings={{}} stages={stages} leads={leads} onChanged={noop} userEmail="uji@example.com" locked={false} />,
@@ -74,7 +76,7 @@ const views = {
   aicost: <div style={{ background: "#05070c", padding: 24 }}><AiCostPanel data={{ kurs: 17700, totals: { by_plan: [{ plan: "standard", accounts: 1, active_accounts: 0, tokens_all: 0, usd_all: 0, tokens_month: 0, usd_month: 0 }, { plan: "enterprise", accounts: 2, active_accounts: 2, tokens_all: 1963610, usd_all: 5.9, tokens_month: 1963610, usd_month: 5.9 }], other: { tokens_all: 4200, usd_all: 0.0077, tokens_month: 4200, usd_month: 0.0077 } }, tracking_since: "2026-10-06T11:00:00Z", accounts: [
     { user_id: "a1", email: "lia@queenpacific.co.id", display_name: "Bu Lia", org_name: "PT Queen Pacific", role: "owner", plan: "enterprise", period_start: "2026-10-06T17:00:00Z", period_end: "2026-11-06T17:00:00Z", period_source: "plan", tokens: 1843210, cost_rp: 96400, cost_usd: 5.4463, est_used_rp: 187300, est_max_rp: 213955, pct_of_limit: 87.5, features: [
       { key: "generate-leads", label: "Generate Leads", used: 4, limit: 4, pct: 100, tokens: 1422000, cost_rp: 68100, cost_usd: 3.8475 },
-      { key: "quick-progress-note", label: "NEX Pro", used: 140, limit: 150, pct: 93, tokens: 380000, cost_rp: 24100, cost_usd: 1.3616 },
+      { key: "quick-progress-note", label: "NEX Pro", used: 117, limit: 125, pct: 94, tokens: 380000, cost_rp: 24100, cost_usd: 1.3616 },
       { key: "daily-digest", label: "AI Advisor (otomatis)", used: 3, limit: 22, pct: 14, tokens: 41210, cost_rp: 4200, cost_usd: 0.2373 },
       { key: "customer-chat", label: "Chat Bantuan", used: 0, limit: null, tokens: 0, cost_rp: 0, cost_usd: 0.0000 } ] },
     { user_id: "a2", email: "budi@queenpacific.co.id", display_name: null, org_name: "PT Queen Pacific", role: "sales_rep", plan: "enterprise", period_start: "2026-10-06T17:00:00Z", period_end: "2026-11-06T17:00:00Z", period_source: "plan", tokens: 120400, cost_rp: 8800, cost_usd: 0.4972, est_used_rp: 60000, est_max_rp: 213955, pct_of_limit: 28, features: [

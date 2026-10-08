@@ -4,7 +4,7 @@
 // TIDAK PERNAH nulis ke DB - hasilnya balik ke frontend buat DIREVIEW MANUAL
 // dulu, baru dieksekusi via db.js pas user tap Simpan.
 //
-// TIER + KUOTA: Standard 25x/bulan, Professional/Enterprise 150x/bulan
+// TIER + KUOTA: Standard 25x/bulan, Professional/Enterprise 125x/bulan (9 Okt 2026, dulu 150x)
 // (1 bulan sejak pemakaian pertama, lihat quota_periods). Mode `checkQuotaOnly` (tanpa audio) buat nampilin sisa
 // jatah tanpa motong kuota.
 //
@@ -125,7 +125,8 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // voice command pendek (maks 3 menit di frontend)
 const QUOTA_STANDARD = 25;
-const QUOTA_PROFESSIONAL = 150;
+const QUOTA_PROFESSIONAL = 125;
+const MAX_TEXT_CHARS = 4000; // mode teks (9 Okt 2026): catatan yang ditempel, tanpa Whisper
 
 // Duplikat ringan dari src/lib/industryTemplates.js (Deno beda runtime).
 const INDUSTRY_CONTEXT = {
@@ -259,7 +260,7 @@ Transkrip: """${transcript}"""`;
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 700, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1000, messages: [{ role: "user", content: prompt }] }),
   });
   if (!resp.ok) throw new Error(`Claude API ${resp.status}`);
   const dat = await resp.json();
@@ -328,32 +329,45 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       return new Response(JSON.stringify({ error: `Kuota NEX Pro (${monthlyMax}x per bulan) sudah terpakai. ${await quotaRefillText(admin, userData.user.id, "quick-progress-note")} Sementara itu, Anda dapat mencatat manual di tab Leads.` }), { status: 429, headers: cors });
     }
 
-    storagePath = body.storagePath;
-    if (!storagePath) {
-      await releaseSlot(admin, reservationId); reservationId = null;
-      return new Response(JSON.stringify({ error: "storagePath kosong" }), { status: 400, headers: cors });
-    }
-    if (!storagePath.startsWith(`${userData.user.id}/`)) {
-      await releaseSlot(admin, reservationId); reservationId = null;
-      return new Response(JSON.stringify({ error: "File audio bukan milik akun Anda" }), { status: 403, headers: cors });
-    }
+    // Mode teks (9 Okt 2026): catatan ditempel pengguna langsung dikirim ke Claude, tanpa upload dan Whisper.
+    // Kuota yang sama dipakai. Mode suara tidak berubah.
+    const textInput = typeof body.text === "string" ? body.text.trim() : "";
+    let transcript = "";
+    if (textInput) {
+      if (textInput.length > MAX_TEXT_CHARS) {
+        await releaseSlot(admin, reservationId); reservationId = null;
+        return new Response(JSON.stringify({ error: `Teks terlalu panjang (maks ${MAX_TEXT_CHARS} karakter). Ringkas catatan atau bagi menjadi beberapa bagian. Kuota Anda tidak terpakai.` }), { status: 400, headers: cors });
+      }
+      transcript = textInput;
+    } else {
+      storagePath = body.storagePath;
+      if (!storagePath) {
+        await releaseSlot(admin, reservationId); reservationId = null;
+        return new Response(JSON.stringify({ error: "storagePath kosong" }), { status: 400, headers: cors });
+      }
+      if (!storagePath.startsWith(`${userData.user.id}/`)) {
+        await releaseSlot(admin, reservationId); reservationId = null;
+        return new Response(JSON.stringify({ error: "File audio bukan milik akun Anda" }), { status: 403, headers: cors });
+      }
 
-    const { data: fileBlob, error: dlErr } = await admin.storage.from("meeting-audio").download(storagePath);
-    if (dlErr) {
-      await releaseSlot(admin, reservationId); reservationId = null;
-      return new Response(JSON.stringify({ error: "Gagal mengambil file audio: " + dlErr.message }), { status: 500, headers: cors });
-    }
-    if (fileBlob.size > MAX_AUDIO_BYTES) {
-      await removeAudio(admin, storagePath);
-      await releaseSlot(admin, reservationId); reservationId = null;
-      return new Response(JSON.stringify({ error: `Rekaman terlalu besar (maks ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)}MB). NEX Pro untuk catatan singkat, bukan rekaman meeting panjang.` }), { status: 413, headers: cors });
-    }
+      const { data: fileBlob, error: dlErr } = await admin.storage.from("meeting-audio").download(storagePath);
+      if (dlErr) {
+        await releaseSlot(admin, reservationId); reservationId = null;
+        return new Response(JSON.stringify({ error: "Gagal mengambil file audio: " + dlErr.message }), { status: 500, headers: cors });
+      }
+      if (fileBlob.size > MAX_AUDIO_BYTES) {
+        await removeAudio(admin, storagePath);
+        await releaseSlot(admin, reservationId); reservationId = null;
+        return new Response(JSON.stringify({ error: `Rekaman terlalu besar (maks ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)}MB). NEX Pro untuk catatan singkat, bukan rekaman meeting panjang.` }), { status: 413, headers: cors });
+      }
 
-    const transcript = await transcribeAudio(fileBlob, storagePath);
-    if (!transcript) {
-      await removeAudio(admin, storagePath);
-      await releaseSlot(admin, reservationId); reservationId = null;
-      return new Response(JSON.stringify({ error: "Suara tidak terdengar jelas atau audio kosong. Kuota Anda tidak terpakai." }), { status: 422, headers: cors });
+      transcript = await transcribeAudio(fileBlob, storagePath);
+      if (!transcript) {
+        await removeAudio(admin, storagePath);
+        await releaseSlot(admin, reservationId); reservationId = null;
+        return new Response(JSON.stringify({ error: "Suara tidak terdengar jelas atau audio kosong. Kuota Anda tidak terpakai." }), { status: 422, headers: cors });
+      }
+
     }
 
     // RLS otomatis nge-filter ke lead org sendiri doang.
@@ -362,7 +376,7 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     const dateLabel = wibNowLabel();
     const [classified] = await Promise.all([
       classifyVoiceCommand(transcript, leads || [], dateLabel, industryKey),
-      removeAudio(admin, storagePath),
+      storagePath ? removeAudio(admin, storagePath) : null,
     ]);
 
     const matchedLead = classified.lead_id ? (leads || []).find((l) => l.id === classified.lead_id) || null : null;

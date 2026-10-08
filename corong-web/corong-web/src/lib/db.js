@@ -1285,6 +1285,15 @@ export async function transcribeQuickVoiceNote(storagePath) {
   return invokeWithMessage("quick-progress-note", { storagePath }, "Gagal memproses catatan suara"); // { transcript, action, progress_note, lead_id, lead_name, confidence, updates, cancel_visit, result, new_lead, quota }
 }
 
+// Mode teks NEX Pro (9 Okt 2026): catatan ditempel pengguna dikirim langsung ke Claude, tanpa upload dan Whisper.
+export async function classifyQuickText(text) {
+  return invokeWithMessage("quick-progress-note", { text }, "Gagal memproses catatan teks");
+}
+// Sisa kuota NEX Pro bulan ini: { used, max, reset_at } (tidak memotong kuota).
+export async function getQuickVoiceQuota() {
+  return invokeWithMessage("quick-progress-note", { checkQuotaOnly: true }, "Gagal membaca kuota NEX Pro");
+}
+
 // Riwayat perpindahan tahap lead pada rentang tanggal (WIB); hanya owner dan manager yang boleh membaca.
 export async function listStageChanges(fromISO, toISO) {
   const orgId = await getMyOrgId();

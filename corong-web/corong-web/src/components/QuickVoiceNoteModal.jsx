@@ -21,7 +21,7 @@
 // skin ulang warna doang.
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Mic, Square, X, Save, Loader2, Search, Zap, CheckCircle2, AlertTriangle, Trash2, Mail, UserPlus, Trophy, XCircle, RefreshCw } from "lucide-react";
+import { Mic, Keyboard, Square, X, Save, Loader2, Search, Zap, CheckCircle2, AlertTriangle, Trash2, Mail, UserPlus, Trophy, XCircle, RefreshCw } from "lucide-react";
 import * as db from "../lib/db";
 
 function fmtTimer(sec) {
@@ -30,6 +30,7 @@ function fmtTimer(sec) {
   return `${m}:${s}`;
 }
 
+const MAX_TEXT_CHARS = 4000; // sama dengan batas di edge function quick-progress-note
 const MAX_RECORDING_SECONDS = 3 * 60; // catatan cepat - gak perlu selama Rekam Meeting (30 menit)
 
 const ACTION_META = {
@@ -55,7 +56,10 @@ const darkLabel = "text-[10px] font-semibold uppercase tracking-wider text-slate
 export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, onSaved, isEnterprise = false, canManage = false }) {
   const [stage, setStage] = useState("idle"); // idle | recording | processing | review | error
   const [seconds, setSeconds] = useState(0);
-  const [processingStep, setProcessingStep] = useState("uploading"); // uploading | transcribing
+  const [processingStep, setProcessingStep] = useState("uploading"); // uploading | transcribing | reading
+  const [inputMode, setInputMode] = useState("voice"); // voice | text (mode teks: catatan ditempel, 9 Okt 2026)
+  const [textInput, setTextInput] = useState("");
+  const [quota, setQuota] = useState(null); // { used, max }
 
   const [action, setAction] = useState("update_lead");
   const [lead, setLead] = useState(null);
@@ -117,6 +121,13 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
     };
   }, []);
 
+  // Sisa kuota bulan ini ditampilkan ke pengguna (9 Okt 2026, permintaan Nando). Gagal membaca tidak mengganggu pemakaian.
+  useEffect(() => {
+    let alive = true;
+    db.getQuickVoiceQuota().then((q) => { if (alive && q && typeof q.max === "number") setQuota({ used: q.used || 0, max: q.max }); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   // Draft email di-fetch TERPISAH (bukan bagian respons quick-progress-note)
   // - reuse fungsi draft-followup yang sama dipake tombol "AI Draft" di
   // LeadModal, biar cache 24 jam & rate limit 5x/hari-nya ikut kepake juga
@@ -131,6 +142,40 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
   }, [stage, action, lead, emailDraft, emailLoading]);
 
   const matches = q.trim() ? (leads || []).filter((l) => l.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
+
+  // Hasil dari edge function (jalur suara atau teks) dipindahkan ke state tinjauan.
+  const applyResult = (result) => {
+    setTranscript(result.transcript || "");
+    setAction(result.action || "update_lead");
+    setProgressNote(result.progress_note || "");
+    // Cuma masukin field yang beneran keisi (bukan null) - biar gak
+    // nampilin form kosong buat field yang gak disebut sama sekali.
+    const filledUpdates = {};
+    for (const [k, v] of Object.entries(result.updates || {})) if (v !== null && v !== undefined && v !== "") filledUpdates[k] = v;
+    setUpdates(filledUpdates);
+    setCancelVisit(!!result.cancel_visit);
+    setCloseResult(result.result || "won");
+    setNewLead(result.new_lead || null);
+    setConfidence(result.confidence || null);
+    const matchedLead = result.lead_id ? (leads || []).find((l) => l.id === result.lead_id) : null;
+    setLead(matchedLead ? { id: matchedLead.id, name: matchedLead.name } : (result.lead_id ? { id: result.lead_id, name: result.lead_name } : null));
+    if (result.quota && typeof result.quota.max === "number") setQuota({ used: result.quota.used || 0, max: result.quota.max });
+  };
+
+  const processText = async () => {
+    const t = textInput.trim();
+    if (!t) return;
+    setProcessingStep("reading");
+    setStage("processing");
+    try {
+      const result = await db.classifyQuickText(t);
+      applyResult({ ...result, transcript: result.transcript || t });
+      setStage("review");
+    } catch (e) {
+      setErrMsg(e.message || "Gagal memproses catatan.");
+      setStage("error");
+    }
+  };
 
   const startRecording = async () => {
     let stream;
@@ -175,20 +220,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         const path = await db.uploadQuickVoiceNote(blob);
         setProcessingStep("transcribing");
         const result = await db.transcribeQuickVoiceNote(path);
-        setTranscript(result.transcript || "");
-        setAction(result.action || "update_lead");
-        setProgressNote(result.progress_note || "");
-        // Cuma masukin field yang beneran keisi (bukan null) - biar gak
-        // nampilin form kosong buat field yang gak disebut sama sekali.
-        const filledUpdates = {};
-        for (const [k, v] of Object.entries(result.updates || {})) if (v !== null && v !== undefined && v !== "") filledUpdates[k] = v;
-        setUpdates(filledUpdates);
-        setCancelVisit(!!result.cancel_visit);
-        setCloseResult(result.result || "won");
-        setNewLead(result.new_lead || null);
-        setConfidence(result.confidence || null);
-        const matchedLead = result.lead_id ? (leads || []).find((l) => l.id === result.lead_id) : null;
-        setLead(matchedLead ? { id: matchedLead.id, name: matchedLead.name } : (result.lead_id ? { id: result.lead_id, name: result.lead_name } : null));
+        applyResult(result);
         setStage("review");
       } catch (e) {
         setErrMsg(e.message || "Gagal proses rekaman.");
@@ -314,10 +346,40 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
             <button onClick={stage === "recording" ? cancelRecording : onClose} className="text-slate-500 hover:text-white transition-colors" aria-label="Tutup"><X size={18} /></button>
           </div>
 
-          {/* Kuota NEX Pro tidak ditampilkan ke pengguna (6 Okt 2026) - dipantau admin di Command Center. */}
-          {stage !== "idle" && <div className="mb-2" />}
+          {quota && stage !== "processing" && (
+            <p className={`mb-2 text-[11px] ${quota.max - quota.used <= Math.ceil(quota.max * 0.1) ? "text-rose-300" : "text-slate-500"}`}>
+              Sisa {Math.max(quota.max - quota.used, 0)} dari {quota.max} pemakaian NEX Pro bulan ini
+            </p>
+          )}
 
           {stage === "idle" && (
+            <div className="mt-1 mb-1 flex rounded-xl border border-white/10 p-0.5 text-[12px] font-medium" role="group" aria-label="Cara memberi catatan">
+              {[["voice", "Suara", Mic], ["text", "Teks", Keyboard]].map(([k, label, Icon]) => (
+                <button key={k} type="button" aria-pressed={inputMode === k} onClick={() => setInputMode(k)} className={`flex flex-1 items-center justify-center gap-1.5 rounded-[10px] py-1.5 transition-colors ${inputMode === k ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}><Icon size={13} /> {label}</button>
+              ))}
+            </div>
+          )}
+
+          {stage === "idle" && inputMode === "text" && (
+            <div className="py-4">
+              <textarea
+                className={darkInput}
+                rows={8}
+                maxLength={MAX_TEXT_CHARS}
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Tempel hasil meeting atau catatan Anda di sini. NEX Pro akan membacanya dan menyiapkan aksinya untuk Anda tinjau."
+                aria-label="Catatan teks untuk NEX Pro"
+              />
+              <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-500">
+                <span>{textInput.length} / {MAX_TEXT_CHARS} karakter</span>
+                {textInput && <button type="button" onClick={() => setTextInput("")} className="hover:text-slate-300">Kosongkan</button>}
+              </div>
+              <button type="button" onClick={processText} disabled={!textInput.trim()} className="mt-3 w-full rounded-xl bg-brand-strong px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40">Proses catatan</button>
+            </div>
+          )}
+
+          {stage === "idle" && inputMode === "voice" && (
             <div className="text-center py-9">
               <div className="relative mx-auto w-28 h-28 flex items-center justify-center">
                 <span className="absolute inset-0 rounded-full border border-violet-400/20" />
@@ -363,8 +425,8 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                 <div className="absolute inset-0 rounded-full border-2 border-white/10" />
                 <div className="absolute inset-0 rounded-full border-2 border-t-orange-400 border-r-violet-400 border-b-transparent border-l-transparent animate-spin" />
               </div>
-              <p className="text-sm text-slate-300">{processingStep === "uploading" ? "Mengirim rekaman…" : "Mentranskrip & menyiapkan aksi…"}</p>
-              <p className="text-xs text-slate-500 mt-1">Biasanya sekitar 15-30 detik</p>
+              <p className="text-sm text-slate-300">{processingStep === "uploading" ? "Mengirim rekaman…" : processingStep === "reading" ? "Membaca catatan & menyiapkan aksi…" : "Mentranskrip & menyiapkan aksi…"}</p>
+              <p className="text-xs text-slate-500 mt-1">{processingStep === "reading" ? "Biasanya sekitar 5-10 detik" : "Biasanya sekitar 15-30 detik"}</p>
             </div>
           )}
 
@@ -473,7 +535,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
               )}
 
               <button onClick={() => setShowTranscript((v) => !v)} className="text-xs text-slate-500 hover:text-slate-300 mt-2.5 transition-colors">
-                {showTranscript ? "Sembunyikan" : "Lihat"} transkrip mentah
+                {showTranscript ? "Sembunyikan" : "Lihat"} {inputMode === "text" ? "teks asli" : "transkrip mentah"}
               </button>
               {showTranscript && <div className="mt-2 text-xs text-slate-400 bg-white/[0.03] border border-white/10 rounded-xl p-3 max-h-40 overflow-y-auto whitespace-pre-wrap">{transcript}</div>}
 
