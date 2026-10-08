@@ -190,6 +190,61 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
 
   // Blok timeline: dipakai di halaman biasa (dalam Panel) dan di layar penuh (menutupi seluruh layar).
   const timeline = (isFull) => {
+    if (isFull) {
+      // Layar penuh: hanya kolom tanggal, melebar sampai semua tanggal terlihat tanpa menggeser. Nama lead
+      // muncul di popup saat kursor diarahkan ke kotak berwarna.
+      const showTip = (e, lead, day, evs) => { const b = e.currentTarget.getBoundingClientRect(); setTip({ x: b.left + b.width / 2, top: b.top, bottom: b.bottom, lead, day, evs }); };
+      return (
+        <div className="fixed inset-0 z-[80] flex flex-col bg-white">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+            <div>
+              <div className="font-display text-[17px] font-bold tracking-[-0.02em] text-ink">{MONTHS[month - 1].toUpperCase()} {year}{orgName ? ` · ${orgName}` : ""}</div>
+              <div className="text-[11px] text-slate-500">{masterRows.length} lead. Arahkan kursor ke kotak berwarna untuk melihat nama lead dan rinciannya.</div>
+            </div>
+            <button type="button" onClick={() => { setTip(null); setFull(false); }} aria-label="Tutup layar penuh" title="Tutup (Esc)" className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><Minimize2 size={18} /></button>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-slate-100 px-5 py-2.5 text-[11.5px] text-slate-600">
+            <span className="font-semibold text-slate-700">Warna tahap</span>
+            {stages.map((st) => <span key={st.key} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: st.hex }} />{st.label}</span>)}
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            {masterRows.length === 0 ? (
+              <EmptyState>Belum ada lead pada bulan ini.</EmptyState>
+            ) : (
+              <table className="w-full table-fixed border-collapse">
+                <thead className="sticky top-0 z-[1] bg-white">
+                  <tr>
+                    {weeks.map(([x, y], i) => <th key={i} colSpan={y - x + 1} className="border-l border-slate-200 px-1 pb-1 pt-0 text-center text-[11px] font-semibold text-slate-500 first:border-l-0">Minggu ke-{i + 1} ({x}–{y} {MONTHS[month - 1].slice(0, 3)})</th>)}
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    {Array.from({ length: daysInMonth }, (_, i) => (
+                      <th key={i} className={cn("py-1 text-center text-[11px] font-semibold text-slate-600", [0, 7, 14, 21].includes(i) && "border-l border-slate-200")}>
+                        <div>{i + 1}</div><div className="font-normal text-slate-400">{dayLetter(i + 1)}</div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {masterRows.map((r) => (
+                    <tr key={r.lead.id}>
+                      {Array.from({ length: daysInMonth }, (_, k) => {
+                        const evs = d.events.get(r.lead.id)?.get(k + 1);
+                        const meta = evs ? stageMeta[evs[evs.length - 1].key] : null;
+                        return (
+                          <td key={k} onMouseEnter={evs ? (e) => showTip(e, r.lead, k + 1, evs) : undefined} onMouseLeave={() => setTip(null)} onClick={evs ? (e) => (tip && tip.lead.id === r.lead.id && tip.day === k + 1 ? setTip(null) : showTip(e, r.lead, k + 1, evs)) : undefined} className={cn("p-[3px]", evs && "cursor-pointer", [0, 7, 14, 21].includes(k) && "border-l border-slate-200")}>
+                            <div className="h-7 w-full rounded-[5px]" style={meta ? { background: meta.hex } : undefined} />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      );
+    }
     const Wrap = isFull ? "div" : Panel;
     return (
       <Wrap className={isFull ? "fixed inset-0 z-[80] flex flex-col bg-white" : "overflow-hidden"}>
