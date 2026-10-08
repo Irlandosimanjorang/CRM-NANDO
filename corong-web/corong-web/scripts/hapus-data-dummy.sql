@@ -6,3 +6,9 @@ delete from progress_notes where lead_id in (select id from leads where org_id =
 delete from leads where org_id = '<ORG_ID>' and source = 'dummy';
 delete from ad_spend where org_id = '<ORG_ID>' and campaign like '[DUMMY]%';
 -- opsional: update organizations set monthly_target = 0 where id = '<ORG_ID>';
+
+-- Anggota dummy akun uji (Adi, Dian, Reza, Rika, Renika; email *.dummy@example.com, tidak bisa login):
+-- hapus lead dummy lebih dulu (skrip di atas), lalu riwayat dan akun-akunnya.
+delete from lead_stage_changes where org_id = '<ORG_ID>' and lead_id not in (select id from leads where org_id = '<ORG_ID>');
+delete from organization_members where user_id in (select id from auth.users where email like '%.dummy@example.com');
+delete from auth.users where email like '%.dummy@example.com';
