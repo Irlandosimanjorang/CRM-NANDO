@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
 import * as db from "../lib/db";
+import LeadConversation from "./LeadConversation";
 import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
@@ -474,6 +475,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           </div>
         </div>
         <div className="space-y-3 px-5 pb-5 pt-3">
+          {lead.id && <LeadConversation leadId={lead.id} />}
           {lead.customer_state && (
             <div className="border border-violet-200 bg-violet-50/60 rounded-2xl p-3">
               <div className="text-xs font-semibold text-violet-700 mb-2 flex items-center gap-1.5">

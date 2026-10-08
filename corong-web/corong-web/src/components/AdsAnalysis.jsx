@@ -52,14 +52,33 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
     const adRows = rows.filter((r) => r.spend > 0);
     const tot = adRows.reduce((t, r) => ({ spend: t.spend + r.spend, leads: t.leads + r.leads, deals: t.deals + r.deals, value: t.value + r.value, clicks: t.clicks + r.clicks, impressions: t.impressions + r.impressions }), { spend: 0, leads: 0, deals: 0, value: 0, clicks: 0, impressions: 0 });
 
+    // Lead per kampanye: dari kolom "kampanye iklan" di lead (terisi otomatis dari chat Cekat atau impor lead iklan),
+    // dicocokkan dengan nama kampanye di data biaya (huruf besar kecil dan tanda baca diabaikan).
+    const normC = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const leadCamp = new Map();
+    for (const l of cohort) {
+      const k = normC(l.ad_campaign);
+      if (!k) continue;
+      const c = leadCamp.get(k) || { leads: 0, deals: 0, value: 0 };
+      c.leads += 1;
+      if (wonKeys.has(l.stage_key)) { c.deals += 1; c.value += num(l.deal_value); }
+      leadCamp.set(k, c);
+    }
     const camp = new Map();
     for (const r of ads) {
       const k = `${normalizePlatform(r.platform)}|${r.campaign}`;
-      const c = camp.get(k) || { platform: normalizePlatform(r.platform), campaign: r.campaign || "(tanpa nama)", spend: 0, clicks: 0, reported: 0 };
+      const c = camp.get(k) || { platform: normalizePlatform(r.platform), campaign: r.campaign || "(tanpa nama)", key: normC(r.campaign), spend: 0, clicks: 0, reported: 0 };
       c.spend += num(r.spend); c.clicks += num(r.clicks); c.reported += num(r.results);
       camp.set(k, c);
     }
+    const matchedKeys = new Set();
+    for (const c of camp.values()) {
+      const m = c.key ? leadCamp.get(c.key) : null;
+      if (m) matchedKeys.add(c.key);
+      c.leadCount = m?.leads || 0; c.deals = m?.deals || 0; c.value = m?.value || 0;
+    }
     const campaigns = [...camp.values()].sort((p, q) => q.spend - p.spend).slice(0, 8);
+    const unmatchedLeads = [...leadCamp.entries()].filter(([k]) => !matchedKeys.has(k)).reduce((t, [, v]) => t + v.leads, 0);
 
     const insights = [];
     const withLeads = adRows.filter((r) => r.leads > 0);
@@ -73,7 +92,7 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
       insights.push(`Omzet terbesar per rupiah iklan: ${best.platform} (${(best.value / best.spend).toFixed(1)}x dari biaya).`);
     }
     for (const r of adRows.filter((x) => x.leads === 0)) insights.push(`${r.platform}: biaya ${fmtRp(Math.round(r.spend))} tetapi belum ada lead dengan sumber ini di Nexto. Pastikan sales mengisi "Sumber lead".`);
-    return { slot, rows, adRows, tot, campaigns, insights, cohortCount: cohort.length, noSource: cohort.filter((l) => sourceOf(l) === "Tidak diisi").length };
+    return { slot, rows, adRows, tot, campaigns, unmatchedLeads, insights, cohortCount: cohort.length, noSource: cohort.filter((l) => sourceOf(l) === "Tidak diisi").length };
   }, [ads, leads, stages, org, ym]);
 
   const colorOf = (p, i) => COLORS[p] || EXTRA[i % EXTRA.length];
@@ -184,10 +203,10 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
 
       {a.campaigns.length > 0 && (
         <Panel className="overflow-hidden">
-          <div className="px-5 pb-1 pt-4"><PanelHeader title="Kampanye dengan biaya terbesar" meta="Angka hasil berasal dari file platform iklan" /></div>
+          <div className="px-5 pb-1 pt-4"><PanelHeader title="Kampanye dengan biaya terbesar" meta="Biaya dan klik dari file iklan. Lead, deal, omzet, dan ROAS dari lead yang kampanye iklannya sama dengan nama kampanye di file." /></div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] border-collapse">
-              <thead><tr className="border-b border-slate-100"><th className={`${th} !text-left`}>Kampanye</th><th className={`${th} !text-left`}>Platform</th><th className={th}>Biaya</th><th className={th}>Klik</th><th className={th}>Biaya/klik</th><th className={th}>Hasil</th></tr></thead>
+            <table className="w-full min-w-[820px] border-collapse">
+              <thead><tr className="border-b border-slate-100"><th className={`${th} !text-left`}>Kampanye</th><th className={`${th} !text-left`}>Platform</th><th className={th}>Biaya</th><th className={th}>Klik</th><th className={th}>Biaya/klik</th><th className={th}>Hasil (file)</th><th className={th}>Lead</th><th className={th}>Deal</th><th className={th}>Omzet</th><th className={th}>ROAS</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {a.campaigns.map((c, i) => (
                   <tr key={i}>
@@ -195,11 +214,15 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
                     <td className="px-4 py-2.5 text-[12.5px] text-slate-600">{c.platform}</td>
                     <td className={td}>{fmtRp(Math.round(c.spend))}</td><td className={td}>{int(c.clicks)}</td>
                     <td className={td}>{rpOrDash(safeDiv(c.spend, c.clicks))}</td><td className={td}>{int(c.reported)}</td>
+                    <td className={td}>{c.leadCount || "-"}</td><td className={td}>{c.leadCount ? c.deals : "-"}</td>
+                    <td className={td}>{c.value > 0 ? fmtRp(Math.round(c.value)) : "-"}</td>
+                    <td className={`${td} font-semibold`}>{c.value > 0 && c.spend > 0 ? `${(c.value / c.spend).toFixed(1)}x` : "-"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {a.unmatchedLeads > 0 && <p className="border-t border-slate-100 px-5 py-2.5 text-[11px] text-amber-700">{a.unmatchedLeads} lead bulan ini punya kampanye iklan yang namanya belum cocok dengan data biaya mana pun. Samakan nama kampanye di file biaya dengan yang tercatat di lead agar ROAS per kampanye terhitung.</p>}
         </Panel>
       )}
 

@@ -212,6 +212,7 @@ export function buildLeadRows(aoa, headerRow, mapping, { platform, stageKey, slo
       key_person: company ? person : "",
     };
     if (slotKey) lead[slotKey] = rowPlatform;
+    if (campaign) lead.ad_campaign = campaign.slice(0, 200);
     if (day) lead.created_at = `${day}T09:00:00+07:00`;
     const note = [`Masuk dari iklan ${rowPlatform}${campaign ? `, kampanye ${campaign}` : ""}.`, String(get("notes") ?? "").trim()].filter(Boolean).join(" ");
     rows.push({ lead, note });

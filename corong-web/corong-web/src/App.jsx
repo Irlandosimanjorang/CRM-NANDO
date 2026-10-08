@@ -1132,7 +1132,7 @@ export default function App() {
                     overlay generic yang dulu nutup SELURUH tab termasuk
                     tombol-tombol itu (bug: user Free gak bisa hapus akun
                     sendiri sama sekali). */}
-                <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} userEmail={session?.user?.email} locked={isLocked("settings")} />
+                <SettingsTab settings={settings} stages={stageList} leads={leads} onChanged={reload} userEmail={session?.user?.email} locked={isLocked("settings")} chatInbound={!!(org && session?.user?.id && org.owner_user_id === session.user.id && hasOrgFeature(org, "lead_webhook"))} />
               </div>
             </>
           )}

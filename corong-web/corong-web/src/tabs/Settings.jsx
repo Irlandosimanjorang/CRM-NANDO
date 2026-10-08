@@ -8,12 +8,13 @@ import DeleteAccountModal from "../components/DeleteAccountModal";
 import PreviewLock from "../components/PreviewLock";
 import SupportChatWidget from "../components/SupportChatWidget";
 import ProductCatalogCard from "../components/ProductCatalogCard";
+import ChatInboundCard from "../components/ChatInboundCard";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 import { PLAN_LEVEL, TIER_LABEL, MAYAR_PAYMENT_LINK } from "../lib/plans";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 
-export default function Settings({ settings, stages, leads, onChanged, userEmail, locked }) {
+export default function Settings({ settings, stages, leads, onChanged, userEmail, locked, chatInbound = false }) {
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -801,6 +802,8 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           </div>
         </div>
       </div>
+
+      {chatInbound && <ChatInboundCard />}
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>

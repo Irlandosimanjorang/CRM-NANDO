@@ -1295,6 +1295,31 @@ export async function listStageChanges(fromISO, toISO) {
   return data || [];
 }
 
+// ---- CHAT MASUK DARI IKLAN (webhook Cekat.ai) ----
+// Owner membuat/mengambil kunci webhook organisasinya (hanya bila saklar lead_webhook menyala).
+export async function ensureChatChannel(rotate = false) {
+  const { data, error } = await supabase.rpc("ensure_chat_channel", { p_rotate: rotate });
+  if (error) throw error;
+  return data;
+}
+export async function getChatWebhookLog() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("chat_webhook_log").select("id, received_at, event, ok, note, payload")
+    .eq("org_id", orgId).order("received_at", { ascending: false }).limit(20);
+  if (error) throw error;
+  return data || [];
+}
+// Percakapan satu lead + pesannya (urut waktu). null bila lead tidak punya percakapan.
+export async function getLeadConversation(leadId) {
+  const { data: conv, error } = await supabase.from("lead_conversations").select("*").eq("lead_id", leadId).order("last_message_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  if (!conv) return { conv: null, messages: [] };
+  const { data: messages, error: mErr } = await supabase.from("lead_messages").select("id, direction, body, media_url, sender_name, sent_at")
+    .eq("conversation_id", conv.id).order("sent_at", { ascending: true }).limit(500);
+  if (mErr) throw mErr;
+  return { conv, messages: messages || [] };
+}
+
 // ---- BIAYA IKLAN (tab Laporan: impor dari Meta/TikTok/Google Ads) ----
 export async function listAdSpend(fromISO, toISO) {
   const orgId = await getMyOrgId();
