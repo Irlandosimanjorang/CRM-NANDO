@@ -158,10 +158,11 @@ function findColIndex(headers, keys, used) {
 // Header kolom induk/grup ("Induk Perusahaan", "Parent Company") memuat kata
 // "perusahaan"/"company" - harus dikecualikan dari tebakan kolom NAMA, kalau
 // tidak kolom ini bisa terpilih sebagai nama lead.
-const PARENT_HEADER_KEYS = ["induk perusahaan", "perusahaan induk", "grup perusahaan", "group company", "parent company", "parent", "induk", "head office", "holding", "kantor pusat"];
+const HOLDING_HEADER_KEYS = ["holding company", "holding", "business group", "grup usaha", "group usaha", "induk usaha", "holding group", "group"];
+const PARENT_HEADER_KEYS = ["induk perusahaan", "perusahaan induk", "grup perusahaan", "group company", "parent company", "parent", "induk", "head office", "kantor pusat"];
 
 function guessNameColIndex(rawHeaders) {
-  const headers = rawHeaders.map((h) => (PARENT_HEADER_KEYS.some((k) => headerMatchesKey(h, k)) ? "" : h));
+  const headers = rawHeaders.map((h) => ([...PARENT_HEADER_KEYS, ...HOLDING_HEADER_KEYS].some((k) => headerMatchesKey(h, k)) ? "" : h));
   for (const k of NAME_STRONG_KEYS) {
     const idx = headers.findIndex((h) => headerMatchesKey(h, k));
     if (idx !== -1) return idx;
@@ -184,6 +185,7 @@ const FIELD_KEY_MAP = {
   product: ["产品", "product", "produk"],
   city: ["城市", "city", "kota"],
   province: ["省", "province", "provinsi"],
+  group_holding: HOLDING_HEADER_KEYS,
   parent_company: PARENT_HEADER_KEYS,
   website: ["网站", "website", "web"],
   background: ["公司背景", "background", "海关"],
@@ -889,6 +891,7 @@ export default function Leads({
               c.product,
               c.sales_owner,
               c.parent_company,
+              c.group_holding,
             ].map(
               (x) =>
                 (
@@ -960,27 +963,73 @@ export default function Leads({
 
   // "Unit" tampilan: satu lead biasa, atau satu grup (>= 2 lead berinduk
   // sama). Halaman dihitung per unit supaya grup tidak terpotong pagination.
+  // Tiga tingkat (8 Okt 2026): Holding/Group > Perusahaan induk > lead (anak perusahaan).
+  // Holding/grup hanya dilipat kalau >= 2 lead; induk hanya kalau >= 2 lead di dalamnya.
   const units = useMemo(() => {
     if (!groupView) return filtered.map((c) => ({ type: "lead", lead: c }));
-    const byKey = new Map();
+    // Satu tingkat: lead dikelompokkan menurut perusahaan induk (>= 2 lead jadi grup).
+    const groupByParent = (list, scope) => {
+      const byKey = new Map();
+      for (const c of list) {
+        if (!c.parent_company) continue;
+        const k = groupKey(c.parent_company);
+        if (!byKey.has(k)) byKey.set(k, []);
+        byKey.get(k).push(c);
+      }
+      const out = [];
+      const emitted = new Set();
+      for (const c of list) {
+        const k = c.parent_company ? groupKey(c.parent_company) : "";
+        const members = k ? byKey.get(k) : null;
+        if (!members || members.length < 2) { out.push({ type: "lead", lead: c }); continue; }
+        if (emitted.has(k)) continue;
+        emitted.add(k);
+        out.push({ type: "group", key: scope + "p:" + k, label: members[0].parent_company, members });
+      }
+      return out;
+    };
+    const byHolding = new Map();
     for (const c of filtered) {
-      if (!c.parent_company) continue;
-      const k = groupKey(c.parent_company);
-      if (!byKey.has(k)) byKey.set(k, []);
-      byKey.get(k).push(c);
+      if (!c.group_holding) continue;
+      const k = groupKey(c.group_holding);
+      if (!byHolding.has(k)) byHolding.set(k, []);
+      byHolding.get(k).push(c);
     }
     const out = [];
-    const emitted = new Set();
+    const emittedH = new Set();
+    const noHolding = [];
+    const order = []; // urutan kemunculan: "H:<kunci>" atau indeks lead tanpa holding
     for (const c of filtered) {
-      const k = c.parent_company ? groupKey(c.parent_company) : "";
-      const members = k ? byKey.get(k) : null;
-      if (!members || members.length < 2) { out.push({ type: "lead", lead: c }); continue; }
-      if (emitted.has(k)) continue;
-      emitted.add(k);
-      out.push({ type: "group", key: k, label: members[0].parent_company, members });
+      const hk = c.group_holding ? groupKey(c.group_holding) : "";
+      const hm = hk ? byHolding.get(hk) : null;
+      if (hm && hm.length >= 2) {
+        if (!emittedH.has(hk)) { emittedH.add(hk); order.push({ h: hk }); }
+      } else {
+        noHolding.push(c);
+        order.push({ lead: c });
+      }
+    }
+    const looseUnits = groupByParent(noHolding, "");
+    const looseByFirstLead = new Map(); // lead pertama sebuah unit -> unit-nya
+    for (const u of looseUnits) looseByFirstLead.set(u.type === "lead" ? u.lead.id : u.members[0].id, u);
+    const emittedLoose = new Set();
+    for (const o of order) {
+      if (o.h) {
+        const members = byHolding.get(o.h);
+        const children = groupByParent(members, "h:" + o.h + "/");
+        out.push({ type: "holding", key: "h:" + o.h, label: members[0].group_holding, members, children });
+      } else {
+        const u = looseByFirstLead.get(o.lead.id);
+        if (u && !emittedLoose.has(u)) { emittedLoose.add(u); out.push(u); }
+      }
     }
     return out;
   }, [filtered, groupView]);
+
+  const holdingOptions = useMemo(
+    () => [...new Set(leads.map((l) => (l.group_holding || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [leads]
+  );
 
   const parentOptions = useMemo(
     () => [...new Set(leads.map((l) => (l.parent_company || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -1110,7 +1159,8 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         }
       }
     }
-    const parentOf = new Map(leads.map((l) => [l.name, l.parent_company ? groupKey(l.parent_company) : ""]));
+    const keysOfRow = (r) => [r.parent_company, r.group_holding].filter(Boolean).map(groupKey);
+    const parentOf = new Map(leads.map((l) => [l.name, keysOfRow(l)]));
 
     const toInsert = []; // { lead, notes }
     const duplicates = []; // { name, matchedName, score, source: "existing" | "this_import" }
@@ -1126,8 +1176,8 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         continue;
       }
 
-      const myParent = m.parent_company ? groupKey(m.parent_company) : "";
-      const fuzzyMatchName = knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD && !(myParent && parentOf.get(n) === myParent));
+      const myKeys = keysOfRow(m);
+      const fuzzyMatchName = knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD && !(myKeys.length && (parentOf.get(n) || []).some((k) => myKeys.includes(k))));
       if (fuzzyMatchName) {
         duplicates.push({ name, matchedName: fuzzyMatchName, score: nameSimilarity(fuzzyMatchName, name), source: originalLeadNames.has(fuzzyMatchName) ? "existing" : "this_import" });
         continue;
@@ -1135,7 +1185,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
       seenThisImport.add(key);
       knownNames.push(name);
-      parentOf.set(name, myParent);
+      parentOf.set(name, myKeys);
       const { notes, ...leadPayload } = m;
       toInsert.push({ lead: { ...leadPayload, name }, notes });
     }
@@ -1373,7 +1423,8 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       Terakhir_Dikontak: c.last_contact || "",
       Tipe: c.company_type,
       Website: c.website,
-      Grup_Induk: c.parent_company || "",
+      Holding_Group: c.group_holding || "",
+      Perusahaan_Induk: c.parent_company || "",
     }));
 
     const XLSX = await import("xlsx");
@@ -1383,7 +1434,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
     ws["!cols"] = [
       { wch: 28 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
       { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
-      { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 24 },
+      { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 24 }, { wch: 24 },
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Leads");
@@ -1795,9 +1846,9 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       <div
         className="mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
-        {groupView && filtered.length > 0 && !units.some((u) => u.type === "group") && (
+        {groupView && filtered.length > 0 && !units.some((u) => u.type === "group" || u.type === "holding") && (
           <div className="col-span-full rounded-inner border border-orange-200 bg-orange-50 px-4 py-3 text-[12.5px] text-slate-700">
-            Belum ada lead yang dikelompokkan. Isi kolom <b>Grup / induk perusahaan</b> di form lead (klik ikon pensil), atau gunakan kolom induk saat import Excel. Lead dengan nama grup yang sama (minimal 2) akan dilipat jadi satu baris.
+            Belum ada lead yang dikelompokkan. Isi <b>Holding / Group</b> dan/atau <b>Perusahaan induk</b> di form lead (klik ikon pensil), atau gunakan kolomnya saat import Excel. Lead dengan nama yang sama (minimal 2) akan dilipat jadi satu baris, bertingkat: Holding &gt; Perusahaan &gt; Anak perusahaan.
           </div>
         )}
 
@@ -1822,30 +1873,49 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             />
           );
           if (u.type === "lead") return [renderCard(u.lead)];
-          const open = openGroups.has(u.key) || !!q;
-          const totalDeal = u.members.reduce((n, m) => n + (Number(m.deal_value) || 0), 0);
-          const wonCount = u.members.filter((m) => kpiWonStageKeys.includes(m.stage_key)).length;
-          const header = (
-            <button
-              key={"g-" + u.key}
-              type="button"
-              onClick={() => toggleGroupOpen(u.key)}
-              aria-expanded={open}
-              className="col-span-full flex items-center gap-3 rounded-panel border border-slate-200 bg-white px-4 py-3 text-left hover:bg-slate-50"
-            >
-              <span className="w-9 h-9 rounded-inner bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><Building2 size={17} /></span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-semibold text-ink truncate">{u.label}</span>
-                <span className="block text-[12px] text-slate-500 tabular-nums">
-                  {u.members.length} cabang
-                  {wonCount > 0 ? ` · ${wonCount} deal` : ""}
-                  {totalDeal > 0 ? ` · total ${fmtRp(totalDeal)}` : ""}
-                </span>
-              </span>
-              {open ? <ChevronDown size={16} className="text-slate-400 shrink-0" /> : <ChevronRight size={16} className="text-slate-400 shrink-0" />}
-            </button>
-          );
-          return open ? [header, ...u.members.map(renderCard)] : [header];
+          const groupHeader = (g, kind, subtitle, nested = false) => {
+            const open = openGroups.has(g.key) || !!q;
+            const totalDeal = g.members.reduce((n, m) => n + (Number(m.deal_value) || 0), 0);
+            const wonCount = g.members.filter((m) => kpiWonStageKeys.includes(m.stage_key)).length;
+            const isHolding = kind === "holding";
+            return {
+              open,
+              node: (
+                <button
+                  key={"g-" + g.key}
+                  type="button"
+                  onClick={() => toggleGroupOpen(g.key)}
+                  aria-expanded={open}
+                  className={`col-span-full flex items-center gap-3 rounded-panel border px-4 py-3 text-left hover:bg-slate-50 ${nested ? "sm:ml-6" : ""} ${isHolding ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white"}`}
+                >
+                  <span className={`w-9 h-9 rounded-inner flex items-center justify-center shrink-0 ${isHolding ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500"}`}><Building2 size={17} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-semibold text-ink truncate">{g.label}{isHolding && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10.5px] font-semibold text-slate-600">Holding / Group</span>}</span>
+                    <span className="block text-[12px] text-slate-500 tabular-nums">
+                      {subtitle}
+                      {wonCount > 0 ? ` · ${wonCount} deal` : ""}
+                      {totalDeal > 0 ? ` · total ${fmtRp(totalDeal)}` : ""}
+                    </span>
+                  </span>
+                  {open ? <ChevronDown size={16} className="text-slate-400 shrink-0" /> : <ChevronRight size={16} className="text-slate-400 shrink-0" />}
+                </button>
+              ),
+            };
+          };
+          if (u.type === "group") {
+            const h = groupHeader(u, "parent", `${u.members.length} anak perusahaan`);
+            return h.open ? [h.node, ...u.members.map(renderCard)] : [h.node];
+          }
+          // holding: header holding, lalu anak-anaknya (perusahaan induk bisa dilipat lagi)
+          const companies = u.children.length;
+          const hh = groupHeader(u, "holding", `${companies} perusahaan · ${u.members.length} lead`);
+          if (!hh.open) return [hh.node];
+          const inner = u.children.flatMap((ch) => {
+            if (ch.type === "lead") return [renderCard(ch.lead)];
+            const ph = groupHeader(ch, "parent", `${ch.members.length} anak perusahaan`, true);
+            return ph.open ? [ph.node, ...ch.members.map(renderCard)] : [ph.node];
+          });
+          return [hh.node, ...inner];
         })}
 
         {filtered.length === 0 && (
@@ -2034,6 +2104,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         <LeadModal
           uppercaseNames={uppercaseNames}
           parentOptions={parentOptions}
+          holdingOptions={holdingOptions}
           lead={edit}
           stages={stages}
           settings={

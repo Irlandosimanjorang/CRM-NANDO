@@ -822,6 +822,8 @@ export async function upsertLead(lead) {
     product: lead.product || "", city: lead.city || "", province: lead.province || "",
     // Grup / induk perusahaan (7 Okt 2026): cabang-cabang satu perusahaan berbagi nama ini.
     parent_company: (lead.parent_company || "").trim(),
+    // Holding / Group (8 Okt 2026): tingkat di atas perusahaan induk.
+    group_holding: (lead.group_holding || "").trim(),
     website: lead.website || "", sales_owner: lead.sales_owner || "", background: lead.background || "",
     chemical: lead.chemical || "", priority: lead.priority || "", next_action: lead.next_action || "",
     // Tanggal terstruktur "diminta nunggu sampai" - beda dari next_action (teks

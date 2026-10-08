@@ -199,7 +199,7 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Tidak ada anggaran"
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], uppercaseNames = false }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = false }) {
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
   const [f, setF] = useState({ ...lead, ...(draft?.f || {}) });
@@ -644,10 +644,16 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             </div>
           ))}
           <Field label="Kota"><input className={inp} value={f.city || ""} onChange={(e) => set("city", e.target.value)} /></Field>
-          <Field label="Grup / induk perusahaan (opsional)">
-            <input className={inp} list="lead-parent-options" value={f.parent_company || ""} onChange={(e) => set("parent_company", e.target.value)} placeholder="Isi jika ini kantor cabang, mis. PT Maju Jaya" />
-            <datalist id="lead-parent-options">{parentOptions.map((o) => <option key={o} value={o} />)}</datalist>
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Holding / Group (opsional)">
+              <input className={inp} list="lead-holding-options" value={f.group_holding || ""} onChange={(e) => set("group_holding", e.target.value)} placeholder="Mis. Maju Group" />
+              <datalist id="lead-holding-options">{holdingOptions.map((o) => <option key={o} value={o} />)}</datalist>
+            </Field>
+            <Field label="Perusahaan induk (opsional)">
+              <input className={inp} list="lead-parent-options" value={f.parent_company || ""} onChange={(e) => set("parent_company", e.target.value)} placeholder="Isi jika ini anak perusahaan/cabang" />
+              <datalist id="lead-parent-options">{parentOptions.map((o) => <option key={o} value={o} />)}</datalist>
+            </Field>
+          </div>
           {customSlots.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {customSlots.map((slot) => (

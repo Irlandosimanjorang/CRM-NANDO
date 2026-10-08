@@ -31,6 +31,9 @@ export default function DuplicateModal({ leads, onClose, onChanged }) {
         // Cabang dari grup yang sama wajar bernama mirip - bukan duplikat.
         const gi = leads[i].parent_company, gj = leads[j].parent_company;
         if (gi && gj && groupKey(gi) === groupKey(gj)) continue;
+        // atau satu holding/group yang sama
+        const hi = leads[i].group_holding, hj = leads[j].group_holding;
+        if (hi && hj && groupKey(hi) === groupKey(hj)) continue;
         const score = nameSimilarity(leads[i].name, leads[j].name);
         if (score >= THRESHOLD) out.push({ key: `${leads[i].id}-${leads[j].id}`, a: leads[i], b: leads[j], score });
       }
