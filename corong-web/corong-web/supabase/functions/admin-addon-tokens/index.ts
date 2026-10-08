@@ -7,6 +7,9 @@
 //       { action: "lookup", email }                              -> cek akun penerima (paket, organisasi)
 //       { action: "grant", email, tokens, expires_at?, note? }   -> beri token (1 token = 1 pencarian)
 //       { action: "revoke", lot_id }                             -> cabut sisa token sebuah lot
+//       { action: "requests" }                                   -> permintaan token dari pengguna yang masih menunggu
+//       { action: "dismiss_request", request_id }                -> abaikan sebuah permintaan
+//       (grant boleh membawa request_id: permintaan itu otomatis ditandai selesai)
 //
 // Token dipakai SETELAH kuota bulanan habis (lihat reserve_lead_gen_slot). Generate Leads sendiri
 // tetap hanya untuk paket Professional ke atas; token tidak melewati batas paket itu.
@@ -79,6 +82,26 @@ Deno.serve(async (req) => {
       return json({ lots: (lots || []).map((l) => ({ ...l, email: emails.get(l.user_id) || null })) });
     }
 
+    if (body.action === "requests") {
+      const { data: reqs, error } = await admin.from("addon_token_requests")
+        .select("id, user_id, feature, tokens, note, status, created_at")
+        .eq("status", "pending").order("created_at", { ascending: true }).limit(100);
+      if (error) throw error;
+      const out = [];
+      for (const r of reqs || []) {
+        const { data } = await admin.auth.admin.getUserById(r.user_id);
+        out.push({ ...r, email: data?.user?.email || null, ...(await planOf(admin, r.user_id)) });
+      }
+      return json({ requests: out });
+    }
+
+    if (body.action === "dismiss_request") {
+      if (!UUID_RE.test(String(body.request_id || ""))) return json({ error: "Permintaan tidak valid." }, 400);
+      const { error } = await admin.from("addon_token_requests").update({ status: "dismissed", handled_at: new Date().toISOString() }).eq("id", body.request_id).eq("status", "pending");
+      if (error) throw error;
+      return json({ ok: true });
+    }
+
     if (body.action === "lookup") {
       const email = String(body.email || "").trim().toLowerCase();
       if (!EMAIL_RE.test(email)) return json({ found: false, invalid: true });
@@ -106,6 +129,11 @@ Deno.serve(async (req) => {
         expires_at: expiresAt, note: String(body.note || "").trim().slice(0, 300), granted_by: userData.user.email,
       }).select("id, user_id, feature, tokens_total, tokens_left, expires_at, note, granted_by, created_at").single();
       if (error) throw error;
+      // Pemberian dari sebuah permintaan: tandai selesai (hanya kalau milik pengguna yang sama).
+      if (UUID_RE.test(String(body.request_id || ""))) {
+        await admin.from("addon_token_requests").update({ status: "done", handled_at: new Date().toISOString() })
+          .eq("id", body.request_id).eq("user_id", user.id).eq("status", "pending");
+      }
       console.log(`[admin-addon-tokens] +${tokens} token generate-leads untuk ${email} oleh ${userData.user.email}`);
       return json({ lot: { ...data, email }, ...(await planOf(admin, user.id)) });
     }

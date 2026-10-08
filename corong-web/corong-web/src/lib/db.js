@@ -501,11 +501,21 @@ export async function getLeadGenCooldown() {
   const [{ used, resetAt }, addon] = await Promise.all([getMyQuotaUsage("generate-leads"), getMyAddonTokens("generate-leads")]);
   const quotaLeft = used < GEN_LEADS_QUOTA_MAX;
   const canGenerate = quotaLeft || addon.tokens > 0;
+  // Permintaan token yang masih menunggu admin (RLS: hanya milik sendiri).
+  const { data: pend } = await supabase.from("addon_token_requests").select("tokens, created_at").eq("status", "pending").order("created_at", { ascending: false }).limit(1);
   return {
     canGenerate, usedThisMonth: used, quotaMax: GEN_LEADS_QUOTA_MAX,
     nextAvailableAt: canGenerate ? null : resetAt, resetAt,
     addonTokens: addon.tokens, addonExpiry: addon.nextExpiry,
+    pendingTokenRequest: pend?.[0] || null,
   };
+}
+
+// Minta token tambahan ke admin (tombol "Tambah pencarian" di tab Generate Leads).
+export async function requestAddonTokens(tokens, note = "") {
+  const { data, error } = await supabase.rpc("request_addon_tokens", { p_tokens: tokens, p_note: note });
+  if (error) throw error;
+  return data;
 }
 
 // Token add-on - hanya admin platform (Command Center).

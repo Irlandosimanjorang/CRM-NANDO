@@ -1076,6 +1076,11 @@ function AgentGridMap({ employees, selectedKey, onSelectEmployee }) {
 
 export default function AdminDashboard() {
   const [status, setStatus] = useState(null);
+  // Jumlah permintaan token add-on yang menunggu (kartu TOKEN ADD-ON); gagal = tidak menampilkan angka.
+  const [tokenRequests, setTokenRequests] = useState(null);
+  useEffect(() => {
+    db.adminAddonTokens("requests").then((r) => setTokenRequests((r.requests || []).length)).catch(() => setTokenRequests(null));
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [triggering, setTriggering] = useState(null);
@@ -1446,8 +1451,8 @@ export default function AdminDashboard() {
       noTriggerNote: "beri token Generate Leads",
       wide: true,
       blurb: "Beri pencarian Generate Leads tambahan ke pengguna.",
-      statLabel: "GENERATE LEADS",
-      statValue: "Token",
+      statLabel: "PERMINTAAN MASUK",
+      statValue: tokenRequests === null ? "-" : tokenRequests,
       content: <AddonTokensPanel />,
     },
   ];

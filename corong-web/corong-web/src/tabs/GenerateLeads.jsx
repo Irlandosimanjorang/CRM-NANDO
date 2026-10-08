@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp, Info, X, ChevronDown } from "lucide-react";
+import { Sparkles, Loader2, Check, Clock, Globe, MapPin, User, Package, Factory, Phone, Mail, ArrowRight, TrendingUp, Info, X, ChevronDown, Ticket } from "lucide-react";
 import * as db from "../lib/db";
 import { getGenerateLeadsExample } from "../lib/industryTemplates";
 
@@ -49,6 +49,65 @@ function Field({ icon: Icon, value }) {
 // user tetep dapet kabar walau dia udah pindah ke tab lain pas nungguin
 // (komponen ini sekarang selalu ke-mount di App.jsx, jadi proses ini gak
 // bakal keputus/ilang lagi cuma gara-gara ganti tab).
+// Dialog "Tambah pencarian" (8 Okt 2026): pengguna meminta token pencarian tambahan; permintaan
+// masuk ke panel admin (Command Center -> TOKEN ADD-ON). Satu permintaan menunggu per pengguna.
+const TOKEN_CHOICES = [5, 10, 20, 50];
+function TokenRequestDialog({ pending, onClose, onSent }) {
+  const [n, setN] = useState(10);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape" && !busy) onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [busy, onClose]);
+  const send = async () => {
+    setBusy(true); setErr("");
+    try { const r = await db.requestAddonTokens(n, note.trim()); onSent({ tokens: r.tokens, created_at: r.created_at }); }
+    catch (e) { setErr(e.message || "Gagal mengirim permintaan."); setBusy(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="tokreq-title" className="w-full max-w-[420px] rounded-panel bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="tokreq-title" className="flex items-center gap-2 text-lg font-bold"><Ticket size={18} className="text-violet-500" /> Tambah pencarian</h2>
+            <p className="mt-1 text-sm text-slate-500">Butuh lebih banyak pencarian Generate Leads? Minta token tambahan. Satu token berarti satu pencarian.</p>
+          </div>
+          <button onClick={onClose} disabled={busy} className="text-slate-400 hover:text-slate-700" aria-label="Tutup"><X size={18} /></button>
+        </div>
+        {pending ? (
+          <div className="mt-4 rounded-2xl bg-violet-50 p-4 text-sm text-violet-900">
+            Permintaan <b>{pending.tokens} token</b> sudah dikirim{pending.created_at ? <> pada {db.formatQuotaDate(pending.created_at)}</> : null}. Admin Nexto akan menghubungi Anda untuk pembayaran dan menambahkan token ke akun Anda.
+          </div>
+        ) : (
+          <>
+            <div className="mt-4">
+              <div className="text-xs font-medium text-slate-500">Jumlah pencarian tambahan</div>
+              <div className="mt-1.5 grid grid-cols-4 gap-2">
+                {TOKEN_CHOICES.map((c) => (
+                  <button key={c} type="button" onClick={() => setN(c)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${n === c ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{c}</button>
+                ))}
+              </div>
+            </div>
+            <label className="mt-3 block">
+              <span className="text-xs font-medium text-slate-500">Catatan (opsional)</span>
+              <textarea rows={2} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-violet-500/10" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Misal: untuk pencarian klien baru bulan ini" />
+            </label>
+            <p className="mt-2 text-[12px] text-slate-500">Permintaan ini belum menagih apa pun. Admin Nexto akan menghubungi Anda untuk harga dan pembayaran, lalu menambahkan token ke akun Anda.</p>
+            {err && <p className="mt-2 rounded-xl bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{err}</p>}
+          </>
+        )}
+        <div className="mt-4 flex gap-2">
+          <button onClick={onClose} disabled={busy} className="flex-1 rounded-xl border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">{pending ? "Tutup" : "Batal"}</button>
+          {!pending && <button onClick={send} disabled={busy} className="flex-1 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60">{busy ? "Mengirim…" : "Kirim permintaan"}</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GenerateLeads({ stages, industry, onChanged, onNotify }) {
   const example = getGenerateLeadsExample(industry);
   const [keyword, setKeyword] = useState("");
@@ -69,6 +128,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   const [results, setResults] = useState([]);
   const [loadingResults, setLoadingResults] = useState(true);
   const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisMonth: 0, quotaMax: 4, nextAvailableAt: null, addonTokens: 0, addonExpiry: null });
+  const [showTokenReq, setShowTokenReq] = useState(false);
   const [importingId, setImportingId] = useState(null);
   const pollRef = useRef(null);
   const enrichPollRef = useRef(null);
@@ -261,7 +321,22 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
           <button onClick={() => setShowInfo((v) => !v)} className="shrink-0 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors" title="Bagaimana AI mencari lead?">
             <Info size={14} />
           </button>
+          <button
+            type="button"
+            onClick={() => setShowTokenReq(true)}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-[13px] font-semibold text-violet-700 hover:bg-violet-100"
+            title="Minta token pencarian tambahan"
+          >
+            <Ticket size={14} /> Tambah pencarian{cooldown.pendingTokenRequest ? " (diminta)" : ""}
+          </button>
         </div>
+        {showTokenReq && (
+          <TokenRequestDialog
+            pending={cooldown.pendingTokenRequest}
+            onClose={() => setShowTokenReq(false)}
+            onSent={(req) => { setCooldown((c) => ({ ...c, pendingTokenRequest: req })); }}
+          />
+        )}
         <p className="text-sm text-slate-500 mt-1">AI mencari calon CUSTOMER untuk produk Anda — bukan sekadar perusahaan sejenis. Provinsi/kota opsional (kosongkan untuk mencari di seluruh Indonesia, atau isi nama kota untuk hasil yang lebih lokal); kolom lain wajib diisi agar AI mengarah ke pembeli potensial yang paling akurat. Maks 10 lead per generate (kontak langsung dilengkapi otomatis).</p>
 
         {showInfo && (
