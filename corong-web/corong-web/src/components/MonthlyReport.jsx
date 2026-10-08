@@ -136,17 +136,6 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
   const sourceOf = (l) => Object.entries(l).find(([k, v]) => /^custom_field_\d+$/.test(k) && SOURCES.includes(v))?.[1] || "";
   const pick = (c) => { setSelected(c.iso); if (!c.inMonth) setYm(c.iso.slice(0, 7)); };
 
-  // Baris ringkasan seperti laporan Excel BSB: jumlah, nilai proyek, bobot terhadap seluruh SPH.
-  const rows = [
-    { label: "Data masuk bulan ini", count: r.masuk.length, value: null, weight: null },
-    { label: "SPH terlayang (semua)", count: r.sphCount + r.hotCount + r.dealRows.length, value: r.sphAll, weight: 100, bar: "bg-slate-300" },
-    { label: "Hot progress", count: r.hotCount, value: r.hotValue, bar: "bg-brand" },
-    { label: "Deal", count: r.dealRows.length, value: r.dealValue, bar: "bg-emerald-500", strong: true },
-    { label: "No deal bulan ini", count: r.lostCount, value: r.lostValue, bar: "bg-rose-400" },
-    { label: "SPH belum diproses", count: r.sphCount, value: r.sphValue, bar: "bg-slate-300" },
-    { label: "Proyek berjalan (kontrak, SO, pengiriman)", count: r.running.length, value: r.runningValue, weight: null },
-  ];
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -170,7 +159,7 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
       </div>
 
       {view === "rekap" ? (
-        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={org?.name || ""} />
+        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={org?.name || ""} target={num(org?.monthly_target)} />
       ) : view === "iklan" ? (
         <AdsAnalysis leads={leads} stages={stages} org={org} ym={ym} canImport={canImport} onChanged={onChanged} />
       ) : (
@@ -298,45 +287,6 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
               </Panel>
             </div>
           </div>
-
-          <Panel className="overflow-hidden">
-            <div className="px-5 pb-1 pt-4"><PanelHeader title="Ringkasan bulan ini" meta="Bobot dihitung terhadap seluruh nilai SPH, seperti di laporan Excel" /></div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
-                    <th className="px-5 py-2.5 text-left">Keterangan</th><th className="px-4 py-2.5 text-right">Jumlah</th><th className="px-4 py-2.5 text-right">Nilai proyek</th><th className="w-[200px] px-5 py-2.5 text-left">Bobot</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {rows.map((x) => {
-                    const w = x.weight === undefined ? (r.sphAll > 0 && x.value !== null ? (x.value / r.sphAll) * 100 : 0) : x.weight;
-                    return (
-                      <tr key={x.label}>
-                        <td className={cn("px-5 py-2.5 text-[12.5px]", x.strong ? "font-bold text-emerald-700" : "font-medium text-ink")}>{x.label}</td>
-                        <td className="px-4 py-2.5 text-right text-[12.5px] tabular-nums text-slate-800">{x.count}</td>
-                        <td className="px-4 py-2.5 text-right text-[12.5px] tabular-nums text-slate-800">{x.value === null ? "-" : fmtRp(x.value)}</td>
-                        <td className="px-5 py-2.5">
-                          {w === null || x.value === null ? <span className="text-[12px] text-slate-400">-</span> : (
-                            <div className="flex items-center gap-2">
-                              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full rounded-full", x.bar || "bg-slate-300")} style={{ width: `${Math.min(100, w)}%` }} /></div>
-                              <span className="w-12 text-right text-[12px] tabular-nums text-slate-600">{`${w.toFixed(1).replace(/.0$/, "")}%`}</span>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="bg-slate-50/60">
-                    <td className="px-5 py-2.5 text-[12.5px] font-bold text-ink">Target omzet bulanan</td>
-                    <td className="px-4 py-2.5" />
-                    <td className="px-4 py-2.5 text-right text-[12.5px] font-bold tabular-nums text-ink">{target ? fmtRp(target) : "-"}</td>
-                    <td className="px-5 py-2.5 text-[12px] tabular-nums text-slate-600">{target ? `Tercapai ${pct(r.dealValue, target)}` : "Belum diisi"}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </Panel>
         </>
       )}
     </div>
