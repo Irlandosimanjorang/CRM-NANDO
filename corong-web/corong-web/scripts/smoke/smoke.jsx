@@ -36,6 +36,7 @@ const weird = { id: "w1", name: "Lead Data Minim", stage_key: "tahap_hilang", ph
 // Sebagian lead dibuat 40 hari lalu tanpa progress -> muncul di "Lead terbengkalai".
 const leads = [...demo.leads.map((l, i) => ({ ...l, assigned_to: i % 2 ? "u2" : "u1", created_at: new Date(Date.now() - (i % 2 ? 2 : 80) * 86400000).toISOString(), progress_notes: i === 0 ? [{ id: "pn1", note_date: new Date(Date.now() - 35 * 86400000).toISOString().slice(0, 10), text: "Minta revisi proposal dan jadwal ulang presentasi." }] : [] })), weird];
 // ?groups=1: enam lead pertama dijadikan cabang satu grup (uji tampilan grup perusahaan).
+window.__LEADS = leads;
 if (q.get("groups")) leads.slice(0, 6).forEach((l) => { l.parent_company = "PT Induk Uji"; });
 // ?groups=3: baris holding adalah lead juga (namanya sama dengan holding, tanpa kolom holding sendiri).
 if (q.get("groups") === "3") { leads[0].name = "Uji Group"; leads[0].group_holding = ""; leads[0].parent_company = ""; leads.slice(1, 4).forEach((l) => { l.group_holding = "Uji Group"; l.parent_company = ""; }); }

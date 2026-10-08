@@ -23,6 +23,7 @@ export default function LeadConversation({ leadId }) {
     <div className="border border-emerald-200 bg-emerald-50/50 rounded-2xl p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-xs font-semibold text-emerald-700 flex items-center gap-1.5"><MessageCircle size={13} /> Percakapan {conv.platform ? `· ${conv.platform}` : ""}</div>
+        {conv.last_inbound_at && (!conv.last_outbound_at || new Date(conv.last_inbound_at) > new Date(conv.last_outbound_at)) && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">Belum dibalas</span>}
         <div className="text-[10px] text-slate-500">{messages.length} pesan{conv.last_inbound_at ? ` · terakhir masuk ${fmt(conv.last_inbound_at)}` : ""}</div>
       </div>
       {conv.campaign && <div className="mt-1 text-[11px] text-slate-600">Kampanye iklan: <b className="text-slate-800">{conv.campaign}</b></div>}

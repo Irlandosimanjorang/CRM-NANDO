@@ -182,7 +182,16 @@ export function findLeadHeaderRow(aoa) {
 const phoneKey = (p) => String(p ?? "").replace(/\D/g, "").slice(-9);
 
 // existing = lead yang sudah ada di Nexto (untuk deteksi duplikat lewat nomor telepon atau nama persis).
-export function buildLeadRows(aoa, headerRow, mapping, { platform, stageKey, slotKey, existing = [] }) {
+// Kolom yang tidak dipetakan (mis. pertanyaan khusus di formulir iklan seperti "jenis produk" atau "kebutuhan")
+// ikut disimpan di catatan lead sebagai "Judul: isi", supaya tidak ada jawaban pelanggan yang hilang.
+const SKIP_EXTRA = /^(id|lead_id|ad_id|adset_id|campaign_id|form_id|page_id|is_organic|lead_status|ad_name|adset_name|platform|created_time)$/i;
+export function unmappedColumns(aoa, headerRow, mapping) {
+  const used = new Set(Object.values(mapping).filter((v) => v !== undefined && v !== null && v !== "").map(Number));
+  return (aoa[headerRow] || []).map((h, i) => ({ i, h: String(h ?? "").trim() })).filter((c) => c.h && !used.has(c.i) && !SKIP_EXTRA.test(c.h));
+}
+
+export function buildLeadRows(aoa, headerRow, mapping, { platform, stageKey, slotKey, existing = [], extraNotes = true }) {
+  const extras = extraNotes ? unmappedColumns(aoa, headerRow, mapping) : [];
   const seenPhone = new Set(existing.map((l) => phoneKey(l.phone)).filter(Boolean));
   const seenName = new Set(existing.map((l) => String(l.name || "").trim().toLowerCase()).filter(Boolean));
   const rows = [];
@@ -196,7 +205,7 @@ export function buildLeadRows(aoa, headerRow, mapping, { platform, stageKey, slo
     const name = company || person;
     let phone = String(get("phone") ?? "").trim().replace(/^p:/i, "");
     // Excel sering membuang angka 0 di depan nomor lokal (812... -> harusnya 0812...).
-    if (/^8d{8,11}$/.test(phone)) phone = "0" + phone;
+    if (/^8[0-9]{8,11}$/.test(phone)) phone = "0" + phone;
     if (!name) { empty++; continue; }
     const pk = phoneKey(phone);
     const nk = name.toLowerCase();
@@ -214,7 +223,8 @@ export function buildLeadRows(aoa, headerRow, mapping, { platform, stageKey, slo
     if (slotKey) lead[slotKey] = rowPlatform;
     if (campaign) lead.ad_campaign = campaign.slice(0, 200);
     if (day) lead.created_at = `${day}T09:00:00+07:00`;
-    const note = [`Masuk dari iklan ${rowPlatform}${campaign ? `, kampanye ${campaign}` : ""}.`, String(get("notes") ?? "").trim()].filter(Boolean).join(" ");
+    const extraText = extras.map((c) => { const v = String(r[c.i] ?? "").trim(); return v ? `${c.h}: ${v}` : ""; }).filter(Boolean).join("; ").slice(0, 600);
+    const note = [`Masuk dari iklan ${rowPlatform}${campaign ? `, kampanye ${campaign}` : ""}.`, String(get("notes") ?? "").trim(), extraText].filter(Boolean).join(" ");
     rows.push({ lead, note });
   }
   return { rows, duplicates, empty };

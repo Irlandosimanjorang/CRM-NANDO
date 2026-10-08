@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Check, Printer } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { Panel, PanelHeader, StatRow, Stat, Pill, Meter, EmptyState } from "../ui";
@@ -201,6 +201,29 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const sourceOf = (l) => Object.entries(l).find(([k, v]) => /^custom_field_\d+$/.test(k) && SOURCES.includes(v))?.[1] || "";
   const pick = (c) => { setSelected(c.iso); if (!c.inMonth) setYm(c.iso.slice(0, 7)); };
 
+  // Cetak ke PDF lewat dialog cetak peramban: ringkasan omzet, pipeline, deal bulan ini, dan perbandingan marketing.
+  const printReport = () => {
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const who = personal ? "Report saya" : scopeId === "all" ? "Semua tim" : scopeName;
+    const deals = [...r.dealRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const rows = (arr) => arr.map((c) => `<tr>${c.map((x, i) => `<td class="${i ? "r" : ""}">${esc(x)}</td>`).join("")}</tr>`).join("");
+    const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Report ${esc(who)} ${MONTHS[month - 1]} ${year}</title>
+<style>*{box-sizing:border-box}body{font:12px/1.5 system-ui,Segoe UI,sans-serif;color:#0f172a;margin:28px}h1{font-size:20px;margin:0}h2{font-size:13px;margin:22px 0 6px}.m{color:#64748b}
+.k{display:flex;gap:10px;margin-top:14px}.k div{flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:10px}.k b{display:block;font-size:17px}table{width:100%;border-collapse:collapse}th,td{padding:5px 8px;border-bottom:1px solid #e2e8f0;text-align:left}th{font-size:11px;color:#64748b}.r{text-align:right;font-variant-numeric:tabular-nums}
+@media print{body{margin:14mm}}</style></head><body>
+<h1>Report penjualan ${esc(who)}</h1><div class="m">${esc(org?.name || "")} · ${MONTHS[month - 1]} ${year}</div>
+<div class="k"><div><span class="m">Omzet</span><b>${esc(fmtRp(r.dealValue))}</b>${target > 0 ? `<span class="m">${pct(r.dealValue, target)} dari target ${esc(fmtRp(target))}</span>` : ""}</div>
+<div><span class="m">Data masuk</span><b>${r.masuk.length}</b></div><div><span class="m">SPH belum diproses</span><b>${r.sphCount}</b><span class="m">${esc(fmtRp(r.sphValue))}</span></div>
+<div><span class="m">Hot progress</span><b>${r.hotCount}</b><span class="m">${esc(fmtRp(r.hotValue))}</span></div><div><span class="m">Deal</span><b>${deals.length}</b></div></div>
+<h2>Deal bulan ini</h2>${deals.length ? `<table><thead><tr><th>Tanggal</th><th>Nama</th><th class="r">Nilai</th></tr></thead><tbody>${rows(deals.map((d) => [String(d.date).slice(0, 10), d.name, fmtRp(d.value)]))}</tbody></table>` : '<div class="m">Belum ada deal pada bulan ini.</div>'}
+${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><table><thead><tr><th>Marketing</th><th class="r">Lead masuk</th><th class="r">SPH</th><th class="r">Hot</th><th class="r">Deal</th><th class="r">Omzet</th><th class="r">Capaian target</th></tr></thead><tbody>${rows(team.map((m) => [m.name, m.masuk, m.sph, m.hot, m.deals, fmtRp(m.omzet), targetOf(m.id) > 0 ? pct(m.omzet, targetOf(m.id)) : "-"]))}</tbody></table>` : ""}
+<div class="m" style="margin-top:18px">Dicetak ${new Date().toLocaleString("id-ID")} dari Nexto.</div></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Pop-up diblokir peramban. Izinkan pop-up untuk situs ini lalu coba lagi."); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    w.focus(); setTimeout(() => w.print(), 300);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -215,6 +238,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
             ))}
           </div>
           <div className="flex items-center gap-1">
+            {view === "penjualan" && <button type="button" onClick={printReport} className={cn("mr-1 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}><Printer size={13} /> Cetak / PDF</button>}
             <button type="button" onClick={() => setYm(todayIso.slice(0, 7))} className={cn("rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}>Hari ini</button>
             <button type="button" onClick={() => go(-1)} aria-label="Bulan sebelumnya" className={cn("rounded-full p-1.5 text-slate-600 hover:bg-slate-100", focus)}><ChevronLeft size={18} /></button>
             <button type="button" onClick={() => go(1)} aria-label="Bulan berikutnya" className={cn("rounded-full p-1.5 text-slate-600 hover:bg-slate-100", focus)}><ChevronRight size={18} /></button>
@@ -276,10 +300,13 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
                 else if (isNow) pace = `Hari terakhir bulan ini. Kurang ${fmtRp(gap)} dari target.`;
                 else pace = `Bulan ini ditutup ${fmtRp(gap)} di bawah target.`;
               }
-              if (!pace && delta === null && prevDeal <= 0) return null;
+              // Perkiraan akhir bulan dari laju harian sejauh ini; baru ditampilkan setelah 5 hari berjalan agar tidak menyesatkan.
+              const elapsed = now.getDate();
+              const forecast = isNow && elapsed >= 5 && r.dealValue > 0 ? Math.round((r.dealValue / elapsed) * daysInMonth) : 0;
+              if (!pace && !forecast && delta === null && prevDeal <= 0) return null;
               return (
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-slate-500">
-                  <span>{pace}</span>
+                  <span>{pace}{forecast > 0 && <span className="block">Perkiraan akhir bulan <b className="tabular-nums text-slate-700">{fmtRp(forecast)}</b> bila laju {elapsed} hari pertama bertahan{target > 0 ? ` (${pct(forecast, target)} dari target)` : ""}.</span>}</span>
                   <span className="inline-flex items-center gap-1.5">
                     Bulan lalu <span className="font-semibold tabular-nums text-slate-700">{fmtRp(prevDeal)}</span>
                     {delta !== null && <span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>{delta >= 0 ? "+" : ""}{delta.toFixed(0)}%</span>}

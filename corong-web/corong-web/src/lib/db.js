@@ -1309,6 +1309,13 @@ export async function getChatWebhookLog() {
   if (error) throw error;
   return data || [];
 }
+// Semua percakapan chat yang terlihat oleh pengguna (owner dan manager: seluruh organisasi), untuk peringatan chat belum dibalas.
+export async function listChatWaiting() {
+  const { data, error } = await supabase.from("lead_conversations").select("id, lead_id, platform, campaign, last_inbound_at, last_outbound_at")
+    .not("lead_id", "is", null).order("last_inbound_at", { ascending: false, nullsFirst: false }).limit(500);
+  if (error) throw error;
+  return data || [];
+}
 // Percakapan satu lead + pesannya (urut waktu). null bila lead tidak punya percakapan.
 export async function getLeadConversation(leadId) {
   const { data: conv, error } = await supabase.from("lead_conversations").select("*").eq("lead_id", leadId).order("last_message_at", { ascending: false }).limit(1).maybeSingle();

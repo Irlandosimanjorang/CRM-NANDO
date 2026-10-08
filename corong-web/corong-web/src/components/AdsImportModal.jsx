@@ -3,7 +3,7 @@ import { X, Upload, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
-import { AD_PLATFORMS, buildAdRows, buildLeadRows, findHeaderRow, findLeadHeaderRow, guessAdColumns, guessLeadColumns, normalizePlatform } from "../lib/adsImport";
+import { AD_PLATFORMS, buildAdRows, buildLeadRows, unmappedColumns, findHeaderRow, findLeadHeaderRow, guessAdColumns, guessLeadColumns, normalizePlatform } from "../lib/adsImport";
 
 // Impor dari Meta Ads Manager / TikTok Ads Manager / Google Ads (Excel atau CSV), dua jenis file:
 //  - "Biaya iklan": laporan performa (biaya, tayangan, klik) -> dianalisis di tab Laporan.
@@ -28,6 +28,7 @@ export default function AdsImportModal({ ym, leads = [], stages = [], org, onClo
   const [platform, setPlatform] = useState("Meta");
   const [fallbackDay, setFallbackDay] = useState(`${ym}-01`);
   const [busy, setBusy] = useState(false);
+  const [extraNotes, setExtraNotes] = useState(true);
   const [err, setErr] = useState("");
   const inputRef = useRef(null);
 
@@ -63,7 +64,7 @@ export default function AdsImportModal({ ym, leads = [], stages = [], org, onClo
   const needed = isLead ? mapping.name : mapping.spend;
   const ready = sheets && needed !== undefined && needed !== "";
   const costBuilt = ready && !isLead ? buildAdRows(aoa, headerRow, mapping, { platform, fallbackDay }) : null;
-  const leadBuilt = ready && isLead ? buildLeadRows(aoa, headerRow, mapping, { platform, stageKey: firstStage, slotKey, existing: leads }) : null;
+  const leadBuilt = ready && isLead ? buildLeadRows(aoa, headerRow, mapping, { platform, stageKey: firstStage, slotKey, existing: leads, extraNotes }) : null;
   const totalSpend = costBuilt ? costBuilt.rows.reduce((s, r) => s + r.spend, 0) : 0;
   const count = isLead ? leadBuilt?.rows.length || 0 : costBuilt?.rows.length || 0;
 
@@ -153,6 +154,16 @@ export default function AdsImportModal({ ym, leads = [], stages = [], org, onClo
                   </div>
                 ))}
               </div>
+              {isLead && ready && (() => {
+                const extra = unmappedColumns(aoa, headerRow, mapping);
+                if (!extra.length) return null;
+                return (
+                  <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12px] text-slate-700">
+                    <input type="checkbox" className="mt-0.5" checked={extraNotes} onChange={(e) => setExtraNotes(e.target.checked)} />
+                    <span>Simpan kolom lain di catatan lead ({extra.slice(0, 4).map((c) => c.h).join(", ")}{extra.length > 4 ? `, +${extra.length - 4}` : ""}). Jawaban pertanyaan formulir iklan tidak hilang.</span>
+                  </label>
+                );
+              })()}
               {!isLead && dayMissing && (
                 <div className="mt-2">
                   <label className="mb-0.5 block text-[11px] text-slate-500">File tidak punya kolom tanggal. Semua baris dicatat pada tanggal:</label>
