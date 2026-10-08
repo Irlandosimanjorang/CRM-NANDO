@@ -214,8 +214,13 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
       // Layar penuh: hanya kolom tanggal, melebar sampai semua tanggal terlihat tanpa menggeser. Nama lead
       // muncul di popup saat kursor diarahkan ke kotak berwarna.
       const showTip = (e, lead, day, evs) => { const b = e.currentTarget.getBoundingClientRect(); setTip({ x: b.left + b.width / 2, top: b.top, bottom: b.bottom, lead, day, evs }); };
+      // Pop-up berada di area konten: sidebar kiri tetap terlihat (tidak ditutup), latar redup di sisi kanan sidebar.
+      const side = typeof document !== "undefined" ? document.querySelector("aside.nexto-sidebar") : null;
+      const sb = side ? side.getBoundingClientRect() : null;
+      const sideLeft = sb && sb.width > 0 && sb.left < 80 ? Math.round(sb.right) + 12 : 0;
       const overlay = (
-        <div className="fixed inset-0 z-[80] flex flex-col bg-white">
+        <div className="fixed inset-y-0 right-0 z-[80] flex items-center justify-center bg-slate-900/40 p-3 sm:p-5" style={{ left: sideLeft }} onMouseDown={(e) => { if (e.target === e.currentTarget) { setTip(null); setFull(false); } }}>
+        <div className="flex h-full max-h-[880px] w-full max-w-[1200px] flex-col overflow-hidden rounded-panel bg-white shadow-float">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
             <div>
               <div className="font-display text-[17px] font-bold tracking-[-0.02em] text-ink">{MONTHS[month - 1].toUpperCase()} {year}{orgName ? ` · ${orgName}` : ""}</div>
@@ -262,6 +267,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
               </div>
             </div>
           )}
+        </div>
         </div>
       );
       return typeof document !== "undefined" ? createPortal(overlay, document.body) : overlay;
