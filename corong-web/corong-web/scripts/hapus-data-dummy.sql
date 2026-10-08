@@ -12,3 +12,8 @@ delete from ad_spend where org_id = '<ORG_ID>' and campaign like '[DUMMY]%';
 delete from lead_stage_changes where org_id = '<ORG_ID>' and lead_id not in (select id from leads where org_id = '<ORG_ID>');
 delete from organization_members where user_id in (select id from auth.users where email like '%.dummy@example.com');
 delete from auth.users where email like '%.dummy@example.com';
+
+-- Chat dummy dari webhook (akun uji): lead bernomor +62812999900x serta tiga lead chat tanpa nomor.
+-- Percakapan dan pesan ikut terhapus otomatis (cascade). Catatan webhook dihapus terpisah.
+delete from leads where org_id = '<ORG_ID>' and (phone like '+62812999900%' or ad_campaign like '[DUMMY]%' and source in ('Meta', 'TikTok', 'WhatsApp', 'Instagram') and id in (select lead_id from lead_conversations where org_id = '<ORG_ID>'));
+delete from chat_webhook_log where org_id = '<ORG_ID>';
