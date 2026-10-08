@@ -4,6 +4,7 @@ import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { Panel, PanelHeader, StatRow, Stat, Pill, Meter, EmptyState } from "../ui";
 import AdsAnalysis from "./AdsAnalysis";
+import RekapLaporan from "./RekapLaporan";
 
 // Tab Laporan (9 Okt 2026, saklar monthly_report; untuk owner dan manager). Dua tampilan:
 //  - Penjualan: target omzet, kalender bulanan ala Google Calendar (deal dan data masuk per tanggal),
@@ -151,11 +152,11 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">Laporan</h1>
-          <p className="mt-0.5 text-[12px] text-slate-500">{view === "penjualan" ? "Penjualan tim, target omzet, dan kalender deal." : "Biaya iklan dan lead per platform."}</p>
+          <p className="mt-0.5 text-[12px] text-slate-500">{view === "penjualan" ? "Penjualan tim, target omzet, dan kalender deal." : view === "rekap" ? "Daftar lead per tahap seperti laporan Excel." : "Biaya iklan dan lead per platform."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <div className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold" role="tablist" aria-label="Jenis laporan">
-            {[["penjualan", "Penjualan"], ["iklan", "Iklan dan sumber lead"]].map(([k, l]) => (
+            {[["penjualan", "Penjualan"], ["rekap", "Rekap per tahap"], ["iklan", "Iklan dan sumber lead"]].map(([k, l]) => (
               <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
             ))}
           </div>
@@ -168,7 +169,9 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
         </div>
       </div>
 
-      {view === "iklan" ? (
+      {view === "rekap" ? (
+        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={org?.name || ""} />
+      ) : view === "iklan" ? (
         <AdsAnalysis leads={leads} stages={stages} org={org} ym={ym} canImport={canImport} onChanged={onChanged} />
       ) : (
         <>
