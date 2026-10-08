@@ -108,6 +108,10 @@ export function normalizePeopleForSave(keyPerson, keyTitle) {
   return joinPeople(rows.length ? rows : [{ name: "", title: "" }]);
 }
 
+// Daftar nilai dipisah koma (email, telepon): buang yang kosong dan potong ke `max` pertama.
+export const limitMulti = (value, max = 5) =>
+  String(value || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, max).join(", ");
+
 // Kunci pengelompokan nama grup/induk perusahaan: "PT Maju Jaya" dan
 // "maju jaya" dianggap grup yang sama.
 export const groupKey = (s) => normalizeCompanyName(s) || String(s || "").trim().toLowerCase();

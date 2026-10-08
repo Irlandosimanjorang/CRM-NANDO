@@ -17,12 +17,13 @@ function Field({ label, children }) { return <label className="block"><span clas
 // nambahin input baru, "x" buang satu (18 Sep 2026, permintaan Nando: mau
 // bisa nambahin lebih dari 1 email/key person per lead, berlaku semua plan).
 // max (opsional): batas jumlah nilai - tombol Tambah hilang saat penuh (Key person maks 5, 8 Okt 2026).
-function MultiField({ label, value, onChange, placeholder, max }) {
+// sanitize (opsional): dijalankan di setiap ketikan, mis. buang huruf dari nomor telepon.
+function MultiField({ label, value, onChange, placeholder, max, sanitize }) {
   const parts = (value || "").split(",").map((s) => s.trim());
   const items = parts.some((s) => s !== "") ? parts : [""];
   const setAt = (idx, v) => {
     const next = [...items];
-    next[idx] = v;
+    next[idx] = sanitize ? sanitize(v) : v;
     onChange(next.join(", "));
   };
   const removeAt = (idx) => onChange(items.filter((_, i) => i !== idx).join(", "));
@@ -626,8 +627,8 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           )}
           {isEnterprise && lead.id && <PaymentTermsCard leadId={lead.id} projectValue={lead.deal_value} />}
           <div className="grid grid-cols-2 gap-3">
-            <MultiField label="Email" value={f.email} onChange={(v) => set("email", v)} placeholder="nama@email.com" />
-            <Field label="Telepon / WA"><input className={inp} value={f.phone || ""} onChange={(e) => set("phone", e.target.value.replace(/[^\d+\-\s,\/()]/g, ""))} placeholder="0812xxxxxxx, 0813xxxxxxx" /></Field>
+            <MultiField label="Email" value={f.email} onChange={(v) => set("email", v)} placeholder="nama@email.com" max={5} />
+            <MultiField label="Telepon / WA" value={f.phone} onChange={(v) => set("phone", v)} placeholder="0812xxxxxxx" max={5} sanitize={(v) => v.replace(/[^\d+\-\s,\/()]/g, "")} />
           </div>
           {(!hidden("key_person") || !hidden("key_person_title")) && (
             !hidden("key_person") && !hidden("key_person_title") ? (

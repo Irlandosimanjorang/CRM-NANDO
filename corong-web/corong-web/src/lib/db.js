@@ -1,6 +1,6 @@
 import { supabase } from "./supabaseClient";
 import { getIndustryTemplate, CUSTOM_FIELD_KEYS } from "./industryTemplates";
-import { todayISO, normalizePeopleForSave } from "./helpers";
+import { todayISO, normalizePeopleForSave, limitMulti } from "./helpers";
 import { compressImage } from "./imageCompress";
 
 // Bersihin kolom telepon/WA: cuma boleh angka + karakter pemisah wajar (+, -, spasi,
@@ -817,7 +817,7 @@ export async function upsertLead(lead) {
     // apa adanya (gak ke-reset ke siapa aja yang lagi ngedit).
     assigned_to: lead.assigned_to || uid,
     name: upperIf(await namesUppercase(), lead.name), category: lead.category, stage_key: lead.stage_key,
-    company_type: lead.company_type || "", email: lead.email || "", phone: sanitizePhone(lead.phone),
+    company_type: lead.company_type || "", email: limitMulti(lead.email), phone: sanitizePhone(limitMulti(lead.phone)),
     ...normalizePeopleForSave(lead.key_person, lead.key_person_title),
     product: lead.product || "", city: lead.city || "", province: lead.province || "",
     // Grup / induk perusahaan (7 Okt 2026): cabang-cabang satu perusahaan berbagi nama ini.
