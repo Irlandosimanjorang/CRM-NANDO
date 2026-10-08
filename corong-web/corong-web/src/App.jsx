@@ -539,7 +539,7 @@ export default function App() {
     if (loading || !org) return;
     const allowed = new Set([...NAV.map((n) => n.key), "advisor", "industridemo"]);
     if (isEnterprise && canManage) allowed.add(TEAM_NAV_ITEM.key);
-    if (hasOrgFeature(org, "monthly_report")) allowed.add(REPORT_NAV_ITEM.key);
+    if (hasOrgFeature(org, "monthly_report") && canManage) allowed.add(REPORT_NAV_ITEM.key);
     if (settings?.is_platform_admin) allowed.add(ADMIN_NAV_ITEM.key);
     if (!allowed.has(tab) || (monitorOwner && !OWNER_MONITOR_TABS.includes(tab) && !(settings?.is_platform_admin && tab === ADMIN_NAV_ITEM.key))) setTab("dashboard");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -742,7 +742,8 @@ export default function App() {
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
   // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
   // Customer biasa (99.9% user) gak akan pernah liat item ini nongol sama sekali.
-  const reportOn = hasOrgFeature(org, "monthly_report");
+  // Tab Laporan hanya untuk owner dan manager (sama seperti Team); anggota tim biasa tidak melihatnya.
+  const reportOn = hasOrgFeature(org, "monthly_report") && canManage;
   const baseNav = NAV.flatMap((n) => {
     const out = [n];
     if (n.key === "leads" && reportOn) out.push(REPORT_NAV_ITEM);
