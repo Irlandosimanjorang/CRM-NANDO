@@ -106,6 +106,18 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     };
   }, [leads, stages, dealTransactions, ym]);
 
+  // Omzet bulan sebelumnya pada lingkup yang sama, untuk pembanding di kartu omzet.
+  const prevDeal = useMemo(() => {
+    const t = new Date(year, month - 2, 1);
+    const pym = `${t.getFullYear()}-${pad(t.getMonth() + 1)}`;
+    const wonKeys = new Set(stages.filter((x) => x.type === "won").map((x) => x.key));
+    const txLeadIds = new Set(dealTransactions.map((x) => x.lead_id));
+    const live = leads.filter((l) => !l.deleted_at);
+    const a = dealTransactions.filter((x) => ymOf(x.deal_date) === pym).reduce((n, x) => n + num(x.deal_value), 0);
+    const b = live.filter((l) => wonKeys.has(l.stage_key) && !txLeadIds.has(l.id) && ymOf(l.deal_date) === pym).reduce((n, l) => n + num(l.deal_value), 0);
+    return a + b;
+  }, [leads, stages, dealTransactions, year, month]);
+
   // Perbandingan antar marketing (selalu dari seluruh data, tidak ikut pilihan marketing di atas).
   const team = useMemo(() => {
     const wonKeys = new Set(stages.filter((x) => x.type === "won").map((x) => x.key));
@@ -252,6 +264,29 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
               )}
             </div>
             {!personal && <Meter value={reached} max={100} tone="good" className="mt-4 h-2" />}
+            {(() => {
+              const isNow = ym === todayIso.slice(0, 7);
+              const left = isNow ? daysInMonth - now.getDate() : 0;
+              const gap = Math.max(0, target - r.dealValue);
+              const delta = prevDeal > 0 ? ((r.dealValue - prevDeal) / prevDeal) * 100 : null;
+              let pace = null;
+              if (!personal && target > 0) {
+                if (gap === 0) pace = "Target tercapai.";
+                else if (isNow && left > 0) pace = `Sisa ${left} hari. Butuh ${fmtRp(Math.ceil(gap / left))} per hari untuk mencapai target.`;
+                else if (isNow) pace = `Hari terakhir bulan ini. Kurang ${fmtRp(gap)} dari target.`;
+                else pace = `Bulan ini ditutup ${fmtRp(gap)} di bawah target.`;
+              }
+              if (!pace && delta === null && prevDeal <= 0) return null;
+              return (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-slate-500">
+                  <span>{pace}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    Bulan lalu <span className="font-semibold tabular-nums text-slate-700">{fmtRp(prevDeal)}</span>
+                    {delta !== null && <span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>{delta >= 0 ? "+" : ""}{delta.toFixed(0)}%</span>}
+                  </span>
+                </div>
+              );
+            })()}
           </Panel>
 
           <StatRow>
@@ -356,10 +391,10 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
             <Panel className="overflow-hidden">
               <div className="px-5 pb-1 pt-4"><PanelHeader title="Hasil per marketing" meta={`Pipeline dan omzet ${MONTHS[month - 1]}. Target, forecast, dan aktivitas tiap orang ada di tab Team. Klik nama untuk membuka report-nya.`} /></div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] border-collapse">
+                <table className="w-full min-w-[760px] border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
-                      <th className="px-5 py-2.5 text-left">Marketing</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th><th className="px-3 py-2.5 text-right">Omzet</th><th className="w-[200px] px-5 py-2.5 text-left">Kontribusi omzet tim</th>
+                      <th className="px-5 py-2.5 text-left">Marketing</th><th className="px-3 py-2.5 text-right">Lead masuk</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th><th className="px-3 py-2.5 text-right">Omzet</th><th className="px-3 py-2.5 text-right">Capaian target</th><th className="w-[200px] px-5 py-2.5 text-left">Kontribusi omzet tim</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -368,10 +403,12 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
                       return (
                         <tr key={m.id}>
                           <td className="px-5 py-2.5"><button type="button" onClick={() => setMemberId(m.id)} className={cn("text-[12.5px] font-semibold text-ink hover:text-brand-strong", focus)}>{m.name}</button></td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.masuk}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.sph}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.hot}{m.hot > 0 && <span className="ml-1 text-slate-400">({short(m.hotValue)})</span>}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.deals}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] font-semibold tabular-nums text-emerald-700">{fmtRp(m.omzet)}</td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{targetOf(m.id) > 0 ? <span className={m.omzet >= targetOf(m.id) ? "font-semibold text-emerald-700" : "text-slate-700"}>{pct(m.omzet, targetOf(m.id))}</span> : <span className="text-slate-400">-</span>}</td>
                           <td className="px-5 py-2.5">
                             {totalOmzet > 0 ? (
                               <div className="flex items-center gap-2">

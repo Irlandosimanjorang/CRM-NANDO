@@ -320,8 +320,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[.18em] text-orange-500">Khusus owner & manager</div>
-          <h1 className="mt-1 text-[28px] font-bold leading-none tracking-[-0.04em] text-ink">Team</h1>
+          <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">Team</h1>
+          <p className="mt-0.5 text-[12px] text-slate-500">Aktivitas dan target tiap anggota. Hasil penjualan ada di tab Report. Khusus owner dan manager.</p>
         </div>
         <div className="flex items-center gap-2">
           <Segmented options={RANGES.map((r) => [r.key, r.label])} value={range} onChange={setRange} />
