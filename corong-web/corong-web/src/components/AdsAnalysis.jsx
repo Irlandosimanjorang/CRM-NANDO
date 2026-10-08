@@ -11,14 +11,20 @@ import AdsImportModal from "./AdsImportModal";
 // Analisis iklan di tab Laporan (9 Okt 2026): biaya iklan hasil impor (Meta/TikTok/Google) disandingkan
 // dengan lead di Nexto per sumber. Lead dihitung dari yang DIBUAT pada bulan terpilih, platform dibaca
 // dari isian "Sumber lead" di lead. Deal = lead tersebut yang sudah masuk tahap menang.
-const COLORS = { Meta: "#2563eb", Instagram: "#db2777", TikTok: "#0f172a", Google: "#16a34a", "Tidak diisi": "#94a3b8" };
+const COLORS = { Meta: "#2563eb", TikTok: "#0f172a", Google: "#16a34a", "Tidak diisi": "#94a3b8" };
 const EXTRA = ["#f97316", "#a855f7", "#0d9488", "#eab308", "#64748b", "#ef4444"];
 const num = (v) => Number(v) || 0;
 const int = (v) => num(v).toLocaleString("id-ID");
 const safeDiv = (a, b) => (b > 0 ? a / b : null);
 const rpOrDash = (v) => (v === null ? "-" : fmtRp(Math.round(v)));
 
-export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImport, onChanged }) {
+// Meta dan Instagram satu akun iklan (Meta Ads), jadi dibandingkan sebagai satu kelompok.
+const groupOf = (p) => (p === "Instagram" ? "Meta" : p);
+const ymOf = (d) => String(d || "").slice(0, 7);
+
+export default function AdsAnalysis({ leads = [], stages = [], dealTransactions = [], org, ym, canImport, onChanged }) {
+  // "cohort": lead yang masuk bulan ini beserta deal-nya kapan pun. "deal": deal yang tutup bulan ini dari lead kapan pun masuknya.
+  const [basis, setBasis] = useState("cohort");
   const [year, month] = ym.split("-").map(Number);
   const from = `${ym}-01`;
   const to = `${ym}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
@@ -38,15 +44,34 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
     const slot = getCustomFieldSlots(org?.industry, org?.custom_field_labels).find((s) => /sumber/i.test(s.label));
     const sourceOf = (l) => normalizePlatform((slot ? l[slot.key] : "") || l.source || "") || "Tidak diisi";
     const wonKeys = new Set(stages.filter((s) => s.type === "won").map((s) => s.key));
-    const cohort = leads.filter((l) => !l.deleted_at && String(l.created_at || "").slice(0, 7) === ym);
+    const live = leads.filter((l) => !l.deleted_at);
+    const isCohort = (l) => ymOf(l.created_at) === ym;
+    const cohort = live.filter(isCohort);
+    // Omzet dari nilai transaksi deal (termasuk repeat order). Lead menang tanpa transaksi memakai nilai deal di lead.
+    const txByLead = new Map();
+    for (const t of dealTransactions) { if (!t.lead_id) continue; const arr = txByLead.get(t.lead_id) || []; arr.push(t); txByLead.set(t.lead_id, arr); }
+    const dealInfo = (l) => {
+      const txs = txByLead.get(l.id) || [];
+      const won = wonKeys.has(l.stage_key);
+      if (basis === "deal") {
+        const m = txs.filter((t) => ymOf(t.deal_date) === ym);
+        if (m.length) return { deal: true, value: m.reduce((t, x) => t + num(x.deal_value), 0) };
+        if (won && !txs.length && ymOf(l.deal_date) === ym) return { deal: true, value: num(l.deal_value) };
+        return { deal: false, value: 0 };
+      }
+      if (!isCohort(l)) return { deal: false, value: 0 };
+      if (txs.length) return { deal: true, value: txs.reduce((t, x) => t + num(x.deal_value), 0) };
+      return won ? { deal: true, value: num(l.deal_value) } : { deal: false, value: 0 };
+    };
 
     const by = new Map();
     const row = (p) => { if (!by.has(p)) by.set(p, { platform: p, spend: 0, impressions: 0, clicks: 0, reported: 0, leads: 0, deals: 0, value: 0 }); return by.get(p); };
-    for (const r of ads) { const x = row(normalizePlatform(r.platform) || "Lainnya"); x.spend += num(r.spend); x.impressions += num(r.impressions); x.clicks += num(r.clicks); x.reported += num(r.results); }
-    for (const l of cohort) {
-      const x = row(sourceOf(l));
-      x.leads += 1;
-      if (wonKeys.has(l.stage_key)) { x.deals += 1; x.value += num(l.deal_value); }
+    for (const r of ads) { const x = row(groupOf(normalizePlatform(r.platform) || "Lainnya")); x.spend += num(r.spend); x.impressions += num(r.impressions); x.clicks += num(r.clicks); x.reported += num(r.results); }
+    for (const l of live) {
+      const x = row(groupOf(sourceOf(l)));
+      if (isCohort(l)) x.leads += 1;
+      const d = dealInfo(l);
+      if (d.deal) { x.deals += 1; x.value += d.value; }
     }
     const rows = [...by.values()].sort((p, q) => q.spend - p.spend || q.leads - p.leads);
     const adRows = rows.filter((r) => r.spend > 0);
@@ -56,12 +81,13 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
     // dicocokkan dengan nama kampanye di data biaya (huruf besar kecil dan tanda baca diabaikan).
     const normC = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     const leadCamp = new Map();
-    for (const l of cohort) {
+    for (const l of live) {
       const k = normC(l.ad_campaign);
       if (!k) continue;
       const c = leadCamp.get(k) || { leads: 0, deals: 0, value: 0 };
-      c.leads += 1;
-      if (wonKeys.has(l.stage_key)) { c.deals += 1; c.value += num(l.deal_value); }
+      if (isCohort(l)) c.leads += 1;
+      const d = dealInfo(l);
+      if (d.deal) { c.deals += 1; c.value += d.value; }
       leadCamp.set(k, c);
     }
     const camp = new Map();
@@ -93,7 +119,7 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
     }
     for (const r of adRows.filter((x) => x.leads === 0)) insights.push(`${r.platform}: biaya ${fmtRp(Math.round(r.spend))} tetapi belum ada lead dengan sumber ini di Nexto. Pastikan sales mengisi "Sumber lead".`);
     return { slot, rows, adRows, tot, campaigns, unmatchedLeads, insights, cohortCount: cohort.length, noSource: cohort.filter((l) => sourceOf(l) === "Tidak diisi").length };
-  }, [ads, leads, stages, org, ym]);
+  }, [ads, leads, stages, dealTransactions, org, ym, basis]);
 
   const colorOf = (p, i) => COLORS[p] || EXTRA[i % EXTRA.length];
   const leadPie = a.rows.filter((r) => r.leads > 0).map((r) => ({ name: r.platform, value: r.leads }));
@@ -143,7 +169,15 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-[12px] text-slate-500">Biaya iklan dari file Meta, TikTok, atau Google dibandingkan dengan lead dan deal di Nexto per sumber. Lead dihitung dari yang dibuat pada bulan ini.</p>
+        <div className="max-w-xl space-y-2">
+          <p className="text-[12px] text-slate-500">Biaya iklan dari file Meta (termasuk Instagram), TikTok, atau Google dibandingkan dengan lead dan deal di Nexto per sumber. Omzet dihitung dari nilai transaksi deal.</p>
+          <div role="group" aria-label="Cara menghitung deal" className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 text-[12px] font-semibold">
+            {[["cohort", "Lead masuk bulan ini"], ["deal", "Deal tutup bulan ini"]].map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setBasis(k)} aria-pressed={basis === k} className={`rounded-full px-3 py-1.5 ${basis === k ? "bg-ink text-white" : "text-slate-600 hover:text-ink"} ${focus}`}>{label}</button>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-400">{basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk bulan ini. Deal yang belum tertutup belum terhitung." : "Lead tetap yang masuk bulan ini. Deal dan omzet dari semua lead yang deal-nya tutup bulan ini, kapan pun lead itu masuk. Cocok untuk melihat uang yang benar-benar masuk bulan ini terhadap biaya iklan bulan ini."}</p>
+        </div>
         {canImport && (
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setShowImport(true)} className={`inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 ${focus}`}><Upload size={14} /> Impor data iklan</button>
@@ -214,7 +248,7 @@ export default function AdsAnalysis({ leads = [], stages = [], org, ym, canImpor
                     <td className="px-4 py-2.5 text-[12.5px] text-slate-600">{c.platform}</td>
                     <td className={td}>{fmtRp(Math.round(c.spend))}</td><td className={td}>{int(c.clicks)}</td>
                     <td className={td}>{rpOrDash(safeDiv(c.spend, c.clicks))}</td><td className={td}>{int(c.reported)}</td>
-                    <td className={td}>{c.leadCount || "-"}</td><td className={td}>{c.leadCount ? c.deals : "-"}</td>
+                    <td className={td}>{c.leadCount || "-"}</td><td className={td}>{c.leadCount || c.deals ? c.deals : "-"}</td>
                     <td className={td}>{c.value > 0 ? fmtRp(Math.round(c.value)) : "-"}</td>
                     <td className={`${td} font-semibold`}>{c.value > 0 && c.spend > 0 ? `${(c.value / c.spend).toFixed(1)}x` : "-"}</td>
                   </tr>
