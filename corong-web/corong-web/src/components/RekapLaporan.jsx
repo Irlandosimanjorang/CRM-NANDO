@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, ZoomIn, ZoomOut } from "lucide-react";
+import { Download, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { Panel, PanelHeader, EmptyState } from "../ui";
@@ -40,8 +40,15 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
   const from = `${ym}-01`, to = `${ym}-${pad(daysInMonth)}`;
   const [changes, setChanges] = useState([]);
   const [zoomIdx, setZoomIdx] = useState(2); // 100%
+  const [full, setFull] = useState(false); // timeline tampil layar penuh
   const [tip, setTip] = useState(null); // popup detail sel timeline
   const zoom = ZOOMS[zoomIdx];
+  useEffect(() => {
+    if (!full) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") { setTip(null); setFull(false); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [full]);
   const nameOf = (uid) => members.find((m) => m.user_id === uid)?.display_name || "";
 
   useEffect(() => {
@@ -181,17 +188,20 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
     </Panel>
   );
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Report data retail dan project</h2>
-          <p className="mt-0.5 text-[11.5px] text-slate-500">Urutan seperti laporan Excel: tabel induk dengan timeline harian, daftar per tahap, proyek bulan lalu, lalu ringkasan bobot.</p>
-        </div>
-        <button type="button" onClick={download} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"><Download size={14} /> Unduh Excel</button>
-      </div>
-
-      <Panel className="overflow-hidden">
+  // Blok timeline: dipakai di halaman biasa (dalam Panel) dan di layar penuh (menutupi seluruh layar).
+  const timeline = (isFull) => {
+    const Wrap = isFull ? "div" : Panel;
+    return (
+      <Wrap className={isFull ? "fixed inset-0 z-[80] flex flex-col bg-white" : "overflow-hidden"}>
+        {isFull && (
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+            <div>
+              <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Timeline {MONTHS[month - 1]} {year}{orgName ? ` · ${orgName}` : ""}</div>
+              <div className="text-[11px] text-slate-500">{masterRows.length} lead. Arahkan kursor ke kotak berwarna untuk melihat rinciannya.</div>
+            </div>
+            <button type="button" onClick={() => setFull(false)} aria-label="Tutup layar penuh" className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><X size={18} /></button>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-5 py-3 text-[11.5px] text-slate-600">
           <span className="font-semibold text-slate-700">Warna tahap</span>
           {stages.map((s) => <span key={s.key} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.hex }} />{s.label}</span>)}
@@ -199,12 +209,14 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
             <button type="button" onClick={() => setZoomIdx((z) => Math.max(0, z - 1))} disabled={zoomIdx === 0} aria-label="Perkecil" className="rounded-full p-1 hover:bg-slate-100 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><ZoomOut size={14} /></button>
             <button type="button" onClick={() => setZoomIdx(2)} title="Kembali ke 100%" className="min-w-[40px] text-center text-[11px] font-semibold tabular-nums hover:text-ink">{Math.round(zoom * 100)}%</button>
             <button type="button" onClick={() => setZoomIdx((z) => Math.min(ZOOMS.length - 1, z + 1))} disabled={zoomIdx === ZOOMS.length - 1} aria-label="Perbesar" className="rounded-full p-1 hover:bg-slate-100 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><ZoomIn size={14} /></button>
+            <span className="mx-0.5 h-4 w-px bg-slate-200" aria-hidden="true" />
+            <button type="button" onClick={() => { setTip(null); setFull((f) => !f); }} aria-label={isFull ? "Tutup layar penuh" : "Layar penuh"} title={isFull ? "Tutup layar penuh (Esc)" : "Buka layar penuh"} className="rounded-full p-1 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{isFull ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
           </span>
         </div>
         {masterRows.length === 0 ? (
           <div className="border-t border-slate-100 px-5 py-5"><EmptyState>Belum ada lead pada bulan ini. Data masuk dan perpindahan tahap tim muncul di sini otomatis.</EmptyState></div>
         ) : (
-          <div className="overflow-x-auto border-t border-slate-100">
+          <div className={isFull ? "flex-1 overflow-auto border-t border-slate-100" : "overflow-x-auto border-t border-slate-100"}>
             <table className="border-collapse text-left">
               <thead>
                 <tr className="bg-slate-50/60">
@@ -246,7 +258,21 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
             </table>
           </div>
         )}
-      </Panel>
+      </Wrap>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Report data retail dan project</h2>
+          <p className="mt-0.5 text-[11.5px] text-slate-500">Urutan seperti laporan Excel: tabel induk dengan timeline harian, daftar per tahap, proyek bulan lalu, lalu ringkasan bobot.</p>
+        </div>
+        <button type="button" onClick={download} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"><Download size={14} /> Unduh Excel</button>
+      </div>
+
+      {timeline(full)}
 
       {d.sections.map((s) => <Table key={s.key} s={s} />)}
       {d.prior.map((s) => <Table key={s.key} s={s} />)}
@@ -256,7 +282,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
         const left = Math.min(Math.max(tip.x, 150), (typeof window !== "undefined" ? window.innerWidth : 1200) - 150);
         const date = new Date(year, month - 1, tip.day);
         return (
-          <div role="tooltip" className="pointer-events-none fixed z-50 w-[272px] rounded-inner border border-slate-200 bg-white p-3 shadow-float" style={{ left, top: up ? tip.top - 8 : tip.bottom + 8, transform: up ? "translate(-50%, -100%)" : "translate(-50%, 0)" }}>
+          <div role="tooltip" className="pointer-events-none fixed z-[90] w-[272px] rounded-inner border border-slate-200 bg-white p-3 shadow-float" style={{ left, top: up ? tip.top - 8 : tip.bottom + 8, transform: up ? "translate(-50%, -100%)" : "translate(-50%, 0)" }}>
             <div className="truncate text-[12.5px] font-bold text-ink">{tip.lead.name}</div>
             <div className="text-[11px] text-slate-500">{DAYS_LONG[date.getDay()]}, {tip.day} {MONTHS[month - 1]} {year}</div>
             <ul className="mt-2 space-y-1.5">
