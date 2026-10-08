@@ -34,7 +34,7 @@ function short(n) {
 const truncate = (s, n) => (String(s).length > n ? `${String(s).slice(0, n - 1)}…` : String(s));
 const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
-export default function MonthlyReport({ leads = [], stages = [], dealTransactions = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead }) {
+export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTx = [], members = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead }) {
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const [ym, setYm] = useState(todayIso.slice(0, 7));
@@ -43,10 +43,25 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
   const personal = !canManage;
   const view = personal && viewRaw === "iklan" ? "penjualan" : viewRaw;
   const [selected, setSelected] = useState(todayIso);
+  const [memberId, setMemberId] = useState("all");
   const [editing, setEditing] = useState(false);
   const [targetInput, setTargetInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+
+  // Marketing = anggota selain owner (owner ikut bila punya lead). Owner dan manager bisa memilih satu marketing
+  // untuk melihat laporannya sendiri, seperti "REPORT ASIFA" di Excel BSB; pilihan "Semua tim" untuk gabungan.
+  const marketers = useMemo(() => {
+    const seen = new Set(); const out = [];
+    const nameOf = (id) => members.find((m) => m.user_id === id)?.display_name || "Anggota";
+    for (const m of members) if (m.role !== "owner") { seen.add(m.user_id); out.push({ id: m.user_id, name: nameOf(m.user_id) }); }
+    for (const l of allLeads) { const u = l.assigned_to || l.user_id; if (u && !seen.has(u)) { seen.add(u); out.push({ id: u, name: nameOf(u) }); } }
+    return out;
+  }, [members, allLeads]);
+  const scopeId = personal ? "all" : marketers.some((m) => m.id === memberId) ? memberId : "all";
+  const scopeName = marketers.find((m) => m.id === scopeId)?.name || "";
+  const leads = useMemo(() => (scopeId === "all" ? allLeads : allLeads.filter((l) => (l.assigned_to || l.user_id) === scopeId)), [allLeads, scopeId]);
+  const dealTransactions = useMemo(() => (scopeId === "all" ? allTx : allTx.filter((t) => t.user_id === scopeId)), [allTx, scopeId]);
 
   const [year, month] = ym.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -91,6 +106,27 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
     };
   }, [leads, stages, dealTransactions, ym]);
 
+  // Perbandingan antar marketing (selalu dari seluruh data, tidak ikut pilihan marketing di atas).
+  const team = useMemo(() => {
+    const wonKeys = new Set(stages.filter((x) => x.type === "won").map((x) => x.key));
+    const txLeadIds = new Set(allTx.map((t) => t.lead_id));
+    return marketers.map((m) => {
+      const ls = allLeads.filter((l) => !l.deleted_at && (l.assigned_to || l.user_id) === m.id);
+      const txs = allTx.filter((t) => t.user_id === m.id && ymOf(t.deal_date) === ym);
+      const viaLead = ls.filter((l) => wonKeys.has(l.stage_key) && !txLeadIds.has(l.id) && ymOf(l.deal_date) === ym);
+      const hot = ls.filter((l) => l.stage_key === "hot_progress");
+      const sph = ls.filter((l) => l.stage_key === "sph_terlayang");
+      const sumV = (arr, f) => arr.reduce((t, x) => t + num(f(x)), 0);
+      return {
+        ...m,
+        masuk: ls.filter((l) => ymOf(l.created_at) === ym).length,
+        sph: sph.length, hot: hot.length, hotValue: sumV(hot, (l) => l.deal_value),
+        deals: txs.length + viaLead.length,
+        omzet: sumV(txs, (t) => t.deal_value) + sumV(viaLead, (l) => l.deal_value),
+      };
+    }).sort((a, b) => b.omzet - a.omzet);
+  }, [marketers, allLeads, allTx, stages, ym]);
+
   // Saat pertama dibuka (atau pindah bulan) pilih hari terbaru yang punya aktivitas, bukan hari kosong.
   const [autoFor, setAutoFor] = useState("");
   useEffect(() => {
@@ -109,12 +145,17 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ym, autoFor]);
 
-  const target = num(org?.monthly_target);
+  // Target: bawaan per orang (monthly_target), bisa ditimpa per marketing (member_targets). Target tim = jumlah target para marketing.
+  const defaultTarget = num(org?.monthly_target);
+  const memberTargets = org?.member_targets || {};
+  const targetOf = (uid) => (memberTargets[uid] !== undefined ? num(memberTargets[uid]) : defaultTarget);
+  const target = personal ? 0 : scopeId === "all" ? (marketers.length ? marketers.reduce((s, m) => s + targetOf(m.id), 0) : defaultTarget) : targetOf(scopeId);
   const reached = target > 0 ? Math.min(100, (r.dealValue / target) * 100) : 0;
   const saveTarget = async () => {
     setSaving(true); setErr("");
     try {
-      await db.setMonthlyTarget(Number(String(targetInput).replace(/\D/g, "")) || 0);
+      const amount = Number(String(targetInput).replace(/\D/g, "")) || 0;
+      if (scopeId === "all") await db.setMonthlyTarget(amount); else await db.setMemberTarget(scopeId, amount);
       setEditing(false);
       onChanged?.();
     } catch (e) { setErr(String(e?.message || e)); }
@@ -161,16 +202,24 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
         </div>
       </div>
 
+      {!personal && view !== "iklan" && marketers.length > 0 && (
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Pilih marketing">
+          {[{ id: "all", name: "Semua tim" }, ...marketers].map((m) => (
+            <button key={m.id} role="tab" aria-selected={scopeId === m.id} onClick={() => setMemberId(m.id)} className={cn("shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] font-semibold", focus, scopeId === m.id ? "border-ink bg-ink text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50")}>{m.name}</button>
+          ))}
+        </div>
+      )}
+
       {view === "rekap" ? (
-        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={org?.name || ""} target={personal ? 0 : num(org?.monthly_target)} personal={personal} />
+        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={scopeId === "all" ? (org?.name || "") : scopeName} target={target} personal={personal} />
       ) : view === "iklan" ? (
-        <AdsAnalysis leads={leads} stages={stages} org={org} ym={ym} canImport={canImport} onChanged={onChanged} />
+        <AdsAnalysis leads={allLeads} stages={stages} org={org} ym={ym} canImport={canImport} onChanged={onChanged} />
       ) : (
         <>
           <Panel className="p-5">
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <div className="min-w-0">
-                <div className="text-[12px] font-semibold text-slate-600">{personal ? "Omzet Anda bulan ini" : "Omzet bulan ini"}</div>
+                <div className="text-[12px] font-semibold text-slate-600">{personal ? "Omzet Anda bulan ini" : scopeId === "all" ? "Omzet bulan ini" : `Omzet ${scopeName} bulan ini`}</div>
                 <div className="mt-1.5 font-display text-[34px] font-bold leading-none tracking-[-0.04em] tabular-nums text-emerald-600">{fmtRp(r.dealValue)}</div>
               </div>
               {!personal && (
@@ -182,9 +231,10 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
                   </div>
                 ) : (
                   <>
-                    <div className="text-[12px] text-slate-500">Target {target ? fmtRp(target) : "belum diisi"}{target > 0 && <span className="ml-1.5 font-semibold text-ink">{pct(r.dealValue, target)}</span>}</div>
+                    <div className="text-[12px] text-slate-500">{scopeId === "all" ? "Target tim" : `Target ${scopeName}`} {target ? fmtRp(target) : "belum diisi"}{target > 0 && <span className="ml-1.5 font-semibold text-ink">{pct(r.dealValue, target)}</span>}</div>
+                    {scopeId === "all" && marketers.length > 0 && <div className="text-[11px] text-slate-400">{marketers.length} marketing, bawaan {fmtRp(defaultTarget)} per orang</div>}
                     {canEditTarget && (
-                      <button type="button" onClick={() => { setTargetInput(String(target || "")); setEditing(true); }} className={cn("mt-1 inline-flex items-center gap-1 rounded-full text-[12px] font-semibold text-brand-strong hover:text-orange-800", focus)}><Pencil size={12} /> {target ? "Ubah target" : "Isi target"}</button>
+                      <button type="button" onClick={() => { setTargetInput(String((scopeId === "all" ? defaultTarget : target) || "")); setEditing(true); }} className={cn("mt-1 inline-flex items-center gap-1 rounded-full text-[12px] font-semibold text-brand-strong hover:text-orange-800", focus)}><Pencil size={12} /> {scopeId === "all" ? "Ubah target per marketing" : target ? "Ubah target" : "Isi target"}</button>
                     )}
                   </>
                 )}
@@ -292,6 +342,44 @@ export default function MonthlyReport({ leads = [], stages = [], dealTransaction
               </Panel>
             </div>
           </div>
+
+          {!personal && scopeId === "all" && team.length > 0 && (
+            <Panel className="overflow-hidden">
+              <div className="px-5 pb-1 pt-4"><PanelHeader title="Perbandingan marketing" meta={`Pencapaian tiap orang pada ${MONTHS[month - 1]}. Klik nama untuk membuka laporannya.`} /></div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
+                      <th className="px-5 py-2.5 text-left">Marketing</th><th className="px-3 py-2.5 text-right">Data masuk</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th><th className="px-3 py-2.5 text-right">Omzet</th><th className="w-[200px] px-5 py-2.5 text-left">Pencapaian target</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {team.map((m) => {
+                      const t = targetOf(m.id);
+                      return (
+                        <tr key={m.id}>
+                          <td className="px-5 py-2.5"><button type="button" onClick={() => setMemberId(m.id)} className={cn("text-[12.5px] font-semibold text-ink hover:text-brand-strong", focus)}>{m.name}</button></td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.masuk}</td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.sph}</td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.hot}</td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.deals}</td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] font-semibold tabular-nums text-emerald-700">{fmtRp(m.omzet)}</td>
+                          <td className="px-5 py-2.5">
+                            {t > 0 ? (
+                              <div className="flex items-center gap-2">
+                                <Meter value={Math.min(100, (m.omzet / t) * 100)} max={100} tone="good" className="h-1.5 flex-1" />
+                                <span className="w-12 text-right text-[12px] tabular-nums text-slate-600">{pct(m.omzet, t)}</span>
+                              </div>
+                            ) : <span className="text-[12px] text-slate-400">Target belum diisi</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          )}
         </>
       )}
     </div>

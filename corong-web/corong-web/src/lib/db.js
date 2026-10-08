@@ -31,6 +31,16 @@ export async function setMonthlyTarget(amount) {
   if (error) throw error;
 }
 
+// Target omzet satu marketing (menimpa target bawaan per orang). Hanya owner yang lolos kebijakan update organisasi.
+export async function setMemberTarget(userId, amount) {
+  const orgId = await getMyOrgId();
+  const { data, error: gErr } = await supabase.from("organizations").select("member_targets").eq("id", orgId).single();
+  if (gErr) throw gErr;
+  const next = { ...(data?.member_targets || {}), [userId]: Math.max(0, Math.floor(Number(amount) || 0)) };
+  const { error } = await supabase.from("organizations").update({ member_targets: next }).eq("id", orgId);
+  if (error) throw error;
+}
+
 export async function getMyOrg() {
   const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("organizations").select("*").eq("id", orgId).single();
