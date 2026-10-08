@@ -20,14 +20,13 @@ const rpOrDash = (v) => (v === null ? "-" : fmtRp(Math.round(v)));
 
 // Meta dan Instagram satu akun iklan (Meta Ads), jadi dibandingkan sebagai satu kelompok.
 const groupOf = (p) => (p === "Instagram" ? "Meta" : p);
-const ymOf = (d) => String(d || "").slice(0, 7);
 
-export default function AdsAnalysis({ leads = [], stages = [], dealTransactions = [], org, ym, canImport, onChanged }) {
-  // "cohort": lead yang masuk bulan ini beserta deal-nya kapan pun. "deal": deal yang tutup bulan ini dari lead kapan pun masuknya.
+export default function AdsAnalysis({ leads = [], stages = [], dealTransactions = [], org, ym, from: fromProp, to: toProp, periodLabel = "", canImport, onChanged }) {
+  // "cohort": lead yang masuk periode ini beserta deal-nya kapan pun. "deal": deal yang tutup periode ini dari lead kapan pun masuknya.
   const [basis, setBasis] = useState("cohort");
   const [year, month] = ym.split("-").map(Number);
-  const from = `${ym}-01`;
-  const to = `${ym}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
+  const from = fromProp || `${ym}-01`;
+  const to = toProp || `${ym}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
   const [ads, setAds] = useState([]);
   const [loadErr, setLoadErr] = useState("");
   const [showImport, setShowImport] = useState(false);
@@ -45,7 +44,8 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
     const sourceOf = (l) => normalizePlatform((slot ? l[slot.key] : "") || l.source || "") || "Tidak diisi";
     const wonKeys = new Set(stages.filter((s) => s.type === "won").map((s) => s.key));
     const live = leads.filter((l) => !l.deleted_at);
-    const isCohort = (l) => ymOf(l.created_at) === ym;
+    const inR = (d) => { const k = String(d || "").slice(0, 10); return k >= from && k <= to; };
+    const isCohort = (l) => inR(l.created_at);
     const cohort = live.filter(isCohort);
     // Omzet dari nilai transaksi deal (termasuk repeat order). Lead menang tanpa transaksi memakai nilai deal di lead.
     const txByLead = new Map();
@@ -54,9 +54,9 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
       const txs = txByLead.get(l.id) || [];
       const won = wonKeys.has(l.stage_key);
       if (basis === "deal") {
-        const m = txs.filter((t) => ymOf(t.deal_date) === ym);
+        const m = txs.filter((t) => inR(t.deal_date));
         if (m.length) return { deal: true, value: m.reduce((t, x) => t + num(x.deal_value), 0) };
-        if (won && !txs.length && ymOf(l.deal_date) === ym) return { deal: true, value: num(l.deal_value) };
+        if (won && !txs.length && inR(l.deal_date)) return { deal: true, value: num(l.deal_value) };
         return { deal: false, value: 0 };
       }
       if (!isCohort(l)) return { deal: false, value: 0 };
@@ -119,7 +119,7 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
     }
     for (const r of adRows.filter((x) => x.leads === 0)) insights.push(`${r.platform}: biaya ${fmtRp(Math.round(r.spend))} tetapi belum ada lead dengan sumber ini di Nexto. Pastikan sales mengisi "Sumber lead".`);
     return { slot, rows, adRows, tot, campaigns, unmatchedLeads, insights, cohortCount: cohort.length, noSource: cohort.filter((l) => sourceOf(l) === "Tidak diisi").length };
-  }, [ads, leads, stages, dealTransactions, org, ym, basis]);
+  }, [ads, leads, stages, dealTransactions, org, from, to, basis]);
 
   const colorOf = (p, i) => COLORS[p] || EXTRA[i % EXTRA.length];
   const leadPie = a.rows.filter((r) => r.leads > 0).map((r) => ({ name: r.platform, value: r.leads }));
@@ -127,7 +127,7 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
   const hasAds = ads.length > 0;
 
   const wipe = async () => {
-    if (!window.confirm(`Hapus semua data iklan bulan ini (${from} sampai ${to})? Data lead tidak ikut terhapus.`)) return;
+    if (!window.confirm(`Hapus semua data iklan periode ini (${from} sampai ${to})? Data lead tidak ikut terhapus.`)) return;
     try { await db.deleteAdSpendRange(from, to); setTick((t) => t + 1); } catch (e) { alert(String(e?.message || e)); }
   };
 
@@ -170,18 +170,18 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="max-w-xl space-y-2">
-          <p className="text-[12px] text-slate-500">Biaya iklan dari file Meta (termasuk Instagram), TikTok, atau Google dibandingkan dengan lead dan deal di Nexto per sumber. Omzet dihitung dari nilai transaksi deal.</p>
+          <p className="text-[12px] text-slate-500">Biaya iklan dari file Meta (termasuk Instagram), TikTok, atau Google dibandingkan dengan lead dan deal di Nexto per sumber. Omzet dihitung dari nilai transaksi deal.{periodLabel ? <> Periode: <b className="text-slate-700">{periodLabel}</b>.</> : null}</p>
           <div role="group" aria-label="Cara menghitung deal" className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 text-[12px] font-semibold">
-            {[["cohort", "Lead masuk bulan ini"], ["deal", "Deal tutup bulan ini"]].map(([k, label]) => (
+            {[["cohort", "Lead masuk periode ini"], ["deal", "Deal tutup periode ini"]].map(([k, label]) => (
               <button key={k} type="button" onClick={() => setBasis(k)} aria-pressed={basis === k} className={`rounded-full px-3 py-1.5 ${basis === k ? "bg-ink text-white" : "text-slate-600 hover:text-ink"} ${focus}`}>{label}</button>
             ))}
           </div>
-          <p className="text-[11px] text-slate-400">{basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk bulan ini. Deal yang belum tertutup belum terhitung." : "Lead tetap yang masuk bulan ini. Deal dan omzet dari semua lead yang deal-nya tutup bulan ini, kapan pun lead itu masuk. Cocok untuk melihat uang yang benar-benar masuk bulan ini terhadap biaya iklan bulan ini."}</p>
+          <p className="text-[11px] text-slate-400">{basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk periode ini. Deal yang belum tertutup belum terhitung." : "Lead tetap yang masuk periode ini. Deal dan omzet dari semua lead yang deal-nya tutup periode ini, kapan pun lead itu masuk. Cocok untuk melihat uang yang benar-benar masuk periode ini terhadap biaya iklan periode ini."}</p>
         </div>
         {canImport && (
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setShowImport(true)} className={`inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 ${focus}`}><Upload size={14} /> Impor data iklan</button>
-            {hasAds && <button type="button" onClick={wipe} className={`rounded-full border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50 hover:text-rose-600 ${focus}`} title="Hapus data iklan bulan ini" aria-label="Hapus data iklan bulan ini"><Trash2 size={14} /></button>}
+            {hasAds && <button type="button" onClick={wipe} className={`rounded-full border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50 hover:text-rose-600 ${focus}`} title="Hapus data iklan periode ini" aria-label="Hapus data iklan periode ini"><Trash2 size={14} /></button>}
           </div>
         )}
       </div>
@@ -198,14 +198,14 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
       </StatRow>
 
       {!hasAds && (
-        <EmptyState>Belum ada data iklan untuk bulan ini. {canImport ? "Klik Impor data iklan untuk mengunggah file dari Ads Manager." : "Owner atau manager dapat mengimpornya."}</EmptyState>
+        <EmptyState>Belum ada data iklan untuk periode ini. {canImport ? "Klik Impor data iklan untuk mengunggah file dari Ads Manager." : "Owner atau manager dapat mengimpornya."}</EmptyState>
       )}
 
       <Panel className="grid md:grid-cols-2 md:divide-x md:divide-slate-100">
         <PieBlock title="Lead per sumber" data={leadPie} />
         <PieBlock title="Biaya iklan per platform" data={spendPie} money />
       </Panel>
-      {a.noSource > 0 && <p className="-mt-2 px-1 text-[11px] text-amber-700">{a.noSource} dari {a.cohortCount} lead bulan ini belum diisi "Sumber lead", jadi tidak masuk hitungan platform.</p>}
+      {a.noSource > 0 && <p className="-mt-2 px-1 text-[11px] text-amber-700">{a.noSource} dari {a.cohortCount} lead periode ini belum diisi "Sumber lead", jadi tidak masuk hitungan platform.</p>}
 
       {a.adRows.length > 0 && (
         <Panel className="overflow-hidden">
@@ -256,7 +256,7 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
               </tbody>
             </table>
           </div>
-          {a.unmatchedLeads > 0 && <p className="border-t border-slate-100 px-5 py-2.5 text-[11px] text-amber-700">{a.unmatchedLeads} lead bulan ini punya kampanye iklan yang namanya belum cocok dengan data biaya mana pun. Samakan nama kampanye di file biaya dengan yang tercatat di lead agar ROAS per kampanye terhitung.</p>}
+          {a.unmatchedLeads > 0 && <p className="border-t border-slate-100 px-5 py-2.5 text-[11px] text-amber-700">{a.unmatchedLeads} lead periode ini punya kampanye iklan yang namanya belum cocok dengan data biaya mana pun. Samakan nama kampanye di file biaya dengan yang tercatat di lead agar ROAS per kampanye terhitung.</p>}
         </Panel>
       )}
 

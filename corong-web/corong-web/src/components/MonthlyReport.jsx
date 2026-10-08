@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil, Check, Printer } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
+import { getCustomFieldSlots } from "../lib/industryTemplates";
+import { normalizePlatform } from "../lib/adsImport";
 import { Panel, PanelHeader, StatRow, Stat, Pill, Meter, EmptyState } from "../ui";
 import AdsAnalysis from "./AdsAnalysis";
 import RekapLaporan from "./RekapLaporan";
@@ -52,7 +54,13 @@ const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outli
 export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTx = [], members = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead }) {
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const [ym, setYm] = useState(todayIso.slice(0, 7));
+  const [ymSel, setYm] = useState(todayIso.slice(0, 7));
+  // Periode: hari ini, minggu ini (Senin-Minggu), satu bulan kalender (panah bulan), atau rentang tanggal bebas.
+  const [mode, setMode] = useState("month"); // today | week | month | custom
+  const [cFrom, setCFrom] = useState(`${todayIso.slice(0, 7)}-01`);
+  const [cTo, setCTo] = useState(todayIso);
+  const [srcF, setSrcF] = useState("all");
+  const [stF, setStF] = useState("all");
   const [viewRaw, setView] = useState("penjualan");
   // Anggota biasa: laporan lead miliknya saja, tanpa tab Iklan dan target tim.
   const personal = !canManage;
@@ -75,11 +83,42 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   }, [members, allLeads]);
   const scopeId = personal ? "all" : marketers.some((m) => m.id === memberId) ? memberId : "all";
   const scopeName = marketers.find((m) => m.id === scopeId)?.name || "";
-  const leads = useMemo(() => (scopeId === "all" ? allLeads : allLeads.filter((l) => (l.assigned_to || l.user_id) === scopeId)), [allLeads, scopeId]);
-  const dealTransactions = useMemo(() => (scopeId === "all" ? allTx : allTx.filter((t) => t.user_id === scopeId)), [allTx, scopeId]);
+
+  // Rentang tanggal terpilih. Target dan forecast hanya berlaku untuk satu bulan penuh (mode "month").
+  const isoOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const range = useMemo(() => {
+    if (mode === "today") return { from: todayIso, to: todayIso };
+    if (mode === "week") {
+      const d = new Date(`${todayIso}T00:00:00`);
+      const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+      return { from: isoOf(mon), to: isoOf(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6)) };
+    }
+    if (mode === "custom") return cFrom && cTo && cFrom <= cTo ? { from: cFrom, to: cTo } : { from: cFrom || cTo, to: cFrom || cTo };
+    const [y, m] = ymSel.split("-").map(Number);
+    return { from: `${ymSel}-01`, to: `${ymSel}-${pad(new Date(y, m, 0).getDate())}` };
+  }, [mode, ymSel, cFrom, cTo, todayIso]);
+  const fullMonth = mode === "month";
+  const ym = fullMonth ? ymSel : range.from.slice(0, 7);
+  const inR = (d) => { const k = String(d || "").slice(0, 10); return k >= range.from && k <= range.to; };
+
+  // Sumber lead dibaca seperti di tab Iklan: isian "Sumber lead" bila ada, selain itu kolom sumber bawaan.
+  const srcSlot = useMemo(() => getCustomFieldSlots(org?.industry, org?.custom_field_labels).find((s) => /sumber/i.test(s.label)), [org]);
+  const sourceOfLead = (l) => normalizePlatform((srcSlot ? l[srcSlot.key] : "") || l.source || "") || "Tidak diisi";
+  const sourceOptions = useMemo(() => [...new Set(allLeads.filter((l) => !l.deleted_at).map(sourceOfLead))].sort(), [allLeads, srcSlot]);
+  const passF = (l) => (srcF === "all" || sourceOfLead(l) === srcF) && (stF === "all" || l.stage_key === stF);
+  const filtered = srcF !== "all" || stF !== "all";
+  const fLeads = useMemo(() => (filtered ? allLeads.filter(passF) : allLeads), [allLeads, srcF, stF, srcSlot]);
+  const fLeadIds = useMemo(() => (filtered ? new Set(fLeads.map((l) => l.id)) : null), [fLeads, filtered]);
+  const fTx = useMemo(() => (fLeadIds ? allTx.filter((t) => fLeadIds.has(t.lead_id)) : allTx), [allTx, fLeadIds]);
+  const leads = useMemo(() => (scopeId === "all" ? fLeads : fLeads.filter((l) => (l.assigned_to || l.user_id) === scopeId)), [fLeads, scopeId]);
+  const dealTransactions = useMemo(() => (scopeId === "all" ? fTx : fTx.filter((t) => t.user_id === scopeId)), [fTx, scopeId]);
 
   const [year, month] = ym.split("-").map(Number);
+  const prevYm = (() => { const t = new Date(Number(todayIso.slice(0, 4)), Number(todayIso.slice(5, 7)) - 2, 1); return `${t.getFullYear()}-${pad(t.getMonth() + 1)}`; })();
   const daysInMonth = new Date(year, month, 0).getDate();
+  const fmtD = (iso) => { const d = new Date(`${iso}T00:00:00`); return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`; };
+  const periodLabel = mode === "today" ? `Hari ini, ${fmtD(range.from)}` : fullMonth ? `${MONTHS[month - 1]} ${year}` : range.from === range.to ? fmtD(range.from) : `${fmtD(range.from)} - ${fmtD(range.to)}`;
+  const periodWord = mode === "today" ? "hari ini" : mode === "week" ? "minggu ini" : fullMonth ? (ym === todayIso.slice(0, 7) ? "bulan ini" : `${MONTHS[month - 1]}`) : "periode ini";
   const go = (d) => {
     const t = new Date(year, month - 1 + d, 1);
     setYm(`${t.getFullYear()}-${pad(t.getMonth() + 1)}`);
@@ -94,16 +133,19 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     const byId = new Map(live.map((l) => [l.id, l]));
     const sph = live.filter((l) => l.stage_key === "sph_terlayang");
     const hot = live.filter((l) => l.stage_key === "hot_progress");
-    const lost = live.filter((l) => lostKeys.has(l.stage_key) && ymOf(l.updated_at) === ym);
+    const lost = live.filter((l) => lostKeys.has(l.stage_key) && inR(l.updated_at));
     const running = live.filter((l) => ["deal_kontrak", "proses_so", "pengiriman"].includes(l.stage_key));
-    const masuk = live.filter((l) => ymOf(l.created_at) === ym);
+    const masukAll = live.filter((l) => ymOf(l.created_at) === ym);
+    const masuk = live.filter((l) => inR(l.created_at));
 
     // Deal dalam bulan: transaksi di tab Deal bila ada, selain itu lead bertahap menang dengan tanggal deal.
     const txLeadIds = new Set(dealTransactions.map((t) => t.lead_id));
-    const dealRows = [
-      ...dealTransactions.filter((t) => ymOf(t.deal_date) === ym).map((t) => ({ date: t.deal_date, value: num(t.deal_value), name: t.lead_name, lead: byId.get(t.lead_id) })),
-      ...live.filter((l) => wonKeys.has(l.stage_key) && !txLeadIds.has(l.id) && ymOf(l.deal_date) === ym).map((l) => ({ date: l.deal_date, value: val(l), name: l.name, lead: l })),
+    const mkRows = (test) => [
+      ...dealTransactions.filter((t) => test(t.deal_date)).map((t) => ({ date: t.deal_date, value: num(t.deal_value), name: t.lead_name, lead: byId.get(t.lead_id) })),
+      ...live.filter((l) => wonKeys.has(l.stage_key) && !txLeadIds.has(l.id) && test(l.deal_date)).map((l) => ({ date: l.deal_date, value: val(l), name: l.name, lead: l })),
     ];
+    const dealRows = mkRows(inR);
+    const dealRowsMonth = mkRows((d) => ymOf(d) === ym);
     const dealValue = dealRows.reduce((s, d) => s + d.value, 0);
     const sphValue = sph.reduce((s, l) => s + val(l), 0);
     const hotValue = hot.reduce((s, l) => s + val(l), 0);
@@ -111,18 +153,19 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     const sphAll = sphValue + hotValue + dealValue;
 
     const dealsByDay = {}, masukByDay = {};
-    for (const d of dealRows) (dealsByDay[String(d.date).slice(0, 10)] ||= []).push(d);
-    for (const l of masuk) (masukByDay[String(l.created_at).slice(0, 10)] ||= []).push(l);
+    for (const d of dealRowsMonth) (dealsByDay[String(d.date).slice(0, 10)] ||= []).push(d);
+    for (const l of masukAll) (masukByDay[String(l.created_at).slice(0, 10)] ||= []).push(l);
 
     return {
       hasBsbFlow, masuk, dealRows, sphCount: sph.length, sphValue, hotCount: hot.length, hotValue, dealValue,
       lostCount: lost.length, lostValue, sphAll, running, runningValue: running.reduce((s, l) => s + val(l), 0),
       dealsByDay, masukByDay,
     };
-  }, [leads, stages, dealTransactions, ym]);
+  }, [leads, stages, dealTransactions, ym, range]);
 
   // Omzet bulan sebelumnya pada lingkup yang sama, untuk pembanding di kartu omzet.
   const prevDeal = useMemo(() => {
+    if (!fullMonth) return 0;
     const t = new Date(year, month - 2, 1);
     const pym = `${t.getFullYear()}-${pad(t.getMonth() + 1)}`;
     const wonKeys = new Set(stages.filter((x) => x.type === "won").map((x) => x.key));
@@ -131,28 +174,28 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     const a = dealTransactions.filter((x) => ymOf(x.deal_date) === pym).reduce((n, x) => n + num(x.deal_value), 0);
     const b = live.filter((l) => wonKeys.has(l.stage_key) && !txLeadIds.has(l.id) && ymOf(l.deal_date) === pym).reduce((n, l) => n + num(l.deal_value), 0);
     return a + b;
-  }, [leads, stages, dealTransactions, year, month]);
+  }, [leads, stages, dealTransactions, year, month, fullMonth]);
 
   // Perbandingan antar marketing (selalu dari seluruh data, tidak ikut pilihan marketing di atas).
   const team = useMemo(() => {
     const wonKeys = new Set(stages.filter((x) => x.type === "won").map((x) => x.key));
-    const txLeadIds = new Set(allTx.map((t) => t.lead_id));
+    const txLeadIds = new Set(fTx.map((t) => t.lead_id));
     return marketers.map((m) => {
-      const ls = allLeads.filter((l) => !l.deleted_at && (l.assigned_to || l.user_id) === m.id);
-      const txs = allTx.filter((t) => t.user_id === m.id && ymOf(t.deal_date) === ym);
-      const viaLead = ls.filter((l) => wonKeys.has(l.stage_key) && !txLeadIds.has(l.id) && ymOf(l.deal_date) === ym);
+      const ls = fLeads.filter((l) => !l.deleted_at && (l.assigned_to || l.user_id) === m.id);
+      const txs = fTx.filter((t) => t.user_id === m.id && inR(t.deal_date));
+      const viaLead = ls.filter((l) => wonKeys.has(l.stage_key) && !txLeadIds.has(l.id) && inR(l.deal_date));
       const hot = ls.filter((l) => l.stage_key === "hot_progress");
       const sph = ls.filter((l) => l.stage_key === "sph_terlayang");
       const sumV = (arr, f) => arr.reduce((t, x) => t + num(f(x)), 0);
       return {
         ...m,
-        masuk: ls.filter((l) => ymOf(l.created_at) === ym).length,
+        masuk: ls.filter((l) => inR(l.created_at)).length,
         sph: sph.length, hot: hot.length, hotValue: sumV(hot, (l) => l.deal_value),
         deals: txs.length + viaLead.length,
         omzet: sumV(txs, (t) => t.deal_value) + sumV(viaLead, (l) => l.deal_value),
       };
     }).sort((a, b) => b.omzet - a.omzet);
-  }, [marketers, allLeads, allTx, stages, ym]);
+  }, [marketers, fLeads, fTx, stages, ym, range]);
 
   // Saat pertama dibuka (atau pindah bulan) pilih hari terbaru yang punya aktivitas, bukan hari kosong.
   const [autoFor, setAutoFor] = useState("");
@@ -183,7 +226,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     return () => { alive = false; };
   }, [ym, personal, tTick]);
   const targetOf = (uid) => num(targets[uid]);
-  const target = personal ? 0 : scopeId === "all" ? marketers.reduce((s, m) => s + targetOf(m.id), 0) : targetOf(scopeId);
+  const target = personal || !fullMonth ? 0 : scopeId === "all" ? marketers.reduce((s, m) => s + targetOf(m.id), 0) : targetOf(scopeId);
   const reached = target > 0 ? Math.min(100, (r.dealValue / target) * 100) : 0;
   const saveTarget = async () => {
     setSaving(true); setErr("");
@@ -214,7 +257,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const selMasuk = r.masukByDay[selected] || [];
   const selDate = new Date(`${selected}T00:00:00`);
   const sourceOf = (l) => Object.entries(l).find(([k, v]) => /^custom_field_\d+$/.test(k) && SOURCES.includes(v))?.[1] || "";
-  const pick = (c) => { setSelected(c.iso); if (!c.inMonth) setYm(c.iso.slice(0, 7)); };
+  const pick = (c) => { setSelected(c.iso); if (!c.inMonth) { setMode("month"); setYm(c.iso.slice(0, 7)); } };
 
   // Cetak ke PDF lewat dialog cetak peramban: ringkasan omzet, pipeline, deal bulan ini, dan perbandingan marketing.
   const printReport = () => {
@@ -222,15 +265,15 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     const who = personal ? "Report saya" : scopeId === "all" ? "Semua tim" : scopeName;
     const deals = [...r.dealRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const rows = (arr) => arr.map((c) => `<tr>${c.map((x, i) => `<td class="${i ? "r" : ""}">${esc(x)}</td>`).join("")}</tr>`).join("");
-    const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Report ${esc(who)} ${MONTHS[month - 1]} ${year}</title>
+    const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Report ${esc(who)} ${esc(periodLabel)}</title>
 <style>*{box-sizing:border-box}body{font:12px/1.5 system-ui,Segoe UI,sans-serif;color:#0f172a;margin:28px}h1{font-size:20px;margin:0}h2{font-size:13px;margin:22px 0 6px}.m{color:#64748b}
 .k{display:flex;gap:10px;margin-top:14px}.k div{flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:10px}.k b{display:block;font-size:17px}table{width:100%;border-collapse:collapse}th,td{padding:5px 8px;border-bottom:1px solid #e2e8f0;text-align:left}th{font-size:11px;color:#64748b}.r{text-align:right;font-variant-numeric:tabular-nums}
 @media print{body{margin:14mm}}</style></head><body>
-<h1>Report penjualan ${esc(who)}</h1><div class="m">${esc(org?.name || "")} · ${MONTHS[month - 1]} ${year}</div>
+<h1>Report penjualan ${esc(who)}</h1><div class="m">${esc(org?.name || "")} · ${esc(periodLabel)}${filtered ? " · terfilter" : ""}</div>
 <div class="k"><div><span class="m">Omzet</span><b>${esc(fmtRp(r.dealValue))}</b>${target > 0 ? `<span class="m">${pct(r.dealValue, target)} dari target ${esc(fmtRp(target))}</span>` : ""}</div>
 <div><span class="m">Data masuk</span><b>${r.masuk.length}</b></div><div><span class="m">SPH belum diproses</span><b>${r.sphCount}</b><span class="m">${esc(fmtRp(r.sphValue))}</span></div>
 <div><span class="m">Hot progress</span><b>${r.hotCount}</b><span class="m">${esc(fmtRp(r.hotValue))}</span></div><div><span class="m">Deal</span><b>${deals.length}</b></div></div>
-<h2>Deal bulan ini</h2>${deals.length ? `<table><thead><tr><th>Tanggal</th><th>Nama</th><th class="r">Nilai</th></tr></thead><tbody>${rows(deals.map((d) => [String(d.date).slice(0, 10), d.name, fmtRp(d.value)]))}</tbody></table>` : '<div class="m">Belum ada deal pada bulan ini.</div>'}
+<h2>Deal ${esc(periodWord)}</h2>${deals.length ? `<table><thead><tr><th>Tanggal</th><th>Nama</th><th class="r">Nilai</th></tr></thead><tbody>${rows(deals.map((d) => [String(d.date).slice(0, 10), d.name, fmtRp(d.value)]))}</tbody></table>` : '<div class="m">Belum ada deal pada bulan ini.</div>'}
 ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><table><thead><tr><th>Marketing</th><th class="r">Lead masuk</th><th class="r">SPH</th><th class="r">Hot</th><th class="r">Deal</th><th class="r">Omzet</th><th class="r">Capaian target</th></tr></thead><tbody>${rows(team.map((m) => [m.name, m.masuk, m.sph, m.hot, m.deals, fmtRp(m.omzet), targetOf(m.id) > 0 ? pct(m.omzet, targetOf(m.id)) : "-"]))}</tbody></table>` : ""}
 <div class="m" style="margin-top:18px">Dicetak ${new Date().toLocaleString("id-ID")} dari Nexto.</div></body></html>`;
     const w = window.open("", "_blank");
@@ -252,15 +295,51 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
             ))}
           </div>
-          <div className="flex items-center gap-1">
-            {view === "penjualan" && <button type="button" onClick={printReport} className={cn("mr-1 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}><Printer size={13} /> Cetak / PDF</button>}
-            <button type="button" onClick={() => setYm(todayIso.slice(0, 7))} className={cn("rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}>Hari ini</button>
-            <button type="button" onClick={() => go(-1)} aria-label="Bulan sebelumnya" className={cn("rounded-full p-1.5 text-slate-600 hover:bg-slate-100", focus)}><ChevronLeft size={18} /></button>
-            <button type="button" onClick={() => go(1)} aria-label="Bulan berikutnya" className={cn("rounded-full p-1.5 text-slate-600 hover:bg-slate-100", focus)}><ChevronRight size={18} /></button>
-            <div className="min-w-[116px] font-display text-[15px] font-bold tracking-[-0.02em] text-ink">{MONTHS[month - 1]} {year}</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {view === "penjualan" && <button type="button" onClick={printReport} className={cn("inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}><Printer size={13} /> Cetak / PDF</button>}
+            <div className="flex rounded-full border border-slate-200 bg-white p-0.5 text-[12px] font-semibold" role="group" aria-label="Periode">
+              {[
+                ["today", "Hari ini", mode === "today"],
+                ["week", "Minggu ini", mode === "week"],
+                ["month", "Bulan ini", fullMonth && ymSel === todayIso.slice(0, 7)],
+                ["last", "Bulan lalu", fullMonth && ymSel === prevYm],
+                ["custom", "Custom", mode === "custom"],
+              ].map(([k, label, on]) => (
+                <button key={k} type="button" aria-pressed={on} onClick={() => { if (k === "month") { setMode("month"); setYm(todayIso.slice(0, 7)); } else if (k === "last") { setMode("month"); setYm(prevYm); } else setMode(k); }} className={cn("rounded-full px-3 py-1", focus, on ? "bg-ink text-white" : "text-slate-600 hover:text-ink")}>{label}</button>
+              ))}
+            </div>
+            {fullMonth ? (
+              <div className="flex items-center gap-0.5">
+                <button type="button" onClick={() => go(-1)} aria-label="Bulan sebelumnya" className={cn("rounded-full p-1.5 text-slate-600 hover:bg-slate-100", focus)}><ChevronLeft size={18} /></button>
+                <button type="button" onClick={() => go(1)} aria-label="Bulan berikutnya" className={cn("rounded-full p-1.5 text-slate-600 hover:bg-slate-100", focus)}><ChevronRight size={18} /></button>
+                <div className="min-w-[116px] font-display text-[15px] font-bold tracking-[-0.02em] text-ink">{MONTHS[month - 1]} {year}</div>
+              </div>
+            ) : mode === "custom" ? (
+              <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
+                <input type="date" value={cFrom} max={cTo || undefined} onChange={(e) => setCFrom(e.target.value)} aria-label="Dari tanggal" className="rounded-inner border border-slate-200 bg-white px-2 py-1 text-[12px] text-ink" />
+                <span>sampai</span>
+                <input type="date" value={cTo} min={cFrom || undefined} onChange={(e) => setCTo(e.target.value)} aria-label="Sampai tanggal" className="rounded-inner border border-slate-200 bg-white px-2 py-1 text-[12px] text-ink" />
+              </div>
+            ) : <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">{periodLabel}</div>}
           </div>
         </div>
       </div>
+
+      {view !== "iklan" && (
+        <div className="flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
+          <span className="font-semibold">Filter</span>
+          <select value={srcF} onChange={(e) => setSrcF(e.target.value)} aria-label="Filter sumber lead" className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+            <option value="all">Semua sumber</option>
+            {sourceOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <select value={stF} onChange={(e) => setStF(e.target.value)} aria-label="Filter tahap" className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+            <option value="all">Semua tahap</option>
+            {stages.map((st) => <option key={st.key} value={st.key}>{st.label}</option>)}
+          </select>
+          {filtered && <button type="button" onClick={() => { setSrcF("all"); setStF("all"); }} className={cn("rounded-full px-2.5 py-1 font-semibold text-brand-strong hover:underline", focus)}>Hapus filter</button>}
+          {view === "rekap" && !fullMonth && <span className="text-[11px] text-slate-400">Rekap menampilkan bulan penuh dari periode ini.</span>}
+        </div>
+      )}
 
       {!personal && view !== "iklan" && marketers.length > 0 && (
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Pilih marketing">
@@ -273,16 +352,16 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
       {view === "rekap" ? (
         <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={scopeId === "all" ? (org?.name || "") : scopeName} target={target} personal={personal} members={members} />
       ) : view === "iklan" ? (
-        <AdsAnalysis leads={allLeads} stages={stages} dealTransactions={allTx} org={org} ym={ym} canImport={canImport} onChanged={onChanged} />
+        <AdsAnalysis leads={allLeads} stages={stages} dealTransactions={allTx} org={org} ym={ym} from={range.from} to={range.to} periodLabel={periodLabel} canImport={canImport} onChanged={onChanged} />
       ) : (
         <>
           <Panel className="p-5">
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <div className="min-w-0">
-                <div className="text-[12px] font-semibold text-slate-600">{personal ? "Omzet Anda bulan ini" : scopeId === "all" ? "Omzet bulan ini" : `Omzet ${scopeName} bulan ini`}</div>
+                <div className="text-[12px] font-semibold text-slate-600">{personal ? `Omzet Anda ${periodWord}` : scopeId === "all" ? `Omzet ${periodWord}` : `Omzet ${scopeName} ${periodWord}`}</div>
                 <div className="mt-1.5 font-display text-[34px] font-bold leading-none tracking-[-0.04em] tabular-nums text-emerald-600">{fmtRp(r.dealValue)}</div>
               </div>
-              {!personal && (
+              {!personal && fullMonth && (
               <div className="sm:text-right">
                 {editing ? (
                   <div className="flex items-center gap-2">
@@ -302,7 +381,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               </div>
               )}
             </div>
-            {!personal && <Meter value={reached} max={100} tone="good" className="mt-4 h-2" />}
+            {!personal && fullMonth && <Meter value={reached} max={100} tone="good" className="mt-4 h-2" />}
             {(() => {
               const isNow = ym === todayIso.slice(0, 7);
               const isPast = ym < todayIso.slice(0, 7);
@@ -348,10 +427,10 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
           </Panel>
 
           <StatRow>
-            <Stat value={r.masuk.length} label="Data masuk" hint={`Dibuat pada ${MONTHS[month - 1]}`} tone="brand" />
+            <Stat value={r.masuk.length} label="Data masuk" hint={`Dibuat ${periodWord}`} tone="brand" />
             <Stat value={r.sphCount} label="SPH belum diproses" hint={fmtRp(r.sphValue)} />
             <Stat value={r.hotCount} label="Hot progress" hint={fmtRp(r.hotValue)} tone="warn" />
-            <Stat value={r.dealRows.length} label="Deal bulan ini" hint={fmtRp(r.dealValue)} tone="good" />
+            <Stat value={r.dealRows.length} label={`Deal ${periodWord}`} hint={fmtRp(r.dealValue)} tone="good" />
           </StatRow>
 
           {!r.hasBsbFlow && (
@@ -447,7 +526,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
 
           {!personal && scopeId === "all" && team.length > 0 && (
             <Panel className="overflow-hidden">
-              <div className="px-5 pb-1 pt-4"><PanelHeader title="Hasil per marketing" meta={`Pipeline dan omzet ${MONTHS[month - 1]}. Target, forecast, dan aktivitas tiap orang ada di tab Team. Klik nama untuk membuka report-nya.`} /></div>
+              <div className="px-5 pb-1 pt-4"><PanelHeader title="Hasil per marketing" meta={`Pipeline dan omzet ${periodLabel}. Target, forecast, dan aktivitas tiap orang ada di tab Team. Klik nama untuk membuka report-nya.`} /></div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[860px] border-collapse">
                   <thead>
@@ -466,8 +545,8 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.hot}{m.hot > 0 && <span className="ml-1 text-slate-400">({short(m.hotValue)})</span>}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.deals}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] font-semibold tabular-nums text-emerald-700">{fmtRp(m.omzet)}</td>
-                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{targetOf(m.id) > 0 ? <span className={m.omzet >= targetOf(m.id) ? "font-semibold text-emerald-700" : "text-slate-700"}>{pct(m.omzet, targetOf(m.id))}</span> : <span className="text-slate-400">-</span>}</td>
-                          <td className="px-3 py-2.5">{(() => { const st = targetStatus({ actual: m.omzet, target: targetOf(m.id), isNow: ym === todayIso.slice(0, 7), isPast: ym < todayIso.slice(0, 7), elapsed: now.getDate(), daysInMonth }); return <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1", TONES[st.tone])}>{st.label === "Berpotensi tidak mencapai target" ? "Berisiko" : st.label}</span>; })()}</td>
+                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{fullMonth && targetOf(m.id) > 0 ? <span className={m.omzet >= targetOf(m.id) ? "font-semibold text-emerald-700" : "text-slate-700"}>{pct(m.omzet, targetOf(m.id))}</span> : <span className="text-slate-400">-</span>}</td>
+                          <td className="px-3 py-2.5">{!fullMonth ? <span className="text-slate-400">-</span> : (() => { const st = targetStatus({ actual: m.omzet, target: targetOf(m.id), isNow: ym === todayIso.slice(0, 7), isPast: ym < todayIso.slice(0, 7), elapsed: now.getDate(), daysInMonth }); return <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1", TONES[st.tone])}>{st.label === "Berpotensi tidak mencapai target" ? "Berisiko" : st.label}</span>; })()}</td>
                           <td className="px-5 py-2.5">
                             {totalOmzet > 0 ? (
                               <div className="flex items-center gap-2">
