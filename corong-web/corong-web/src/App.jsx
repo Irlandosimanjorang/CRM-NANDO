@@ -47,7 +47,6 @@ import IndustryPicker from "./components/IndustryPicker";
 import TeamLockedScreen from "./components/TeamLockedScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates";
-import { hasOrgFeature } from "./lib/orgFeatures";
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
@@ -1047,7 +1046,7 @@ export default function App() {
                 <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} myUid={session?.user?.id} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
-                <Leads uppercaseNames={hasOrgFeature(org, "lead_name_uppercase")} leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
+                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
               </div>
               <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
                 {visitedTabs.has("generateleads") && (

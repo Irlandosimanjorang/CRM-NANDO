@@ -46,7 +46,7 @@ const canManage = role !== "sales", myLevel = ent ? 2 : 0;
 const noop = () => {};
 const views = {
   dashboard: <Dashboard myUid="u1" leads={leads} stages={stages} dealTransactions={demo.deals} settings={{}} onGo={noop} onOpenLead={noop} myLevel={myLevel} onChanged={noop} isEnterprise={ent} canManage={canManage} />,
-  leads: <Leads uppercaseNames={q.get("upper") === "1"} leads={leads} stages={stages} settings={{}} industry={ind} customFieldLabels={{}} myLevel={myLevel} onChanged={noop} canManage={canManage} isEnterprise={ent} />,
+  leads: <Leads leads={leads} stages={stages} settings={{}} industry={ind} customFieldLabels={{}} myLevel={myLevel} onChanged={noop} canManage={canManage} isEnterprise={ent} />,
   generate: <GenerateLeads stages={stages} industry={ind} onChanged={noop} onNotify={noop} />,
   deal: <Deal leads={leads} stages={stages} dealTransactions={demo.deals} industry={ind} onEdit={noop} onChanged={noop} />,
   visit: <VisitFollowup leads={leads} onEdit={noop} onChanged={noop} onNotify={noop} isEnterprise={ent} myLevel={myLevel} industry={ind} />,
@@ -68,7 +68,7 @@ const views = {
     { user_id: "a2", email: "budi@queenpacific.co.id", display_name: null, org_name: "PT Queen Pacific", role: "sales_rep", plan: "enterprise", period_start: "2026-10-06T17:00:00Z", period_end: "2026-11-06T17:00:00Z", period_source: "plan", tokens: 120400, cost_rp: 8800, cost_usd: 0.4972, est_used_rp: 60000, est_max_rp: 213955, pct_of_limit: 28, features: [
       { key: "lead-from-url", label: "Lead dari Link", used: 6, limit: 10, pct: 60, tokens: 120400, cost_rp: 8800, cost_usd: 0.4972 } ] },
     { user_id: "a3", email: "rina@majujaya.id", display_name: "Rina", org_name: "CV Maju Jaya", role: "owner", plan: "standard", period_start: "2026-09-24T02:10:00Z", period_end: "2026-10-24T02:10:00Z", period_source: "plan", tokens: 0, cost_rp: 0, cost_usd: 0.0000, est_used_rp: 110, est_max_rp: 53955, pct_of_limit: 0.2, features: [] } ] }} /></div>,
-  leadmodal: <LeadModal uppercaseNames={q.get("upper") === "1"} lead={leads[0]} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
+  leadmodal: <LeadModal lead={leads[0]} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
   leadmodal_weird: <LeadModal lead={weird} stages={stages} settings={{}} industry={ind} myLevel={myLevel} onClose={noop} onSaved={noop} canManage={canManage} isEnterprise={ent} members={window.__M.members} myUid="u1" />,
 };
 const errors = [];

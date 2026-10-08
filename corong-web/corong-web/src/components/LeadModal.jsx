@@ -199,7 +199,7 @@ const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Tidak ada anggaran"
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = false }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true }) {
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
   const [f, setF] = useState({ ...lead, ...(draft?.f || {}) });

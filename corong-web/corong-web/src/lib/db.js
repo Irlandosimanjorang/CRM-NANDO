@@ -795,17 +795,8 @@ export async function getLeads() {
   }));
 }
 
-// Saklar "lead_name_uppercase" (8 Okt 2026): nama lead disimpan HURUF BESAR untuk organisasi yang
-// menyalakannya. Dicache 30 detik supaya tidak membaca organisasi di setiap simpan.
-let upperNamesCache = { at: 0, orgId: null, v: false };
-async function namesUppercase() {
-  const orgId = await getMyOrgId();
-  if (upperNamesCache.orgId === orgId && Date.now() - upperNamesCache.at < 30000) return upperNamesCache.v;
-  const org = await getMyOrg().catch(() => null);
-  upperNamesCache = { at: Date.now(), orgId, v: org?.features?.lead_name_uppercase === true };
-  return upperNamesCache.v;
-}
-const upperIf = (on, name) => (on && typeof name === "string" ? name.toUpperCase() : name);
+// Nama lead selalu disimpan HURUF BESAR (8 Okt 2026, perilaku umum untuk semua organisasi).
+const upperName = (name) => (typeof name === "string" ? name.toUpperCase() : name);
 
 export async function upsertLead(lead) {
   const uid = (await supabase.auth.getUser()).data.user.id;
@@ -816,7 +807,7 @@ export async function upsertLead(lead) {
     // Lead baru: default ke diri sendiri. Lead yang udah ada: dipertahanin
     // apa adanya (gak ke-reset ke siapa aja yang lagi ngedit).
     assigned_to: lead.assigned_to || uid,
-    name: upperIf(await namesUppercase(), lead.name), category: lead.category, stage_key: lead.stage_key,
+    name: upperName(lead.name), category: lead.category, stage_key: lead.stage_key,
     company_type: lead.company_type || "", email: limitMulti(lead.email), phone: sanitizePhone(limitMulti(lead.phone)),
     ...normalizePeopleForSave(lead.key_person, lead.key_person_title),
     product: lead.product || "", city: lead.city || "", province: lead.province || "",
@@ -1300,13 +1291,12 @@ export async function smartImportMap(sampleRows) {
 export async function bulkInsertLeads(leads) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
-  const up = await namesUppercase();
   // Insert massal: baris yang tidak memuat sebuah kolom dikirim sebagai NULL, padahal parent_company
   // dan group_holding NOT NULL. Hirarki hanya mengisi sebagian baris, jadi kedua kolom itu SELALU
   // diisi di semua baris ("" kalau kosong) supaya semua baris punya kunci yang sama.
   const rows = leads.map((l) => ({
     user_id: uid, org_id: orgId, assigned_to: l.assigned_to || uid, ...l,
-    name: upperIf(up, l.name), phone: sanitizePhone(l.phone),
+    name: upperName(l.name), phone: sanitizePhone(l.phone),
     parent_company: l.parent_company || "", group_holding: l.group_holding || "",
   }));
   const { data, error } = await supabase.from("leads").insert(rows).select("id, name");

@@ -601,7 +601,7 @@ export default function Leads({
   onChanged,
   canManage,
   isEnterprise,
-  uppercaseNames = false,
+  uppercaseNames = true, // nama lead tampil HURUF BESAR (perilaku umum)
 }) {
 
   const [q, setQ] =
