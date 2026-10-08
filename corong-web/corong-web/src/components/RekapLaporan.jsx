@@ -187,8 +187,12 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
             <table className="border-collapse text-left">
               <thead>
                 <tr className="bg-slate-50/60">
-                  <th colSpan={COLS.length} className={cn(th, "sticky left-0 z-10 bg-slate-50")}>{MONTHS[month - 1].toUpperCase()} {year} · {masterRows.length} lead</th>
-                  {weeks.map(([a, b], i) => <th key={i} colSpan={b - a + 1} className="border-l border-slate-200 px-1 py-2 text-center text-[10.5px] font-semibold text-slate-500">Minggu ke-{i + 1}</th>)}
+                  <th colSpan={COLS.length} className={cn(th, "sticky left-0 z-10 bg-slate-50")}>{masterRows.length} lead</th>
+                  <th colSpan={daysInMonth} className="border-l border-slate-200 bg-slate-100/70 px-2 py-1.5 text-left text-[12px] font-bold tracking-[0.04em] text-ink">{MONTHS[month - 1].toUpperCase()} {year}</th>
+                </tr>
+                <tr className="bg-slate-50/60">
+                  <th colSpan={COLS.length} className={cn(th, "sticky left-0 z-10 bg-slate-50")} />
+                  {weeks.map(([a, b], i) => <th key={i} colSpan={b - a + 1} className="border-l border-slate-200 px-1 py-2 text-center text-[10.5px] font-semibold text-slate-500">Minggu ke-{i + 1} ({a}–{b} {MONTHS[month - 1].slice(0, 3)})</th>)}
                 </tr>
                 <tr className="border-y border-slate-100 bg-slate-50/60">
                   {COLS.map(([c, cls], k) => <th key={c} className={cn(th, cls.includes("text-right") && "!text-right", k === 0 && "sticky left-0 z-10 bg-slate-50", k === 2 && "sticky left-10 z-10 bg-slate-50")}>{c}</th>)}
