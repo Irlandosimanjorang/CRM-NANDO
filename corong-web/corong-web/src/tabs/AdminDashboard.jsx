@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Coins } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Ticket, Coins } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
 import QuotationPanel from "../components/QuotationPanel";
 import OrgFeaturesPanel from "../components/OrgFeaturesPanel";
+import AddonTokensPanel from "../components/AddonTokensPanel";
 
 // Dashboard admin platform - versi "mission control" - CUMA keliatan buat
 // email admin (dicek di App.jsx + server-side di admin-status/admin-trigger).
@@ -1429,6 +1430,25 @@ export default function AdminDashboard() {
       // Dihitung per OWNER berbayar (bukan per nama organisasi): banyak klien bernama sama, mis. "Organisasi Saya".
       statValue: (status?.users_overview?.list || []).filter((u) => u.role === "owner" && ["standard", "professional", "enterprise"].includes(u.plan)).length,
       content: <OrgFeaturesPanel />,
+    },
+    {
+      // Token add-on Generate Leads (8 Okt 2026, permintaan Nando): pencarian tambahan yang
+      // dibeli pengguna, diberikan admin; dipakai setelah kuota bulanan habis.
+      key: "addon-tokens",
+      title: "TOKEN ADD-ON",
+      subtitle: "Pencarian tambahan",
+      icon: Ticket,
+      accentColor: "#c084fc",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(192,132,252,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "beri token Generate Leads",
+      wide: true,
+      blurb: "Beri pencarian Generate Leads tambahan ke pengguna.",
+      statLabel: "GENERATE LEADS",
+      statValue: "Token",
+      content: <AddonTokensPanel />,
     },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];

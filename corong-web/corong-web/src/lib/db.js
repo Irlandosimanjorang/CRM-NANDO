@@ -490,10 +490,34 @@ async function getMyQuotaUsage(feature) {
 }
 
 const GEN_LEADS_QUOTA_MAX = 4;
+// Token tambahan (add-on) 8 Okt 2026: dipakai SETELAH kuota bulanan habis, jadi pengguna masih
+// boleh mencari kalau punya token. Saldo hanya token yang dibeli; kuota bulanan tetap tidak dilihat pengguna.
+async function getMyAddonTokens(feature) {
+  const { data, error } = await supabase.rpc("my_addon_tokens", { p_feature: feature });
+  if (error) return { tokens: 0, nextExpiry: null }; // gagal baca saldo: anggap tidak ada, jangan blokir halaman
+  return { tokens: Number(data?.tokens) || 0, nextExpiry: data?.next_expiry || null };
+}
 export async function getLeadGenCooldown() {
-  const { used, resetAt } = await getMyQuotaUsage("generate-leads");
-  const canGenerate = used < GEN_LEADS_QUOTA_MAX;
-  return { canGenerate, usedThisMonth: used, quotaMax: GEN_LEADS_QUOTA_MAX, nextAvailableAt: canGenerate ? null : resetAt, resetAt };
+  const [{ used, resetAt }, addon] = await Promise.all([getMyQuotaUsage("generate-leads"), getMyAddonTokens("generate-leads")]);
+  const quotaLeft = used < GEN_LEADS_QUOTA_MAX;
+  const canGenerate = quotaLeft || addon.tokens > 0;
+  return {
+    canGenerate, usedThisMonth: used, quotaMax: GEN_LEADS_QUOTA_MAX,
+    nextAvailableAt: canGenerate ? null : resetAt, resetAt,
+    addonTokens: addon.tokens, addonExpiry: addon.nextExpiry,
+  };
+}
+
+// Token add-on - hanya admin platform (Command Center).
+export async function adminAddonTokens(action, payload = {}) {
+  const { data, error } = await supabase.functions.invoke("admin-addon-tokens", { body: { action, ...payload } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal memproses token");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 
 export async function importGeneratedLead(genLead, defaultStageKey) {

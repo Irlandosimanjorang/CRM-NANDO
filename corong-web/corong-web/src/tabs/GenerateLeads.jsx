@@ -68,7 +68,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   const [msg, setMsg] = useState("");
   const [results, setResults] = useState([]);
   const [loadingResults, setLoadingResults] = useState(true);
-  const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisMonth: 0, quotaMax: 4, nextAvailableAt: null });
+  const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisMonth: 0, quotaMax: 4, nextAvailableAt: null, addonTokens: 0, addonExpiry: null });
   const [importingId, setImportingId] = useState(null);
   const pollRef = useRef(null);
   const enrichPollRef = useRef(null);
@@ -290,10 +290,20 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         {!cooldown.canGenerate ? (
           <div className="flex items-center gap-2.5 text-sm text-amber-700 bg-amber-50 rounded-2xl p-4">
             <Clock size={18} className="shrink-0" />
-            <span>Kuota Generate Leads Anda untuk periode ini sudah terpakai. Kuota terisi kembali {nextDate ? <>pada <b>{db.formatQuotaDate(cooldown.nextAvailableAt)}</b> ({daysLeft} hari lagi)</> : "1 bulan setelah pemakaian pertama"}.</span>
+            <span>Kuota Generate Leads Anda untuk periode ini sudah terpakai. Kuota terisi kembali {nextDate ? <>pada <b>{db.formatQuotaDate(cooldown.nextAvailableAt)}</b> ({daysLeft} hari lagi)</> : "1 bulan setelah pemakaian pertama"}. Butuh lebih banyak pencarian? Hubungi admin Nexto untuk menambah token pencarian.</span>
           </div>
         ) : (
           <div className="space-y-3">
+            {cooldown.addonTokens > 0 && (
+              <div className="flex items-center gap-2.5 rounded-2xl bg-violet-50 p-3 text-[13px] text-violet-800">
+                <Sparkles size={16} className="shrink-0" />
+                <span>
+                  Token tambahan: <b>{cooldown.addonTokens} pencarian</b>
+                  {cooldown.addonExpiry ? <> (berlaku sampai {db.formatQuotaDate(cooldown.addonExpiry)})</> : null}.
+                  {cooldown.usedThisMonth >= cooldown.quotaMax ? " Kuota bulanan sudah terpakai, jadi pencarian berikutnya memakai 1 token." : " Token dipakai setelah kuota bulanan Anda habis."}
+                </span>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Barang/jasa yang Anda jual <span className="text-rose-500">*</span></span>

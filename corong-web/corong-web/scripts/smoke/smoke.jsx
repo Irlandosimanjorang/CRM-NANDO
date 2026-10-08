@@ -18,6 +18,7 @@ import LeadModal from "../../src/components/LeadModal";
 import EnterpriseInvoicePanel from "../../src/components/EnterpriseInvoicePanel";
 import QuotationPanel from "../../src/components/QuotationPanel";
 import OrgFeaturesPanel from "../../src/components/OrgFeaturesPanel";
+import AddonTokensPanel from "../../src/components/AddonTokensPanel";
 import { AiCostPanel } from "../../src/tabs/AdminDashboard";
 
 const q = new URLSearchParams(location.search);
@@ -36,6 +37,9 @@ if (q.get("groups")) leads.slice(0, 6).forEach((l) => { l.parent_company = "PT I
 if (q.get("groups") === "3") { leads[0].name = "Uji Group"; leads[0].group_holding = ""; leads[0].parent_company = ""; leads.slice(1, 4).forEach((l) => { l.group_holding = "Uji Group"; l.parent_company = ""; }); }
 // ?groups=2: dua perusahaan induk di bawah satu holding (uji tiga tingkat).
 if (q.get("groups") === "2") leads.slice(0, 6).forEach((l, i) => { l.group_holding = "Uji Group"; l.parent_company = i < 2 ? "PT Induk Uji A" : i < 4 ? "PT Induk Uji B" : ""; });
+// ?tok=5&qused=4: saldo token tambahan dan pemakaian kuota Generate Leads (uji tab Generate Leads).
+window.__TOK = Number(q.get("tok")) || 0;
+if (q.get("qused") !== null) window.__QUSED = Number(q.get("qused"));
 window.__M = {
   org: { id: "o1", name: "PT Uji", owner_user_id: role === "sales" ? "u9" : "u1", plan: ent ? "enterprise" : null, member_limit: ent ? 4 : 1, industry: ind, custom_field_labels: {} },
   settings: { plan: ent ? null : null }, role: role === "sales" ? "sales_rep" : "owner",
@@ -56,6 +60,7 @@ const views = {
   advisor: <Advisor leads={leads} stages={stages} onOpen={noop} dummy={!ent} demoRecs={demo.advisorRecs} />,
   industrydemo: <IndustryDemo />,
   settings: <Settings settings={{}} stages={stages} leads={leads} onChanged={noop} userEmail="uji@example.com" locked={false} />,
+  addons: <div style={{ background: "#05070c", padding: 24 }}><AddonTokensPanel /></div>,
   orgfeatures: <div style={{ background: "#05070c", padding: 24 }}><OrgFeaturesPanel /></div>,
   quotation: <div id="modal-scroll" className="max-h-[85vh] overflow-y-auto overscroll-contain" style={{ background: "#05070c", padding: 24 }}><QuotationPanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }]} /></div>,
   invoice: <div id="modal-scroll" className="max-h-[85vh] overflow-y-auto overscroll-contain" style={{ background: "#05070c", padding: 24 }}><EnterpriseInvoicePanel users={[{ plan: "enterprise", org_name: "PT Queen Pacific", role: "owner", display_name: "Bu Lia", email: "lia@queenpacific.co.id" }, { plan: "enterprise", org_name: "PT Queen Pacific", role: "sales_rep" }, { plan: "free", org_name: "Org Free", role: "owner" }, { plan: "professional", org_name: "CV Maju Jaya", role: "owner", display_name: "Pak Budi", email: "budi@majujaya.id" }]} /></div>,
