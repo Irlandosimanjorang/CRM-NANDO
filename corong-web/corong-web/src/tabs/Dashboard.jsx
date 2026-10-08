@@ -26,6 +26,7 @@ export default function Dashboard({
   onOpenLead,
   isEnterprise = false,
   canManage = false,
+  hideAiRecs = false,
   myUid = null,
 }) {
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
@@ -247,7 +248,7 @@ export default function Dashboard({
 
       {/* NEX AI - satu-satunya permukaan gelap di Dashboard (titik fokus).
           Ungu = warna khusus AI. */}
-      <section className="overflow-hidden rounded-panel border border-slate-800 bg-slate-950 text-white">
+      {!hideAiRecs && <section className="overflow-hidden rounded-panel border border-slate-800 bg-slate-950 text-white">
         <div className="p-5 bg-[radial-gradient(circle_at_88%_0%,rgba(109,93,252,.38),transparent_40%)]">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -284,7 +285,7 @@ export default function Dashboard({
             </ol>
           )}
         </div>
-      </section>
+      </section>}
 
       {/* Angka utama - satu panel dengan garis pemisah, bukan 4 kartu. */}
       <StatRow>

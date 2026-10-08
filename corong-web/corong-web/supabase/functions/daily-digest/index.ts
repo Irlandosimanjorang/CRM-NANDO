@@ -601,8 +601,13 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
 
         const [{ data: settingsRow }, { data: orgPlanRow }] = await Promise.all([
           admin.from("settings").select("plan, community_display_name").eq("user_id", u.id).maybeSingle(),
-          admin.from("organizations").select("plan").eq("id", memberRow.org_id).maybeSingle(),
+          admin.from("organizations").select("plan, owner_user_id, features").eq("id", memberRow.org_id).maybeSingle(),
         ]);
+        // Saklar owner_monitor (8 Okt 2026): owner yang hanya memantau tidak menerima digest.
+        if (orgPlanRow?.features?.owner_monitor === true && orgPlanRow.owner_user_id === u.id) {
+          console.log("[digest] skip, owner pemantau (owner_monitor):", u.id);
+          continue;
+        }
         const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
         const myPlanLevel = orgPlanRow?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settingsRow?.plan] ?? 0);
         if (myPlanLevel < 1) {

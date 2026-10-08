@@ -43,7 +43,7 @@ const CORS = {
 };
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const FEATURE_KEYS = ["marketing_report", "lead_webhook", "lead_name_uppercase"];
+const FEATURE_KEYS = ["marketing_report", "lead_webhook", "lead_name_uppercase", "owner_monitor"];
 const PRESETS = {
   standar: [],
   marketing: ["marketing_report", "lead_webhook"],

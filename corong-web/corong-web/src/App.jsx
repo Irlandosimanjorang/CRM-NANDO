@@ -15,6 +15,7 @@ import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
 // buka salah satu dari ini begitu login, jadi lazy-load-nya cuma nambah
 // flicker Suspense tanpa beneran ngirit apa-apa (chunk-nya bakal langsung
 // diambil ulang beberapa detik kemudian).
+import { hasOrgFeature, OWNER_MONITOR_TABS } from "./lib/orgFeatures";
 import Dashboard from "./tabs/Dashboard";
 import Leads from "./tabs/Leads";
 import SettingsTab from "./tabs/Settings";
@@ -525,6 +526,8 @@ export default function App() {
   // jadi dipindah ke atas SINI, sebelum satu pun early return.
   const isEnterprise = org?.plan === "enterprise";
   const canManage = !!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager";
+  // Saklar owner_monitor (8 Okt 2026): owner hanya memantau lewat Dashboard, Leads, Team, Pengaturan.
+  const monitorOwner = !!(org && session?.user?.id && org.owner_user_id === session.user.id && hasOrgFeature(org, "owner_monitor"));
   // Tab terakhir yang diingat bisa saja sudah tidak tersedia untuk akun ini
   // (mis. Team setelah bukan owner/manager lagi) - kembalikan ke Dashboard.
   useEffect(() => {
@@ -532,9 +535,9 @@ export default function App() {
     const allowed = new Set([...NAV.map((n) => n.key), "advisor", "industridemo"]);
     if (isEnterprise && canManage) allowed.add(TEAM_NAV_ITEM.key);
     if (settings?.is_platform_admin) allowed.add(ADMIN_NAV_ITEM.key);
-    if (!allowed.has(tab)) setTab("dashboard");
+    if (!allowed.has(tab) || (monitorOwner && !OWNER_MONITOR_TABS.includes(tab) && !(settings?.is_platform_admin && tab === ADMIN_NAV_ITEM.key))) setTab("dashboard");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, org, isEnterprise, canManage, settings?.is_platform_admin]);
+  }, [loading, org, isEnterprise, canManage, monitorOwner, tab, settings?.is_platform_admin]);
   const [orgMembers, setOrgMembers] = useState([]);
   useEffect(() => {
     if (!canManage) { setOrgMembers([]); return; }
@@ -736,7 +739,8 @@ export default function App() {
   const baseNav = isEnterprise && canManage
     ? NAV.flatMap((n) => (n.key === "visitfollowup" ? [n, TEAM_NAV_ITEM] : [n]))
     : NAV;
-  const navItems = settings?.is_platform_admin ? [...baseNav, ADMIN_NAV_ITEM] : baseNav;
+  const monitorNav = monitorOwner ? baseNav.filter((n) => OWNER_MONITOR_TABS.includes(n.key)) : baseNav;
+  const navItems = settings?.is_platform_admin ? [...monitorNav, ADMIN_NAV_ITEM] : monitorNav;
 
   return (
     <div className="nexto-app min-h-screen text-slate-900 flex overflow-x-hidden">
@@ -1043,7 +1047,7 @@ export default function App() {
                   rekam meeting, dst) yang lagi jalan di tab manapun GAK KEPUTUS
                   cuma gara-gara user pindah tab pas nungguin. ---- */}
               <div style={{ display: effectiveTab === "dashboard" ? "block" : "none" }}>
-                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} myUid={session?.user?.id} />
+                <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} hideAiRecs={monitorOwner} myUid={session?.user?.id} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
                 <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
