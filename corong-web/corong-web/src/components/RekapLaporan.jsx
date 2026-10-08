@@ -86,6 +86,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
       { key: "hot", title: "Hot progress", note: "Calon yang serius, menunggu gambar atau survei", rows: sorted(hot.map((l) => row(l))) },
       { key: "deal", title: "Proyek deal", note: `Deal pada ${MONTHS[month - 1]}`, rows: sorted(deals.filter((x) => x.lead.stage_key === "proyek_deal").map((x) => row(x.lead, x.value, x.date))) },
       { key: "kontrak", title: "Deal kontrak", note: `Deal kontrak pada ${MONTHS[month - 1]}`, rows: sorted(deals.filter((x) => x.lead.stage_key === "deal_kontrak").map((x) => row(x.lead, x.value, x.date))) },
+      { key: "so", title: "Deal bulan ini yang sudah proses SO / pengiriman", note: `Deal pada ${MONTHS[month - 1]} yang sudah lanjut`, rows: sorted(deals.filter((x) => ["proses_so", "pengiriman"].includes(x.lead.stage_key)).map((x) => row(x.lead, x.value, x.date))) },
       { key: "nodeal", title: "No deal", note: `Diubah pada ${MONTHS[month - 1]}`, rows: sorted(lost.map((l) => row(l))) },
     ];
     const prior = [
@@ -95,7 +96,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
 
     const sum = (rows) => rows.reduce((t, r) => t + r.value, 0);
     const sphAll = sum(sections[0].rows);
-    return { master, events, sections, prior, sphAll, hotAll: sum(sections[1].rows), dealAll: sum(deals), lostAll: sum(sections[4].rows), pending: sph.reduce((t, l) => t + num(l.deal_value), 0), masukCount: live.filter((l) => ymOf(wibDate(l.created_at)) === ym).length };
+    return { master, events, sections, prior, sphAll, hotAll: sum(sections[1].rows), dealAll: sum(deals), dealCount: deals.length, sphStageCount: sph.length, hotCount: hot.length, lostCount: lost.length, lostAll: sum(sections.find((x) => x.key === "nodeal").rows), pending: sph.reduce((t, l) => t + num(l.deal_value), 0), masukCount: live.filter((l) => ymOf(wibDate(l.created_at)) === ym).length };
   }, [leads, stages, dealTransactions, changes, ym, from, firstKey, month]);
 
   const cells = (r, i) => [
@@ -108,10 +109,10 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
   const summary = [
     ["Data masuk bulan ini", d.masukCount, null, null],
     ["SPH terlayang (semua)", d.sections[0].rows.length, d.sphAll, 100],
-    ["Hot progress", d.sections[1].rows.length, d.hotAll, d.sphAll ? (d.hotAll / d.sphAll) * 100 : 0],
-    ["Deal", d.sections[2].rows.length + d.sections[3].rows.length, d.dealAll, d.sphAll ? (d.dealAll / d.sphAll) * 100 : 0],
-    ["No deal", d.sections[4].rows.length, d.lostAll, d.sphAll ? (d.lostAll / d.sphAll) * 100 : 0],
-    ["Data yang belum diproses dari SPH dan hot progress (deal dan no deal)", d.sections[0].rows.length - d.sections[1].rows.length - d.sections[2].rows.length - d.sections[3].rows.length, d.pending, d.sphAll ? (d.pending / d.sphAll) * 100 : 0],
+    ["Hot progress", d.hotCount, d.hotAll, d.sphAll ? (d.hotAll / d.sphAll) * 100 : 0],
+    ["Deal", d.dealCount, d.dealAll, d.sphAll ? (d.dealAll / d.sphAll) * 100 : 0],
+    ["No deal", d.lostCount, d.lostAll, d.sphAll ? (d.lostAll / d.sphAll) * 100 : 0],
+    ["Data yang belum diproses dari SPH dan hot progress (deal dan no deal)", d.sphStageCount, d.pending, d.sphAll ? (d.pending / d.sphAll) * 100 : 0],
     ...(personal ? [] : [["Key personal indicator / target omzet", null, target, target ? 100 : null]]),
     ["Omzet tercapai di bulan ini", null, d.dealAll, !personal && target ? (d.dealAll / target) * 100 : null],
   ];
