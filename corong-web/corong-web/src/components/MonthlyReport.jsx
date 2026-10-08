@@ -32,6 +32,21 @@ function short(n) {
   return String(v);
 }
 const truncate = (s, n) => (String(s).length > n ? `${String(s).slice(0, n - 1)}…` : String(s));
+// Status target: bulan berjalan memakai forecast dari laju harian (baru dari hari ke-5); bulan lewat memakai hasil akhir.
+// Batas: forecast >= 100% target = Aman, 80-99% = Warning, di bawah 80% = berpotensi tidak mencapai target.
+const TONES = { good: "bg-emerald-50 text-emerald-700 ring-emerald-200", warn: "bg-amber-50 text-amber-800 ring-amber-200", bad: "bg-rose-50 text-rose-700 ring-rose-200", none: "bg-slate-100 text-slate-600 ring-slate-200" };
+function targetStatus({ actual, target, isNow, isPast, elapsed, daysInMonth }) {
+  const forecast = isNow && elapsed >= 5 && actual > 0 ? Math.round((actual / elapsed) * daysInMonth) : isPast ? actual : 0;
+  if (!(target > 0)) return { forecast, tone: "none", label: "Target belum diisi" };
+  if (actual >= target) return { forecast, tone: "good", label: isPast ? "Tercapai" : "Target tercapai" };
+  if (isPast) return { forecast, tone: "bad", label: "Tidak tercapai" };
+  if (!isNow) return { forecast, tone: "none", label: "Belum berjalan" };
+  if (!forecast) return { forecast, tone: "none", label: "Belum cukup data" };
+  const ratio = forecast / target;
+  if (ratio >= 1) return { forecast, tone: "good", label: "Aman" };
+  if (ratio >= 0.8) return { forecast, tone: "warn", label: "Warning" };
+  return { forecast, tone: "bad", label: "Berpotensi tidak mencapai target" };
+}
 const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
 export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTx = [], members = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead }) {
@@ -290,28 +305,44 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             {!personal && <Meter value={reached} max={100} tone="good" className="mt-4 h-2" />}
             {(() => {
               const isNow = ym === todayIso.slice(0, 7);
+              const isPast = ym < todayIso.slice(0, 7);
               const left = isNow ? daysInMonth - now.getDate() : 0;
-              const gap = Math.max(0, target - r.dealValue);
+              const gap = r.dealValue - target;
               const delta = prevDeal > 0 ? ((r.dealValue - prevDeal) / prevDeal) * 100 : null;
-              let pace = null;
-              if (!personal && target > 0) {
-                if (gap === 0) pace = "Target tercapai.";
-                else if (isNow && left > 0) pace = `Sisa ${left} hari. Butuh ${fmtRp(Math.ceil(gap / left))} per hari untuk mencapai target.`;
-                else if (isNow) pace = `Hari terakhir bulan ini. Kurang ${fmtRp(gap)} dari target.`;
-                else pace = `Bulan ini ditutup ${fmtRp(gap)} di bawah target.`;
-              }
-              // Perkiraan akhir bulan dari laju harian sejauh ini; baru ditampilkan setelah 5 hari berjalan agar tidak menyesatkan.
-              const elapsed = now.getDate();
-              const forecast = isNow && elapsed >= 5 && r.dealValue > 0 ? Math.round((r.dealValue / elapsed) * daysInMonth) : 0;
-              if (!pace && !forecast && delta === null && prevDeal <= 0) return null;
+              const st = targetStatus({ actual: r.dealValue, target, isNow, isPast, elapsed: now.getDate(), daysInMonth });
+              const need = !personal && target > 0 && gap < 0 ? (isNow && left > 0 ? `Sisa ${left} hari. Butuh ${fmtRp(Math.ceil(-gap / left))} per hari untuk mencapai target.` : isNow ? "Hari terakhir bulan ini." : "") : "";
               return (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-slate-500">
-                  <span>{pace}{forecast > 0 && <span className="block">Perkiraan akhir bulan <b className="tabular-nums text-slate-700">{fmtRp(forecast)}</b> bila laju {elapsed} hari pertama bertahan{target > 0 ? ` (${pct(forecast, target)} dari target)` : ""}.</span>}</span>
-                  <span className="inline-flex items-center gap-1.5">
-                    Bulan lalu <span className="font-semibold tabular-nums text-slate-700">{fmtRp(prevDeal)}</span>
-                    {delta !== null && <span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>{delta >= 0 ? "+" : ""}{delta.toFixed(0)}%</span>}
-                  </span>
-                </div>
+                <>
+                  {!personal && target > 0 && (
+                    <div className="mt-4 rounded-inner border border-slate-100 bg-slate-50/60 p-3.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[12px] font-semibold text-slate-600">Target vs actual</span>
+                        <span className={cn("rounded-full px-2.5 py-1 text-[11.5px] font-semibold ring-1", TONES[st.tone])}>{st.label}</span>
+                      </div>
+                      <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
+                        {[
+                          ["Target", fmtRp(target), ""],
+                          ["Actual", fmtRp(r.dealValue), "text-emerald-700"],
+                          ["Achievement", pct(r.dealValue, target), ""],
+                          ["Forecast", st.forecast > 0 && !isPast ? fmtRp(st.forecast) : "-", ""],
+                          ["Gap ke target", gap >= 0 ? `+${fmtRp(gap)}` : `-${fmtRp(-gap)}`, gap >= 0 ? "text-emerald-700" : "text-rose-600"],
+                        ].map(([k, v, c]) => (
+                          <div key={k}><dt className="text-[11px] text-slate-500">{k}</dt><dd className={cn("mt-0.5 text-[14px] font-bold tabular-nums tracking-[-0.02em] text-ink", c)}>{v}</dd></div>
+                        ))}
+                      </dl>
+                      {st.forecast > 0 && isNow && <p className="mt-2 text-[11px] text-slate-400">Forecast dari laju {now.getDate()} hari pertama bila bertahan sampai akhir bulan. Aman: forecast mencapai target, Warning: 80-99%, di bawah 80%: berpotensi tidak tercapai.</p>}
+                    </div>
+                  )}
+                  {(need || delta !== null || prevDeal > 0) && (
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-slate-500">
+                      <span>{need}</span>
+                      <span className="inline-flex items-center gap-1.5">
+                        Bulan lalu <span className="font-semibold tabular-nums text-slate-700">{fmtRp(prevDeal)}</span>
+                        {delta !== null && <span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>{delta >= 0 ? "+" : ""}{delta.toFixed(0)}%</span>}
+                      </span>
+                    </div>
+                  )}
+                </>
               );
             })()}
           </Panel>
@@ -418,10 +449,10 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             <Panel className="overflow-hidden">
               <div className="px-5 pb-1 pt-4"><PanelHeader title="Hasil per marketing" meta={`Pipeline dan omzet ${MONTHS[month - 1]}. Target, forecast, dan aktivitas tiap orang ada di tab Team. Klik nama untuk membuka report-nya.`} /></div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] border-collapse">
+                <table className="w-full min-w-[860px] border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
-                      <th className="px-5 py-2.5 text-left">Marketing</th><th className="px-3 py-2.5 text-right">Lead masuk</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th><th className="px-3 py-2.5 text-right">Omzet</th><th className="px-3 py-2.5 text-right">Capaian target</th><th className="w-[200px] px-5 py-2.5 text-left">Kontribusi omzet tim</th>
+                      <th className="px-5 py-2.5 text-left">Marketing</th><th className="px-3 py-2.5 text-right">Lead masuk</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th><th className="px-3 py-2.5 text-right">Omzet</th><th className="px-3 py-2.5 text-right">Capaian target</th><th className="px-3 py-2.5 text-left">Status</th><th className="w-[200px] px-5 py-2.5 text-left">Kontribusi omzet tim</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -436,6 +467,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.deals}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] font-semibold tabular-nums text-emerald-700">{fmtRp(m.omzet)}</td>
                           <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{targetOf(m.id) > 0 ? <span className={m.omzet >= targetOf(m.id) ? "font-semibold text-emerald-700" : "text-slate-700"}>{pct(m.omzet, targetOf(m.id))}</span> : <span className="text-slate-400">-</span>}</td>
+                          <td className="px-3 py-2.5">{(() => { const st = targetStatus({ actual: m.omzet, target: targetOf(m.id), isNow: ym === todayIso.slice(0, 7), isPast: ym < todayIso.slice(0, 7), elapsed: now.getDate(), daysInMonth }); return <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1", TONES[st.tone])}>{st.label === "Berpotensi tidak mencapai target" ? "Berisiko" : st.label}</span>; })()}</td>
                           <td className="px-5 py-2.5">
                             {totalOmzet > 0 ? (
                               <div className="flex items-center gap-2">
