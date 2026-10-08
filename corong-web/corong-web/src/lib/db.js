@@ -1288,7 +1288,7 @@ export async function transcribeQuickVoiceNote(storagePath) {
 // Riwayat perpindahan tahap lead pada rentang tanggal (WIB); hanya owner dan manager yang boleh membaca.
 export async function listStageChanges(fromISO, toISO) {
   const orgId = await getMyOrgId();
-  const { data, error } = await supabase.from("lead_stage_changes").select("lead_id, from_stage, to_stage, changed_at")
+  const { data, error } = await supabase.from("lead_stage_changes").select("lead_id, from_stage, to_stage, changed_by, changed_at")
     .eq("org_id", orgId).gte("changed_at", `${fromISO}T00:00:00+07:00`).lte("changed_at", `${toISO}T23:59:59+07:00`)
     .order("changed_at", { ascending: true }).limit(20000);
   if (error) throw error;

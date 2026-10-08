@@ -220,7 +220,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
       )}
 
       {view === "rekap" ? (
-        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={scopeId === "all" ? (org?.name || "") : scopeName} target={target} personal={personal} />
+        <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={scopeId === "all" ? (org?.name || "") : scopeName} target={target} personal={personal} members={members} />
       ) : view === "iklan" ? (
         <AdsAnalysis leads={allLeads} stages={stages} org={org} ym={ym} canImport={canImport} onChanged={onChanged} />
       ) : (

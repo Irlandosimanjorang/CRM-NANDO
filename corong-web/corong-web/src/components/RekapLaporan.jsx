@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, ZoomIn, ZoomOut } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { Panel, PanelHeader, EmptyState } from "../ui";
@@ -25,17 +25,24 @@ const sourceOf = (l) => Object.entries(l).find(([k, v]) => /^custom_field_\d+$/.
 const wibDate = (ts) => new Date(new Date(ts).getTime() + 7 * 3600000).toISOString().slice(0, 10);
 const pctOf = (v, base) => (base > 0 ? `${((v / base) * 100).toFixed(2).replace(/\.?0+$/, "")}%` : "0%");
 const cn = (...v) => v.filter(Boolean).join(" ");
+const ZOOMS = [0.7, 0.85, 1, 1.25, 1.5, 1.8];
+const DAYS_LONG = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const timeWib = (ts) => { const d = new Date(new Date(ts).getTime() + 7 * 3600000); return `${pad(d.getUTCHours())}.${pad(d.getUTCMinutes())} WIB`; };
 
 const COLS = [
   ["NO", "w-10 text-right"], ["TANGGAL", "whitespace-nowrap"], ["NAMA", "min-w-[170px]"], ["INSTANSI", ""], ["NOMOR TELP", "whitespace-nowrap"],
   ["ALAMAT", ""], ["NO SPH / INVOICE", "whitespace-nowrap"], ["NILAI", "text-right whitespace-nowrap"], ["KETERANGAN", "min-w-[190px]"], ["SUMBER", ""],
 ];
 
-export default function RekapLaporan({ leads = [], stages = [], dealTransactions = [], ym, orgName = "", target = 0, personal = false }) {
+export default function RekapLaporan({ leads = [], stages = [], dealTransactions = [], ym, orgName = "", target = 0, personal = false, members = [] }) {
   const [year, month] = ym.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
   const from = `${ym}-01`, to = `${ym}-${pad(daysInMonth)}`;
   const [changes, setChanges] = useState([]);
+  const [zoomIdx, setZoomIdx] = useState(2); // 100%
+  const [tip, setTip] = useState(null); // popup detail sel timeline
+  const zoom = ZOOMS[zoomIdx];
+  const nameOf = (uid) => members.find((m) => m.user_id === uid)?.display_name || "";
 
   useEffect(() => {
     let alive = true;
@@ -62,14 +69,22 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
 
     // Timeline: tanggal -> tahap, per lead. Riwayat pindah tahap lebih diutamakan daripada perkiraan.
     const events = new Map();
-    const put = (id, iso, key) => { if (ymOf(iso) !== ym || !key) return; const day = Number(iso.slice(8, 10)); (events.get(id) || events.set(id, new Map()).get(id)).set(day, key); };
+    // events: lead -> tanggal -> daftar kejadian { key (tahap tujuan), from, by, at, created, estimated }.
+    const put = (id, iso, key, extra = {}) => {
+      if (ymOf(iso) !== ym || !key) return;
+      const day = Number(iso.slice(8, 10));
+      const byDay = events.get(id) || events.set(id, new Map()).get(id);
+      const list = byDay.get(day) || [];
+      list.push({ key, ...extra });
+      byDay.set(day, list);
+    };
     const changed = new Map();
-    for (const c of [...changes].sort((a, b) => String(a.changed_at).localeCompare(String(b.changed_at)))) { put(c.lead_id, wibDate(c.changed_at), c.to_stage); changed.set(c.lead_id, true); }
+    for (const c of [...changes].sort((a, b) => String(a.changed_at).localeCompare(String(b.changed_at)))) { put(c.lead_id, wibDate(c.changed_at), c.to_stage, { from: c.from_stage, by: c.changed_by, at: c.changed_at }); changed.set(c.lead_id, true); }
     for (const l of live) {
-      if (ymOf(l.created_at) === ym && !(events.get(l.id)?.has(Number(wibDate(l.created_at).slice(8, 10))))) put(l.id, wibDate(l.created_at), firstKey);
+      if (ymOf(l.created_at) === ym && !(events.get(l.id)?.has(Number(wibDate(l.created_at).slice(8, 10))))) put(l.id, wibDate(l.created_at), firstKey, { created: true, by: l.user_id, at: l.created_at });
       if (!changed.get(l.id) && l.stage_key !== firstKey) {
         const when = wonKeys.has(l.stage_key) && l.deal_date ? l.deal_date : wibDate(l.updated_at);
-        put(l.id, when, l.stage_key);
+        put(l.id, when, l.stage_key, { estimated: true });
       }
     }
 
@@ -122,7 +137,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
     const label = (key) => stageMeta[key]?.label || key;
     const aoa = [[`REPORT ${(orgName || "SALES").toUpperCase()} ${MONTHS[month - 1].toUpperCase()} ${year}`], ["REPORT DATA RETAIL & PROJECT"], []];
     aoa.push([...COLS.map((c) => c[0]), ...Array.from({ length: daysInMonth }, (_, i) => `${i + 1}${dayLetter(i + 1)}`)]);
-    masterRows.forEach((r, i) => aoa.push([...cells(r, i), ...Array.from({ length: daysInMonth }, (_, k) => { const key = d.events.get(r.lead.id)?.get(k + 1); return key ? label(key) : ""; })]));
+    masterRows.forEach((r, i) => aoa.push([...cells(r, i), ...Array.from({ length: daysInMonth }, (_, k) => { const evs = d.events.get(r.lead.id)?.get(k + 1); return evs ? label(evs[evs.length - 1].key) : ""; })]));
     aoa.push([]);
     for (const s of [...d.sections, ...d.prior]) {
       aoa.push([s.title.toUpperCase()], COLS.map((c) => c[0]));
@@ -180,6 +195,11 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-5 py-3 text-[11.5px] text-slate-600">
           <span className="font-semibold text-slate-700">Warna tahap</span>
           {stages.map((s) => <span key={s.key} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.hex }} />{s.label}</span>)}
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-1 py-0.5 text-slate-600" role="group" aria-label="Zoom timeline">
+            <button type="button" onClick={() => setZoomIdx((z) => Math.max(0, z - 1))} disabled={zoomIdx === 0} aria-label="Perkecil" className="rounded-full p-1 hover:bg-slate-100 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><ZoomOut size={14} /></button>
+            <button type="button" onClick={() => setZoomIdx(2)} title="Kembali ke 100%" className="min-w-[40px] text-center text-[11px] font-semibold tabular-nums hover:text-ink">{Math.round(zoom * 100)}%</button>
+            <button type="button" onClick={() => setZoomIdx((z) => Math.min(ZOOMS.length - 1, z + 1))} disabled={zoomIdx === ZOOMS.length - 1} aria-label="Perbesar" className="rounded-full p-1 hover:bg-slate-100 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><ZoomIn size={14} /></button>
+          </span>
         </div>
         {masterRows.length === 0 ? (
           <div className="border-t border-slate-100 px-5 py-5"><EmptyState>Belum ada lead pada bulan ini. Data masuk dan perpindahan tahap tim muncul di sini otomatis.</EmptyState></div>
@@ -198,7 +218,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
                 <tr className="border-y border-slate-100 bg-slate-50/60">
                   {COLS.map(([c, cls], k) => <th key={c} className={cn(th, cls.includes("text-right") && "!text-right", k === 0 && "sticky left-0 z-10 bg-slate-50", k === 2 && "sticky left-10 z-10 bg-slate-50")}>{c}</th>)}
                   {Array.from({ length: daysInMonth }, (_, i) => (
-                    <th key={i} className={cn("w-[26px] min-w-[26px] px-0 py-1 text-center text-[10px] font-semibold text-slate-500", [0, 7, 14, 21].includes(i) && "border-l border-slate-200")}>
+                    <th key={i} style={{ width: Math.round(26 * zoom), minWidth: Math.round(26 * zoom), fontSize: Math.max(9, Math.round(10 * zoom)) }} className={cn("px-0 py-1 text-center font-semibold text-slate-500", [0, 7, 14, 21].includes(i) && "border-l border-slate-200")}>
                       <div>{i + 1}</div><div className="font-normal text-slate-400">{dayLetter(i + 1)}</div>
                     </th>
                   ))}
@@ -211,11 +231,12 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
                       <td key={k} className={cn(td, COLS[k][1], k === 2 && "font-semibold text-ink", k === 7 && "tabular-nums", k === 0 && "sticky left-0 z-[1] bg-white", k === 2 && "sticky left-10 z-[1] bg-white")}><Cell v={v} k={k} /></td>
                     ))}
                     {Array.from({ length: daysInMonth }, (_, k) => {
-                      const key = d.events.get(r.lead.id)?.get(k + 1);
-                      const meta = key ? stageMeta[key] : null;
+                      const evs = d.events.get(r.lead.id)?.get(k + 1);
+                      const meta = evs ? stageMeta[evs[evs.length - 1].key] : null;
+                      const show = (e) => { const b = e.currentTarget.getBoundingClientRect(); setTip({ x: b.left + b.width / 2, top: b.top, bottom: b.bottom, lead: r.lead, day: k + 1, evs }); };
                       return (
-                        <td key={k} title={meta ? `${k + 1} ${MONTHS[month - 1]}: ${meta.label}` : undefined} className={cn("p-0.5", [0, 7, 14, 21].includes(k) && "border-l border-slate-200")}>
-                          <div className="h-6 w-5 rounded-[4px]" style={meta ? { background: meta.hex } : undefined} />
+                        <td key={k} onMouseEnter={evs ? show : undefined} onMouseLeave={() => setTip(null)} onClick={evs ? (e) => (tip && tip.lead.id === r.lead.id && tip.day === k + 1 ? setTip(null) : show(e)) : undefined} className={cn("p-0.5", evs && "cursor-pointer", [0, 7, 14, 21].includes(k) && "border-l border-slate-200")}>
+                          <div className="rounded-[4px]" style={{ width: Math.round(20 * zoom), height: Math.round(24 * zoom), ...(meta ? { background: meta.hex } : {}) }} />
                         </td>
                       );
                     })}
@@ -229,6 +250,39 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
 
       {d.sections.map((s) => <Table key={s.key} s={s} />)}
       {d.prior.map((s) => <Table key={s.key} s={s} />)}
+
+      {tip && (() => {
+        const up = tip.top > 190;
+        const left = Math.min(Math.max(tip.x, 150), (typeof window !== "undefined" ? window.innerWidth : 1200) - 150);
+        const date = new Date(year, month - 1, tip.day);
+        return (
+          <div role="tooltip" className="pointer-events-none fixed z-50 w-[272px] rounded-inner border border-slate-200 bg-white p-3 shadow-float" style={{ left, top: up ? tip.top - 8 : tip.bottom + 8, transform: up ? "translate(-50%, -100%)" : "translate(-50%, 0)" }}>
+            <div className="truncate text-[12.5px] font-bold text-ink">{tip.lead.name}</div>
+            <div className="text-[11px] text-slate-500">{DAYS_LONG[date.getDay()]}, {tip.day} {MONTHS[month - 1]} {year}</div>
+            <ul className="mt-2 space-y-1.5">
+              {tip.evs.map((e, i) => {
+                const to = stageMeta[e.key];
+                const from = e.from ? stageMeta[e.from] : null;
+                const who = e.by ? nameOf(e.by) : "";
+                return (
+                  <li key={i} className="text-[12px]">
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-800"><span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: to?.hex }} />{e.created ? "Lead dibuat" : to?.label || e.key}</div>
+                    <div className="ml-4 text-[11px] text-slate-500">
+                      {e.estimated ? "Perkiraan, belum ada riwayat pindah tahap" : e.created ? `Tahap awal: ${to?.label || e.key}` : `${from?.label || "-"} → ${to?.label || e.key}`}
+                      {(who || e.at) && <div>{[who && `oleh ${who}`, e.at && timeWib(e.at)].filter(Boolean).join(" · ")}</div>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 border-t border-slate-100 pt-2 text-[11px] text-slate-500">
+              {num(tip.lead.deal_value) > 0 && <span>Nilai <b className="text-slate-700">{fmtRp(num(tip.lead.deal_value))}</b></span>}
+              {String(tip.lead.custom_field_1 || "").trim() && <span>SPH <b className="text-slate-700">{String(tip.lead.custom_field_1).trim()}</b></span>}
+              {tip.lead.company_type && <span>{tip.lead.company_type}</span>}
+            </div>
+          </div>
+        );
+      })()}
 
       <Panel className="overflow-hidden">
         <div className="px-5 pb-1 pt-4"><PanelHeader title="Ringkasan nilai project dan bobot" meta="Bobot terhadap seluruh nilai SPH, seperti di bagian bawah laporan Excel" /></div>
