@@ -1082,6 +1082,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     db.adminAddonTokens("requests").then((r) => setTokenRequests((r.requests || []).length)).catch(() => setTokenRequests(null));
   }, []);
+  // Saldo token Anthropic untuk kartu CASH FLOW (10 Okt 2026): disegarkan tiap 30 detik; gagal = kartu tidak menampilkan saldo.
+  const [cashBalance, setCashBalance] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const pull = () => { if (!document.hidden) db.adminCashflow("balance").then((r) => { if (alive) setCashBalance(r); }).catch(() => {}); };
+    pull();
+    const t = setInterval(pull, 30000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [triggering, setTriggering] = useState(null);
@@ -1382,19 +1391,21 @@ export default function AdminDashboard() {
       // ARUS KAS (9 Okt 2026, permintaan Nando) - uang masuk dari invoice,
       // jatah token Anthropic per kontrak, saldo token live, laba rugi & margin.
       key: "cashflow",
-      title: "ARUS KAS",
-      subtitle: "Kas, token & margin",
+      title: "CASH FLOW",
+      subtitle: "Laporan keuangan & saldo token",
       icon: Wallet,
       accentColor: "#34d399",
       glowClass: "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]",
-      ok: true,
-      gaugeValue: 100,
+      ok: !cashBalance?.has_checkpoint || cashBalance.pct_remaining >= 15,
+      gaugeValue: cashBalance?.has_checkpoint ? Math.max(3, Math.min(100, cashBalance.pct_remaining)) : 100,
       noTrigger: true,
       noTriggerNote: "dihitung dari invoice dan biaya AI",
       wide: true,
-      blurb: "MRR, saldo token Anthropic, jatah token per kontrak, dan margin.",
-      statLabel: "BIAYA AI TERCATAT",
-      statValue: fmtUsd(sumUsd(status?.ai_usage?.accounts)),
+      blurb: cashBalance?.has_checkpoint
+        ? `Saldo token Anthropic ${fmtUsd(cashBalance.remaining_usd)} (sisa ${cashBalance.pct_remaining}%), laba rugi, arus kas, dan margin.`
+        : "Laba rugi, arus kas, saldo token Anthropic, dan margin.",
+      statLabel: cashBalance?.has_checkpoint ? "SALDO ANTHROPIC" : "BIAYA AI TERCATAT",
+      statValue: cashBalance?.has_checkpoint ? fmtUsd(cashBalance.remaining_usd) : fmtUsd(sumUsd(status?.ai_usage?.accounts)),
       content: <CashflowPanel />,
     },
     {
