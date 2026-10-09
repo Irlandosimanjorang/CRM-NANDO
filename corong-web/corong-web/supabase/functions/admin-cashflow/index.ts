@@ -30,7 +30,8 @@ const startOfWibDay = (d: string) => new Date(`${d}T00:00:00+07:00`).toISOString
 const num = (v: unknown, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
 
 const DEFAULT_SETTINGS = {
-  kurs: 17700,
+  kurs: 17700, // dipakai bila kurs otomatis dimatikan, atau sebagai cadangan bila sumber kurs tidak dapat dihubungi
+  kurs_auto: true,
   token_pct: 25,
   anthropic: { checkpoint_date: null as string | null, balance_usd: 0 },
   topups: [] as { id: string; date: string; amount_usd: number; note: string }[],
@@ -68,7 +69,32 @@ function cleanSettings(src: any) {
     standard: Math.max(0, Math.round(num(sp.standard, CATALOG_PRICE.standard))),
     professional: Math.max(0, Math.round(num(sp.professional, CATALOG_PRICE.professional))),
   };
-  return { kurs, token_pct, anthropic, topups, costs, sub_price };
+  return { kurs, kurs_auto: s.kurs_auto !== false, token_pct, anthropic, topups, costs, sub_price };
+}
+
+// Kurs USD/IDR otomatis: disimpan di admin_settings (key "fx_usd_idr") dan diperbarui paling cepat tiap 6 jam
+// dari open.er-api.com, cadangan frankfurter.dev. Bila keduanya gagal, pakai kurs tersimpan (stale) lalu kurs manual.
+const FX_SOURCES: [string, string, (j: any) => unknown][] = [
+  ["open.er-api.com", "https://open.er-api.com/v6/latest/USD", (j) => j?.rates?.IDR],
+  ["frankfurter.dev", "https://api.frankfurter.dev/v1/latest?base=USD&symbols=IDR", (j) => j?.rates?.IDR],
+];
+async function getFxRate(admin: any) {
+  const { data } = await admin.from("admin_settings").select("value").eq("key", "fx_usd_idr").maybeSingle();
+  const cached = data?.value;
+  if (cached?.rate && Date.now() - new Date(cached.fetched_at).getTime() < 6 * 3600000) return { ...cached, stale: false };
+  for (const [source, url, pick] of FX_SOURCES) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      if (!r.ok) continue;
+      const rate = Number(pick(await r.json()));
+      if (rate > 1000 && rate < 100000) {
+        const v = { rate: Math.round(rate), source, fetched_at: new Date().toISOString() };
+        await admin.from("admin_settings").upsert({ key: "fx_usd_idr", value: v, updated_at: v.fetched_at });
+        return { ...v, stale: false };
+      }
+    } catch (_) { /* coba sumber berikutnya */ }
+  }
+  return cached?.rate ? { ...cached, stale: true } : null;
 }
 
 // Semua baris ai_usage sejak tanggal tertentu (dipaginasi 1000/halaman).
@@ -108,7 +134,12 @@ Deno.serve(async (req) => {
     const { data: stRow, error: stErr } = await admin.from("admin_settings").select("value").eq("key", "cashflow").maybeSingle();
     if (stErr) throw stErr;
     const settings = cleanSettings({ ...DEFAULT_SETTINGS, ...(stRow?.value || {}) });
-    const kurs = settings.kurs;
+    const fx = settings.kurs_auto ? await getFxRate(admin) : null;
+    const kurs = fx?.rate ?? settings.kurs;
+    const kursInfo = {
+      mode: settings.kurs_auto ? "auto" : "manual", rate: kurs, source: fx?.source ?? "manual",
+      fetched_at: fx?.fetched_at ?? null, stale: !!fx?.stale, fallback: settings.kurs_auto && !fx,
+    };
 
     const today = wibToday();
     const monthStart = wibMonthStart();
@@ -244,7 +275,7 @@ Deno.serve(async (req) => {
     };
 
     return json({
-      ok: true, today, settings, kurs, pnl,
+      ok: true, today, settings, kurs, kurs_info: kursInfo, pnl,
       summary: {
         sub_mrr: Math.round(subMrr), sub_count: individuals.filter((i) => i.counted).length,
         mrr: Math.round(mrr), cash_in_month: Math.round(cashInMonth), receivable: Math.round(receivable), overdue_count: overdueCount,

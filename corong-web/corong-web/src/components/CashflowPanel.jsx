@@ -106,7 +106,11 @@ export default function CashflowPanel() {
 
   const { summary: s, anthropic: a, contracts, daily } = data;
   const individuals = data.individuals || [];
-  const kurs = Number(form.kurs) || 17700;
+  const kurs = Number(data.kurs) || 17700;
+  const ki = data.kurs_info || {};
+  const kursNote = ki.mode === "auto"
+    ? (ki.fallback ? "kurs otomatis gagal diambil, memakai kurs manual" : `otomatis dari ${ki.source}${ki.stale ? " (data lama)" : ""}, diperbarui ${new Date(ki.fetched_at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`)
+    : "kurs manual";
   const balLow = a.balance_usd !== null && (a.runway_days !== null ? a.runway_days <= 14 : a.balance_usd < 10);
   const balAccent = a.balance_usd === null ? "#cbd5e1" : a.balance_usd <= 0 ? "#fb7185" : balLow ? "#fbbf24" : "#34d399";
   const profitAccent = s.profit_month_idr >= 0 ? "#34d399" : "#fb7185";
@@ -125,7 +129,7 @@ export default function CashflowPanel() {
   return (
     <div className="grid gap-5 min-w-0">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[11px] text-slate-300 font-mono">Diperbarui otomatis tiap 45 detik · kurs Rp{kurs.toLocaleString("id-ID")}/USD</div>
+        <div className="text-[11px] text-slate-300 font-mono">Diperbarui otomatis tiap 45 detik · kurs Rp{kurs.toLocaleString("id-ID")}/USD ({kursNote})</div>
         <button onClick={() => load()} className="inline-flex items-center gap-1 text-[11px] font-mono px-2.5 py-1.5 rounded-lg border border-white/[0.2] bg-[#111826] text-slate-200 hover:bg-[#182033]">
           <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Muat ulang
         </button>
@@ -291,7 +295,13 @@ export default function CashflowPanel() {
           <div className="grid gap-2">
             <div className="text-[11.5px] font-bold text-slate-100">Parameter</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div><label className={lab}>Kurs (Rp/USD)</label><input type="number" className={`${inp} w-full`} value={form.kurs} onChange={(e) => edit({ kurs: e.target.value })} /></div>
+              <div>
+                <label className={lab}>Kurs (Rp/USD)</label>
+                <input type="number" disabled={form.kurs_auto !== false} className={`${inp} w-full disabled:opacity-60`} value={form.kurs_auto !== false ? kurs : form.kurs} onChange={(e) => edit({ kurs: e.target.value })} />
+                <label className="mt-1.5 flex items-center gap-1.5 text-[11px] font-mono text-slate-200 cursor-pointer">
+                  <input type="checkbox" checked={form.kurs_auto !== false} onChange={(e) => edit({ kurs_auto: e.target.checked, ...(e.target.checked ? {} : { kurs: kurs }) })} /> Otomatis
+                </label>
+              </div>
               <div><label className={lab}>Jatah token (% kontrak)</label><input type="number" min="1" max="100" className={`${inp} w-full`} value={form.token_pct} onChange={(e) => edit({ token_pct: e.target.value })} /></div>
               <div><label className={lab}>Tanggal saldo patokan</label><input type="date" style={DARK} className={`${inp} w-full`} value={form.anthropic.checkpoint_date || ""} onChange={(e) => edit({ anthropic: { ...form.anthropic, checkpoint_date: e.target.value || null } })} /></div>
               <div><label className={lab}>Harga Standard (Rp/bln)</label><input type="number" className={`${inp} w-full`} value={form.sub_price?.standard ?? ""} onChange={(e) => edit({ sub_price: { ...form.sub_price, standard: e.target.value } })} /></div>
