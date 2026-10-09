@@ -194,9 +194,9 @@ export function LiveBalance({ kurs, onNeedSetup, compact, children, reloadKey, s
           })}
         </div>
       )}
-      <div className="text-[10.5px] text-slate-400 font-mono leading-relaxed">
+      {detail && <div className="text-[10.5px] text-slate-400 font-mono leading-relaxed">
         Anthropic tidak membuka saldo kredit lewat API, jadi saldo dihitung dari saldo patokan + top-up - biaya AI yang tercatat di Nexto. Pemakaian di luar Nexto tidak terhitung; cocokkan dengan Console Anthropic sesekali.
-      </div>
+      </div>}
     </div>
   );
 }
@@ -590,12 +590,10 @@ export function AnthropicStrip() {
   return (
     <div className="w-full max-w-6xl mb-4">
       <LiveBalance kurs={kurs || 17700} compact reloadKey={reloadKey}>
-        {hasCp === false || open ? form : null}
-        {hasCp !== false && (
-          <button onClick={() => setOpen((v) => !v)} className="justify-self-start text-[11px] font-mono font-bold text-emerald-100 border border-emerald-400/60 bg-emerald-500/20 rounded-lg px-2.5 py-1 hover:bg-emerald-500/30">
-            {open ? "Tutup isian saldo" : "Atur saldo patokan / tambah top-up"}
-          </button>
-        )}
+        {open ? form : null}
+        <button onClick={() => setOpen((v) => !v)} className="justify-self-start text-[11px] font-mono font-bold text-emerald-100 border border-emerald-400/60 bg-emerald-500/20 rounded-lg px-2.5 py-1 hover:bg-emerald-500/30">
+          {open ? "Tutup isian saldo" : hasCp === false ? "Isi saldo patokan" : "Atur saldo patokan / tambah top-up"}
+        </button>
       </LiveBalance>
     </div>
   );

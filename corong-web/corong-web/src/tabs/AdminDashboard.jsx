@@ -1495,7 +1495,7 @@ export default function AdminDashboard() {
   // modal detail yang sama persis kayak sebelumnya - gak ada perilaku yang
   // berubah, cuma tampilan sekelilingnya.
   return (
-    <div className="relative flex h-full min-h-0 flex-col items-center justify-center overflow-auto bg-[#05070c] p-6 md:p-12">
+    <div className="relative flex h-full min-h-0 flex-col items-center overflow-auto bg-[#05070c] p-6 md:p-12">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.15]"
         style={{
@@ -1505,12 +1505,15 @@ export default function AdminDashboard() {
           WebkitMaskImage: "radial-gradient(circle at 50% 50%, rgba(0,0,0,.9), transparent 75%)",
         }}
       />
-      <AnthropicStrip />
-      <AgentGridMap
-        employees={employees}
-        selectedKey={selectedEmployeeKey}
-        onSelectEmployee={(key) => { setSelectedEmployeeKey(key); setDetailOpen(true); }}
-      />
+      {/* my-auto: konten di tengah layar bila pendek, dan tetap bisa di-scroll dari paling atas bila lebih tinggi dari layar. */}
+      <div className="relative my-auto flex w-full flex-col items-center">
+        <AnthropicStrip />
+        <AgentGridMap
+          employees={employees}
+          selectedKey={selectedEmployeeKey}
+          onSelectEmployee={(key) => { setSelectedEmployeeKey(key); setDetailOpen(true); }}
+        />
+      </div>
       {detailOpen && selectedEmployee && (
         <EmployeeDetailModal
           employee={selectedEmployee}
