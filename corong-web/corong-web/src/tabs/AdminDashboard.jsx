@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Ticket, Coins, Wallet } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Ticket, Coins, Wallet, Cpu } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
@@ -8,6 +8,9 @@ import QuotationPanel from "../components/QuotationPanel";
 import OrgFeaturesPanel from "../components/OrgFeaturesPanel";
 import AddonTokensPanel from "../components/AddonTokensPanel";
 import CashflowPanel from "../components/CashflowPanel";
+import AiFeaturesPanel from "../components/AiFeaturesPanel";
+import { AI_FEATURES } from "../lib/aiFeatureCatalog";
+const AI_FEATURE_COUNT = AI_FEATURES.length;
 
 // Dashboard admin platform - versi "mission control" - CUMA keliatan buat
 // email admin (dicek di App.jsx + server-side di admin-status/admin-trigger).
@@ -1386,6 +1389,25 @@ export default function AdminDashboard() {
       statLabel: "BIAYA AI TERCATAT",
       statValue: fmtUsd(sumUsd(status?.ai_usage?.accounts)),
       content: <AiCostPanel data={status?.ai_usage} />,
+    },
+    {
+      // FITUR AI (10 Okt 2026, permintaan Nando) - semua fitur AI tanpa kecuali, tiap fitur berupa dropdown:
+      // model, gate/batas per paket, biaya nyata per panggilan, biaya maksimal per pengguna, pemakaian bulan ini.
+      key: "ai_features",
+      title: "FITUR AI",
+      subtitle: "Semua fitur, batas & biaya",
+      icon: Cpu,
+      accentColor: "#c084fc",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(192,132,252,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "klik fitur untuk melihat detail",
+      wide: true,
+      blurb: "Model, batas (gate) per paket, biaya per panggilan, dan pemakaian tiap fitur AI.",
+      statLabel: "FITUR TERDAFTAR",
+      statValue: AI_FEATURE_COUNT,
+      content: <AiFeaturesPanel stats={status?.ai_usage?.feature_stats} kurs={status?.ai_usage?.kurs} />,
     },
     {
       // ARUS KAS (9 Okt 2026, permintaan Nando) - uang masuk dari invoice,

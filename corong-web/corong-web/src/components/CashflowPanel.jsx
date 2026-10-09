@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Loader2, RefreshCw, Plus, Trash2, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import * as db from "../lib/db";
 import { isoDay, fmtShort } from "./EnterpriseInvoicePanel";
+import { perUserMonthly } from "../lib/aiFeatureCatalog";
 
 // Kartu CASH FLOW di Command Center (9 Okt 2026, permintaan Nando): laporan keuangan bulanan
 // (laba rugi, arus kas metode langsung, posisi keuangan ringkas, rekonsiliasi saldo prabayar Anthropic)
@@ -204,6 +205,9 @@ export function LiveBalance({ kurs, onNeedSetup, compact, children, reloadKey, s
 // Rencana top-up token (10 Okt 2026, permintaan Nando): dari jumlah pelanggan berbayar dan pemakaian nyata, berapa dolar yang
 // sebaiknya di-top up, dibandingkan dengan saldo yang ada, plus status aman/waspada/bahaya. Dihitung di server (planner).
 function TopupPlanner({ pl, kurs, onNeedSetup }) {
+  // Batas atas dihitung dari katalog fitur AI (kartu FITUR AI): jumlah akun per paket × biaya maksimal per pengguna.
+  const worstStd = perUserMonthly("standard", "worst"), worstPro = perUserMonthly("professional", "worst"), worstEnt = perUserMonthly("enterprise", "worst");
+  const worstTotal = pl.accounts.standard * worstStd + pl.accounts.professional * worstPro + pl.accounts.enterprise * worstEnt;
   const tone = { danger: { c: "#fb7185", t: "SEGERA TOP UP" }, warn: { c: "#fbbf24", t: "WASPADA" }, ok: { c: "#34d399", t: "AMAN" }, unset: { c: "#cbd5e1", t: "BELUM DIATUR" } }[pl.status] || { c: "#cbd5e1", t: "-" };
   const head = pl.status === "unset"
     ? "Isi saldo patokan Anthropic dulu supaya sisa saldo bisa dipantau dan rekomendasi top-up akurat."
@@ -230,12 +234,12 @@ function TopupPlanner({ pl, kurs, onNeedSetup }) {
         <Tile label="Pelanggan berbayar aktif" value={`${pl.accounts.total} akun`} sub={`Standard ${pl.accounts.standard} · Pro ${pl.accounts.professional} · Enterprise ${pl.accounts.enterprise}`} accent="#34d399" />
         <Tile label="Pemakaian token / bulan" value={usd(pl.month_usage_usd)} sub={`${usd(pl.burn_usd_per_day)} per hari (rata-rata 7 hari)`} accent="#f9a8d4" />
         <Tile label={`Kebutuhan 1 bulan + cadangan ${pl.buffer_pct}%`} value={usd(pl.need_month_usd)} sub={idr(pl.need_month_usd * kurs)} />
-        <Tile label="Batas atas (kuota habis semua)" value={usd(pl.worst_case_month_usd)} sub="per bulan, kondisi terburuk" />
+        <Tile label="Batas atas (kuota habis semua)" value={usd(worstTotal)} sub="per bulan, kondisi terburuk" />
       </div>
       <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
         Cara hitung: rata-rata pemakaian 7 hari terakhir × 30 hari + cadangan {pl.buffer_pct}%, dikurangi saldo yang ada, dibulatkan ke atas per $5.
         {pl.accounts.total > 0 && pl.per_account_month_usd !== null && ` Saat ini tiap akun berbayar memakai sekitar ${usd(pl.per_account_month_usd)} per bulan.`}
-        {" "}Batas atas per pengguna per bulan: Standard $3,05 · Professional $11,25 · Enterprise $11,51. Anggaran paling aman untuk klien baru adalah batas atas, pemakaian nyata biasanya jauh di bawahnya.
+        {" "}Batas atas per pengguna per bulan: Standard {usd(worstStd)} · Professional {usd(worstPro)} · Enterprise {usd(worstEnt)} (rincian per fitur ada di kartu FITUR AI). Anggaran paling aman untuk klien baru adalah batas atas, pemakaian nyata biasanya jauh di bawahnya.
         {pl.thin_data && ` Data pemakaian baru ${pl.tracked_days} hari, jadi angka ini makin akurat seiring waktu.`}
       </div>
     </div>

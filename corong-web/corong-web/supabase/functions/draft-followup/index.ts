@@ -6,7 +6,7 @@
 //
 // (Riwayat fix lama: draft disimpen ke ai_drafts SEBELUM return + dipake ulang
 // kalau masih <24 jam, tier gate Professional+, rate limit 3x generate baru
-// per hari WIB lewat RPC atomic, org_memory, max_tokens 900 biar gak
+// per bulan (10 Okt 2026: 60x per bulan) lewat RPC atomic, org_memory, max_tokens 900 biar gak
 // kepotong - detail lengkap ada di versi sebelumnya.)
 //
 // === MODEL (29 Sep 2026) === Sonnet 4.6 -> Sonnet 5.5 (lebih murah $2/$10
@@ -123,22 +123,24 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const DRAFT_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // draft yang masih fresh (<24 jam) dipake ulang, gak generate baru
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-// Awal hari kalender WIB (jam 00:00 WIB) - dikonversi balik ke instant UTC
-// buat dipake sebagai batas query `called_at >=`.
-function wibDayStartUTC(d = new Date()) {
-  const wibNow = new Date(d.getTime() + WIB_OFFSET_MS);
-  const y = wibNow.getUTCFullYear(), m = wibNow.getUTCMonth(), day = wibNow.getUTCDate();
-  return new Date(Date.UTC(y, m, day, 0, 0, 0) - WIB_OFFSET_MS);
-}
-
-// Rate limit PER USER, dipatok ke awal hari kalender WIB (bukan rolling 24 jam).
-// Lewat RPC reserve_edge_function_call biar check+insert atomic. Balikin id
-// reservasi (buat dikembalikan kalau AI gagal) atau null kalau kuota habis.
-async function reserveDaily(admin, userId, functionName, maxCalls) {
-  const windowStart = wibDayStartUTC().toISOString();
+// Kuota bulanan (10 Okt 2026, permintaan Nando: 60x per bulan, bukan lagi 3x per hari). Siklusnya mengikuti
+// langganan: reserve_edge_function_call menghitung periodenya sendiri (draft-followup terdaftar di
+// is_monthly_quota_feature). Lewat RPC atomic: cek + catat dalam satu langkah. Balikin id reservasi (buat dikembalikan
+// kalau AI gagal) atau null kalau kuota habis.
+const MONTHLY_MAX = 60;
+async function reserveMonthly(admin, userId, functionName, maxCalls) {
+  const wibNow = new Date(Date.now() + WIB_OFFSET_MS);
+  const windowStart = new Date(Date.UTC(wibNow.getUTCFullYear(), wibNow.getUTCMonth(), 1, 0, 0, 0) - WIB_OFFSET_MS).toISOString();
   const { data, error } = await admin.rpc("reserve_edge_function_call", { p_user_id: userId, p_function_name: functionName, p_window_start: windowStart, p_max_calls: maxCalls });
   if (error) { console.error("[draft-followup] reserve_edge_function_call gagal:", error); return null; }
   return data || null;
+}
+async function quotaRefillText(admin, userId, feature) {
+  try {
+    const { data } = await admin.rpc("quota_usage", { p_user_id: userId, p_feature: feature });
+    if (data?.reset_at) return `Kuota terisi kembali pada ${new Date(data.reset_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" })}.`;
+  } catch (_) { /* pesan tanpa tanggal */ }
+  return "Kuota terisi kembali 1 bulan setelah pemakaian pertama.";
 }
 
 // ---- VECTOR MEMORY - sama kayak di daily-digest: narik catatan progress
@@ -250,12 +252,12 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       return new Response(JSON.stringify({ ...cachedResult, cached: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ---- RATE LIMIT - 3x GENERATE BARU per hari (6 Okt 2026, dulu 5x) kalender WIB per user (cache
+    // ---- RATE LIMIT - 60x GENERATE BARU per bulan per user (10 Okt 2026, dulu 3x per hari; cache
     // hit di atas gak kena hitungan ini).
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    reservationId = await reserveDaily(admin, userData.user.id, "draft-followup", 3);
+    reservationId = await reserveMonthly(admin, userData.user.id, "draft-followup", MONTHLY_MAX);
     if (!reservationId) {
-      return new Response(JSON.stringify({ error: "Kuota AI Draft Follow-up (3x per hari) sudah terpakai. Silakan coba lagi besok, atau tulis pesan secara manual." }), { status: 429, headers: cors });
+      return new Response(JSON.stringify({ error: `Kuota AI Draft Follow-up (${MONTHLY_MAX}x per bulan) sudah terpakai. ${await quotaRefillText(admin, userData.user.id, "draft-followup")} Anda juga dapat menulis pesan secara manual.` }), { status: 429, headers: cors });
     }
 
     let industryKey = "b2b_general";

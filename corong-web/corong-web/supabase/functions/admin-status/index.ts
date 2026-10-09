@@ -21,7 +21,7 @@
 // akun berbayar - pemakaian vs limit per fitur, token & biaya nyata (tabel
 // ai_usage), dan persen dari total limit paketnya. Katalog limit lama juga
 // diperbarui: Generate Leads per pengguna, Rekam Meeting 8x, Draft
-// Follow-up 3x/hari.
+// Follow-up 3x/hari (sejak 10 Okt 2026: 60x per bulan).
 //
 // Sumber ini sebelumnya hanya ada di server (tidak ada di repo) - disimpan ke
 // repo mulai 6 Okt 2026.
@@ -65,7 +65,7 @@ const FEATURE_CATALOG = [
   { key: "generate_leads", label: "Generate Leads AI", tier: "professional", scope: "user", window: "month", limit: 4, metered: true, functionName: null, usesLeadGenRuns: true },
   { key: "transcribe_meeting", label: "Rekam Meeting Otomatis (AI)", tier: "professional", scope: "user", window: "month", limit: 8, metered: true, functionName: "transcribe-meeting" },
   { key: "outcome_memory", label: "Outcome Memory (AI)", tier: "professional", scope: "user", window: "month", limit: 15, metered: true, functionName: "guess-outcome-reason" },
-  { key: "draft_followup", label: "AI Draft Follow-up", tier: "professional", scope: "user", window: "day", limit: 3, metered: true, functionName: "draft-followup" },
+  { key: "draft_followup", label: "AI Draft Follow-up", tier: "professional", scope: "user", window: "month", limit: 60, metered: true, functionName: "draft-followup" },
   { key: "chatbot_messages", label: "Chatbot NEXA (Teks & Voice Note)", tier: "professional", scope: "user", window: "day", limit: 17, metered: true, functionName: null, usesChatMessages: true },
   { key: "customer_state", label: "Customer State (AI)", tier: "professional", scope: "user", window: "month", limit: null, metered: false, note: "Nempel ke data lead yang udah ada, bukan panggilan AI on-demand terpisah." },
   { key: "competitor_analysis", label: "Analisa Kompetitor", tier: "professional", scope: "user", window: "month", limit: null, metered: false, note: "CRUD data kompetitor - gak ada panggilan AI sama sekali." },
