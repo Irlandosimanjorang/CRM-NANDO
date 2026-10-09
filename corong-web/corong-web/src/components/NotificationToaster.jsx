@@ -3,10 +3,10 @@ import { Bell, X } from "lucide-react";
 import * as db from "../lib/db";
 
 // Pop up notifikasi (9 Okt 2026, permintaan Nando): saat ada notifikasi baru, muncul kartu di pojok layar yang hilang sendiri
-// dalam 5 detik, selain angka di lonceng dan bunyi pendek. Notifikasi lama yang sudah ada saat aplikasi dibuka tidak ikut muncul.
+// dalam 15 detik (diubah dari 5 detik atas permintaan Nando), selain angka di lonceng dan bunyi pendek. Notifikasi lama yang sudah ada saat aplikasi dibuka tidak ikut muncul.
 // Memeriksa tiap 15 detik dan saat tab kembali aktif (bukan realtime), cukup untuk "muncul tidak lama setelah kejadian".
 const POLL_MS = 15000;
-const SHOW_MS = 5000;
+const SHOW_MS = 15000;
 const FRESH_MS = 10 * 60 * 1000; // notifikasi yang lebih tua dari ini tidak dimunculkan sebagai pop up
 
 // Peramban memblokir bunyi sebelum pengguna menyentuh halaman, jadi satu AudioContext dibuat dan "dibuka" pada sentuhan/klik/tombol
