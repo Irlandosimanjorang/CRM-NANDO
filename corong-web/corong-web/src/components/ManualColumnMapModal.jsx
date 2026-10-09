@@ -40,6 +40,17 @@ const BASE_FIELD_OPTIONS = [
   { value: "", label: "— Abaikan —" },
   { value: "name", label: "Nama Lead / Perusahaan *" },
   { value: "company_type", label: "Tipe / skala perusahaan" },
+  { value: "category", label: "Kategori / jenis usaha" },
+  { value: "deal_value", label: "Nilai deal / SPH (Rp)" },
+  { value: "stage_key", label: "Tahap / status pipeline" },
+  { value: "priority", label: "Prioritas" },
+  { value: "source", label: "Sumber lead" },
+  { value: "assigned_name", label: "Sales / penanggung jawab" },
+  { value: "created_at", label: "Tanggal masuk" },
+  { value: "deal_date", label: "Tanggal deal" },
+  { value: "last_contact", label: "Kontak terakhir" },
+  { value: "next_action", label: "Tindak lanjut" },
+  { value: "address", label: "Alamat (masuk catatan)" },
   { value: "email", label: "Email" },
   { value: "phone", label: "Telepon / WA" },
   { value: "key_person", label: "Nama Kontak (PIC)" },
@@ -66,8 +77,8 @@ const ROW_ROLES = [
   { value: "mandiri", label: "Mandiri" },
 ];
 
-export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
-  const { rawRows, sheetName, initialMapping = {}, initialDataStartRow = 0, usedAiGuess, existingCustomSlots = [] } = request;
+export default function ManualColumnMapModal({ request, onConfirm, onCancel, onPickSheet }) {
+  const { rawRows, sheetName, initialMapping = {}, initialDataStartRow = 0, usedAiGuess, existingCustomSlots = [], initialReasons = {}, initialCustom = {}, noteCols = [], sheetNames = [] } = request;
 
   const fieldOptions = useMemo(() => {
     const existingOpts = existingCustomSlots.map((s) => ({ value: s.key, label: s.label }));
@@ -85,10 +96,13 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
     Object.entries(initialMapping).forEach(([field, idx]) => {
       if (idx !== null && idx !== undefined && idx >= 0 && idx < numCols) arr[idx] = field;
     });
+    Object.keys(initialCustom).forEach((idx) => { if (Number(idx) < numCols && !arr[Number(idx)]) arr[Number(idx)] = NEW_CUSTOM_VALUE; });
     return arr;
   });
   const [dataStartRow, setDataStartRow] = useState(() => mapDraft?.dataStartRow ?? initialDataStartRow);
-  const [customLabels, setCustomLabels] = useState(() => mapDraft?.customLabels || {}); // colIdx -> label yang diketik user
+  const [customLabels, setCustomLabels] = useState(() => mapDraft?.customLabels || { ...initialCustom });
+  // Kolom sisa (tanpa padanan dan tanpa slot custom) dititipkan ke catatan lead supaya datanya tidak hilang.
+  const [noteExtras, setNoteExtras] = useState(true); // colIdx -> label yang diketik user
   // Mode tandai hirarki (8 Okt 2026): pilih peran tiap baris (Holding/Perusahaan/Anak) langsung di tabel.
   const [hierMode, setHierMode] = useState(() => !!mapDraft?.hierMode);
   const [follow, setFollow] = useState(() => mapDraft?.follow !== false); // baris tanpa tanda ikut jadi anak
@@ -163,7 +177,8 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
         if (role && di >= 0) levels[di] = role;
       }
     }
-    onConfirm(mapping, dataStartRow, customEntries, hierMode ? { levels, follow } : undefined);
+    const extraNoteCols = noteExtras ? noteCols.filter((c) => !assign[c.index]) : [];
+    onConfirm(mapping, dataStartRow, customEntries, hierMode ? { levels, follow } : undefined, extraNoteCols);
   };
 
   const handleCancel = () => { clearManualMapDraft(); onCancel(); };
@@ -188,6 +203,14 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
             <>Nexto belum yakin dapat menebak kolom di sheet <b>"{sheetName}"</b> ini. Tentukan sendiri isi setiap kolom melalui dropdown di atas tiap kolom.</>
           )}
         </p>
+        {sheetNames.length > 1 && onPickSheet && (
+          <label className="mb-2 flex items-center gap-2 text-[12px] text-slate-600">
+            File ini punya {sheetNames.length} sheet. Sheet yang dibaca:
+            <select value={sheetName} onChange={(e) => onPickSheet(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[12px] font-semibold text-slate-700">
+              {sheetNames.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+        )}
         <p className="text-xs text-amber-600 flex items-center gap-1 mb-3"><AlertTriangle size={12} /> Wajib memilih satu kolom sebagai "Nama Lead / Perusahaan". Kolom yang tidak memiliki padanan dapat dipilih "+ Custom..." dan diberi nama sendiri.</p>
 
         <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
@@ -231,6 +254,9 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
                         </option>
                       ))}
                     </select>
+                    {assign[colIdx] && assign[colIdx] !== NEW_CUSTOM_VALUE && initialReasons[colIdx] && assign[colIdx] === Object.keys(initialMapping).find((f) => initialMapping[f] === colIdx) && (
+                      <div className="mt-0.5 text-[10px] text-slate-400">tebakan dari {initialReasons[colIdx]}</div>
+                    )}
                     {assign[colIdx] === NEW_CUSTOM_VALUE && (
                       <input
                         type="text"
@@ -279,6 +305,12 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel }) {
           Klik salah satu baris di atas untuk menandai baris tersebut sebagai awal DATA ASLI (baris judul/header di atasnya akan dilewati).
           {!hierMode && rawRows.length > MAX_PREVIEW_ROWS && ` Cuma ${MAX_PREVIEW_ROWS} baris pertama ditampilkan di sini, sisanya (${rawRows.length - MAX_PREVIEW_ROWS} baris lagi) tetap ikut diproses.`}
         </p>
+        {noteCols.some((c) => !assign[c.index]) && (
+          <label className="mt-2 flex cursor-pointer items-start gap-2 text-[12px] text-slate-600">
+            <input type="checkbox" className="mt-0.5 h-3.5 w-3.5 accent-orange-600" checked={noteExtras} onChange={(e) => setNoteExtras(e.target.checked)} />
+            <span>Simpan kolom lain yang belum dipetakan di catatan lead ({noteCols.filter((c) => !assign[c.index]).slice(0, 4).map((c) => c.label).join(", ")}{noteCols.filter((c) => !assign[c.index]).length > 4 ? `, +${noteCols.filter((c) => !assign[c.index]).length - 4}` : ""}). Tidak ada data klien yang hilang.</span>
+          </label>
+        )}
         {existingCustomSlots.length > 0 && (
           <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1"><Sparkles size={11} /> Field custom yang sudah ada: {existingCustomSlots.map((s) => s.label).join(", ")}.</p>
         )}

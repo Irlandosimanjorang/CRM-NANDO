@@ -45,6 +45,7 @@ import {
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
 import DeleteAllLeadsModal from "../components/DeleteAllLeadsModal";
+import { detectHeaderRow, smartMapping, suggestExtras, normalizePhone, parseMoney, parseDate, normalizePriority, matchStage, matchMember } from "../lib/importSmart";
 import ImportSummaryModal from "../components/ImportSummaryModal";
 import ManualColumnMapModal from "../components/ManualColumnMapModal";
 import AiDraftPopup from "../components/AiDraftPopup";
@@ -286,11 +287,33 @@ export function extractRowsFromMapping(dataRows, mapping, firstStage, opts = {})
     const row = dataRows[ri];
     const name = get(row, mapping.name);
     if (!name || /^(xxx|yyyy-mm-dd|mr\/ms xxx)$/i.test(name.trim())) continue;
+    // Baris total/subtotal di akhir laporan bukan lead.
+    if (/^(total|subtotal|sub total|jumlah|grand total)\b/i.test(name.trim())) continue;
     const obj = { name, category: "Lainnya", stage_key: firstStage, source: "import" };
+    const noteBits = [];
     for (const [field, idx] of Object.entries(mapping)) {
       if (field === "name") continue;
-      obj[field] = get(row, idx);
+      const raw = get(row, idx);
+      const cell = row[idx];
+      switch (field) {
+        case "deal_value": { const n = parseMoney(cell); if (n !== null) obj.deal_value = n; else if (raw) noteBits.push(`Nilai: ${raw}`); break; }
+        case "deal_date": case "last_contact": { const d = parseDate(cell); if (d) obj[field] = d; break; }
+        case "created_at": { const d = parseDate(cell); if (d) obj.created_at = `${d}T09:00:00+07:00`; break; }
+        case "priority": { const p = normalizePriority(raw); if (p) obj.priority = p; break; }
+        case "stage_key": { const k = matchStage(raw, opts.stages); if (k) obj.stage_key = k; else if (raw) noteBits.push(`Status: ${raw}`); break; }
+        case "assigned_name": { const uid = matchMember(raw, opts.members); if (uid) obj.assigned_to = uid; else if (raw) noteBits.push(`Sales: ${raw}`); break; }
+        case "address": if (raw) noteBits.push(`Alamat: ${raw}`); break;
+        case "phone": obj.phone = normalizePhone(cell); break;
+        case "category": case "source": case "company_type": if (raw) obj[field] = raw; break;
+        default: obj[field] = raw;
+      }
     }
+    // Kolom lain yang tidak dipetakan dititipkan ke catatan supaya tidak ada data yang hilang.
+    for (const nc of opts.noteCols || []) {
+      const v = get(row, nc.index);
+      if (v) noteBits.push(`${nc.label}: ${v}`);
+    }
+    if (noteBits.length) obj.notes = [obj.notes, ...noteBits].filter(Boolean).join(" | ");
     if (opts.levels && opts.levels[ri]) obj.entity_level = opts.levels[ri];
     out.push(obj);
   }
@@ -1356,44 +1379,83 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
   // Products" ke-anggep nama lead). Rule-based/AI di importFile cuma buat
   // PRE-FILL tebakan, ManualColumnMapModal yang nentuin apa yang beneran
   // diimport, lewat handleManualMapConfirm.
+  // Bahan pembaca pintar (9 Okt 2026): workbook disimpan di memori supaya sheet lain bisa dipilih tanpa unggah ulang.
+  const wbRef = useRef(null);
+
+  // Analisis satu sheet: cari baris judul sebenarnya, tebak kolom dari judul DAN isi data (lib/importSmart),
+  // lalu usulkan kolom sisa jadi field custom atau catatan. Hanya tebakan awal; pengguna tetap meninjau.
+  const analyzeSheet = (XLSX, wb, sheetName) => {
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: "" });
+    const rawRows = aoa.filter((r) => r.some((v) => String(v).trim()));
+    if (rawRows.length === 0) return null;
+    const headerRow = detectHeaderRow(rawRows);
+    const headers = rawRows[headerRow] || [];
+    const dataRows = rawRows.slice(headerRow + 1);
+    const ctx = { stages: stages.map((st) => ({ key: st.key, label: st.label, type: st.type })), members };
+    const sm = smartMapping(headers, dataRows, guessMappingFromHeaders(headers), ctx);
+    const labelled = getCustomFieldSlots(industry, customFieldLabels).filter((sl) => String(sl.label || "").trim()).length;
+    const ex = suggestExtras(headers, sm.mapping, sm.profiles, Math.min(Math.max(0, CUSTOM_FIELD_KEYS.length - labelled), 4));
+    const initialCustom = Object.fromEntries(ex.custom.map((c) => [c.colIndex, c.label]));
+    return {
+      sheetName, rawRows, headerRow,
+      initialMapping: sm.mapping,
+      initialDataStartRow: headerRow + 1,
+      initialReasons: sm.reasons,
+      initialCustom,
+      noteCols: ex.notes.map((c) => ({ index: c.colIndex, label: c.label })),
+      mappedCount: Object.keys(sm.mapping).length,
+      dataCount: dataRows.length,
+    };
+  };
+
+  const openSheet = async (name) => {
+    if (!wbRef.current) return;
+    const { XLSX, wb } = wbRef.current;
+    const a = analyzeSheet(XLSX, wb, name);
+    if (!a) { alert("Sheet itu kosong."); return; }
+    setManualMapRequest((prev) => ({ ...(prev || {}), ...a, usedAiGuess: false, sheetNames: prev?.sheetNames }));
+  };
+
+  // CSV dari Excel Indonesia sering memakai titik koma sebagai pemisah; tab dan | juga lazim.
+  const detectCsvDelimiter = (text) => {
+    const head = text.split(/\r?\n/).slice(0, 8).join("\n");
+    const counts = { ";": (head.match(/;/g) || []).length, ",": (head.match(/,/g) || []).length, "\t": (head.match(/\t/g) || []).length, "|": (head.match(/\|/g) || []).length };
+    return Object.entries(counts).sort((x, y) => y[1] - x[1])[0][0];
+  };
+
   const importFile = async (file) => {
     if (!file) return;
     setBusy(true);
 
     try {
-      // xlsx dimuat DINAMIS di sini (bukan static import di atas) - library
-      // ini lumayan berat (~500KB+), padahal cuma kepake pas user beneran
-      // klik import. Nunda loadingnya sampai titik ini bikin bundle awal
-      // Nexto lebih ringan buat SEMUA user, termasuk yang gak pernah import.
+      // xlsx dimuat DINAMIS (library berat, hanya dipakai saat import).
       const XLSX = await import("xlsx");
-      const buf = new Uint8Array(await file.arrayBuffer());
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      let wb;
+      if (/\.(csv|txt|tsv)$/i.test(file.name)) {
+        let text = await file.text();
+        if (text.includes("\uFFFD")) { try { text = new TextDecoder("windows-1252").decode(await file.arrayBuffer()); } catch { /* biarkan */ } }
+        wb = XLSX.read(text.replace(/^\uFEFF/, ""), { type: "string", cellDates: true, FS: detectCsvDelimiter(text) });
+      } else {
+        wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: "array", cellDates: true });
+      }
+      wbRef.current = { XLSX, wb };
       const firstStage = stages[0]?.key;
 
-      // Ambil sheet PERTAMA yang punya data - kalau file punya beberapa
-      // sheet (umumnya cuma "Sheet2" kosong bawaan Excel), yang lain
-      // diabaikan. Sheet lain bisa diimport terpisah kalau memang perlu.
-      let sheetName = null;
-      let rawRows = [];
-      for (const sn of wb.SheetNames) {
-        const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: "" });
-        const nonEmpty = aoa.filter((r) => r.some((v) => String(v).trim()));
-        if (nonEmpty.length > 0) { sheetName = sn; rawRows = nonEmpty; break; }
-      }
-
-      if (rawRows.length === 0) {
+      // Analisis semua sheet; pilih yang paling meyakinkan (kolom terpetakan terbanyak, lalu baris terbanyak).
+      const analyses = wb.SheetNames.map((n) => analyzeSheet(XLSX, wb, n)).filter((a) => a && a.dataCount >= 1);
+      if (analyses.length === 0) {
         alert("File kosong, tidak ada data yang terbaca sama sekali.");
         return;
       }
-
-      // Tebak petaan dari baris header (row pertama) dulu - GRATIS, gak
-      // perlu manggil AI. Kalau gagal nemuin kolom nama (misal ada baris
-      // judul di atas header asli), baru minta AI baca sample & tentuin
-      // sendiri kolom + baris data mulai dari mana.
-      let guessedMapping = guessMappingFromHeaders(rawRows[0]);
-      let guessedDataStartRow = 1;
+      analyses.sort((p, q) => (q.mappedCount * 10 + Math.min(q.dataCount, 500) / 50) - (p.mappedCount * 10 + Math.min(p.dataCount, 500) / 50));
+      const chosen = analyses[0];
+      let { rawRows, initialMapping: guessedMapping, initialDataStartRow: guessedDataStartRow } = chosen;
       let usedAiGuess = false;
+      let initialReasons = chosen.initialReasons;
+      let initialCustom = chosen.initialCustom;
+      let noteCols = chosen.noteCols;
 
+      // Kalau kolom nama tetap tidak ketemu, minta AI membaca sampel (kuota Smart Import) seperti sebelumnya.
       if (!aiOff && (guessedMapping.name === undefined || guessedMapping.name === null)) {
         try {
           const sample = rawRows.slice(0, 8);
@@ -1402,16 +1464,13 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             guessedMapping = mapping;
             guessedDataStartRow = Math.min(Math.max(data_start_row || 0, 0), rawRows.length);
             usedAiGuess = true;
+            initialReasons = {}; initialCustom = {}; noteCols = [];
           } else {
             guessedMapping = {};
             guessedDataStartRow = 0;
           }
         } catch (aiErr) {
           console.error("Smart import AI gagal menebak:", aiErr);
-          // Sebelumnya diem-diem aja jatuh ke pemetaan manual tanpa bilang
-          // apa-apa - user gak pernah tau KENAPA (misal jatah Smart Import
-          // udah abis). Sekarang dikasih tau alasannya lewat notif, baru
-          // lanjut ke pemetaan manual biar proses import-nya tetep jalan.
           alert(aiErr.message || "Smart Import AI gagal diproses, silakan petakan kolom secara manual.");
           guessedMapping = {};
           guessedDataStartRow = 0;
@@ -1419,16 +1478,17 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       }
 
       setManualMapRequest({
-        sheetName,
+        sheetName: chosen.sheetName,
         rawRows,
         firstStage,
         initialMapping: guessedMapping,
         initialDataStartRow: guessedDataStartRow,
         usedAiGuess,
-        // Slot custom_field_1..10 yang UDAH ada namanya (dari template industri
-        // atau import sebelumnya) - ditawarin sebagai pilihan langsung di
-        // dropdown, biar import berikutnya dengan kolom yang sama gak perlu
-        // bikin ulang custom field baru.
+        initialReasons,
+        initialCustom,
+        noteCols,
+        sheetNames: analyses.map((a) => a.sheetName),
+        // Slot custom_field_1..10 yang sudah bernama ditawarkan sebagai pilihan langsung di dropdown.
         existingCustomSlots: getCustomFieldSlots(industry, customFieldLabels),
       });
     } catch (e) {
@@ -1438,7 +1498,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
     }
   };
 
-  const handleManualMapConfirm = async (mapping, dataStartRow, customEntries, hierarchy) => {
+  const handleManualMapConfirm = async (mapping, dataStartRow, customEntries, hierarchy, noteExtraCols = []) => {
     if (!manualMapRequest) return;
     const { rawRows, firstStage, usedAiGuess } = manualMapRequest;
 
@@ -1499,7 +1559,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         await db.mergeCustomFieldLabels(newLabelAssignments);
       }
       const dataRows = rawRows.slice(Math.max(0, dataStartRow));
-      const leadRows = extractRowsFromMapping(dataRows, finalMapping, firstStage, hierarchy || {});
+      const leadRows = extractRowsFromMapping(dataRows, finalMapping, firstStage, { ...(hierarchy || {}), stages, members, noteCols: noteExtraCols });
       await finalizeImport(leadRows, usedAiGuess);
     } catch (e) {
       alert("Gagal import: " + e.message);
@@ -2433,6 +2493,8 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
       {manualMapRequest && (
         <ManualColumnMapModal
+          key={manualMapRequest.sheetName}
+          onPickSheet={wbRef.current ? openSheet : null}
           request={manualMapRequest}
           onConfirm={handleManualMapConfirm}
           onCancel={() => setManualMapRequest(null)}
