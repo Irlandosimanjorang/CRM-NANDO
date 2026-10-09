@@ -672,6 +672,17 @@ export async function adminInvoices(action, payload = {}) {
   return data;
 }
 
+export async function adminCashflow(action, payload = {}) {
+  const { data, error } = await supabase.functions.invoke("admin-cashflow", { body: { action, ...payload } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal memuat arus kas");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export async function getAdminStatus() {
   const { data, error } = await supabase.functions.invoke("admin-status");
   if (error) {

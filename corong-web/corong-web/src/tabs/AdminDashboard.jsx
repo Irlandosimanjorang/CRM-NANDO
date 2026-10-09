@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Ticket, Coins } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Ticket, Coins, Wallet } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
 import QuotationPanel from "../components/QuotationPanel";
 import OrgFeaturesPanel from "../components/OrgFeaturesPanel";
 import AddonTokensPanel from "../components/AddonTokensPanel";
+import CashflowPanel from "../components/CashflowPanel";
 
 // Dashboard admin platform - versi "mission control" - CUMA keliatan buat
 // email admin (dicek di App.jsx + server-side di admin-status/admin-trigger).
@@ -1376,6 +1377,25 @@ export default function AdminDashboard() {
       statLabel: "BIAYA AI TERCATAT",
       statValue: fmtUsd(sumUsd(status?.ai_usage?.accounts)),
       content: <AiCostPanel data={status?.ai_usage} />,
+    },
+    {
+      // ARUS KAS (9 Okt 2026, permintaan Nando) - uang masuk dari invoice,
+      // jatah token Anthropic per kontrak, saldo token live, laba rugi & margin.
+      key: "cashflow",
+      title: "ARUS KAS",
+      subtitle: "Kas, token & margin",
+      icon: Wallet,
+      accentColor: "#34d399",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "dihitung dari invoice dan biaya AI",
+      wide: true,
+      blurb: "MRR, saldo token Anthropic, jatah token per kontrak, dan margin.",
+      statLabel: "BIAYA AI TERCATAT",
+      statValue: fmtUsd(sumUsd(status?.ai_usage?.accounts)),
+      content: <CashflowPanel />,
     },
     {
       // INVOICE (2 Okt 2026, permintaan Nando) - buat invoice langganan
