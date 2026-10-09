@@ -105,6 +105,7 @@ export default function CashflowPanel() {
   if (!data || !form) return <div className="flex items-center gap-2 text-[12px] text-slate-300 font-mono"><Loader2 className="w-3.5 h-3.5 animate-spin" /> memuat arus kas...</div>;
 
   const { summary: s, anthropic: a, contracts, daily } = data;
+  const individuals = data.individuals || [];
   const kurs = Number(form.kurs) || 17700;
   const balLow = a.balance_usd !== null && (a.runway_days !== null ? a.runway_days <= 14 : a.balance_usd < 10);
   const balAccent = a.balance_usd === null ? "#cbd5e1" : a.balance_usd <= 0 ? "#fb7185" : balLow ? "#fbbf24" : "#34d399";
@@ -130,9 +131,6 @@ export default function CashflowPanel() {
         </button>
       </div>
 
-      {notice && (
-        <div className={`rounded-lg border px-3 py-2 text-[12px] font-mono ${notice.ok ? "border-emerald-400/50 bg-emerald-950 text-emerald-200" : "border-rose-400/50 bg-rose-950 text-rose-200"}`}>{notice.text}</div>
-      )}
 
       <Section title="Saldo token Anthropic" hint="perkiraan live">
         <div className="rounded-xl border p-3 grid gap-3 bg-[#111826]" style={{ borderColor: balAccent }}>
@@ -174,6 +172,7 @@ export default function CashflowPanel() {
           <Tile label="Biaya tetap" value={rp(s.fixed_costs_idr)} sub={`${form.costs.length} pos per bulan`} />
           <Tile label="Jatah token" value={`${form.token_pct}%`} sub="dari nilai tiap invoice" />
           <Tile label="Kontrak aktif" value={contracts.filter((c) => c.active).length} sub={`${contracts.filter((c) => c.status === "paid").length} Lunas total`} />
+          <Tile label="MRR langganan individu" value={rp(s.sub_mrr)} sub={`${s.sub_count} akun Standard/Professional`} accent="#34d399" />
         </div>
       </Section>
 
@@ -254,6 +253,39 @@ export default function CashflowPanel() {
         </div>
       </Section>
 
+      <Section title="Langganan individu (Standard dan Professional)" hint="perkiraan: pembayaran Mayar tidak tersimpan di database">
+        <div className={`min-w-0 overflow-x-auto ${BLOCK}`}>
+          <table className="w-full text-left border-collapse min-w-[640px]">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wide text-slate-300 font-mono bg-[#182033]">
+                <th className="py-2 pl-3 pr-2 font-medium">Akun</th>
+                <th className="py-2 pr-2 font-medium">Paket</th>
+                <th className="py-2 pr-2 font-medium text-right">Harga / bulan</th>
+                <th className="py-2 pr-2 font-medium">Aktif sampai</th>
+                <th className="py-2 pr-2 font-medium text-right">Biaya AI bulan ini</th>
+                <th className="py-2 pr-3 font-medium text-right">Margin kotor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {individuals.length === 0 && <tr><td colSpan={6} className="py-4 text-center text-[12px] text-slate-400 font-mono">Belum ada akun Standard atau Professional individu.</td></tr>}
+              {individuals.map((i) => (
+                <tr key={i.user_id} className="border-t border-white/[0.12]">
+                  <td className="py-2 pl-3 pr-2"><div className="text-[12px] font-semibold text-white truncate max-w-[220px]">{i.name || i.email || i.user_id.slice(0, 8)}</div>{i.name && i.email && <div className="text-[10.5px] font-mono text-slate-400 truncate max-w-[220px]">{i.email}</div>}</td>
+                  <td className="py-2 pr-2 text-[11.5px] font-mono text-slate-200">{i.plan === "professional" ? "Professional" : "Standard"}</td>
+                  <td className="py-2 pr-2 text-[11.5px] font-mono tabular-nums text-right text-white">{rp(i.price)}</td>
+                  <td className="py-2 pr-2 text-[11.5px] font-mono">{i.expires_at ? <span className={i.counted ? "text-emerald-300" : "text-rose-300"}>{fmtShort(isoDay(new Date(i.expires_at)))}{i.counted ? "" : " (berakhir)"}</span> : <span className="text-amber-300">tanpa masa aktif, tidak dihitung</span>}</td>
+                  <td className="py-2 pr-2 text-[11.5px] font-mono tabular-nums text-right text-pink-200">{usd(i.ai_month_usd)}</td>
+                  <td className="py-2 pr-3 text-[11.5px] font-mono tabular-nums text-right">{i.margin_pct === null ? <span className="text-slate-500">-</span> : <span className="font-bold" style={{ color: i.margin_pct >= 50 ? "#34d399" : i.margin_pct >= 20 ? "#fbbf24" : "#fb7185" }}>{i.margin_pct}%</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
+          Dihitung sebagai MRR bila masa aktif belum berakhir, memakai harga per bulan di Pengaturan. Akun yang paketnya dibuat lewat invoice tidak dihitung dua kali. Kas masuk dari Mayar tidak muncul di "Kas masuk" karena tanggal dan nominalnya tidak tercatat.
+        </div>
+      </Section>
+
       <Section title="Pengaturan" hint="top-up dan biaya tetap langsung tersimpan saat ditambah atau dihapus">
         <div className={`${BLOCK} p-3 grid gap-5`}>
           <div className="grid gap-2">
@@ -262,6 +294,8 @@ export default function CashflowPanel() {
               <div><label className={lab}>Kurs (Rp/USD)</label><input type="number" className={`${inp} w-full`} value={form.kurs} onChange={(e) => edit({ kurs: e.target.value })} /></div>
               <div><label className={lab}>Jatah token (% kontrak)</label><input type="number" min="1" max="100" className={`${inp} w-full`} value={form.token_pct} onChange={(e) => edit({ token_pct: e.target.value })} /></div>
               <div><label className={lab}>Tanggal saldo patokan</label><input type="date" style={DARK} className={`${inp} w-full`} value={form.anthropic.checkpoint_date || ""} onChange={(e) => edit({ anthropic: { ...form.anthropic, checkpoint_date: e.target.value || null } })} /></div>
+              <div><label className={lab}>Harga Standard (Rp/bln)</label><input type="number" className={`${inp} w-full`} value={form.sub_price?.standard ?? ""} onChange={(e) => edit({ sub_price: { ...form.sub_price, standard: e.target.value } })} /></div>
+              <div><label className={lab}>Harga Professional (Rp/bln)</label><input type="number" className={`${inp} w-full`} value={form.sub_price?.professional ?? ""} onChange={(e) => edit({ sub_price: { ...form.sub_price, professional: e.target.value } })} /></div>
               <div><label className={lab}>Saldo patokan (USD)</label><input type="number" step="0.01" className={`${inp} w-full`} value={form.anthropic.balance_usd} onChange={(e) => edit({ anthropic: { ...form.anthropic, balance_usd: e.target.value } })} /></div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -313,6 +347,10 @@ export default function CashflowPanel() {
           </div>
         </div>
       </Section>
+
+      {notice && (
+        <div className={`sticky bottom-2 z-20 rounded-lg border px-3 py-2.5 text-[12px] font-mono font-bold shadow-xl ${notice.ok ? "border-emerald-400 bg-emerald-950 text-emerald-100" : "border-rose-400 bg-rose-950 text-rose-100"}`}>{notice.text}</div>
+      )}
     </div>
   );
 }

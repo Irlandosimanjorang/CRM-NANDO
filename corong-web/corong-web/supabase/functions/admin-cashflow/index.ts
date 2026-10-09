@@ -36,6 +36,9 @@ const DEFAULT_SETTINGS = {
   topups: [] as { id: string; date: string; amount_usd: number; note: string }[],
   costs: [] as { id: string; name: string; currency: string; amount: number; kind: string }[],
 };
+// Harga katalog per pengguna per bulan (sama dengan Auth.jsx): early bird sampai 15 Okt 2026, setelah itu normal.
+const EARLY = new Date() < new Date("2026-10-15T23:59:59+07:00");
+const CATALOG_PRICE = { standard: EARLY ? 59000 : 89000, professional: EARLY ? 229000 : 249000 };
 
 function cleanSettings(src: any) {
   const s = src || {};
@@ -60,7 +63,12 @@ function cleanSettings(src: any) {
         kind: c.kind === "opex" ? "opex" : "hpp", // hpp = biaya penyedia layanan (Supabase, Vercel), opex = beban lain
       };
     });
-  return { kurs, token_pct, anthropic, topups, costs };
+  const sp = s.sub_price || {};
+  const sub_price = {
+    standard: Math.max(0, Math.round(num(sp.standard, CATALOG_PRICE.standard))),
+    professional: Math.max(0, Math.round(num(sp.professional, CATALOG_PRICE.professional))),
+  };
+  return { kurs, token_pct, anthropic, topups, costs, sub_price };
 }
 
 // Semua baris ai_usage sejak tanggal tertentu (dipaginasi 1000/halaman).
@@ -167,6 +175,40 @@ Deno.serve(async (req) => {
     });
 
     // Saldo Anthropic (perkiraan live).
+    // Langganan individu Standard/Professional (bayar lewat Mayar). Pembayarannya tidak tersimpan di tabel mana pun,
+    // jadi pendapatannya DIPERKIRAKAN dari akun berbayar yang masa aktifnya belum berakhir x harga per bulan.
+    const coveredUsers = new Set<string>();
+    const coveredOrgs = new Set<string>();
+    for (const inv of invoices || []) {
+      if (inv.data?.activation?.user_id) coveredUsers.add(inv.data.activation.user_id);
+      if (inv.data?.activation?.org_id) coveredOrgs.add(inv.data.activation.org_id);
+    }
+    const { data: orgRows } = await admin.from("organizations").select("id, plan");
+    const enterpriseOrgs = new Set((orgRows || []).filter((o: any) => o.plan === "enterprise").map((o: any) => o.id));
+    const { data: subRows, error: subErr } = await admin.from("settings")
+      .select("user_id, plan, plan_expires_at, community_display_name").in("plan", ["standard", "premium"]);
+    if (subErr) throw subErr;
+    const monthStartIso = startOfWibDay(monthStart);
+    const individuals: any[] = [];
+    let subMrr = 0;
+    for (const r of (subRows || []).slice(0, 200)) {
+      const org = orgsOfUser[r.user_id];
+      if (coveredUsers.has(r.user_id) || (org && (enterpriseOrgs.has(org) || coveredOrgs.has(org)))) continue;
+      const plan = r.plan === "premium" ? "professional" : "standard";
+      const price = settings.sub_price[plan];
+      const exp = r.plan_expires_at as string | null;
+      const counted = !!exp && new Date(exp).getTime() > Date.now();
+      let email: string | null = null;
+      try { email = (await admin.auth.admin.getUserById(r.user_id))?.data?.user?.email || null; } catch (_) { /* biarkan kosong */ }
+      const aiMonth = sumUsd((u) => u.user_id === r.user_id && u.created_at >= monthStartIso);
+      if (counted) { subMrr += price; mrr += price; activeContractValue += price; }
+      individuals.push({
+        user_id: r.user_id, name: r.community_display_name || null, email, plan, price, expires_at: exp, counted,
+        ai_month_usd: Math.round(aiMonth * 10000) / 10000,
+        margin_pct: counted && price > 0 ? Math.round((price - aiMonth * kurs) / price * 1000) / 10 : null,
+      });
+    }
+
     const cpDate = settings.anthropic.checkpoint_date;
     const spentSince = cpDate ? sumUsd((u) => u.created_at >= startOfWibDay(cpDate)) : 0;
     const topupsSince = settings.topups.filter((t) => !cpDate || t.date >= cpDate).reduce((s, t) => s + t.amount_usd, 0);
@@ -204,6 +246,7 @@ Deno.serve(async (req) => {
     return json({
       ok: true, today, settings, kurs, pnl,
       summary: {
+        sub_mrr: Math.round(subMrr), sub_count: individuals.filter((i) => i.counted).length,
         mrr: Math.round(mrr), cash_in_month: Math.round(cashInMonth), receivable: Math.round(receivable), overdue_count: overdueCount,
         active_contract_value: Math.round(activeContractValue),
         ai_month_usd: Math.round(aiMonthUsd * 10000) / 10000, ai_month_idr: Math.round(aiMonthUsd * kurs),
@@ -216,7 +259,7 @@ Deno.serve(async (req) => {
         burn_usd_per_day: Math.round(burn7 * 10000) / 10000, runway_days: runwayDays,
         tracking_since: usage[0]?.created_at || null,
       },
-      contracts, daily,
+      contracts, individuals, daily,
     });
   } catch (e) {
     return json({ error: String(e?.message || e) }, 500);
