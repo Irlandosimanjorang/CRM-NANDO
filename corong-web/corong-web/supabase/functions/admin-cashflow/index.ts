@@ -148,13 +148,21 @@ Deno.serve(async (req) => {
       .order("invoice_date", { ascending: false }).limit(500);
     if (invErr) throw invErr;
 
-    // ai_usage dari tanggal paling awal yang dibutuhkan (kontrak, patokan saldo, 30 hari terakhir).
+    const { data: payRows, error: payErr } = await admin.from("subscription_payments")
+      .select("id, email, user_id, tier, amount, months, paid_at, source, note").order("paid_at", { ascending: true }).limit(2000);
+    if (payErr) throw payErr;
+
+    // ai_usage dari tanggal paling awal yang dibutuhkan (kontrak, pembayaran, patokan saldo, 30 hari terakhir).
     const thirtyAgo = new Date(Date.now() - 30 * DAY_MS).toISOString().slice(0, 10);
     let earliest = thirtyAgo < monthStart ? thirtyAgo : monthStart;
     if (settings.anthropic.checkpoint_date && settings.anthropic.checkpoint_date < earliest) earliest = settings.anthropic.checkpoint_date;
     for (const inv of invoices || []) {
       const st = inv.data?.start;
       if (inv.status === "paid" && DATE_RE.test(st || "") && st < earliest) earliest = st;
+    }
+    for (const pay of payRows || []) {
+      const d = new Date(new Date(pay.paid_at).getTime() + 7 * 3600000).toISOString().slice(0, 10);
+      if (d < earliest) earliest = d;
     }
     const usage = await fetchAiUsage(admin, startOfWibDay(earliest));
 
@@ -166,79 +174,121 @@ Deno.serve(async (req) => {
     const sumUsd = (pred: (u: typeof usage[number]) => boolean) => usage.reduce((s, u) => (pred(u) ? s + u.cost_usd : s), 0);
     const wibDate = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3600000).toISOString().slice(0, 10);
 
-    // Kontrak dari invoice.
-    let mrr = 0, cashInMonth = 0, receivable = 0, overdueCount = 0, activeContractValue = 0, deferred = 0;
-    const contracts = (invoices || []).map((inv: any) => {
-      const d = inv.data || {};
-      const months = Math.max(1, Math.floor(num(d.months, 1)));
-      const total = num(inv.total);
-      const start = DATE_RE.test(d.start || "") ? d.start : inv.invoice_date;
-      const end = DATE_RE.test(d.end || "") ? d.end : null;
-      const orgId = d.activation?.org_id || null;
-      const active = inv.status === "paid" && start <= today && (!end || end >= today);
-      if (inv.status === "paid" && inv.paid_at && wibDate(inv.paid_at) >= monthStart) cashInMonth += total;
-      if (inv.status === "unpaid") { receivable += total; if (inv.due_date < today) overdueCount++; }
-      if (active) { mrr += total / months; activeContractValue += total; }
-      // Biaya AI klien ini sejak kontrak mulai (hanya bila organisasinya sudah diaktifkan lewat invoice).
-      let aiUsd: number | null = null;
-      if (inv.status === "paid" && orgId) {
-        const since = startOfWibDay(start);
-        aiUsd = sumUsd((u) => !!u.user_id && orgsOfUser[u.user_id] === orgId && u.created_at >= since);
-      }
-      const quotaIdr = Math.round(total * settings.token_pct / 100);
-      // Pendapatan diakui (akrual): dibagi rata per hari sepanjang masa kontrak; sisanya = pendapatan diterima di muka.
-      let recognized = 0;
-      if (inv.status === "paid") {
-        const t0 = new Date(`${start}T00:00:00+07:00`).getTime();
-        const t1 = end ? new Date(`${end}T23:59:59+07:00`).getTime() : t0 + months * 30 * DAY_MS;
-        recognized = total * Math.min(1, Math.max(0, (Date.now() - t0) / Math.max(1, t1 - t0)));
-        deferred += total - recognized;
-      }
-      return {
-        recognized_idr: Math.round(recognized), unearned_idr: inv.status === "paid" ? Math.round(total - recognized) : 0,
-        margin_pct: aiUsd === null || recognized <= 0 ? null : Math.round((recognized - aiUsd * kurs) / recognized * 1000) / 10,
-        id: inv.id, number: inv.number, company: inv.company, status: inv.status, total, months, seats: num(d.seats, 1),
-        start, end, due_date: inv.due_date, paid_at: inv.paid_at, active, org_id: orgId,
-        monthly: Math.round(total / months), quota_idr: quotaIdr,
-        ai_usd: aiUsd, ai_idr: aiUsd === null ? null : Math.round(aiUsd * kurs),
-        quota_used_pct: aiUsd === null || quotaIdr <= 0 ? null : Math.round((aiUsd * kurs) / quotaIdr * 1000) / 10,
-      };
-    });
+    // === PENDAPATAN GABUNGAN (9 Okt 2026) ===
+    // Satu daftar untuk semua sumber uang: invoice (Enterprise/klien), pembayaran Mayar yang tercatat di
+    // subscription_payments (Standard/Professional/Enterprise), dan PERKIRAAN untuk akun berbayar lama yang
+    // belum punya catatan pembayaran. Semua dihitung dengan rumus yang sama (MRR, pendapatan diakui, margin).
+    const addMonthsDate = (dateStr: string, m: number) => {
+      const d = new Date(`${dateStr}T12:00:00+07:00`);
+      d.setUTCMonth(d.getUTCMonth() + m);
+      return new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10);
+    };
+    const { data: orgRows } = await admin.from("organizations").select("id, plan");
+    const enterpriseOrgs = new Set((orgRows || []).filter((o: any) => o.plan === "enterprise").map((o: any) => o.id));
+    const { data: setRows, error: setErr } = await admin.from("settings")
+      .select("user_id, plan, plan_expires_at, community_display_name").limit(5000);
+    if (setErr) throw setErr;
+    const settingsOf: Record<string, any> = {};
+    for (const r of setRows || []) settingsOf[r.user_id] = r;
 
-    // Saldo Anthropic (perkiraan live).
-    // Langganan individu Standard/Professional (bayar lewat Mayar). Pembayarannya tidak tersimpan di tabel mana pun,
-    // jadi pendapatannya DIPERKIRAKAN dari akun berbayar yang masa aktifnya belum berakhir x harga per bulan.
+    type Base = {
+      id: string; kind: "invoice" | "mayar" | "estimate"; number: string; company: string; sub: string | null; plan: string | null;
+      status: string; total: number; months: number; seats: number; start: string; end: string | null; due_date: string | null;
+      paid_at: string | null; orgId: string | null; userId: string | null; counted_cash: boolean; note: string | null;
+    };
+    const bases: Base[] = [];
+
     const coveredUsers = new Set<string>();
     const coveredOrgs = new Set<string>();
     for (const inv of invoices || []) {
-      if (inv.data?.activation?.user_id) coveredUsers.add(inv.data.activation.user_id);
-      if (inv.data?.activation?.org_id) coveredOrgs.add(inv.data.activation.org_id);
-    }
-    const { data: orgRows } = await admin.from("organizations").select("id, plan");
-    const enterpriseOrgs = new Set((orgRows || []).filter((o: any) => o.plan === "enterprise").map((o: any) => o.id));
-    const { data: subRows, error: subErr } = await admin.from("settings")
-      .select("user_id, plan, plan_expires_at, community_display_name").in("plan", ["standard", "premium"]);
-    if (subErr) throw subErr;
-    const monthStartIso = startOfWibDay(monthStart);
-    const individuals: any[] = [];
-    let subMrr = 0;
-    for (const r of (subRows || []).slice(0, 200)) {
-      const org = orgsOfUser[r.user_id];
-      if (coveredUsers.has(r.user_id) || (org && (enterpriseOrgs.has(org) || coveredOrgs.has(org)))) continue;
-      const plan = r.plan === "premium" ? "professional" : "standard";
-      const price = settings.sub_price[plan];
-      const exp = r.plan_expires_at as string | null;
-      const counted = !!exp && new Date(exp).getTime() > Date.now();
-      let email: string | null = null;
-      try { email = (await admin.auth.admin.getUserById(r.user_id))?.data?.user?.email || null; } catch (_) { /* biarkan kosong */ }
-      const aiMonth = sumUsd((u) => u.user_id === r.user_id && u.created_at >= monthStartIso);
-      if (counted) { subMrr += price; mrr += price; activeContractValue += price; }
-      individuals.push({
-        user_id: r.user_id, name: r.community_display_name || null, email, plan, price, expires_at: exp, counted,
-        ai_month_usd: Math.round(aiMonth * 10000) / 10000,
-        margin_pct: counted && price > 0 ? Math.round((price - aiMonth * kurs) / price * 1000) / 10 : null,
+      const d = inv.data || {};
+      if (d.activation?.user_id) coveredUsers.add(d.activation.user_id);
+      if (d.activation?.org_id) coveredOrgs.add(d.activation.org_id);
+      const months = Math.max(1, Math.floor(num(d.months, 1)));
+      bases.push({
+        id: inv.id, kind: "invoice", number: inv.number, company: inv.company, sub: d.email || null, plan: d.plan || null,
+        status: inv.status, total: num(inv.total), months, seats: num(d.seats, 1),
+        start: DATE_RE.test(d.start || "") ? d.start : inv.invoice_date, end: DATE_RE.test(d.end || "") ? d.end : null,
+        due_date: inv.due_date, paid_at: inv.paid_at, orgId: d.activation?.org_id || null, userId: d.activation?.user_id || null,
+        counted_cash: true, note: null,
       });
     }
+
+    // Pembayaran Mayar: periode berurutan per akun (periode baru dimulai setelah periode sebelumnya habis, sama dengan stacking di webhook).
+    const lastEndBy: Record<string, string> = {};
+    const usersWithPayments = new Set<string>();
+    for (const pay of payRows || []) {
+      const key = pay.user_id || pay.email;
+      const paidDate = wibDate(pay.paid_at);
+      const start = lastEndBy[key] && lastEndBy[key] > paidDate ? lastEndBy[key] : paidDate;
+      const months = Math.max(1, Math.floor(num(pay.months, 1)));
+      const end = addMonthsDate(start, months);
+      lastEndBy[key] = end;
+      if (pay.user_id) usersWithPayments.add(pay.user_id);
+      const st = pay.user_id ? settingsOf[pay.user_id] : null;
+      const plan = pay.tier === "premium" ? "professional" : pay.tier;
+      const orgId = pay.tier === "enterprise" && pay.user_id ? (orgsOfUser[pay.user_id] || null) : null;
+      bases.push({
+        id: pay.id, kind: "mayar", number: pay.source === "backfill" ? "Mayar (perkiraan)" : "Mayar", company: st?.community_display_name || pay.email,
+        sub: st?.community_display_name ? pay.email : null, plan, status: "paid", total: num(pay.amount), months,
+        seats: pay.tier === "enterprise" ? 4 : 1, start, end, due_date: null, paid_at: pay.paid_at, orgId, userId: pay.user_id,
+        counted_cash: true, note: pay.source === "backfill" ? "Nominal diperkirakan (dicatat sebelum pencatatan otomatis ada)" : null,
+      });
+    }
+
+    // Akun berbayar lama tanpa catatan pembayaran dan tanpa invoice: perkiraan dari masa aktif dan harga per bulan.
+    let manualGrants = 0;
+    for (const r of setRows || []) {
+      if (r.plan !== "standard" && r.plan !== "premium") continue;
+      const org = orgsOfUser[r.user_id];
+      if (usersWithPayments.has(r.user_id) || coveredUsers.has(r.user_id) || (org && (enterpriseOrgs.has(org) || coveredOrgs.has(org)))) continue;
+      const exp = r.plan_expires_at as string | null;
+      if (!exp || new Date(exp).getTime() <= Date.now()) { if (!exp) manualGrants++; continue; }
+      const plan = r.plan === "premium" ? "professional" : "standard";
+      let email: string | null = null;
+      try { email = (await admin.auth.admin.getUserById(r.user_id))?.data?.user?.email || null; } catch (_) { /* biarkan kosong */ }
+      const endDate = wibDate(exp);
+      bases.push({
+        id: "est-" + r.user_id, kind: "estimate", number: "Perkiraan", company: r.community_display_name || email || r.user_id.slice(0, 8),
+        sub: r.community_display_name ? email : null, plan, status: "paid", total: settings.sub_price[plan], months: 1, seats: 1,
+        start: addMonthsDate(endDate, -1), end: endDate, due_date: null, paid_at: null, orgId: null, userId: r.user_id,
+        counted_cash: false, note: "Belum ada catatan pembayaran. Nominal dan tanggal diperkirakan dari masa aktif dan harga per bulan.",
+      });
+    }
+
+    let mrr = 0, cashInMonth = 0, receivable = 0, overdueCount = 0, activeContractValue = 0, deferred = 0, subMrr = 0, subCount = 0;
+    const contracts = bases.map((b) => {
+      const paid = b.status === "paid";
+      const active = paid && b.start <= today && (!b.end || b.end >= today);
+      if (paid && b.counted_cash && b.paid_at && wibDate(b.paid_at) >= monthStart) cashInMonth += b.total;
+      if (b.status === "unpaid") { receivable += b.total; if (b.due_date && b.due_date < today) overdueCount++; }
+      if (active) {
+        mrr += b.total / b.months; activeContractValue += b.total;
+        if (b.kind !== "invoice") { subMrr += b.total / b.months; subCount++; }
+      }
+      let aiUsd: number | null = null;
+      if (paid && (b.orgId || b.userId)) {
+        const since = startOfWibDay(b.start);
+        aiUsd = sumUsd((u) => !!u.user_id && u.created_at >= since && (b.orgId ? orgsOfUser[u.user_id] === b.orgId : u.user_id === b.userId));
+      }
+      const quotaIdr = Math.round(b.total * settings.token_pct / 100);
+      let recognized = 0;
+      if (paid) {
+        const t0 = new Date(`${b.start}T00:00:00+07:00`).getTime();
+        const t1 = b.end ? new Date(`${b.end}T00:00:00+07:00`).getTime() : t0 + b.months * 30 * DAY_MS;
+        recognized = b.total * Math.min(1, Math.max(0, (Date.now() - t0) / Math.max(1, t1 - t0)));
+        deferred += b.total - recognized;
+      }
+      return {
+        id: b.id, kind: b.kind, number: b.number, company: b.company, sub: b.sub, plan: b.plan, note: b.note, status: b.status,
+        total: b.total, months: b.months, seats: b.seats, start: b.start, end: b.end, due_date: b.due_date, paid_at: b.paid_at,
+        active, org_id: b.orgId, monthly: Math.round(b.total / b.months), quota_idr: quotaIdr,
+        recognized_idr: Math.round(recognized), unearned_idr: paid ? Math.round(b.total - recognized) : 0,
+        margin_pct: aiUsd === null || recognized <= 0 ? null : Math.round((recognized - aiUsd * kurs) / recognized * 1000) / 10,
+        ai_usd: aiUsd, ai_idr: aiUsd === null ? null : Math.round(aiUsd * kurs),
+        quota_used_pct: aiUsd === null || quotaIdr <= 0 ? null : Math.round((aiUsd * kurs) / quotaIdr * 1000) / 10,
+      };
+    }).sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0) || String(b.start).localeCompare(String(a.start)));
 
     const cpDate = settings.anthropic.checkpoint_date;
     const spentSince = cpDate ? sumUsd((u) => u.created_at >= startOfWibDay(cpDate)) : 0;
@@ -277,7 +327,7 @@ Deno.serve(async (req) => {
     return json({
       ok: true, today, settings, kurs, kurs_info: kursInfo, pnl,
       summary: {
-        sub_mrr: Math.round(subMrr), sub_count: individuals.filter((i) => i.counted).length,
+        sub_mrr: Math.round(subMrr), sub_count: subCount, manual_grants: manualGrants,
         mrr: Math.round(mrr), cash_in_month: Math.round(cashInMonth), receivable: Math.round(receivable), overdue_count: overdueCount,
         active_contract_value: Math.round(activeContractValue),
         ai_month_usd: Math.round(aiMonthUsd * 10000) / 10000, ai_month_idr: Math.round(aiMonthUsd * kurs),
@@ -290,7 +340,7 @@ Deno.serve(async (req) => {
         burn_usd_per_day: Math.round(burn7 * 10000) / 10000, runway_days: runwayDays,
         tracking_since: usage[0]?.created_at || null,
       },
-      contracts, individuals, daily,
+      contracts, daily,
     });
   } catch (e) {
     return json({ error: String(e?.message || e) }, 500);
