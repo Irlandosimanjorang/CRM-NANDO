@@ -7,7 +7,7 @@ import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
 import QuotationPanel from "../components/QuotationPanel";
 import OrgFeaturesPanel from "../components/OrgFeaturesPanel";
 import AddonTokensPanel from "../components/AddonTokensPanel";
-import CashflowPanel, { AnthropicStrip } from "../components/CashflowPanel";
+import CashflowPanel from "../components/CashflowPanel";
 
 // Dashboard admin platform - versi "mission control" - CUMA keliatan buat
 // email admin (dicek di App.jsx + server-side di admin-status/admin-trigger).
@@ -1507,7 +1507,6 @@ export default function AdminDashboard() {
       />
       {/* my-auto: konten di tengah layar bila pendek, dan tetap bisa di-scroll dari paling atas bila lebih tinggi dari layar. */}
       <div className="relative my-auto flex w-full flex-col items-center">
-        <AnthropicStrip />
         <AgentGridMap
           employees={employees}
           selectedKey={selectedEmployeeKey}
