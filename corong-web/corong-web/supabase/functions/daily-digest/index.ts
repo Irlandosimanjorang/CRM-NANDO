@@ -31,6 +31,9 @@
 // === HEMAT BIAYA (6 Okt 2026, permintaan Nando) ===
 // AI Advisor hanya dijalankan untuk pengguna yang aktif 7 hari terakhir
 // (lihat isRecentlyActive). ?force=true dan ?user_id= tetap melewati filter.
+// === AKUN DUMMY (9 Okt 2026, permintaan Nando) ===
+// Akun dengan email @example.com (anggota dummy untuk uji tampilan) dilewati sepenuhnya: tanpa AI, tanpa suara,
+// tanpa email (alamat itu pasti bounce dan merusak reputasi pengirim). ?force=true dan ?user_id= tetap melewati.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -593,6 +596,12 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     const orgWideCache = new Map();
 
     for (const u of allUsers) {
+      // Akun dummy (email @example.com) dilewati: tanpa AI, suara, maupun email (9 Okt 2026).
+      if (!forceRun && !onlyUserId && /@example.com$/i.test(u.email || "")) {
+        console.log("[digest] skip, akun dummy:", u.id);
+        results.push({ user: u.email, skipped: "akun_dummy" });
+        continue;
+      }
       console.log("[digest] processing user", u.id, u.email);
       aiSetUser(u.id);
       try {
