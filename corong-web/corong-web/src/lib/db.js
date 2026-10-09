@@ -294,9 +294,22 @@ export async function getPendingApprovals() {
   return rows.map((r) => ({ ...r, requester_name: nameByUid[r.requested_by] || null }));
 }
 
+// Marketing (sales_rep) Enterprise meminta hapus semua lead miliknya; owner/manager menyetujui di Pengaturan.
+export async function requestDeleteAllMyLeads() {
+  const { data, error } = await supabase.rpc("request_delete_all_my_leads");
+  if (error) throw error;
+  return data; // { id, count }
+}
+
 export async function decideApproval(id, approve) {
   const { data: reqRow, error: fErr } = await supabase.from("approval_requests").select("*").eq("id", id).single();
   if (fErr) throw fErr;
+  if (approve && reqRow.action_type === "delete_all_my_leads") {
+    // Fungsi database memindahkan lead pemohon ke Recycle Bin dan menandai permintaan disetujui sekaligus.
+    const { error } = await supabase.rpc("approve_delete_all_my_leads", { p_request: id });
+    if (error) throw error;
+    return;
+  }
   if (approve && reqRow.action_type === "delete_lead" && reqRow.payload?.lead_id) {
     await deleteLead(reqRow.payload.lead_id);
   }

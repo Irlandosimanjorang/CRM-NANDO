@@ -647,6 +647,9 @@ export default function Leads({
   // Sekarang beneran nge-filter lewat state fKpi ini.
   const [fKpi, setFKpi] = useState("");
   const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [showRequestAll, setShowRequestAll] = useState(false);
+  const [myUid, setMyUid] = useState(null);
+  useEffect(() => { db.getCurrentUserId().then(setMyUid).catch(() => setMyUid(null)); }, []);
 
   // Tampilan grup (7 Okt 2026): lead dengan nama grup/induk yang sama
   // dilipat jadi satu baris induk yang bisa dibuka. Pilihan disimpan per
@@ -676,7 +679,6 @@ export default function Leads({
   // manager gak keliatan fitur ini padahal RLS-nya udah ngasih akses.
   const [members, setMembers] = useState([]);
   const [fAssignee, setFAssignee] = useState("");
-  const [myUid, setMyUid] = useState(null);
   useEffect(() => {
     if (!canManage) return;
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
@@ -2004,6 +2006,18 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             Kelompokkan per grup
           </button>
 
+          {!canManage && isEnterprise && myUid && leads.some((l) => l.assigned_to === myUid) && (
+            <button
+              type="button"
+              onClick={() => setShowRequestAll(true)}
+              className="text-[12px] font-medium flex items-center gap-1.5 border border-rose-200 text-rose-600 rounded-inner px-3 py-1.5 bg-white hover:bg-rose-50"
+              title="Mengirim permintaan ke owner atau manager"
+            >
+              <Trash2 size={12} />
+              Hapus semua lead saya
+            </button>
+          )}
+
           {canManage && leads.length > 0 && (
             <button
               type="button"
@@ -2416,6 +2430,18 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
       )}
 
+
+      {showRequestAll && (
+        <DeleteAllLeadsModal
+          request
+          count={leads.filter((l) => l.assigned_to === myUid).length}
+          onClose={() => setShowRequestAll(false)}
+          onDone={(n) => {
+            setShowRequestAll(false);
+            alert(`Permintaan terkirim. Owner atau manager akan menerima notifikasi untuk menyetujui penghapusan ${n} lead Anda.`);
+          }}
+        />
+      )}
 
       {showDeleteAll && (
         <DeleteAllLeadsModal
