@@ -54,7 +54,7 @@ function SendDialog({ quotation, onClose, onChange }) {
           <div>
             <label className={lbl} htmlFor="qsend-to">Kirim ke email</label>
             <input id="qsend-to" type="email" className={field} value={to} onChange={(e) => setTo(e.target.value)} placeholder="nama@perusahaan.co.id" disabled={sending} />
-            <p className="mt-1 text-[11.5px] text-slate-500">Balasan klien masuk ke email penagih, dan Anda menerima salinannya.</p>
+            <p className="mt-1 text-[11.5px] text-slate-400">Balasan klien masuk ke email penagih, dan Anda menerima salinannya.</p>
           </div>
           <div>
             <label className={lbl} htmlFor="qsend-note">Pesan tambahan (opsional)</label>
@@ -275,7 +275,7 @@ export default function QuotationPanel({ users = [] }) {
                 <input id="quo-company" list="quo-orgs" className={field} value={viewing ? viewing.company : company} onChange={(e) => setCompany(e.target.value)} placeholder="Ketik nama perusahaan calon klien" autoComplete="off" />
                 <datalist id="quo-orgs">{orgs.map((o) => <option key={o.name} value={o.name} />)}</datalist>
                 {!viewing && (
-                  <p className="mt-1 text-[11px] text-slate-500">
+                  <p className="mt-1 text-[11px] text-slate-400">
                     {matched ? `Klien ${PLANS[matched.plan].label} ditemukan: ${matched.members} anggota terdaftar, paket & data owner terisi otomatis.` : "Untuk calon klien baru, isi data di bawah secara manual."}
                   </p>
                 )}
@@ -312,7 +312,7 @@ export default function QuotationPanel({ users = [] }) {
                     <div>
                       <label className={lbl}>Kursi gratis (owner/manager)</label>
                       <input type="number" min="0" max="5" className={field} value={freeSeats} onChange={(e) => setFreeSeats(e.target.value)} />
-                      <p className="mt-1 text-[11.5px] text-slate-500">Tidak ditagih, tetapi menambah batas anggota. Isi 1 bila owner hanya memantau lewat dashboard dan seluruh tim sudah dihitung di Jumlah.</p>
+                      <p className="mt-1 text-[11.5px] text-slate-400">Tidak ditagih, tetapi menambah batas anggota. Isi 1 bila owner hanya memantau lewat dashboard dan seluruh tim sudah dihitung di Jumlah.</p>
                     </div>
                   )}
                   <div className="grid grid-cols-[1fr_96px_110px] gap-3">
@@ -334,7 +334,7 @@ export default function QuotationPanel({ users = [] }) {
                     </div>
                   </div>
                   <div><label className={lbl}>Catatan (opsional)</label><textarea rows={2} className={field} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Misal: termasuk onboarding tim 1 sesi" /></div>
-                  <p className="text-[11px] text-slate-500">Data penagih, tanda tangan, dan stempel mengikuti pengaturan di kartu Invoice.</p>
+                  <p className="text-[11px] text-slate-400">Data penagih, tanda tangan, dan stempel mengikuti pengaturan di kartu Invoice.</p>
                 </>
               )}
             </fieldset>
@@ -352,7 +352,7 @@ export default function QuotationPanel({ users = [] }) {
                 <button type="button" disabled={busy} onClick={saveAndDownload} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:opacity-60">{busy ? "Menyimpan…" : "Simpan & unduh PDF"}</button>
               )}
             </div>
-            <p className="text-[11px] text-slate-500">Berkas PDF langsung terunduh.</p>
+            <p className="text-[11px] text-slate-400">Berkas PDF langsung terunduh.</p>
           </div>
         </div>
 
@@ -369,11 +369,11 @@ export default function QuotationPanel({ users = [] }) {
           )}
         </div>
         {history === null ? (
-          <p className="px-4 py-4 text-[12px] text-slate-500">Memuat riwayat…</p>
+          <p className="px-4 py-4 text-[12px] text-slate-400">Memuat riwayat…</p>
         ) : historyErr ? (
           <p className="px-4 py-4 text-[12px] text-rose-300">Riwayat gagal dimuat: {historyErr}</p>
         ) : history.length === 0 ? (
-          <p className="px-4 py-4 text-[12px] text-slate-500">Belum ada quotation tersimpan. Quotation pertama akan bernomor 0001.</p>
+          <p className="px-4 py-4 text-[12px] text-slate-400">Belum ada quotation tersimpan. Quotation pertama akan bernomor 0001.</p>
         ) : (
           <div className="max-h-[360px] overflow-auto overscroll-contain">
             <table className="w-full min-w-[920px] text-[12.5px]">
@@ -389,7 +389,7 @@ export default function QuotationPanel({ users = [] }) {
                       <td className="px-4 py-2 font-mono text-slate-200">{x.number}</td>
                       <td className="max-w-[200px] px-2 py-2 text-slate-200">
                         <div className="truncate">{x.company}</div>
-                        {sent && <div className="truncate text-[11px] text-slate-500" title={sent.to}>Dikirim ke {sent.to}</div>}
+                        {sent && <div className="truncate text-[11px] text-slate-400" title={sent.to}>Dikirim ke {sent.to}</div>}
                       </td>
                       <td className="px-2 py-2 text-slate-400">{fmtShort(x.invoice_date)}</td>
                       <td className={`px-2 py-2 ${expired ? "font-semibold text-rose-300" : "text-slate-400"}`}>{fmtShort(x.due_date)}{expired ? " (lewat)" : ""}</td>
@@ -404,7 +404,7 @@ export default function QuotationPanel({ users = [] }) {
                           <span className="font-mono text-[12px] text-emerald-300" title={`Dikonversi ${fmtStamp(x.data.converted.at)}`}>{x.data.converted.invoice_number}</span>
                         ) : x.status !== "void" && x.status !== "rejected" ? (
                           <button type="button" disabled={busy} onClick={() => convert(x)} className="rounded-md border border-violet-400/50 px-2 py-1 text-[12px] font-semibold text-violet-200 hover:bg-violet-500/15 disabled:opacity-50">Jadikan invoice</button>
-                        ) : <span className="text-[12px] text-slate-500">-</span>}
+                        ) : <span className="text-[12px] text-slate-400">-</span>}
                       </td>
                       <td className="px-4 py-2 text-right">
                         {x.public_token && <button type="button" onClick={() => downloadInvoicePdf(x, "quotation").catch((e) => alert("PDF gagal diunduh: " + e.message))} className="mr-3 font-semibold text-emerald-300 hover:text-emerald-200">Unduh</button>}

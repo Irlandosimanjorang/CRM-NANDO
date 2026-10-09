@@ -114,7 +114,7 @@ export default function OrgFeaturesPanel() {
               {!f.ready && <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-amber-300">Segera</span>}
             </div>
             <p className="mt-0.5 text-[11.5px] text-slate-400">{f.hint}</p>
-            <p className="mt-1 text-[11.5px] text-slate-500">Menyala di {onCount(f.key)} organisasi{!f.ready ? ". Belum ada efeknya sampai fiturnya dibangun." : "."}</p>
+            <p className="mt-1 text-[11.5px] text-slate-400">Menyala di {onCount(f.key)} organisasi{!f.ready ? ". Belum ada efeknya sampai fiturnya dibangun." : "."}</p>
           </div>
         ))}
       </div>
@@ -126,15 +126,15 @@ export default function OrgFeaturesPanel() {
           Tampilkan juga yang Gratis ({hiddenFree})
         </label>
       </div>
-      <p className="text-[11.5px] text-slate-500">Secara bawaan hanya klien berbayar (Standard, Professional, Enterprise dengan masa aktif berjalan) yang tampil.</p>
+      <p className="text-[11.5px] text-slate-400">Secara bawaan hanya klien berbayar (Standard, Professional, Enterprise dengan masa aktif berjalan) yang tampil.</p>
 
       <div className="rounded-xl border border-slate-700">
         {orgs === null ? (
-          <p className="px-4 py-4 text-[12px] text-slate-500">Memuat organisasi…</p>
+          <p className="px-4 py-4 text-[12px] text-slate-400">Memuat organisasi…</p>
         ) : err ? (
           <p className="px-4 py-4 text-[12px] text-rose-300">Gagal memuat: {err}</p>
         ) : shown.length === 0 ? (
-          <p className="px-4 py-4 text-[12px] text-slate-500">Tidak ada klien berbayar yang cocok.{!showFree && hiddenFree > 0 ? " Centang \"Tampilkan juga yang Gratis\" untuk melihat organisasi lain." : ""}</p>
+          <p className="px-4 py-4 text-[12px] text-slate-400">Tidak ada klien berbayar yang cocok.{!showFree && hiddenFree > 0 ? " Centang \"Tampilkan juga yang Gratis\" untuk melihat organisasi lain." : ""}</p>
         ) : (
           <div className="max-h-[420px] overflow-auto overscroll-contain">
             <table className="w-full min-w-[820px] text-[12.5px]">
@@ -151,7 +151,7 @@ export default function OrgFeaturesPanel() {
                   <tr key={o.id}>
                     <td className="max-w-[260px] px-4 py-2">
                       <button type="button" onClick={() => setDetailId(o.id)} className="block max-w-full truncate text-left font-semibold text-emerald-300 hover:text-emerald-200 hover:underline" title="Buka halaman klien">{o.name || "Tanpa nama"}</button>
-                      <div className="truncate text-[11px] text-slate-500" title={o.owner_email || ""}>{o.owner_email || "-"}</div>
+                      <div className="truncate text-[11px] text-slate-400" title={o.owner_email || ""}>{o.owner_email || "-"}</div>
                     </td>
                     <td className="px-2 py-2 text-slate-400">{PLAN_LABEL[o.plan_effective] || "Gratis"}</td>
                     <td className="px-2 py-2">

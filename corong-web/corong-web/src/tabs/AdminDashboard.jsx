@@ -43,7 +43,7 @@ function Gauge({ value, color }) {
 
 function TrendSparkline({ data, dataKey, color }) {
   if (!data || data.length < 2) {
-    return <div className="h-10 flex items-center text-[10px] text-slate-600 font-mono">belum cukup data buat grafik tren</div>;
+    return <div className="h-10 flex items-center text-[10px] text-slate-500 font-mono">belum cukup data buat grafik tren</div>;
   }
   return (
     <div className="h-10 -mx-1">
@@ -84,7 +84,7 @@ function HudCorners({ color }) {
 
 function EmployeeCard({ icon: Icon, title, subtitle, accentColor, glowClass, gaugeValue, trend, trendKey, children, onTrigger, triggering, triggerKey, noTrigger, noTriggerNote }) {
   return (
-    <div className={`relative rounded-[22px] border border-white/[0.07] bg-white/[0.02] p-4 overflow-hidden ${glowClass}`}>
+    <div className={`relative rounded-[22px] border border-white/[0.14] bg-[#0e1522] p-4 overflow-hidden ${glowClass}`}>
       <HudCorners color={`${accentColor}55`} />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       <div className="flex items-start justify-between gap-3">
@@ -95,24 +95,24 @@ function EmployeeCard({ icon: Icon, title, subtitle, accentColor, glowClass, gau
               <Icon size={13} style={{ color: accentColor }} />
               <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-200 truncate">{title}</span>
             </div>
-            <div className="text-[10px] text-slate-500 mt-0.5 truncate">{subtitle}</div>
+            <div className="text-[10px] text-slate-400 mt-0.5 truncate">{subtitle}</div>
           </div>
         </div>
         {!noTrigger ? (
           <button
             onClick={() => onTrigger(triggerKey)}
             disabled={triggering === triggerKey}
-            className="shrink-0 text-[10px] font-mono uppercase tracking-wide bg-white/[0.05] hover:bg-white/[0.09] disabled:opacity-50 border border-white/10 text-slate-300 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 transition-colors"
+            className="shrink-0 text-[10px] font-mono uppercase tracking-wide bg-[#182033] hover:bg-white/[0.09] disabled:opacity-50 border border-white/10 text-slate-300 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 transition-colors"
           >
             {triggering === triggerKey ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />} Panggil
           </button>
         ) : (
-          <span className="shrink-0 text-[9px] font-mono text-slate-600 text-right max-w-[90px]">{noTriggerNote}</span>
+          <span className="shrink-0 text-[9px] font-mono text-slate-500 text-right max-w-[90px]">{noTriggerNote}</span>
         )}
       </div>
       <div className="mt-3">{children}</div>
       {trend && (
-        <div className="mt-2 pt-2 border-t border-white/[0.05]">
+        <div className="mt-2 pt-2 border-t border-white/[0.14]">
           <TrendSparkline data={trend} dataKey={trendKey} color={accentColor} />
         </div>
       )}
@@ -153,7 +153,7 @@ function CheckDetailModal({ check, aiSummary, onClose }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div
         className={`relative w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl border p-5 ${
           check.ok ? "border-emerald-500/25 bg-[#070b12]" : "border-amber-500/35 bg-[#0d0a05] shadow-[0_0_60px_-15px_rgba(245,158,11,0.5)]"
@@ -169,9 +169,9 @@ function CheckDetailModal({ check, aiSummary, onClose }) {
             )}
             <span className="font-mono text-base font-bold tracking-wide text-white truncate">{check.label}</span>
           </div>
-          <button onClick={onClose} className="shrink-0 text-slate-500 hover:text-white"><X size={18} /></button>
+          <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-white"><X size={18} /></button>
         </div>
-        <div className="text-slate-500 text-[12px] font-sans leading-relaxed mb-3">{check.desc}</div>
+        <div className="text-slate-400 text-[12px] font-sans leading-relaxed mb-3">{check.desc}</div>
         <div
           className={`text-[13px] font-sans leading-relaxed whitespace-pre-wrap rounded-xl p-3 border ${
             check.ok ? "text-emerald-200 bg-emerald-500/[0.06] border-emerald-500/20" : "text-amber-100 bg-amber-500/10 border-amber-500/25"
@@ -216,10 +216,10 @@ function ChecksDetailPanel({ checks, aiSummary }) {
             <span className={`relative inline-flex rounded-full h-full w-full ${allOk ? "bg-emerald-400" : "bg-amber-400"}`} />
           </span>
           <span className="font-mono text-[13px] font-bold uppercase tracking-[0.12em] text-slate-200 group-hover:text-white transition-colors">
-            {okCount}<span className="text-slate-600">/{checks.length}</span> Sinyal Termonitor
+            {okCount}<span className="text-slate-500">/{checks.length}</span> Sinyal Termonitor
           </span>
         </div>
-        <ChevronDown size={15} className={`text-slate-500 group-hover:text-white transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown size={15} className={`text-slate-400 group-hover:text-white transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div className="mt-3 grid gap-2">
@@ -242,7 +242,7 @@ function ChecksDetailPanel({ checks, aiSummary }) {
                 )}
                 <span className="font-mono text-[14px] font-bold tracking-wide text-white">{c.label}</span>
               </div>
-              <div className="text-slate-500 text-[11.5px] mt-1 pl-[30px] font-sans leading-relaxed">{c.desc}</div>
+              <div className="text-slate-400 text-[11.5px] mt-1 pl-[30px] font-sans leading-relaxed">{c.desc}</div>
             </button>
           ))}
         </div>
@@ -259,12 +259,12 @@ function ChecksDetailPanel({ checks, aiSummary }) {
 function EmployeeDetailModal({ employee, onTrigger, triggering, onClose }) {
   if (!employee) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div
         className={`relative w-full ${employee.wide ? "max-w-6xl" : "max-w-lg"} max-h-[85vh] overflow-y-auto overscroll-contain rounded-[22px] pt-9`}
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={onClose} className="absolute top-2 right-2 z-30 text-slate-400 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] rounded-lg p-1.5 transition-colors">
+        <button onClick={onClose} className="absolute top-2 right-2 z-30 text-slate-400 hover:text-white bg-[#182033] hover:bg-white/[0.12] rounded-lg p-1.5 transition-colors">
           <X size={16} />
         </button>
         <EmployeeCard
@@ -296,8 +296,8 @@ const USAGE_STATUS_STYLE = {
   ok: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
   warning: "bg-amber-500/15 text-amber-300 border-amber-500/30",
   over: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-  unlimited: "bg-slate-500/10 text-slate-500 border-white/[0.06]",
-  "n/a": "bg-slate-500/[0.04] text-slate-600 border-white/[0.04]",
+  unlimited: "bg-slate-500/10 text-slate-400 border-white/[0.14]",
+  "n/a": "bg-slate-500/[0.04] text-slate-500 border-white/[0.14]",
 };
 
 function limitText(f) {
@@ -311,15 +311,15 @@ function AiFeatureCatalog({ features }) {
   return (
     <div className="grid gap-1.5">
       {features.map((f) => (
-        <div key={f.key} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-white/[0.015] px-2.5 py-2">
+        <div key={f.key} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.14] bg-[#0e1522] px-2.5 py-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-[11.5px] font-semibold text-slate-200">{f.label}</span>
-              <span className="text-[8.5px] uppercase tracking-wide font-mono text-slate-500 border border-white/[0.08] rounded px-1 py-[1px]">{TIER_LABEL[f.tier]}</span>
+              <span className="text-[8.5px] uppercase tracking-wide font-mono text-slate-400 border border-white/[0.08] rounded px-1 py-[1px]">{TIER_LABEL[f.tier]}</span>
             </div>
-            {f.note && <div className="mt-0.5 text-[10px] text-slate-500 font-mono">{f.note}</div>}
+            {f.note && <div className="mt-0.5 text-[10px] text-slate-400 font-mono">{f.note}</div>}
           </div>
-          <span className={`shrink-0 font-mono text-[10.5px] font-bold px-2 py-1 rounded-lg border ${f.metered ? "bg-sky-500/10 text-sky-300 border-sky-500/20" : "bg-slate-500/10 text-slate-500 border-white/[0.06]"}`}>
+          <span className={`shrink-0 font-mono text-[10.5px] font-bold px-2 py-1 rounded-lg border ${f.metered ? "bg-sky-500/10 text-sky-300 border-sky-500/20" : "bg-slate-500/10 text-slate-400 border-white/[0.14]"}`}>
             {limitText(f)}
           </span>
         </div>
@@ -355,13 +355,13 @@ function AiAccountsUsagePanel({ features, accounts }) {
   const [openKey, setOpenKey] = useState(null);
   const meteredFeatures = features.filter((f) => f.metered);
   if (!accounts || accounts.length === 0) {
-    return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun team (organization_members kosong).</div>;
+    return <div className="text-[11px] text-slate-400 font-mono">Belum ada akun team (organization_members kosong).</div>;
   }
   // Kolom "Akun" dibuat STICKY (nempel di kiri pas di-scroll horizontal) -
   // sebelumnya kalau tabelnya lebih lebar dari panel (makin banyak fitur AI
   // makin lebar), nama akunnya ikut ketutup pas scroll ke kanan buat liat
   // kolom fitur yang jauh - jadi gak kebaca lagi akun siapa yang dilihat.
-  const STICKY_BG = "#0c1018"; // approksimasi warna komposit card (bg-white/[0.02] di atas #05070c)
+  const STICKY_BG = "#0c1018"; // approksimasi warna komposit card (bg-[#0e1522] di atas #05070c)
 
   const sections = PLAN_SECTIONS.map((sec) => ({
     ...sec,
@@ -370,7 +370,7 @@ function AiAccountsUsagePanel({ features, accounts }) {
   })).filter((sec) => sec.accounts.length > 0);
 
   if (sections.length === 0) {
-    return <div className="text-[11px] text-slate-500 font-mono">Belum ada akun berbayar (semua akun team masih Free).</div>;
+    return <div className="text-[11px] text-slate-400 font-mono">Belum ada akun berbayar (semua akun team masih Free).</div>;
   }
 
   return (
@@ -384,21 +384,21 @@ function AiAccountsUsagePanel({ features, accounts }) {
       {sections.map((sec) => {
         const isOpen = openKey === sec.key;
         return (
-        <div key={sec.key} className="min-w-0 rounded-xl border border-white/[0.06] overflow-hidden">
+        <div key={sec.key} className="min-w-0 rounded-xl border border-white/[0.14] overflow-hidden">
           <button
             onClick={() => setOpenKey(isOpen ? null : sec.key)}
-            className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white/[0.015] hover:bg-white/[0.03] transition-colors"
+            className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[#0e1522] hover:bg-[#131b2a] transition-colors"
           >
             <span className="text-[10px] font-mono uppercase tracking-wide text-slate-400">
-              {sec.label} <span className="text-slate-600">· {sec.accounts.length} akun</span>
+              {sec.label} <span className="text-slate-500">· {sec.accounts.length} akun</span>
             </span>
-            <ChevronDown size={13} className={`text-slate-500 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+            <ChevronDown size={13} className={`text-slate-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
           </button>
           {isOpen && (
-            <div className="min-w-0 overflow-x-auto border-t border-white/[0.06]">
+            <div className="min-w-0 overflow-x-auto border-t border-white/[0.14]">
               <table className="w-full text-left border-collapse min-w-[560px]">
                 <thead>
-                  <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+                  <tr className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono">
                     <th className="sticky left-0 z-10 pb-1.5 pt-2 pr-2 pl-2 font-medium" style={{ background: STICKY_BG }}>Akun</th>
                     {sec.columns.map((f) => (
                       <th key={f.key} className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap">{f.label}</th>
@@ -416,15 +416,15 @@ function AiAccountsUsagePanel({ features, accounts }) {
                     const primaryName = a.display_name || a.email || a.user_id.slice(0, 8);
                     const secondaryLine = a.display_name ? (a.email || `${a.org_name} · ${a.role}`) : `${a.org_name} · ${a.role}`;
                     return (
-                      <tr key={a.user_id} className="border-t border-white/[0.05]">
+                      <tr key={a.user_id} className="border-t border-white/[0.14]">
                         <td className="sticky left-0 z-10 py-1.5 pr-2 pl-2" style={{ background: STICKY_BG }}>
                           <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{primaryName}</div>
-                          <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{secondaryLine}</div>
+                          <div className="text-[9.5px] text-slate-400 font-mono truncate max-w-[160px]">{secondaryLine}</div>
                         </td>
                         {sec.columns.map((f) => {
                           const u = a.usage?.[f.key];
                           if (!u || !u.applicable) {
-                            return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-600">-</span></td>;
+                            return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-500">-</span></td>;
                           }
                           return (
                             <td key={f.key} className="py-1.5 pr-2">
@@ -479,12 +479,12 @@ function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
           health_check_runs.ai_flagged_count, biar keliatan POLANYA (naik
           pelan-pelan sebelum kebocoran), bukan cuma snapshot hari ini doang. */}
       {hasTrend ? (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-2.5">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-1">Tren sinyal butuh perhatian - 7 hari</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-2.5">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-1">Tren sinyal butuh perhatian - 7 hari</div>
           <TrendSparkline data={trend} dataKey="count" color={severity === "critical" ? "#f43f5e" : severity === "warning" ? "#f59e0b" : "#34d399"} />
         </div>
       ) : (
-        <div className="text-[10px] text-slate-600 font-mono">tren mulai kekumpul abis beberapa kali ATOM jalan (tiap ~4 jam) - belum cukup data buat grafik</div>
+        <div className="text-[10px] text-slate-500 font-mono">tren mulai kekumpul abis beberapa kali ATOM jalan (tiap ~4 jam) - belum cukup data buat grafik</div>
       )}
       <AiFeatureCatalog features={features} />
       <AiAccountsUsagePanel features={features} accounts={accounts} />
@@ -494,8 +494,8 @@ function AiLimitsPanel({ aiLimits, flaggedCount, severity }) {
 
 function StatTile({ label, value, accent }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] px-2.5 py-2">
-      <div className="text-[9px] font-mono uppercase tracking-wide text-slate-500">{label}</div>
+    <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] px-2.5 py-2">
+      <div className="text-[9px] font-mono uppercase tracking-wide text-slate-400">{label}</div>
       <div className="text-[17px] font-bold font-mono mt-0.5" style={{ color: accent || "#e2e8f0" }}>{value}</div>
     </div>
   );
@@ -547,10 +547,10 @@ function AiPlanTotals({ totals }) {
   const sum = (k) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0) + (Number(other[k]) || 0);
   const cell = "py-1.5 pr-2 text-[10.5px] font-mono tabular-nums text-right";
   return (
-    <div className="min-w-0 overflow-x-auto rounded-xl border border-white/[0.06]">
+    <div className="min-w-0 overflow-x-auto rounded-xl border border-white/[0.14]">
       <table className="w-full text-left border-collapse min-w-[600px]">
         <thead>
-          <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+          <tr className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono">
             <th className="py-2 pl-3 pr-2 font-medium">Total per paket</th>
             <th className="py-2 pr-2 font-medium text-right">Akun aktif</th>
             <th className="py-2 pr-2 font-medium text-right">Token bulan ini</th>
@@ -561,7 +561,7 @@ function AiPlanTotals({ totals }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.plan} className="border-t border-white/[0.05]">
+            <tr key={r.plan} className="border-t border-white/[0.14]">
               <td className="py-1.5 pl-3 pr-2 text-[11px] font-semibold text-slate-200">{PLAN_NAME[r.plan] || r.plan}</td>
               <td className={`${cell} text-slate-300`}>{r.active_accounts}/{r.accounts}</td>
               <td className={`${cell} text-slate-300`}>{fmtTokens(r.tokens_month)}</td>
@@ -570,15 +570,15 @@ function AiPlanTotals({ totals }) {
               <td className={`${cell} pr-3 text-pink-200`}>{fmtUsd(r.usd_all)}</td>
             </tr>
           ))}
-          <tr className="border-t border-white/[0.05]">
+          <tr className="border-t border-white/[0.14]">
             <td className="py-1.5 pl-3 pr-2 text-[11px] text-slate-400" title="Pengguna gratis dan Chat Bantuan publik (tanpa akun)">Di luar akun berbayar</td>
-            <td className={`${cell} text-slate-500`}>-</td>
+            <td className={`${cell} text-slate-400`}>-</td>
             <td className={`${cell} text-slate-400`}>{fmtTokens(other.tokens_month)}</td>
             <td className={`${cell} text-slate-400`}>{fmtUsd(other.usd_month)}</td>
             <td className={`${cell} text-slate-400`}>{fmtTokens(other.tokens_all)}</td>
             <td className={`${cell} pr-3 text-slate-400`}>{fmtUsd(other.usd_all)}</td>
           </tr>
-          <tr className="border-t border-white/[0.12] bg-white/[0.02]">
+          <tr className="border-t border-white/[0.12] bg-[#0e1522]">
             <td className="py-2 pl-3 pr-2 text-[11px] font-bold text-slate-100">Semua</td>
             <td className={`${cell} text-slate-200`}>{rows.reduce((s, r) => s + (Number(r.active_accounts) || 0), 0)}/{rows.reduce((s, r) => s + (Number(r.accounts) || 0), 0)}</td>
             <td className={`${cell} font-bold text-slate-100`}>{fmtTokens(sum("tokens_month"))}</td>
@@ -597,7 +597,7 @@ export function AiCostPanel({ data }) {
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
   const accounts = data?.accounts || [];
-  if (!data) return <div className="text-[11px] text-slate-500 font-mono">Data pemakaian AI belum tersedia.</div>;
+  if (!data) return <div className="text-[11px] text-slate-400 font-mono">Data pemakaian AI belum tersedia.</div>;
 
   const q = query.trim().toLowerCase();
   const shown = accounts.filter((a) =>
@@ -622,7 +622,7 @@ export function AiCostPanel({ data }) {
 
       {totals && <AiPlanTotals totals={totals} />}
 
-      <div className="text-[10px] text-slate-500 font-mono leading-relaxed">
+      <div className="text-[10px] text-slate-400 font-mono leading-relaxed">
         Token & biaya nyata tercatat sejak {data.tracking_since ? new Date(data.tracking_since).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "pencatatan dimulai (belum ada pemakaian)"} (dolar AS).
         % limit = pemakaian × perkiraan biaya per fitur dibanding seluruh kuota paketnya, per siklus langganan berjalan.
       </div>
@@ -641,17 +641,17 @@ export function AiCostPanel({ data }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Cari email, nama, atau organisasi"
-          className="ml-auto min-w-0 flex-1 sm:flex-none sm:w-56 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-pink-400/40"
+          className="ml-auto min-w-0 flex-1 sm:flex-none sm:w-56 rounded-lg border border-white/[0.08] bg-[#131b2a] px-2.5 py-1 text-[11px] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-pink-400/40"
         />
       </div>
 
       {shown.length === 0 ? (
-        <div className="text-[11px] text-slate-500 font-mono">Tidak ada akun yang cocok.</div>
+        <div className="text-[11px] text-slate-400 font-mono">Tidak ada akun yang cocok.</div>
       ) : (
-        <div className="min-w-0 overflow-x-auto rounded-xl border border-white/[0.06]">
+        <div className="min-w-0 overflow-x-auto rounded-xl border border-white/[0.14]">
           <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
-              <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+              <tr className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono">
                 <th className="py-2 pl-3 pr-2 font-medium">Akun</th>
                 <th className="py-2 pr-2 font-medium">Paket</th>
                 <th className="py-2 pr-2 font-medium">Reset</th>
@@ -668,14 +668,14 @@ export function AiCostPanel({ data }) {
                   <tr
                     key={a.user_id}
                     onClick={() => setOpenId(isOpen ? null : a.user_id)}
-                    className="border-t border-white/[0.05] cursor-pointer hover:bg-white/[0.02]"
+                    className="border-t border-white/[0.14] cursor-pointer hover:bg-[#0e1522]"
                   >
                     <td className="py-2 pl-3 pr-2">
                       <div className="flex items-center gap-1.5">
-                        <ChevronDown size={12} className={`shrink-0 text-slate-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                        <ChevronDown size={12} className={`shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                         <div className="min-w-0">
                           <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[200px]">{a.display_name || a.email}</div>
-                          <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[200px]">{a.display_name ? a.email : ""}{a.display_name ? " · " : ""}{a.org_name} · {ROLE_LABEL[a.role] || a.role}</div>
+                          <div className="text-[9.5px] text-slate-400 font-mono truncate max-w-[200px]">{a.display_name ? a.email : ""}{a.display_name ? " · " : ""}{a.org_name} · {ROLE_LABEL[a.role] || a.role}</div>
                         </div>
                       </div>
                     </td>
@@ -685,7 +685,7 @@ export function AiCostPanel({ data }) {
                     <td className="py-2 pr-2 text-[10.5px] font-mono text-pink-200 text-right tabular-nums">{fmtUsd(a.cost_usd)}</td>
                     <td className="py-2 pr-3">
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div className="h-1.5 flex-1 rounded-full bg-[#182033] overflow-hidden">
                           <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: pctColor(pct) }} />
                         </div>
                         <span className="text-[10.5px] font-mono font-bold tabular-nums w-11 text-right" style={{ color: pctColor(pct) }}>{pct.toFixed(1)}%</span>
@@ -693,14 +693,14 @@ export function AiCostPanel({ data }) {
                     </td>
                   </tr>,
                   isOpen && (
-                    <tr key={`${a.user_id}-detail`} className="bg-white/[0.015]">
+                    <tr key={`${a.user_id}-detail`} className="bg-[#0e1522]">
                       <td colSpan={6} className="px-3 pb-3 pt-1">
-                        <div className="text-[9.5px] text-slate-500 font-mono mb-1.5">
+                        <div className="text-[9.5px] text-slate-400 font-mono mb-1.5">
                           Periode {fmtShortDate(a.period_start)} – {fmtShortDate(a.period_end)} · perkiraan pemakaian {fmtUsd(a.est_used_rp / kurs)} dari maksimal {fmtUsd(a.est_max_rp / kurs)}
                         </div>
                         <table className="w-full text-left border-collapse">
                           <thead>
-                            <tr className="text-[9px] uppercase tracking-wide text-slate-600 font-mono">
+                            <tr className="text-[9px] uppercase tracking-wide text-slate-500 font-mono">
                               <th className="py-1 pr-2 font-medium">Fitur</th>
                               <th className="py-1 pr-2 font-medium">Pakai / limit</th>
                               <th className="py-1 pr-2 font-medium text-right">Token</th>
@@ -709,7 +709,7 @@ export function AiCostPanel({ data }) {
                           </thead>
                           <tbody>
                             {(a.features || []).map((f) => (
-                              <tr key={f.key} className="border-t border-white/[0.04]">
+                              <tr key={f.key} className="border-t border-white/[0.14]">
                                 <td className="py-1 pr-2 text-[10.5px] text-slate-300">{f.label}</td>
                                 <td className="py-1 pr-2 text-[10.5px] font-mono tabular-nums" style={{ color: f.limit ? pctColor(f.pct || 0) : "#64748b" }}>
                                   {f.limit ? `${f.used}/${f.limit}` : "otomatis"}
@@ -740,7 +740,7 @@ export function AiCostPanel({ data }) {
 // bukan cuma yang bayar).
 function UsersOverviewPanel({ data, features }) {
   const [openKey, setOpenKey] = useState(null);
-  if (!data) return <div className="text-[11px] text-slate-500 font-mono">Belum ada data.</div>;
+  if (!data) return <div className="text-[11px] text-slate-400 font-mono">Belum ada data.</div>;
   const { total, by_plan, new_7d, total_leads, list } = data;
   const meteredFeatures = (features || []).filter((f) => f.metered);
   const sections = USER_PLAN_SECTIONS.map((sec) => ({
@@ -770,23 +770,23 @@ function UsersOverviewPanel({ data, features }) {
         {sections.map((sec) => {
           const isOpen = openKey === sec.key;
           return (
-            <div key={sec.key} className="min-w-0 rounded-xl border border-white/[0.06] overflow-hidden">
+            <div key={sec.key} className="min-w-0 rounded-xl border border-white/[0.14] overflow-hidden">
               <button
                 onClick={() => setOpenKey(isOpen ? null : sec.key)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white/[0.015] hover:bg-white/[0.03] transition-colors"
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[#0e1522] hover:bg-[#131b2a] transition-colors"
               >
                 <span className="text-[10px] font-mono uppercase tracking-wide" style={{ color: sec.accent }}>
-                  {sec.label} <span className="text-slate-600">· {sec.users.length} user</span>
+                  {sec.label} <span className="text-slate-500">· {sec.users.length} user</span>
                 </span>
-                <ChevronDown size={13} className={`text-slate-500 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                <ChevronDown size={13} className={`text-slate-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
               </button>
               {isOpen && sec.users.length === 0 ? (
-                <div className="border-t border-white/[0.06] px-3 py-3 text-[11px] text-slate-500 font-mono">Belum ada user di plan {sec.label} ini.</div>
+                <div className="border-t border-white/[0.14] px-3 py-3 text-[11px] text-slate-400 font-mono">Belum ada user di plan {sec.label} ini.</div>
               ) : isOpen && (
-                <div className="min-w-0 overflow-x-auto max-h-[320px] overflow-y-auto border-t border-white/[0.06]">
+                <div className="min-w-0 overflow-x-auto max-h-[320px] overflow-y-auto border-t border-white/[0.14]">
                   <table className="w-full text-left border-collapse min-w-[640px]">
                     <thead className="sticky top-0 z-20">
-                      <tr className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono">
+                      <tr className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono">
                         <th className="sticky left-0 z-10 pb-1.5 pt-2 pr-2 pl-2 font-medium" style={{ background: USERS_STICKY_BG }}>Akun</th>
                         <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>Org · Role</th>
                         <th className="pb-1.5 pt-2 pr-2 font-medium whitespace-nowrap" style={{ background: USERS_STICKY_BG }}>WhatsApp</th>
@@ -800,20 +800,20 @@ function UsersOverviewPanel({ data, features }) {
                     </thead>
                     <tbody>
                       {sec.users.map((u) => (
-                        <tr key={u.user_id} className="border-t border-white/[0.05]">
+                        <tr key={u.user_id} className="border-t border-white/[0.14]">
                           <td className="sticky left-0 z-10 py-1.5 pr-2 pl-2" style={{ background: USERS_STICKY_BG }}>
                             <div className="text-[11.5px] font-semibold text-slate-200 truncate max-w-[160px]">{u.display_name || u.email || u.user_id.slice(0, 8)}</div>
-                            <div className="text-[9.5px] text-slate-500 font-mono truncate max-w-[160px]">{u.email}</div>
+                            <div className="text-[9.5px] text-slate-400 font-mono truncate max-w-[160px]">{u.email}</div>
                           </td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono truncate max-w-[160px] whitespace-nowrap">{u.org_name || "-"}{u.role ? ` · ${u.role}` : ""}</td>
-                          <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{u.whatsapp || <span className="text-slate-600">-</span>}</td>
+                          <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{u.whatsapp || <span className="text-slate-500">-</span>}</td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{u.leads_count ?? 0}</td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{fmtShortDate(u.created_at)}</td>
                           <td className="py-1.5 pr-2 text-[10.5px] text-slate-400 font-mono whitespace-nowrap">{timeAgo(u.last_sign_in_at)}</td>
                           {sec.usageColumns.map((f) => {
                             const usage = u.usage?.[f.key];
                             if (!usage || !usage.applicable) {
-                              return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-600">-</span></td>;
+                              return <td key={f.key} className="py-1.5 pr-2"><span className="text-[10px] font-mono text-slate-500">-</span></td>;
                             }
                             return (
                               <td key={f.key} className="py-1.5 pr-2">
@@ -841,7 +841,7 @@ function UsersOverviewPanel({ data, features }) {
 // permintaan Nando: "history visitor + tambahin dikit yang lain") - baca
 // dari page_visits (diisi track-visit, dipanggil landing page & /grok-bot).
 function TrafficPanel({ data }) {
-  if (!data) return <div className="text-[11px] text-slate-500 font-mono">Belum ada data.</div>;
+  if (!data) return <div className="text-[11px] text-slate-400 font-mono">Belum ada data.</div>;
   const { visits_today, unique_today, visits_7d, trend, top_pages, top_referrers, device, hourly, page_flow, new_vs_returning_today, top_countries, top_cities } = data;
   const totalDevice = (device?.mobile || 0) + (device?.desktop || 0);
   const mobilePct = totalDevice > 0 ? Math.round((device.mobile / totalDevice) * 100) : 0;
@@ -858,39 +858,39 @@ function TrafficPanel({ data }) {
         <StatTile label="TOTAL 7 HARI" value={visits_7d} accent="#38bdf8" />
       </div>
       {trend && trend.length > 1 ? (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-2.5">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-1">Tren kunjungan - 7 hari</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-2.5">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-1">Tren kunjungan - 7 hari</div>
           <TrendSparkline data={trend.map((d) => ({ ...d, day: d.day.slice(5) }))} dataKey="visits" color="#a3e635" />
         </div>
       ) : (
-        <div className="text-[10px] text-slate-600 font-mono">belum cukup data buat grafik tren - nunggu beberapa hari kunjungan lagi.</div>
+        <div className="text-[10px] text-slate-500 font-mono">belum cukup data buat grafik tren - nunggu beberapa hari kunjungan lagi.</div>
       )}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Halaman paling sering dibuka (7 hari)</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-2">Halaman paling sering dibuka (7 hari)</div>
           {(!top_pages || top_pages.length === 0) ? (
-            <div className="text-[11px] text-slate-600">belum ada data</div>
+            <div className="text-[11px] text-slate-500">belum ada data</div>
           ) : (
             <div className="grid gap-1.5">
               {top_pages.map((p) => (
                 <div key={p.page} className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-300 font-mono truncate">{p.page}</span>
-                  <span className="text-slate-500 font-mono font-bold shrink-0 ml-2">{p.count}</span>
+                  <span className="text-slate-400 font-mono font-bold shrink-0 ml-2">{p.count}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Sumber kunjungan (referrer, 7 hari)</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-2">Sumber kunjungan (referrer, 7 hari)</div>
           {(!top_referrers || top_referrers.length === 0) ? (
-            <div className="text-[11px] text-slate-600">belum ada referrer tercatat (kebanyakan direct/gak ada referrer)</div>
+            <div className="text-[11px] text-slate-500">belum ada referrer tercatat (kebanyakan direct/gak ada referrer)</div>
           ) : (
             <div className="grid gap-1.5">
               {top_referrers.map((r) => (
                 <div key={r.host} className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-300 font-mono truncate">{r.host}</span>
-                  <span className="text-slate-500 font-mono font-bold shrink-0 ml-2">{r.count}</span>
+                  <span className="text-slate-400 font-mono font-bold shrink-0 ml-2">{r.count}</span>
                 </div>
               ))}
             </div>
@@ -898,13 +898,13 @@ function TrafficPanel({ data }) {
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Device (7 hari)</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-2">Device (7 hari)</div>
           {totalDevice === 0 ? (
-            <div className="text-[11px] text-slate-600">belum ada data</div>
+            <div className="text-[11px] text-slate-500">belum ada data</div>
           ) : (
             <>
-              <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
+              <div className="h-2 w-full rounded-full bg-[#182033] overflow-hidden flex">
                 <div className="h-full bg-sky-400" style={{ width: `${mobilePct}%` }} />
                 <div className="h-full bg-violet-400" style={{ width: `${100 - mobilePct}%` }} />
               </div>
@@ -915,13 +915,13 @@ function TrafficPanel({ data }) {
             </>
           )}
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Alur halaman per sesi (7 hari)</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-2">Alur halaman per sesi (7 hari)</div>
           {totalFlow === 0 ? (
-            <div className="text-[11px] text-slate-600">belum ada data</div>
+            <div className="text-[11px] text-slate-500">belum ada data</div>
           ) : (
             <>
-              <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
+              <div className="h-2 w-full rounded-full bg-[#182033] overflow-hidden flex">
                 <div className="h-full bg-amber-400" style={{ width: `${100 - multiPct}%` }} />
                 <div className="h-full bg-emerald-400" style={{ width: `${multiPct}%` }} />
               </div>
@@ -934,13 +934,13 @@ function TrafficPanel({ data }) {
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Visitor baru vs balik lagi (hari ini)</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-2">Visitor baru vs balik lagi (hari ini)</div>
           {totalNewRet === 0 ? (
-            <div className="text-[11px] text-slate-600">belum ada data</div>
+            <div className="text-[11px] text-slate-500">belum ada data</div>
           ) : (
             <>
-              <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden flex">
+              <div className="h-2 w-full rounded-full bg-[#182033] overflow-hidden flex">
                 <div className="h-full bg-fuchsia-400" style={{ width: `${100 - returningPct}%` }} />
                 <div className="h-full bg-cyan-400" style={{ width: `${returningPct}%` }} />
               </div>
@@ -951,10 +951,10 @@ function TrafficPanel({ data }) {
             </>
           )}
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Jam-jam rame (WIB, 7 hari)</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-2">Jam-jam rame (WIB, 7 hari)</div>
           {!hourly || hourly.every((h) => h.count === 0) ? (
-            <div className="text-[11px] text-slate-600">belum ada data</div>
+            <div className="text-[11px] text-slate-500">belum ada data</div>
           ) : (
             <div className="flex items-end gap-[2px] h-14">
               {hourly.map((h) => (
@@ -967,31 +967,31 @@ function TrafficPanel({ data }) {
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Negara pengunjung (7 hari)</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-2">Negara pengunjung (7 hari)</div>
           {(!top_countries || top_countries.length === 0) ? (
-            <div className="text-[11px] text-slate-600">belum ada data lokasi</div>
+            <div className="text-[11px] text-slate-500">belum ada data lokasi</div>
           ) : (
             <div className="grid gap-1.5">
               {top_countries.map((c) => (
                 <div key={c.country} className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-300 font-mono truncate">{c.country}</span>
-                  <span className="text-slate-500 font-mono font-bold shrink-0 ml-2">{c.count}</span>
+                  <span className="text-slate-400 font-mono font-bold shrink-0 ml-2">{c.count}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-          <div className="text-[9.5px] uppercase tracking-wide text-slate-500 font-mono mb-2">Kota pengunjung (7 hari)</div>
+        <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[9.5px] uppercase tracking-wide text-slate-400 font-mono mb-2">Kota pengunjung (7 hari)</div>
           {(!top_cities || top_cities.length === 0) ? (
-            <div className="text-[11px] text-slate-600">belum ada data lokasi</div>
+            <div className="text-[11px] text-slate-500">belum ada data lokasi</div>
           ) : (
             <div className="grid gap-1.5">
               {top_cities.map((c) => (
                 <div key={c.city} className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-300 font-mono truncate">{c.city}</span>
-                  <span className="text-slate-500 font-mono font-bold shrink-0 ml-2">{c.count}</span>
+                  <span className="text-slate-400 font-mono font-bold shrink-0 ml-2">{c.count}</span>
                 </div>
               ))}
             </div>
@@ -1034,7 +1034,7 @@ function AgentGridMap({ employees, selectedKey, onSelectEmployee }) {
               key={e.key}
               onClick={() => onSelectEmployee(e.key)}
               className={`group relative flex flex-col gap-3 rounded-[20px] border p-4 text-left transition-all duration-200 ${
-                isSelected ? "bg-white/[0.05]" : "bg-white/[0.02] hover:bg-white/[0.035]"
+                isSelected ? "bg-[#182033]" : "bg-[#0e1522] hover:bg-[#131b2a]"
               }`}
               style={{
                 borderColor: isSelected ? e.accentColor : "rgba(255,255,255,0.07)",
@@ -1058,12 +1058,12 @@ function AgentGridMap({ employees, selectedKey, onSelectEmployee }) {
               </div>
               <div>
                 <div className="font-mono text-[13px] font-bold uppercase tracking-wider text-slate-100 group-hover:text-white transition-colors">{e.title}</div>
-                <div className="text-[10.5px] text-slate-500 mt-0.5">{e.subtitle}</div>
+                <div className="text-[10.5px] text-slate-400 mt-0.5">{e.subtitle}</div>
               </div>
               {e.blurb && <div className="text-[11px] text-slate-400 leading-relaxed">{e.blurb}</div>}
               {e.statLabel && (
-                <div className="mt-auto pt-2.5 border-t border-white/[0.06] flex items-center justify-between">
-                  <span className="text-[9px] font-mono uppercase tracking-wide text-slate-600">{e.statLabel}</span>
+                <div className="mt-auto pt-2.5 border-t border-white/[0.14] flex items-center justify-between">
+                  <span className="text-[9px] font-mono uppercase tracking-wide text-slate-500">{e.statLabel}</span>
                   <span className="text-[11px] font-mono font-bold text-slate-200">{e.statValue}</span>
                 </div>
               )}
@@ -1127,7 +1127,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="rounded-[28px] bg-[#05070c] border border-white/[0.06] flex items-center gap-2 text-sm text-slate-500 py-16 justify-center font-mono">
+      <div className="rounded-[28px] bg-[#05070c] border border-white/[0.14] flex items-center gap-2 text-sm text-slate-400 py-16 justify-center font-mono">
         <Loader2 size={16} className="animate-spin" /> menghubungkan ke command center…
       </div>
     );
@@ -1486,7 +1486,7 @@ export default function AdminDashboard() {
   return (
     <div className="relative flex h-full min-h-0 flex-col items-center justify-center overflow-auto bg-[#05070c] p-6 md:p-12">
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        className="pointer-events-none absolute inset-0 opacity-[0.15]"
         style={{
           backgroundImage: "linear-gradient(rgba(148,163,184,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.06) 1px, transparent 1px)",
           backgroundSize: "28px 28px",

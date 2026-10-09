@@ -238,8 +238,8 @@ export function buildInvoiceHtml(d, meta = {}) {
 </div></body></html>`;
 }
 
-export const field = "w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-violet-400 focus:outline-none disabled:opacity-60";
-export const lbl = "mb-1 block text-[11px] font-semibold text-slate-400";
+export const field = "w-full rounded-lg border border-slate-600 bg-slate-900 [color-scheme:dark] px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none disabled:opacity-60";
+export const lbl = "mb-1 block text-[11px] font-semibold text-slate-300";
 
 const CURRENT_PLAN_LABEL = { enterprise: "Enterprise", standard: "Standard", premium: "Professional" };
 const fmtWib = (iso) => (iso ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }) : "-");
@@ -302,7 +302,7 @@ function ActivateDialog({ invoice, onClose, onDone }) {
               <select id="act-plan" className={field} value={asPlan} disabled={saving} onChange={(e) => { setAsPlan(e.target.value); check(email, e.target.value); }}>
                 {ACTIVATE_AS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
               </select>
-              <p className="mt-1 text-[11.5px] text-slate-500">Invoice ini paket Custom. Kuota anggota dan masa aktif tetap mengikuti invoice ({invoice.data?.seats} {invoice.data?.unit || "pengguna"}).</p>
+              <p className="mt-1 text-[11.5px] text-slate-400">Invoice ini paket Custom. Kuota anggota dan masa aktif tetap mengikuti invoice ({invoice.data?.seats} {invoice.data?.unit || "pengguna"}).</p>
             </div>
           )}
           <div>
@@ -315,10 +315,10 @@ function ActivateDialog({ invoice, onClose, onDone }) {
           </div>
 
           {loading ? (
-            <p className="text-[12.5px] text-slate-500">Memeriksa akun…</p>
+            <p className="text-[12.5px] text-slate-400">Memeriksa akun…</p>
           ) : pv && rows.length > 0 ? (
             <table className="w-full text-[12.5px]">
-              <thead><tr className="text-left text-[11px] text-slate-500"><th className="pb-1.5 font-semibold" /><th className="pb-1.5 font-semibold">Sekarang</th><th className="pb-1.5 font-semibold">Sesudah</th></tr></thead>
+              <thead><tr className="text-left text-[11px] text-slate-400"><th className="pb-1.5 font-semibold" /><th className="pb-1.5 font-semibold">Sekarang</th><th className="pb-1.5 font-semibold">Sesudah</th></tr></thead>
               <tbody className="divide-y divide-slate-800">
                 {rows.map(([k, a, b]) => (
                   <tr key={k}><td className="py-2 pr-3 text-slate-400">{k}</td><td className="py-2 pr-3 text-slate-400">{a}</td><td className="py-2 font-semibold text-slate-100">{b}</td></tr>
@@ -395,7 +395,7 @@ function SendDialog({ invoice, onClose, onChange }) {
           <div>
             <label className={lbl} htmlFor="send-to">Kirim ke email</label>
             <input id="send-to" type="email" className={field} value={to} onChange={(e) => setTo(e.target.value)} placeholder="keuangan@perusahaan.co.id" disabled={sending} />
-            <p className="mt-1 text-[11.5px] text-slate-500">Boleh berbeda dari email akun, misalnya email bagian keuangan klien. Balasan klien masuk ke email penagih, dan Anda menerima salinannya.</p>
+            <p className="mt-1 text-[11.5px] text-slate-400">Boleh berbeda dari email akun, misalnya email bagian keuangan klien. Balasan klien masuk ke email penagih, dan Anda menerima salinannya.</p>
           </div>
           <div>
             <label className={lbl} htmlFor="send-note">Pesan tambahan (opsional)</label>
@@ -445,7 +445,7 @@ function PaidDateDialog({ invoice, onClose, onSave }) {
         <div className="px-5 py-4">
           <label className={lbl} htmlFor="paid-date">Tanggal uang diterima</label>
           <input id="paid-date" type="date" className={field} value={d} max={todayWib} onChange={(e) => setD(e.target.value)} />
-          <p className="mt-1.5 text-[11.5px] text-slate-500">Sesuaikan dengan tanggal di mutasi rekening. Tanggal ini tercetak di invoice sebagai tanggal lunas.{invoice.status !== "paid" && !invoice.data?.activation ? " Setelah disimpan, jendela aktivasi paket langsung terbuka." : ""}</p>
+          <p className="mt-1.5 text-[11.5px] text-slate-400">Sesuaikan dengan tanggal di mutasi rekening. Tanggal ini tercetak di invoice sebagai tanggal lunas.{invoice.status !== "paid" && !invoice.data?.activation ? " Setelah disimpan, jendela aktivasi paket langsung terbuka." : ""}</p>
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-800 px-5 py-3">
           <button type="button" onClick={onClose} disabled={saving} className="rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50">Batal</button>
@@ -700,7 +700,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
               <input id="inv-company" list="inv-orgs" className={field} value={viewing ? viewing.company : company} onChange={(e) => setCompany(e.target.value)} placeholder="Ketik nama perusahaan klien" autoComplete="off" />
               <datalist id="inv-orgs">{orgs.map((o) => <option key={o.name} value={o.name} />)}</datalist>
               {!viewing && (
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-400">
                   {matched ? `Klien ${PLANS[matched.plan].label} ditemukan: ${matched.members} anggota terdaftar, paket & data owner terisi otomatis.` : orgs.length ? `${orgs.length} klien berbayar tersedia di daftar saran.` : "Belum ada klien berbayar - isi data secara manual."}
                 </p>
               )}
@@ -721,7 +721,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                   );
                 })()}
                 {emailCheck && (
-                  <p className={`-mt-1 text-[11.5px] ${emailCheck.status === "found" ? "text-emerald-300" : emailCheck.status === "checking" ? "text-slate-500" : "text-amber-300"}`}>
+                  <p className={`-mt-1 text-[11.5px] ${emailCheck.status === "found" ? "text-emerald-300" : emailCheck.status === "checking" ? "text-slate-400" : "text-amber-300"}`}>
                     {emailCheck.status === "checking" ? "Memeriksa akun…"
                       : emailCheck.status === "invalid" ? "Format email belum valid."
                       : emailCheck.status === "notfound" ? "Belum ada akun Nexto dengan email ini. Periksa ejaannya, atau minta klien mendaftar dengan email ini."
@@ -763,7 +763,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                   <div>
                     <label className={lbl}>Kursi gratis (owner/manager)</label>
                     <input type="number" min="0" max="5" className={field} value={freeSeats} onChange={(e) => setFreeSeats(e.target.value)} />
-                    <p className="mt-1 text-[11.5px] text-slate-500">Tidak ditagih, tetapi menambah batas anggota. Isi 1 bila owner hanya memantau lewat dashboard dan seluruh tim sudah dihitung di Jumlah.</p>
+                    <p className="mt-1 text-[11.5px] text-slate-400">Tidak ditagih, tetapi menambah batas anggota. Isi 1 bila owner hanya memantau lewat dashboard dan seluruh tim sudah dihitung di Jumlah.</p>
                   </div>
                 )}
                 <div className="grid grid-cols-[1fr_96px_110px] gap-3">
@@ -799,11 +799,11 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                 <div className="rounded-lg border border-slate-700">
                   <button type="button" onClick={() => setShowSeller((v) => !v)} className="flex w-full items-center justify-between px-3 py-2 text-[12px] font-semibold text-slate-300">
                     <span>Data penagih & penanda tangan
-                      <span className={`ml-2 font-normal ${profileSync === "error" ? "text-amber-300" : "text-slate-500"}`}>
+                      <span className={`ml-2 font-normal ${profileSync === "error" ? "text-amber-300" : "text-slate-400"}`}>
                         {profileSync === "loading" ? "Memuat…" : profileSync === "saving" ? "Menyimpan…" : profileSync === "error" ? "Belum tersimpan di server" : "Tersimpan di server"}
                       </span>
                     </span>
-                    <span className="text-slate-500">{showSeller ? "Tutup" : "Ubah"}</span>
+                    <span className="text-slate-400">{showSeller ? "Tutup" : "Ubah"}</span>
                   </button>
                   {showSeller && (
                     <div className="grid gap-2 border-t border-slate-700 p-3">
@@ -830,7 +830,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                           </div>
                         </div>
                       ))}
-                      <p className="text-[11px] text-slate-500">Foto tanda tangan di kertas putih dengan pulpen hitam/biru - latar putihnya dihapus otomatis. Semua data ini disimpan di perangkat ini; invoice yang sudah tersimpan tetap memakai tanda tangan saat invoice dibuat.</p>
+                      <p className="text-[11px] text-slate-400">Foto tanda tangan di kertas putih dengan pulpen hitam/biru - latar putihnya dihapus otomatis. Semua data ini disimpan di perangkat ini; invoice yang sudah tersimpan tetap memakai tanda tangan saat invoice dibuat.</p>
                     </div>
                   )}
                 </div>
@@ -851,7 +851,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
               <button type="button" disabled={busy} onClick={saveAndPrint} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:opacity-60">{busy ? "Menyimpan…" : "Simpan & unduh PDF"}</button>
             )}
           </div>
-          <p className="text-[11px] text-slate-500">Berkas PDF langsung terunduh.</p>
+          <p className="text-[11px] text-slate-400">Berkas PDF langsung terunduh.</p>
           </div>
         </div>
 
@@ -872,11 +872,11 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
           )}
         </div>
         {history === null ? (
-          <p className="px-4 py-4 text-[12px] text-slate-500">Memuat riwayat…</p>
+          <p className="px-4 py-4 text-[12px] text-slate-400">Memuat riwayat…</p>
         ) : historyErr ? (
           <p className="px-4 py-4 text-[12px] text-rose-300">Riwayat gagal dimuat: {historyErr}</p>
         ) : history.length === 0 ? (
-          <p className="px-4 py-4 text-[12px] text-slate-500">Belum ada invoice tersimpan. Invoice pertama akan bernomor 0001.</p>
+          <p className="px-4 py-4 text-[12px] text-slate-400">Belum ada invoice tersimpan. Invoice pertama akan bernomor 0001.</p>
         ) : (
           <div className="max-h-[360px] overflow-auto overscroll-contain">
             <table className="w-full min-w-[920px] text-[12.5px]">
@@ -891,7 +891,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                       <td className="px-4 py-2 font-mono text-slate-200">{x.number}</td>
                       <td className="max-w-[200px] px-2 py-2 text-slate-200">
                         <div className="truncate">{x.company}</div>
-                        {(() => { const sent = [...(x.email_log || [])].reverse().find((e) => e.type === "invoice" || e.type === "receipt"); return sent ? <div className="truncate text-[11px] text-slate-500" title={sent.to}>{sent.type === "receipt" ? "Bukti lunas terkirim" : "Terkirim"} {fmtShort(isoDay(new Date(sent.at)))}</div> : null; })()}
+                        {(() => { const sent = [...(x.email_log || [])].reverse().find((e) => e.type === "invoice" || e.type === "receipt"); return sent ? <div className="truncate text-[11px] text-slate-400" title={sent.to}>{sent.type === "receipt" ? "Bukti lunas terkirim" : "Terkirim"} {fmtShort(isoDay(new Date(sent.at)))}</div> : null; })()}
                       </td>
                       <td className="px-2 py-2 text-slate-400">{fmtShort(x.invoice_date)}</td>
                       <td className={`px-2 py-2 ${late ? "font-semibold text-rose-300" : "text-slate-400"}`}>{fmtShort(x.due_date)}{late ? " (lewat)" : ""}</td>
@@ -910,7 +910,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                         ) : x.status === "paid" && PLANS[x.data?.plan] ? (
                           <button type="button" onClick={() => setActivating(x)} className="rounded-md border border-violet-400/50 px-2 py-1 text-[12px] font-semibold text-violet-200 hover:bg-violet-500/15">Aktifkan paket</button>
                         ) : (
-                          <span className="text-[12px] text-slate-500">{x.status === "void" ? "-" : "Menunggu pembayaran"}</span>
+                          <span className="text-[12px] text-slate-400">{x.status === "void" ? "-" : "Menunggu pembayaran"}</span>
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">

@@ -118,7 +118,7 @@ export default function AddonTokensPanel() {
               <li key={rq.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-[12.5px]">
                 <span className="min-w-0">
                   <span className="block truncate text-slate-100"><b>{rq.tokens} token</b> dari {rq.email || "pengguna"}{rq.org_name ? <span className="text-slate-400">, {rq.org_name}</span> : null}</span>
-                  <span className="block truncate text-[11px] text-slate-500">{fmtShort(rq.created_at.slice(0, 10))}, paket {PLAN_LABEL[rq.plan] || "Gratis"}{rq.can_generate ? "" : " (belum bisa memakai Generate Leads)"}{rq.note ? `, "${rq.note}"` : ""}</span>
+                  <span className="block truncate text-[11px] text-slate-400">{fmtShort(rq.created_at.slice(0, 10))}, paket {PLAN_LABEL[rq.plan] || "Gratis"}{rq.can_generate ? "" : " (belum bisa memakai Generate Leads)"}{rq.note ? `, "${rq.note}"` : ""}</span>
                 </span>
                 <span className="flex shrink-0 gap-2">
                   <button type="button" onClick={() => processRequest(rq)} className="rounded-md bg-violet-500 px-2.5 py-1 font-semibold text-white hover:bg-violet-400">Proses</button>
@@ -137,7 +137,7 @@ export default function AddonTokensPanel() {
             <label className={lbl} htmlFor="tok-email">Email penerima</label>
             <input id="tok-email" type="email" className={field} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="pengguna@perusahaan.com" autoComplete="off" />
             {lookup && (
-              <p className={`mt-1 text-[11.5px] ${lookup.status === "found" ? (lookup.can_generate ? "text-emerald-300" : "text-amber-300") : lookup.status === "checking" ? "text-slate-500" : "text-amber-300"}`}>
+              <p className={`mt-1 text-[11.5px] ${lookup.status === "found" ? (lookup.can_generate ? "text-emerald-300" : "text-amber-300") : lookup.status === "checking" ? "text-slate-400" : "text-amber-300"}`}>
                 {lookup.status === "checking" ? "Memeriksa akun…"
                   : lookup.status === "invalid" ? "Format email belum valid."
                   : lookup.status === "notfound" ? "Belum ada akun Nexto dengan email ini."
@@ -164,7 +164,7 @@ export default function AddonTokensPanel() {
               ))}
               {expiry && <button type="button" onClick={() => setExpiry("")} className="text-[12px] text-slate-400 hover:text-slate-200">Tanpa batas</button>}
             </div>
-            <p className="mt-1 text-[11px] text-slate-500">Kosong = tidak kedaluwarsa. Token yang paling cepat kedaluwarsa dipakai lebih dulu.</p>
+            <p className="mt-1 text-[11px] text-slate-400">Kosong = tidak kedaluwarsa. Token yang paling cepat kedaluwarsa dipakai lebih dulu.</p>
           </div>
           <div>
             <label className={lbl} htmlFor="tok-note">Catatan (opsional)</label>
@@ -182,11 +182,11 @@ export default function AddonTokensPanel() {
             <input className={field} value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Cari email atau catatan" aria-label="Cari" />
           </div>
           {lots === null ? (
-            <p className="px-4 py-4 text-[12px] text-slate-500">Memuat…</p>
+            <p className="px-4 py-4 text-[12px] text-slate-400">Memuat…</p>
           ) : err ? (
             <p className="px-4 py-4 text-[12px] text-rose-300">Gagal memuat: {err}</p>
           ) : shown.length === 0 ? (
-            <p className="px-4 py-4 text-[12px] text-slate-500">{lots.length ? "Tidak ada yang cocok." : "Belum ada token yang diberikan."}</p>
+            <p className="px-4 py-4 text-[12px] text-slate-400">{lots.length ? "Tidak ada yang cocok." : "Belum ada token yang diberikan."}</p>
           ) : (
             <div className="max-h-[420px] overflow-auto overscroll-contain">
               <table className="w-full min-w-[640px] text-[12.5px]">
@@ -200,7 +200,7 @@ export default function AddonTokensPanel() {
                       <tr key={l.id}>
                         <td className="max-w-[240px] px-4 py-2">
                           <div className="truncate text-slate-200" title={l.email || ""}>{l.email || "-"}</div>
-                          <div className="truncate text-[11px] text-slate-500" title={l.note || ""}>{fmtShort(l.created_at.slice(0, 10))}{l.note ? `, ${l.note}` : ""}</div>
+                          <div className="truncate text-[11px] text-slate-400" title={l.note || ""}>{fmtShort(l.created_at.slice(0, 10))}{l.note ? `, ${l.note}` : ""}</div>
                         </td>
                         <td className="px-2 py-2 text-right font-mono text-slate-100">{l.tokens_left} / {l.tokens_total}</td>
                         <td className="px-2 py-2 text-slate-400">{l.expires_at ? fmtShort(isoDay(new Date(l.expires_at))) : "Tanpa batas"}</td>
