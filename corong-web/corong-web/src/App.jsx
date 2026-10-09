@@ -8,6 +8,7 @@ import { getIndustryDemo } from "./lib/industryDemo";
 import Auth from "./Auth";
 import PreviewLock from "./components/PreviewLock";
 import AppTour from "./components/AppTour";
+import NotificationToaster from "./components/NotificationToaster";
 import QuickVoiceNoteModal from "./components/QuickVoiceNoteModal";
 import { buildTourSteps } from "./lib/tourSteps";
 import { NextoRobotHead, NextoDarkWordmark } from "./Auth";
@@ -833,6 +834,8 @@ export default function App() {
         </div>
       )}
 
+      {session && <NotificationToaster onNavigate={setTab} />}
+
       {/* ---- TOAST CONTAINER - fixed di atas semua tab, gak ikut kepengaruh mount/unmount tab manapun ---- */}
       {toasts.length > 0 && (
         <div className="fixed z-[1200] top-4 inset-x-0 flex flex-col items-center gap-2 px-4 pointer-events-none md:top-5 md:right-5 md:left-auto md:items-end">
@@ -1476,7 +1479,8 @@ function NotificationBell({ onNavigate }) {
     const refresh = () => db.getUnreadNotificationCount().then(setUnread).catch(() => {});
     refresh();
     const id = setInterval(refresh, 45000);
-    return () => clearInterval(id);
+    window.addEventListener("nexto:notifications-changed", refresh);
+    return () => { clearInterval(id); window.removeEventListener("nexto:notifications-changed", refresh); };
   }, []);
 
   const toggleOpen = () => {

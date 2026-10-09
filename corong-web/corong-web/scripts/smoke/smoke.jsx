@@ -12,6 +12,7 @@ import VisitFollowup from "../../src/tabs/VisitFollowup";
 import Kompetitor from "../../src/tabs/Kompetitor";
 import Nex from "../../src/tabs/Nex";
 import QuickVoiceNoteModal from "../../src/components/QuickVoiceNoteModal";
+import NotificationToaster from "../../src/components/NotificationToaster";
 import Advisor from "../../src/tabs/Advisor";
 import IndustryDemo from "../../src/tabs/IndustryDemo";
 import Team from "../../src/tabs/Team";
@@ -63,6 +64,7 @@ const views = {
   team: <Team leads={leads} stages={stages} dealTransactions={demo.deals} onOpenLead={noop} canManage={canManage} />,
   kompetitor: <Kompetitor competitors={demo.competitors} onChanged={noop} />,
   nex: <Nex dummy={!ent} settings={{}} />,
+  toast: <NotificationToaster onNavigate={noop} />,
   nexpro: <QuickVoiceNoteModal leads={leads} stages={stages} settings={{}} onClose={noop} onSaved={noop} isEnterprise={ent} canManage={canManage} />,
   advisor: <Advisor leads={leads} stages={stages} onOpen={noop} dummy={!ent} demoRecs={demo.advisorRecs} />,
   industrydemo: <IndustryDemo />,
