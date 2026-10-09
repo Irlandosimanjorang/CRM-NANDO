@@ -44,6 +44,7 @@ import {
 
 import LeadModal from "../components/LeadModal";
 import DuplicateModal from "../components/DuplicateModal";
+import DeleteAllLeadsModal from "../components/DeleteAllLeadsModal";
 import ImportSummaryModal from "../components/ImportSummaryModal";
 import ManualColumnMapModal from "../components/ManualColumnMapModal";
 import AiDraftPopup from "../components/AiDraftPopup";
@@ -622,6 +623,7 @@ export default function Leads({
   // pernah beneran nge-filter apa-apa (dead code sisa refactor lama).
   // Sekarang beneran nge-filter lewat state fKpi ini.
   const [fKpi, setFKpi] = useState("");
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
 
   // Tampilan grup (7 Okt 2026): lead dengan nama grup/induk yang sama
   // dilipat jadi satu baris induk yang bisa dibuka. Pilihan disimpan per
@@ -1942,6 +1944,17 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             Kelompokkan per grup
           </button>
 
+          {canManage && leads.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteAll(true)}
+              className="text-[12px] font-medium flex items-center gap-1.5 border border-rose-200 text-rose-600 rounded-inner px-3 py-1.5 bg-white hover:bg-rose-50"
+            >
+              <Trash2 size={12} />
+              Hapus semua lead
+            </button>
+          )}
+
           <span className="text-[12px] text-slate-500 self-center ml-auto tabular-nums">
 
             {filtered.length}
@@ -2343,6 +2356,18 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
       )}
 
+
+      {showDeleteAll && (
+        <DeleteAllLeadsModal
+          count={leads.length}
+          onClose={() => setShowDeleteAll(false)}
+          onDone={(n) => {
+            setShowDeleteAll(false);
+            onChanged?.();
+            alert(`${n} lead dipindahkan ke Recycle Bin. Anda dapat memulihkannya dari Pengaturan, bagian Recycle Bin.`);
+          }}
+        />
+      )}
 
       {showDup && (
 

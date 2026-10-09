@@ -907,6 +907,13 @@ export async function deleteLead(id) {
   }
 }
 
+// Hapus semua lead organisasi (khusus owner/manager) ke Recycle Bin. Balikan: jumlah lead yang dipindahkan.
+export async function deleteAllLeads(confirmWord) {
+  const { data, error } = await supabase.rpc("soft_delete_all_leads", { p_confirm: confirmWord });
+  if (error) throw error;
+  return Number(data) || 0;
+}
+
 export async function getDeletedLeads() {
   const { data, error } = await supabase
     .from("leads")
