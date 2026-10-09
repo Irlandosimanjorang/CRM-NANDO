@@ -679,6 +679,8 @@ export default function Leads({
   // manager gak keliatan fitur ini padahal RLS-nya udah ngasih akses.
   const [members, setMembers] = useState([]);
   const [fAssignee, setFAssignee] = useState("");
+  // Nama anggota pada filter sales (untuk label dan dialog "Hapus semua lead <nama>").
+  const deleteScopeName = (() => { const m = members.find((x) => x.user_id === fAssignee); return m?.display_name || m?.name || "anggota ini"; })();
   useEffect(() => {
     if (!canManage) return;
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
@@ -2025,7 +2027,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               className="text-[12px] font-medium flex items-center gap-1.5 border border-rose-200 text-rose-600 rounded-inner px-3 py-1.5 bg-white hover:bg-rose-50"
             >
               <Trash2 size={12} />
-              Hapus semua lead
+              {fAssignee ? `Hapus semua lead ${deleteScopeName}` : "Hapus semua lead"}
             </button>
           )}
 
@@ -2445,7 +2447,9 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
       {showDeleteAll && (
         <DeleteAllLeadsModal
-          count={leads.length}
+          count={fAssignee ? leads.filter((l) => l.assigned_to === fAssignee).length : leads.length}
+          scopeName={fAssignee ? deleteScopeName : ""}
+          assigneeId={fAssignee || null}
           onClose={() => setShowDeleteAll(false)}
           onDone={(n) => {
             setShowDeleteAll(false);

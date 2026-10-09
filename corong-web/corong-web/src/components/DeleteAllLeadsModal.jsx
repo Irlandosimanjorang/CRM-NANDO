@@ -8,7 +8,8 @@ import * as db from "../lib/db";
 const WORD = "HAPUS SEMUA";
 
 // request = true (marketing Enterprise): bukan menghapus, tetapi mengirim permintaan persetujuan ke owner/manager.
-export default function DeleteAllLeadsModal({ count, onClose, onDone, request = false }) {
+// scopeName + assigneeId: hanya lead milik satu anggota (mengikuti filter sales di tab Leads); kosong = seluruh tim.
+export default function DeleteAllLeadsModal({ count, onClose, onDone, request = false, scopeName = "", assigneeId = null }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -27,7 +28,7 @@ export default function DeleteAllLeadsModal({ count, onClose, onDone, request = 
     setBusy(true); setErr("");
     try {
       if (request) { const r = await db.requestDeleteAllMyLeads(); onDone?.(r?.count ?? count); }
-      else { const n = await db.deleteAllLeads(WORD); onDone?.(n); }
+      else { const n = await db.deleteAllLeads(WORD, assigneeId); onDone?.(n); }
     } catch (e) {
       setErr(String(e?.message || e));
       setBusy(false);
@@ -41,18 +42,18 @@ export default function DeleteAllLeadsModal({ count, onClose, onDone, request = 
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600"><AlertTriangle size={18} /></span>
           <div>
-            <h2 className="text-[16px] font-bold tracking-[-0.02em] text-ink">{request ? "Minta hapus semua lead saya" : "Hapus semua lead"}</h2>
+            <h2 className="text-[16px] font-bold tracking-[-0.02em] text-ink">{request ? "Minta hapus semua lead saya" : scopeName ? `Hapus semua lead ${scopeName}` : "Hapus semua lead"}</h2>
             <p className="mt-1 text-[13px] leading-relaxed text-slate-600">
               {request ? (
                 <><b className="text-ink">{count} lead</b> milik Anda akan dipindahkan ke Recycle Bin setelah owner atau manager menyetujui. Sebelum disetujui, lead Anda tidak berubah.</>
               ) : (
-                <><b className="text-ink">{count} lead</b> milik seluruh tim akan dipindahkan ke Recycle Bin. Lead di sana masih bisa dipulihkan, dan baru terhapus permanen bila Anda mengosongkan Recycle Bin.</>
+                <><b className="text-ink">{count} lead</b> {scopeName ? <>milik <b className="text-ink">{scopeName}</b></> : "milik seluruh tim"} akan dipindahkan ke Recycle Bin. Lead di sana masih bisa dipulihkan, dan baru terhapus permanen bila Anda mengosongkan Recycle Bin.</>
               )}
             </p>
           </div>
         </div>
         <ul className="mt-4 space-y-1 rounded-inner bg-slate-50 px-4 py-3 text-[12px] text-slate-600">
-          {request ? <li>Hanya lead yang Anda pegang. Lead anggota lain tidak ikut.</li> : <li>Berlaku untuk semua anggota tim, bukan hanya lead Anda.</li>}
+          {request ? <li>Hanya lead yang Anda pegang. Lead anggota lain tidak ikut.</li> : scopeName ? <li>Hanya lead yang dipegang {scopeName}. Lead anggota tim lainnya tidak ikut terhapus.</li> : <li>Berlaku untuk semua anggota tim, bukan hanya lead Anda.</li>}
           <li>Catatan progres, percakapan, dan riwayat lead tersimpan bersama lead di Recycle Bin.</li>
           <li>Tindakan ini tercatat di aktivitas tim.</li>
         </ul>
