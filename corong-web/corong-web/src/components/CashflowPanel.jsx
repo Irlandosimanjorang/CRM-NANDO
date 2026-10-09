@@ -84,8 +84,9 @@ function Statement({ rows, foot }) {
 }
 
 // Bar status saldo token Anthropic, diperbarui tiap 10 detik (dihentikan saat tab tidak terlihat).
-function LiveBalance({ kurs, onNeedSetup }) {
+export function LiveBalance({ kurs, onNeedSetup, compact, children, reloadKey, setupWhere = "pada isian di bawah" }) {
   const [b, setB] = useState(null);
+  const [detail, setDetail] = useState(!compact);
   const [err, setErr] = useState("");
   const [now, setNow] = useState(Date.now());
   const [fresh, setFresh] = useState(new Set());
@@ -111,7 +112,7 @@ function LiveBalance({ kurs, onNeedSetup }) {
     const t = setInterval(pull, LIVE_MS);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => { clearInterval(t); clearInterval(tick); };
-  }, [pull]);
+  }, [pull, reloadKey]);
 
   if (!b) return <div className={`${BLOCK} p-4 text-[12px] font-mono text-slate-300 flex items-center gap-2`}>{err ? err : <><Loader2 className="w-3.5 h-3.5 animate-spin" /> memuat saldo token...</>}</div>;
 
@@ -131,11 +132,12 @@ function LiveBalance({ kurs, onNeedSetup }) {
         </div>
         <span className="text-[10.5px] font-mono text-slate-400">diperbarui {Math.max(0, Math.round((now - lastOk.current) / 1000))} dtk lalu · tiap {LIVE_MS / 1000} dtk</span>
       </div>
+      {children}
 
       {!b.has_checkpoint ? (
         <div className="text-[12px] font-mono text-slate-200 leading-relaxed">
-          Saldo belum dapat dihitung karena saldo patokan belum diisi. Buka Console Anthropic, lihat kredit Anda, lalu isi tanggal dan saldo patokan di bagian Pengaturan.
-          <div className="mt-2"><button onClick={onNeedSetup} className={btnAdd}>Isi saldo patokan</button></div>
+          Saldo belum dapat dihitung karena saldo patokan belum diisi. Buka Console Anthropic, lihat kredit Anda, lalu isi tanggal dan saldonya {setupWhere}.
+          {onNeedSetup && <div className="mt-2"><button onClick={onNeedSetup} className={btnAdd}>Isi saldo patokan</button></div>}
         </div>
       ) : (
         <>
@@ -165,14 +167,19 @@ function LiveBalance({ kurs, onNeedSetup }) {
         </>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {compact && (
+        <button onClick={() => setDetail((v) => !v)} className="justify-self-start text-[11px] font-mono font-bold text-slate-200 border border-white/[0.25] rounded-lg px-2.5 py-1 hover:bg-[#182033]">
+          {detail ? "Sembunyikan detail" : "Lihat detail pemakaian"}
+        </button>
+      )}
+      {detail && <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Tile label="Pakai hari ini" value={usd(b.spent_today_usd)} sub={idr(b.spent_today_usd * kurs)} accent="#f9a8d4" />
         <Tile label="Pakai 1 jam terakhir" value={usd(b.spent_last_hour_usd)} sub={idr(b.spent_last_hour_usd * kurs)} />
         <Tile label="Rata-rata 7 hari" value={`${usd(b.burn_usd_per_day)}/hari`} sub={idr(b.burn_usd_per_day * kurs) + "/hari"} />
         <Tile label="Pemakaian terakhir" value={b.last_usage_at ? ago(b.last_usage_at, now) : "-"} sub={b.recent?.[0]?.feature || "belum ada"} />
-      </div>
+      </div>}
 
-      {b.recent?.length > 0 && (
+      {detail && b.recent?.length > 0 && (
         <div className="rounded-lg bg-[#0a0f18] border border-white/[0.12] p-2 grid gap-0.5">
           <div className="text-[10px] font-mono uppercase tracking-wide text-slate-400 px-1">Pemakaian terbaru</div>
           {b.recent.map((e, i) => {
@@ -205,7 +212,6 @@ export default function CashflowPanel() {
   const [notice, setNotice] = useState(null); // { ok, text }
   const [newTop, setNewTop] = useState({ date: isoDay(new Date()), amount_usd: "", amount_idr: "", note: "" });
   const [newCost, setNewCost] = useState({ name: "", amount: "", currency: "USD", kind: "hpp" });
-  const settingsRef = useRef(null);
 
   const load = useCallback(async (silent, per) => {
     if (!silent) setLoading(true);
@@ -252,7 +258,6 @@ export default function CashflowPanel() {
     persist({ ...form, costs: [...form.costs, { id: uid(), name: newCost.name.trim(), currency: newCost.currency, amount, kind: newCost.kind }] }, "Biaya tetap ditambahkan.");
     setNewCost({ ...newCost, name: "", amount: "" });
   };
-  const goSettings = () => settingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   if (err && !data) return <div className="text-[12px] text-rose-300 font-mono">{err}</div>;
   if (!data || !form) return <div className="flex items-center gap-2 text-[12px] text-slate-300 font-mono"><Loader2 className="w-3.5 h-3.5 animate-spin" /> memuat cash flow...</div>;
@@ -325,7 +330,7 @@ export default function CashflowPanel() {
 
   return (
     <div className="grid gap-5 min-w-0">
-      <LiveBalance kurs={kurs} onNeedSetup={goSettings} />
+      <LiveBalance kurs={kurs} setupWhere="di bar saldo pada layar utama Command Center (di atas kartu-kartu)" />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
@@ -432,7 +437,6 @@ export default function CashflowPanel() {
         </div>
       </Section>
 
-      <div ref={settingsRef} />
       <Section title="Pengaturan" hint="top-up dan biaya tetap langsung tersimpan saat ditambah atau dihapus">
         <div className={`${BLOCK} p-3 grid gap-5`}>
           <div className="grid gap-2">
@@ -448,8 +452,6 @@ export default function CashflowPanel() {
               <div><label className={lab}>Jatah token (% kontrak)</label><input type="number" min="1" max="100" className={`${inp} w-full`} value={form.token_pct} onChange={(e) => edit({ token_pct: e.target.value })} /></div>
               <div><label className={lab}>Harga perkiraan Standard (Rp/bln)</label><input type="number" className={`${inp} w-full`} value={form.sub_price?.standard ?? ""} onChange={(e) => edit({ sub_price: { ...form.sub_price, standard: e.target.value } })} /></div>
               <div><label className={lab}>Harga perkiraan Professional (Rp/bln)</label><input type="number" className={`${inp} w-full`} value={form.sub_price?.professional ?? ""} onChange={(e) => edit({ sub_price: { ...form.sub_price, professional: e.target.value } })} /></div>
-              <div><label className={lab}>Tanggal saldo patokan Anthropic</label><input type="date" style={DARK} className={`${inp} w-full`} value={form.anthropic.checkpoint_date || ""} onChange={(e) => edit({ anthropic: { ...form.anthropic, checkpoint_date: e.target.value || null } })} /></div>
-              <div><label className={lab}>Saldo patokan Anthropic (USD)</label><input type="number" step="0.01" className={`${inp} w-full`} value={form.anthropic.balance_usd} onChange={(e) => edit({ anthropic: { ...form.anthropic, balance_usd: e.target.value } })} /></div>
               <div><label className={lab}>Saldo kas awal: bulan</label><input type="month" style={DARK} className={`${inp} w-full`} value={form.cash_opening?.month || ""} onChange={(e) => edit({ cash_opening: { ...(form.cash_opening || {}), month: e.target.value || null } })} /></div>
               <div><label className={lab}>Saldo kas awal (Rp)</label><input type="number" className={`${inp} w-full`} value={form.cash_opening?.amount_idr ?? 0} onChange={(e) => edit({ cash_opening: { ...(form.cash_opening || {}), amount_idr: e.target.value } })} /></div>
             </div>
@@ -460,7 +462,7 @@ export default function CashflowPanel() {
               {dirty && <span className="text-[11px] text-amber-300 font-mono">Ada perubahan belum disimpan.</span>}
             </div>
             <div className="text-[10.5px] text-slate-400 font-mono leading-relaxed">
-              Saldo patokan = kredit di Console Anthropic pada awal hari tanggal tersebut. Saldo kas awal = saldo rekening bisnis pada awal bulan yang dipilih; laporan kas dihitung dari situ.
+              Saldo kas awal = saldo rekening bisnis pada awal bulan yang dipilih; laporan kas dihitung dari situ. Saldo patokan Anthropic diisi di bar saldo pada layar utama Command Center.
             </div>
           </div>
 
@@ -511,6 +513,90 @@ export default function CashflowPanel() {
       {notice && (
         <div className={`sticky bottom-2 z-20 rounded-lg border px-3 py-2.5 text-[12px] font-mono font-bold shadow-xl ${notice.ok ? "border-emerald-400 bg-emerald-950 text-emerald-100" : "border-rose-400 bg-rose-950 text-rose-100"}`}>{notice.text}</div>
       )}
+    </div>
+  );
+}
+
+// Bar saldo token Anthropic di layar utama Command Center, lengkap dengan isian saldo patokan dan top-up
+// (permintaan Nando 10 Okt 2026: kolom saldo harus ada di Command Center, bukan hanya di dalam kartu CASH FLOW).
+// Menyimpan lewat admin-cashflow: ambil pengaturan terbaru, ubah bagian Anthropic saja, lalu simpan.
+export function AnthropicStrip() {
+  const [kurs, setKurs] = useState(0);
+  const [cp, setCp] = useState({ date: isoDay(new Date()), usd: "" });
+  const [top, setTop] = useState({ date: isoDay(new Date()), usd: "", idr: "" });
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [hasCp, setHasCp] = useState(null);
+
+  // Kurs dan status saldo patokan diambil sekali (laporan lengkap hanya dimuat saat kartu CASH FLOW dibuka).
+  useEffect(() => {
+    let alive = true;
+    db.adminCashflow("get").then((r) => {
+      if (!alive) return;
+      setKurs(Number(r.kurs) || 0); setHasCp(!!r.settings?.anthropic?.checkpoint_date);
+      if (r.settings?.anthropic?.checkpoint_date) setCp({ date: r.settings.anthropic.checkpoint_date, usd: String(r.settings.anthropic.balance_usd) });
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [reloadKey]);
+
+  const mutate = async (fn, okText) => {
+    setBusy(true); setMsg(null);
+    try {
+      const cur = (await db.adminCashflow("get")).settings;
+      const next = fn(cur);
+      await db.adminCashflow("save", { settings: next });
+      setMsg({ ok: true, text: okText });
+      setReloadKey((k) => k + 1);
+    } catch (e) { setMsg({ ok: false, text: "Gagal menyimpan: " + e.message }); }
+    finally { setBusy(false); }
+  };
+  const saveCp = (e) => {
+    e.preventDefault();
+    const usdVal = Number(cp.usd);
+    if (!cp.date) return setMsg({ ok: false, text: "Pilih tanggal saldo patokan." });
+    if (cp.usd === "" || !(usdVal >= 0)) return setMsg({ ok: false, text: "Isi saldo kredit Anthropic dalam USD (boleh 0)." });
+    mutate((c) => ({ ...c, anthropic: { checkpoint_date: cp.date, balance_usd: usdVal } }), "Saldo patokan disimpan. Bar di atas sudah memakai saldo ini.");
+  };
+  const addTop = (e) => {
+    e.preventDefault();
+    const usdVal = Number(top.usd);
+    if (!top.date) return setMsg({ ok: false, text: "Pilih tanggal top-up." });
+    if (!(usdVal > 0)) return setMsg({ ok: false, text: "Isi jumlah top-up dalam USD (lebih dari 0)." });
+    const paid = top.idr === "" ? null : Number(top.idr);
+    mutate((c) => ({ ...c, topups: [...c.topups, { id: uid(), date: top.date, amount_usd: usdVal, amount_idr: paid > 0 ? paid : null, note: "" }] }), "Top-up ditambahkan ke saldo.");
+    setTop({ ...top, usd: "", idr: "" });
+  };
+
+  const form = (
+    <div className="rounded-lg bg-[#0a0f18] border border-white/[0.15] p-3 grid gap-3">
+      <form onSubmit={saveCp} className="grid grid-cols-2 sm:grid-cols-[170px_150px_auto] gap-2 items-end">
+        <div><label className={lab}>Tanggal saldo patokan</label><input type="date" style={DARK} className={`${inp} w-full`} value={cp.date} onChange={(e) => setCp({ ...cp, date: e.target.value })} /></div>
+        <div><label className={lab}>Saldo di Console (USD)</label><input type="number" step="0.01" min="0" placeholder="mis. 50" className={`${inp} w-full`} value={cp.usd} onChange={(e) => setCp({ ...cp, usd: e.target.value })} /></div>
+        <button type="submit" disabled={busy} className={`${btnAdd} col-span-2 sm:col-span-1`}>{busy && <Loader2 className="w-3 h-3 animate-spin" />} Simpan saldo patokan</button>
+      </form>
+      <div className="text-[10.5px] text-slate-400 font-mono -mt-1">Lihat kredit Anda di Console Anthropic, isi angkanya dan tanggal hari ini. Setelah itu bar menghitung sisa saldo otomatis dari pemakaian.</div>
+      <form onSubmit={addTop} className="grid grid-cols-2 sm:grid-cols-[150px_120px_160px_auto] gap-2 items-end border-t border-white/[0.12] pt-3">
+        <div><label className={lab}>Tanggal top-up</label><input type="date" style={DARK} className={`${inp} w-full`} value={top.date} onChange={(e) => setTop({ ...top, date: e.target.value })} /></div>
+        <div><label className={lab}>Jumlah (USD)</label><input type="number" step="0.01" min="0" placeholder="50" className={`${inp} w-full`} value={top.usd} onChange={(e) => setTop({ ...top, usd: e.target.value })} /></div>
+        <div><label className={lab}>Dibayar (Rp, opsional)</label><input type="number" min="0" placeholder="mis. 897500" className={`${inp} w-full`} value={top.idr} onChange={(e) => setTop({ ...top, idr: e.target.value })} /></div>
+        <button type="submit" disabled={busy} className={`${btnAdd} col-span-2 sm:col-span-1`}><Plus className="w-3.5 h-3.5" /> Tambah top-up</button>
+      </form>
+      {msg && <div className={`rounded-lg border px-3 py-2 text-[12px] font-mono font-bold ${msg.ok ? "border-emerald-400 bg-emerald-950 text-emerald-100" : "border-rose-400 bg-rose-950 text-rose-100"}`}>{msg.text}</div>}
+    </div>
+  );
+
+  return (
+    <div className="w-full max-w-6xl mb-4">
+      <LiveBalance kurs={kurs || 17700} compact reloadKey={reloadKey}>
+        {hasCp === false || open ? form : null}
+        {hasCp !== false && (
+          <button onClick={() => setOpen((v) => !v)} className="justify-self-start text-[11px] font-mono font-bold text-emerald-100 border border-emerald-400/60 bg-emerald-500/20 rounded-lg px-2.5 py-1 hover:bg-emerald-500/30">
+            {open ? "Tutup isian saldo" : "Atur saldo patokan / tambah top-up"}
+          </button>
+        )}
+      </LiveBalance>
     </div>
   );
 }

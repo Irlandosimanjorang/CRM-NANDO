@@ -7,7 +7,7 @@ import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
 import QuotationPanel from "../components/QuotationPanel";
 import OrgFeaturesPanel from "../components/OrgFeaturesPanel";
 import AddonTokensPanel from "../components/AddonTokensPanel";
-import CashflowPanel from "../components/CashflowPanel";
+import CashflowPanel, { AnthropicStrip } from "../components/CashflowPanel";
 
 // Dashboard admin platform - versi "mission control" - CUMA keliatan buat
 // email admin (dicek di App.jsx + server-side di admin-status/admin-trigger).
@@ -1505,6 +1505,7 @@ export default function AdminDashboard() {
           WebkitMaskImage: "radial-gradient(circle at 50% 50%, rgba(0,0,0,.9), transparent 75%)",
         }}
       />
+      <AnthropicStrip />
       <AgentGridMap
         employees={employees}
         selectedKey={selectedEmployeeKey}
