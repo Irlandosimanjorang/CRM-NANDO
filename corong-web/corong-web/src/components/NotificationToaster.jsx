@@ -8,6 +8,7 @@ import * as db from "../lib/db";
 const POLL_MS = 15000;
 const SHOW_MS = 15000;
 const FRESH_MS = 10 * 60 * 1000; // notifikasi yang lebih tua dari ini tidak dimunculkan sebagai pop up
+const OPEN_FRESH_MS = 2 * 60 * 1000; // saat aplikasi baru dibuka, hanya yang belum dibaca dan berumur kurang dari ini yang ikut muncul
 
 // Peramban memblokir bunyi sebelum pengguna menyentuh halaman, jadi satu AudioContext dibuat dan "dibuka" pada sentuhan/klik/tombol
 // pertama, lalu dipakai ulang untuk setiap notifikasi. Bunyi: dua nada pendek (chime) yang cukup terdengar; di HP ditambah getar.
@@ -58,8 +59,9 @@ export default function NotificationToaster({ onNavigate }) {
       try {
         const rows = await db.getMyNotifications(10);
         if (!alive) return;
-        if (seen.current === null) { seen.current = new Set(rows.map((r) => r.id)); return; }
-        const fresh = rows.filter((r) => !seen.current.has(r.id));
+        const first = seen.current === null;
+        if (first) seen.current = new Set();
+        const fresh = rows.filter((r) => !seen.current.has(r.id) && (!first || (!r.read_at && Date.now() - new Date(r.created_at).getTime() < OPEN_FRESH_MS)));
         rows.forEach((r) => seen.current.add(r.id));
         const show = fresh.filter((r) => !r.read_at && Date.now() - new Date(r.created_at).getTime() < FRESH_MS).slice(0, 3);
         if (fresh.length) window.dispatchEvent(new Event("nexto:notifications-changed"));
