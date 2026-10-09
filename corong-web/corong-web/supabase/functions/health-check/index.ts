@@ -576,6 +576,25 @@ const CHECK_DEFS = [
   { key: "anthropic_balance", label: "Saldo Token Anthropic", desc: "Sisa kredit token Anthropic cukup untuk pemakaian ke depan (peringatan sebelum habis, dengan saran jumlah top-up)" },
 ];
 
+// PENCATATAN BIAYA (10 Okt 2026, permintaan Nando): ringkasan AI untuk Telegram dicatat ke ai_usage (feature "health-check")
+// supaya masuk hitungan Cash Flow. Gagal mencatat TIDAK boleh mengganggu pengiriman alert.
+const SONNET_PRICE = [2, 10, 2.5, 0.2];
+async function logAiUsage(model, u) {
+  try {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const row = {
+      feature: "health-check", user_id: null, provider: "anthropic", model: model || "claude-sonnet-5-5",
+      input_tokens: u?.input_tokens || 0, output_tokens: u?.output_tokens || 0,
+      cache_write_tokens: u?.cache_creation_input_tokens || 0, cache_read_tokens: u?.cache_read_input_tokens || 0,
+    };
+    row.cost_usd = (row.input_tokens * SONNET_PRICE[0] + row.output_tokens * SONNET_PRICE[1] + row.cache_write_tokens * SONNET_PRICE[2] + row.cache_read_tokens * SONNET_PRICE[3]) / 1e6;
+    const { error } = await admin.from("ai_usage").insert(row);
+    if (error) console.log("[ai-usage] simpan gagal:", error.message);
+  } catch (e) {
+    console.log("[ai-usage] exception:", String(e));
+  }
+}
+
 async function summarizeIssues(issues) {
   const prompt = `Kamu asisten teknis buat developer non-programmer yang jalanin CRM bernama Nexto (dibangun pake Supabase + React). Ini beberapa temuan mentah dari health check otomatis sistem:
 
@@ -600,6 +619,7 @@ BATAS KETAT: maksimal 15 baris, DAN maksimal 3000 karakter total - kalau temuann
     if (!resp.ok) return issues.join("\n\n");
     const dat = await resp.json();
     console.log("[health-check] USAGE:", JSON.stringify(dat.usage), "issues_count:", issues.length, "prompt_chars:", prompt.length);
+    await logAiUsage(dat.model, dat.usage);
     return (dat.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n") || issues.join("\n\n");
   } catch (_) {
     return issues.join("\n\n");
