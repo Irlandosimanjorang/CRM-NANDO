@@ -505,6 +505,51 @@ async function computeAiUsageSnapshot(admin) {
   };
 }
 
+// === SALDO TOKEN ANTHROPIC (10 Okt 2026, permintaan Nando: "alert dari ATOM") ===
+// Saldo kredit Anthropic tidak bisa dibaca lewat API, jadi dihitung seperti kartu CASH FLOW di Command Center:
+// saldo patokan (admin_settings "cashflow") + top-up sejak patokan - biaya AI di ai_usage (RPC admin_ai_cost_between).
+// Status: bahaya bila habis/ sisa < 15% / cukup < 7 hari; waspada bila sisa < 40% / cukup < 21 hari. Saldo patokan belum
+// diisi = tidak diperingatkan. Pesan Telegram dibatasi (tokenAlertDue) supaya tidak berulang tiap 8 jam.
+let lastTokenStatus = null;
+async function checkAnthropicBalance(admin) {
+  lastTokenStatus = null;
+  const { data: st } = await admin.from("admin_settings").select("value").eq("key", "cashflow").maybeSingle();
+  const cfg = st?.value || {};
+  const cp = cfg.anthropic?.checkpoint_date;
+  if (!cp || !/^\d{4}-\d{2}-\d{2}$/.test(cp)) return null;
+  const nowIso = new Date(Date.now() + 60000).toISOString();
+  const cost = async (fromIso) => {
+    const { data, error } = await admin.rpc("admin_ai_cost_between", { p_from: fromIso, p_to: nowIso });
+    if (error) throw error;
+    return Number(data) || 0;
+  };
+  const consumed = await cost(new Date(`${cp}T00:00:00+07:00`).toISOString());
+  const week = await cost(new Date(Date.now() - 7 * 86400000).toISOString());
+  const topups = (cfg.topups || []).filter((t) => t.date >= cp).reduce((a, t) => a + (Number(t.amount_usd) || 0), 0);
+  const funded = (Number(cfg.anthropic.balance_usd) || 0) + topups;
+  const remaining = funded - consumed;
+  const pctLeft = funded > 0 ? Math.max(0, remaining) / funded * 100 : 0;
+  const burn = week / 7;
+  const days = burn > 0 ? Math.floor(Math.max(0, remaining) / burn) : null;
+  const status = remaining <= 0 || pctLeft < 15 || (days !== null && days < 7) ? "danger"
+    : pctLeft < 40 || (days !== null && days < 21) ? "warn" : "ok";
+  if (status === "ok") return null;
+  lastTokenStatus = status;
+  const need = burn * 30 * 1.3;
+  const rec = Math.max(0, Math.ceil((need - remaining) / 5 - 1e-9) * 5);
+  return `Saldo token Anthropic ${status === "danger" ? "HAMPIR HABIS" : "mulai menipis"}: sisa $${remaining.toFixed(2)} (${pctLeft.toFixed(0)}% dari $${funded.toFixed(2)})${days !== null ? `, cukup sekitar ${days} hari` : ""}. Disarankan top up sekitar $${rec} (rata-rata pemakaian $${burn.toFixed(2)} per hari). Kalau saldo habis semua fitur AI Nexto berhenti. Rincian di Command Center, kartu CASH FLOW.`;
+}
+// Alert Telegram hanya dikirim bila status memburuk, atau sudah 12 jam (bahaya) / 24 jam (waspada) sejak alert terakhir.
+async function tokenAlertDue(admin, status) {
+  const { data } = await admin.from("admin_settings").select("value").eq("key", "anthropic_alert").maybeSingle();
+  const last = data?.value;
+  const rank = { warn: 1, danger: 2 };
+  const hours = last?.at ? (Date.now() - new Date(last.at).getTime()) / 3600000 : 1e9;
+  const due = !last || (rank[status] || 0) > (rank[last.status] || 0) || hours >= (status === "danger" ? 12 : 24);
+  if (due) await admin.from("admin_settings").upsert({ key: "anthropic_alert", value: { status, at: new Date().toISOString() }, updated_at: new Date().toISOString() });
+  return due;
+}
+
 const CHECK_DEFS = [
   { key: "daily_digest", label: "Daily Digest", desc: "Ringkasan & rekomendasi lead harian ngirim ke user tiap pagi" },
   { key: "embedding_backlog", label: "Backlog Vector Memory", desc: "Catatan progress yang belum diproses jadi memori semantik" },
@@ -528,6 +573,7 @@ const CHECK_DEFS = [
   { key: "gcal_oauth_abandoned", label: "Alur Connect Google Calendar", desc: "Percobaan connect Google Calendar berhasil sampai selesai, gak macet di tengah" },
   { key: "write_selftest", label: "Uji Simpan Data & RLS (Canary)", desc: "Uji otomatis jalur simpan kritis (daftar, tambah/edit lead, ganti tahap, progress, deal) + uji RLS sebagai user biasa & isolasi antar-organisasi - selalu di-rollback, gak ninggalin data" },
   { key: "client_errors", label: "Error dari Aplikasi", desc: "Pesan 'Gagal ...' yang dialami user asli di app - error yang berulang = kemungkinan bug beneran" },
+  { key: "anthropic_balance", label: "Saldo Token Anthropic", desc: "Sisa kredit token Anthropic cukup untuk pemakaian ke depan (peringatan sebelum habis, dengan saran jumlah top-up)" },
 ];
 
 async function summarizeIssues(issues) {
@@ -540,7 +586,7 @@ Tulis pesan Telegram (Bahasa Indonesia santai) yang:
 - Kasih saran KONKRET langkah pertama yang perlu dicek (nama tab/menu di Supabase Dashboard yang relevan)
 - JANGAN nyaranin eksekusi perbaikan apapun tanpa manusia liat dulu - kamu cuma boleh kasih saran "cek ini", bukan "saya udah benerin" atau "lakukan X"
 - Kalau ada lebih dari 1 temuan, urutin dari yang paling penting/mendesak duluan
-- Kalau ada temuan yang nyangkut KEAMANAN (RLS mati, secret ilang, lonjakan hapus data, KEBOCORAN data antar-organisasi) ATAU DUIT (pembayaran nyangkut/nominal gak dikenali) ATAU USER GAK BISA NYIMPAN DATA (uji simpan data gagal), taro itu PALING ATAS, tandain jelas - buat temuan soal pembayaran, SEBUTIN JELAS nama/email/nomor WA customer-nya (JANGAN diringkas/dihilangkan) biar bisa langsung dipake buat hubungin orangnya; buat temuan uji simpan data, SEBUTIN persis nama jalur & pesan error-nya
+- Kalau ada temuan yang nyangkut KEAMANAN (RLS mati, secret ilang, lonjakan hapus data, KEBOCORAN data antar-organisasi) ATAU DUIT (pembayaran nyangkut/nominal gak dikenali) ATAU SALDO TOKEN ANTHROPIC HABIS/MENIPIS (semua fitur AI berhenti kalau habis - sebutkan sisa saldo dan saran top-up persis seperti di temuan) ATAU USER GAK BISA NYIMPAN DATA (uji simpan data gagal), taro itu PALING ATAS, tandain jelas - buat temuan soal pembayaran, SEBUTIN JELAS nama/email/nomor WA customer-nya (JANGAN diringkas/dihilangkan) biar bisa langsung dipake buat hubungin orangnya; buat temuan uji simpan data, SEBUTIN persis nama jalur & pesan error-nya
 - JANGAN pake tanda bintang (*) atau underscore (_) buat format tebal/miring - tulis PLAIN TEXT doang, gak ada markdown sama sekali (nama variable/secret di temuan sering ada underscore-nya, kalau kepake buat markdown formatting Telegram bakal GAGAL PARSE dan pesannya gak kekirim sama sekali)
 
 BATAS KETAT: maksimal 15 baris, DAN maksimal 3000 karakter total - kalau temuannya banyak, ringkas per poin (gak usah sepanjang penjelasan yang bisa ditulis), JANGAN sampai kepotong di tengah kalimat. Jangan pakai markdown heading, langsung ke isi.`;
@@ -604,6 +650,7 @@ Deno.serve(async (req) => {
       checkGcalOauthAbandoned(admin),
       checkWritePathSelftest(admin),
       checkClientErrors(admin),
+      checkAnthropicBalance(admin).catch((e) => `Pengecekan saldo token Anthropic gagal dijalankan: ${String(e).slice(0, 200)}`),
     ]);
     const checksDetail = CHECK_DEFS.map((def, i) => ({
       key: def.key,
@@ -612,7 +659,15 @@ Deno.serve(async (req) => {
       ok: checkResults[i] === null,
       detail: checkResults[i] || "Aman, gak ada masalah terdeteksi.",
     }));
-    const issues = checkResults.filter(Boolean);
+    let issues = checkResults.filter(Boolean);
+    const tokenText = checkResults[CHECK_DEFS.findIndex((d) => d.key === "anthropic_balance")];
+    if (tokenText && lastTokenStatus) {
+      // Tetap tampil di kartu ATOM, tapi Telegram hanya bila tokenAlertDue.
+      try { if (!(await tokenAlertDue(admin, lastTokenStatus))) issues = issues.filter((t) => t !== tokenText); }
+      catch (e) { console.log("[health-check] tokenAlertDue gagal:", String(e)); }
+    } else if (!tokenText) {
+      try { await admin.from("admin_settings").delete().eq("key", "anthropic_alert"); } catch (_) { /* abaikan */ }
+    }
 
     let aiUsageSnapshot = { flaggedCount: null, criticalCount: 0, issueText: null };
     try {
@@ -627,8 +682,9 @@ Deno.serve(async (req) => {
     }
 
     if (issues.length === 0) {
-      console.log("[health-check] Semua sinyal normal.");
-      await admin.from("health_check_runs").insert({ status: "sehat", issue_count: 0, summary: "Semua sinyal normal.", checks_detail: checksDetail, ai_flagged_count: aiUsageSnapshot.flaggedCount });
+      console.log("[health-check] Tidak ada temuan baru untuk dikirim.");
+      const tokenOnly = !!(tokenText && lastTokenStatus);
+      await admin.from("health_check_runs").insert({ status: tokenOnly ? "ada_temuan" : "sehat", issue_count: tokenOnly ? 1 : 0, summary: tokenOnly ? tokenText : "Semua sinyal normal.", checks_detail: checksDetail, ai_flagged_count: aiUsageSnapshot.flaggedCount });
       return new Response(JSON.stringify({ ok: true, status: "sehat", issues: [] }), { headers: { "Content-Type": "application/json" } });
     }
 
