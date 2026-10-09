@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Loader2, RefreshCw, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, RefreshCw, Plus, Trash2, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import * as db from "../lib/db";
 import { isoDay, fmtShort } from "./EnterpriseInvoicePanel";
 
@@ -201,11 +201,53 @@ export function LiveBalance({ kurs, onNeedSetup, compact, children, reloadKey, s
   );
 }
 
+// Rencana top-up token (10 Okt 2026, permintaan Nando): dari jumlah pelanggan berbayar dan pemakaian nyata, berapa dolar yang
+// sebaiknya di-top up, dibandingkan dengan saldo yang ada, plus status aman/waspada/bahaya. Dihitung di server (planner).
+function TopupPlanner({ pl, kurs, onNeedSetup }) {
+  const tone = { danger: { c: "#fb7185", t: "SEGERA TOP UP" }, warn: { c: "#fbbf24", t: "WASPADA" }, ok: { c: "#34d399", t: "AMAN" }, unset: { c: "#cbd5e1", t: "BELUM DIATUR" } }[pl.status] || { c: "#cbd5e1", t: "-" };
+  const head = pl.status === "unset"
+    ? "Isi saldo patokan Anthropic dulu supaya sisa saldo bisa dipantau dan rekomendasi top-up akurat."
+    : pl.remaining_usd <= 0
+      ? "Saldo token sudah habis."
+      : `Saldo ${usd(pl.remaining_usd)} cukup sekitar ${pl.runway_days ?? "-"} hari${pl.empty_date ? ` (sampai ${fmtShort(pl.empty_date)})` : ""}.`;
+  const act = pl.status === "unset"
+    ? `Perkiraan kebutuhan bulan ini ${usd(pl.recommended_topup_usd)}.`
+    : pl.recommended_topup_usd > 0
+      ? `Disarankan top up ${usd(pl.recommended_topup_usd)} (sekitar ${idr(pl.recommended_topup_usd * kurs)}) sekarang.`
+      : "Belum perlu top up.";
+  return (
+    <div className="rounded-xl border-2 p-4 grid gap-3 bg-[#111826]" style={{ borderColor: tone.c }}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[12px] font-bold uppercase tracking-wider text-slate-100">Rencana top-up token</span>
+        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded border" style={{ color: tone.c, borderColor: tone.c }}>{tone.t}</span>
+      </div>
+      <div>
+        <div className="text-[15px] font-bold text-white leading-snug">{head}</div>
+        <div className="text-[15px] font-bold leading-snug mt-0.5" style={{ color: tone.c }}>{act}</div>
+        {pl.status === "unset" && onNeedSetup && <div className="mt-2"><button onClick={onNeedSetup} className={btnAdd}>Isi saldo patokan</button></div>}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <Tile label="Pelanggan berbayar aktif" value={`${pl.accounts.total} akun`} sub={`Standard ${pl.accounts.standard} · Pro ${pl.accounts.professional} · Enterprise ${pl.accounts.enterprise}`} accent="#34d399" />
+        <Tile label="Pemakaian token / bulan" value={usd(pl.month_usage_usd)} sub={`${usd(pl.burn_usd_per_day)} per hari (rata-rata 7 hari)`} accent="#f9a8d4" />
+        <Tile label={`Kebutuhan 1 bulan + cadangan ${pl.buffer_pct}%`} value={usd(pl.need_month_usd)} sub={idr(pl.need_month_usd * kurs)} />
+        <Tile label="Batas atas (kuota habis semua)" value={usd(pl.worst_case_month_usd)} sub="per bulan, kondisi terburuk" />
+      </div>
+      <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
+        Cara hitung: rata-rata pemakaian 7 hari terakhir × 30 hari + cadangan {pl.buffer_pct}%, dikurangi saldo yang ada, dibulatkan ke atas per $5.
+        {pl.accounts.total > 0 && pl.per_account_month_usd !== null && ` Saat ini tiap akun berbayar memakai sekitar ${usd(pl.per_account_month_usd)} per bulan.`}
+        {" "}Batas atas per pengguna per bulan: Standard $3,05 · Professional $11,25 · Enterprise $11,51. Anggaran paling aman untuk klien baru adalah batas atas, pemakaian nyata biasanya jauh di bawahnya.
+        {pl.thin_data && ` Data pemakaian baru ${pl.tracked_days} hari, jadi angka ini makin akurat seiring waktu.`}
+      </div>
+    </div>
+  );
+}
+
 export default function CashflowPanel() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState(null); // null = bulan berjalan
+  const [showAcc, setShowAcc] = useState(false); // laporan akuntansi lengkap dilipat secara default
   const [form, setForm] = useState(null); // salinan pengaturan yang sedang diedit
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -334,6 +376,7 @@ export default function CashflowPanel() {
   return (
     <div className="grid gap-5 min-w-0">
       <LiveBalance kurs={kurs} onNeedSetup={goSettings} setupWhere="di bagian Pengaturan (paling bawah kartu ini)" />
+      {data.planner && <TopupPlanner pl={data.planner} kurs={kurs} onNeedSetup={goSettings} />}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
@@ -351,13 +394,29 @@ export default function CashflowPanel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Tile label="MRR saat ini" value={idr(s.mrr)} sub={`nilai kontrak aktif ${idr(s.active_contract_value)}`} accent="#34d399" />
-        <Tile label="Penerimaan kas periode" value={idr(cf.receipts.total)} sub="invoice + Mayar" />
-        <Tile label="Piutang" value={idr(s.receivables)} sub={s.overdue_count ? `${s.overdue_count} lewat jatuh tempo` : "tidak ada yang lewat tempo"} accent={s.overdue_count ? "#fbbf24" : undefined} />
-        <Tile label="Laba bersih periode" value={acc(inc.net_profit)} sub={`margin ${mp(inc.net_margin_pct)}`} accent={profitAccent} />
-      </div>
+      <Section title="Ringkasan bulan ini" hint="dalam bahasa sederhana">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Tile label="Uang masuk" value={idr(cf.receipts.total)} sub="dari klien (invoice + Mayar)" accent="#34d399" />
+          <Tile label="Uang keluar" value={idr(cf.payments.total)} sub="token, server, dan biaya lain" accent="#f9a8d4" />
+          <Tile label="Sisa kas" value={cf.closing_cash === null ? "-" : acc(cf.closing_cash)} sub={cf.closing_cash === null ? "isi saldo kas awal di Pengaturan" : "uang bisnis di rekening"} />
+          <Tile label="Untung bulan ini" value={acc(inc.net_profit)} sub={`margin ${mp(inc.net_margin_pct)}`} accent={profitAccent} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Tile label="Uang klien yang layanannya belum berjalan" value={idr(s.unearned)} sub="kewajiban melayani, bukan untung" accent="#fbbf24" />
+          <Tile label="Piutang" value={idr(s.receivables)} sub={s.overdue_count ? `${s.overdue_count} lewat jatuh tempo` : "tidak ada yang lewat tempo"} accent={s.overdue_count ? "#fbbf24" : undefined} />
+          <Tile label="Pendapatan berulang / bulan (MRR)" value={idr(s.mrr)} sub={`nilai kontrak aktif ${idr(s.active_contract_value)}`} />
+        </div>
+        <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
+          Untung dihitung dari layanan yang sudah berjalan bulan ini. Uang klien yang dibayar di muka untuk bulan-bulan berikutnya belum dianggap untung, jadi jangan dibelanjakan dulu.
+        </div>
+      </Section>
 
+      <button onClick={() => setShowAcc((v) => !v)} className="justify-self-start inline-flex items-center gap-1.5 text-[11.5px] font-mono font-bold px-3 py-2 rounded-lg border border-white/[0.25] bg-[#111826] text-slate-100 hover:bg-[#182033]">
+        <ChevronDown className={`w-4 h-4 transition-transform ${showAcc ? "rotate-180" : ""}`} />
+        {showAcc ? "Sembunyikan laporan akuntansi lengkap" : "Tampilkan laporan akuntansi lengkap (untuk akuntan)"}
+      </button>
+      {showAcc && (
+        <>
       <div className="grid gap-5 lg:grid-cols-2">
         <Section title="Laporan laba rugi" hint={ym2label(per.ym)}>
           <Statement rows={incomeRows} foot="Pendapatan diakui bertahap per hari selama periode layanan (PSAK 72), bukan saat uang masuk. HPP token = pemakaian dinilai dengan biaya rata-rata tertimbang saldo prabayar. Pajak, gaji, dan penyusutan tidak dihitung kecuali ditambahkan sebagai Beban." />
@@ -377,6 +436,9 @@ export default function CashflowPanel() {
             : <div className={`${BLOCK} p-3 text-[12px] font-mono text-slate-300 leading-relaxed`}>Tidak tersedia untuk periode ini karena saldo patokan belum diisi atau tanggalnya setelah periode ini. HPP token periode ini dihitung dengan kurs harian ({idr(inc.cogs.ai)}).</div>}
         </Section>
       </div>
+
+        </>
+      )}
 
       <Section title="Pendapatan: invoice dan langganan" hint="semua sumber dalam satu daftar, kondisi saat ini">
         <div className={`min-w-0 overflow-x-auto ${BLOCK}`}>

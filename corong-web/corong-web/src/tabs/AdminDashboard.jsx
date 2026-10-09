@@ -1396,7 +1396,7 @@ export default function AdminDashboard() {
       icon: Wallet,
       accentColor: "#34d399",
       glowClass: "shadow-[0_0_40px_-25px_rgba(52,211,153,0.6)]",
-      ok: !cashBalance?.has_checkpoint || cashBalance.pct_remaining >= 15,
+      ok: !(["warn", "danger"].includes(cashBalance?.status)),
       gaugeValue: cashBalance?.has_checkpoint ? Math.max(3, Math.min(100, cashBalance.pct_remaining)) : 100,
       noTrigger: true,
       noTriggerNote: "dihitung dari invoice dan biaya AI",

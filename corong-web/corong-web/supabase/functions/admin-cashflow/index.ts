@@ -223,6 +223,12 @@ async function anthropicBalance(admin: any, settings: ReturnType<typeof cleanSet
     out.pct_remaining = funded > 0 ? Math.round(Math.max(0, remaining) / funded * 1000) / 10 : 0;
     out.runway_days = burn > 0 ? Math.floor(Math.max(0, remaining) / burn) : null;
     out.empty_date = burn > 0 && remaining > 0 ? wibDateOf(new Date(Date.now() + (remaining / burn) * DAY_MS).toISOString()) : null;
+    // Status sederhana: bahaya bila habis dalam < 7 hari atau sisa < 15%; waspada bila < 21 hari atau sisa < 40%.
+    const days = out.runway_days;
+    out.status = remaining <= 0 || out.pct_remaining < 15 || (days !== null && days < 7) ? "danger"
+      : out.pct_remaining < 40 || (days !== null && days < 21) ? "warn" : "ok";
+  } else {
+    out.status = "unset";
   }
   return out;
 }
@@ -326,7 +332,7 @@ Deno.serve(async (req) => {
       const months = Math.max(1, Math.floor(num(d.months, 1)));
       const start = DATE_RE.test(d.start || "") ? d.start : inv.invoice_date;
       bases.push({
-        id: inv.id, kind: "invoice", number: inv.number, company: inv.company, sub: d.email || null, plan: d.plan || null,
+        id: inv.id, kind: "invoice", number: inv.number, company: inv.company, sub: d.email || null, plan: (d.plan === "custom" ? (d.activatePlan || "enterprise") : d.plan) || null,
         status: inv.status, total: num(inv.total), months, seats: num(d.seats, 1), start,
         end: DATE_RE.test(d.end || "") && d.end > start ? d.end : addMonthsDate(start, months),
         due_date: inv.due_date, invoice_date: inv.invoice_date, paid_at: inv.paid_at,
@@ -543,6 +549,34 @@ Deno.serve(async (req) => {
 
     const balance = await anthropicBalance(admin, settings);
 
+    // ---- RENCANA TOP-UP TOKEN ----
+    // Pelanggan berbayar aktif (pengguna), pemakaian nyata -> kebutuhan 30 hari + cadangan, dibandingkan dengan saldo.
+    const WORST_USD_PER_USER = { standard: 3.05, professional: 11.25, enterprise: 11.51 }; // jika semua kuota fitur AI terpakai habis tiap bulan
+    const cnt = { standard: 0, professional: 0, enterprise: 0 };
+    for (const b of bases) {
+      if (b.status !== "paid" || !(b.start <= today && b.end > today)) continue;
+      const plan = b.plan === "enterprise" ? "enterprise" : b.plan === "professional" ? "professional" : "standard";
+      cnt[plan] += plan === "enterprise" ? Math.max(1, b.seats) : (b.kind === "invoice" ? Math.max(1, b.seats) : 1);
+    }
+    const totalAccounts = cnt.standard + cnt.professional + cnt.enterprise;
+    const burnDay = balance.burn_usd_per_day || 0;
+    const monthUsage = burnDay * 30;
+    const bufferPct = 30;
+    const need = monthUsage * (1 + bufferPct / 100);
+    const ceil5 = (x: number) => Math.ceil(x / 5 - 1e-9) * 5;
+    const remainingUsd = balance.has_checkpoint ? balance.remaining_usd : null;
+    const recommended = remainingUsd === null ? ceil5(need) : Math.max(0, ceil5(need - remainingUsd));
+    const worstMonth = cnt.standard * WORST_USD_PER_USER.standard + cnt.professional * WORST_USD_PER_USER.professional + cnt.enterprise * WORST_USD_PER_USER.enterprise;
+    const trackedDays = usage[0] ? Math.max(1, Math.round((Date.now() - new Date(usage[0].created_at).getTime()) / DAY_MS)) : 0;
+    const planner = {
+      accounts: { ...cnt, total: totalAccounts },
+      burn_usd_per_day: r4(burnDay), month_usage_usd: Math.round(monthUsage * 100) / 100, buffer_pct: bufferPct,
+      need_month_usd: Math.round(need * 100) / 100, remaining_usd: remainingUsd, runway_days: balance.runway_days ?? null, empty_date: balance.empty_date ?? null,
+      recommended_topup_usd: recommended, worst_case_month_usd: Math.round(worstMonth * 100) / 100,
+      per_account_month_usd: totalAccounts > 0 ? Math.round(monthUsage / totalAccounts * 100) / 100 : null,
+      status: balance.status, thin_data: trackedDays < 7, tracked_days: trackedDays,
+    };
+
     return json({
       ok: true, today, settings, kurs: spot, kurs_info: { ...kursInfo, historical },
       period: { ym, start: pStart, end_excl: pEnd, as_of: asOf, is_current: isCurrent, current_ym: currentYm, fx_end: fxEnd },
@@ -551,7 +585,7 @@ Deno.serve(async (req) => {
         mrr: R(mrr), active_contract_value: R(activeValue), sub_mrr: R(subMrr), sub_count: subCount, manual_grants: manualGrants,
         receivables: R(receivables), overdue_count: overdueCount, unearned: R(unearned), fixed_costs_idr: hppFixed + opexFixed,
       },
-      balance, contracts,
+      balance, planner, contracts,
     });
   } catch (e) {
     return json({ error: String(e?.message || e) }, 500);
