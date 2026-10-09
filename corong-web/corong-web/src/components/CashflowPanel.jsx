@@ -37,7 +37,7 @@ export default function CashflowPanel() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newTop, setNewTop] = useState({ date: isoDay(new Date()), amount_usd: "", note: "" });
-  const [newCost, setNewCost] = useState({ name: "", amount_idr: "" });
+  const [newCost, setNewCost] = useState({ name: "", amount: "", currency: "USD", kind: "hpp" });
 
   const load = useCallback(async (silent) => {
     if (!silent) setLoading(true);
@@ -120,7 +120,7 @@ export default function CashflowPanel() {
         <Tile label="MRR kontrak aktif" value={rp(s.mrr)} sub={`nilai kontrak ${rp(s.active_contract_value)}`} accent="#34d399" />
         <Tile label="Kas masuk bulan ini" value={rp(s.cash_in_month)} sub="invoice Lunas bulan ini" />
         <Tile label="Piutang" value={rp(s.receivable)} sub={s.overdue_count ? `${s.overdue_count} lewat jatuh tempo` : `${unpaid.length} invoice belum dibayar`} accent={s.overdue_count ? "#f59e0b" : undefined} />
-        <Tile label="Laba perkiraan bulan ini" value={rp(s.profit_month_idr)} sub="MRR - biaya tetap - biaya AI" accent={profitAccent} />
+        <Tile label="Laba perkiraan bulan ini" value={rp(s.profit_month_idr)} sub="MRR - HPP - beban" accent={profitAccent} />
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Tile label="Biaya AI bulan ini" value={usd(s.ai_month_usd)} sub={rp(s.ai_month_idr)} accent="#f472b6" />
@@ -140,9 +140,10 @@ export default function CashflowPanel() {
           const mp = (v) => (v === null || v === undefined ? "-" : `${v}%`);
           const rows = [
             { l: "Pendapatan (MRR)", v: rp(p.revenue), c: "#e2e8f0" },
-            { l: "HPP: biaya AI Anthropic", v: `- ${rp(p.cogs)}`, c: "#f9a8d4", sub: `${mp(p.ai_pct_of_revenue)} dari pendapatan` },
+            { l: "HPP: biaya AI Anthropic", v: `- ${rp(p.cogs_ai)}`, c: "#f9a8d4", sub: `${mp(p.ai_pct_of_revenue)} dari pendapatan` },
+            { l: "HPP: infrastruktur (Supabase, dll)", v: `- ${rp(p.cogs_fixed)}`, c: "#f9a8d4" },
             { l: "Laba kotor", v: rp(p.gross_profit), c: p.gross_profit >= 0 ? "#34d399" : "#f43f5e", bold: true, sub: `margin kotor ${mp(p.gross_margin_pct)}` },
-            { l: "Beban tetap (infrastruktur, dll)", v: `- ${rp(p.opex)}`, c: "#cbd5e1" },
+            { l: "Beban operasional lain", v: `- ${rp(p.opex)}`, c: "#cbd5e1" },
             { l: "Laba bersih", v: rp(p.net_profit), c: p.net_profit >= 0 ? "#34d399" : "#f43f5e", bold: true, sub: `margin bersih ${mp(p.net_margin_pct)}` },
           ];
           return (
@@ -166,7 +167,7 @@ export default function CashflowPanel() {
           );
         })()}
         <div className="text-[10px] text-slate-500 font-mono leading-relaxed">
-          HPP memakai seluruh biaya AI bulan ini (termasuk pengguna gratis dan Chat Bantuan), jadi lebih konservatif dari biaya klien berbayar saja. Belum termasuk pajak, gaji, dan iklan kecuali Anda masukkan di biaya tetap.
+          HPP = seluruh biaya AI bulan ini (termasuk pengguna gratis dan Chat Bantuan) + biaya tetap berjenis HPP seperti Supabase. Pajak, gaji, dan iklan belum masuk kecuali Anda tambahkan sebagai Beban.
         </div>
       </div>
 
@@ -260,20 +261,23 @@ export default function CashflowPanel() {
         </div>
 
         <div className="grid gap-2">
-          <div className="text-[10.5px] font-semibold text-slate-300">Biaya tetap bulanan (Rp)</div>
-          {form.costs.length === 0 && <div className="text-[10.5px] text-slate-600 font-mono">Belum ada. Isi Supabase, Vercel, Cekat, domain, dan lainnya.</div>}
+          <div className="text-[10.5px] font-semibold text-slate-300">Biaya tetap bulanan</div>
+          {form.costs.length === 0 && <div className="text-[10.5px] text-slate-600 font-mono">Belum ada. Isi Supabase ($25), Vercel, Cekat, domain, dan lainnya.</div>}
           {form.costs.map((c) => (
             <div key={c.id} className="flex items-center gap-2 text-[11px] font-mono">
               <span className="text-slate-300 truncate flex-1">{c.name}</span>
-              <span className="text-slate-200">{rp(c.amount_idr)}</span>
+              <span className="text-[9.5px] text-slate-500">{c.kind === "hpp" ? "HPP" : "Beban"}</span>
+              <span className="text-slate-200">{c.currency === "USD" ? `${usd(c.amount)} ≈ ${rp(c.amount * kurs)}` : rp(c.amount)}</span>
               <button onClick={() => edit({ costs: form.costs.filter((x) => x.id !== c.id) })} className="text-slate-500 hover:text-rose-300" aria-label="Hapus biaya"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
           <div className="flex flex-wrap items-center gap-2">
             <input placeholder="Nama (mis. Supabase)" className={`${inp} flex-1 min-w-[140px]`} value={newCost.name} onChange={(e) => setNewCost({ ...newCost, name: e.target.value })} />
-            <input type="number" placeholder="Rp / bulan" className={`${inp} w-32`} value={newCost.amount_idr} onChange={(e) => setNewCost({ ...newCost, amount_idr: e.target.value })} />
+            <select className={inp} value={newCost.currency} onChange={(e) => setNewCost({ ...newCost, currency: e.target.value })}><option value="USD">USD</option><option value="IDR">Rp</option></select>
+            <input type="number" placeholder="per bulan" className={`${inp} w-28`} value={newCost.amount} onChange={(e) => setNewCost({ ...newCost, amount: e.target.value })} />
+            <select className={inp} value={newCost.kind} onChange={(e) => setNewCost({ ...newCost, kind: e.target.value })}><option value="hpp">HPP</option><option value="opex">Beban</option></select>
             <button
-              onClick={() => { if (!newCost.name.trim() || !(Number(newCost.amount_idr) >= 0) || newCost.amount_idr === "") return; edit({ costs: [...form.costs, { id: uid(), name: newCost.name.trim(), amount_idr: Number(newCost.amount_idr) }] }); setNewCost({ name: "", amount_idr: "" }); }}
+              onClick={() => { if (!newCost.name.trim() || newCost.amount === "" || !(Number(newCost.amount) >= 0)) return; edit({ costs: [...form.costs, { id: uid(), name: newCost.name.trim(), currency: newCost.currency, amount: Number(newCost.amount), kind: newCost.kind }] }); setNewCost({ ...newCost, name: "", amount: "" }); }}
               className="inline-flex items-center gap-1 text-[10.5px] font-mono px-2.5 py-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
             ><Plus className="w-3 h-3" /> Tambah</button>
           </div>

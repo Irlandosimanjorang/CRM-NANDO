@@ -34,7 +34,7 @@ const DEFAULT_SETTINGS = {
   token_pct: 25,
   anthropic: { checkpoint_date: null as string | null, balance_usd: 0 },
   topups: [] as { id: string; date: string; amount_usd: number; note: string }[],
-  costs: [] as { id: string; name: string; amount_idr: number }[],
+  costs: [] as { id: string; name: string; currency: string; amount: number; kind: string }[],
 };
 
 function cleanSettings(src: any) {
@@ -50,8 +50,16 @@ function cleanSettings(src: any) {
     .filter((t: any) => DATE_RE.test(t?.date || "") && num(t.amount_usd) > 0)
     .map((t: any) => ({ id: String(t.id || crypto.randomUUID()).slice(0, 64), date: t.date, amount_usd: num(t.amount_usd), note: String(t.note || "").slice(0, 200) }));
   const costs = (Array.isArray(s.costs) ? s.costs : []).slice(0, 100)
-    .filter((c: any) => String(c?.name || "").trim() && num(c.amount_idr) >= 0)
-    .map((c: any) => ({ id: String(c.id || crypto.randomUUID()).slice(0, 64), name: String(c.name).trim().slice(0, 100), amount_idr: Math.round(num(c.amount_idr)) }));
+    .filter((c: any) => String(c?.name || "").trim() && num(c.amount ?? c.amount_idr) >= 0)
+    .map((c: any) => {
+      const currency = c.currency === "USD" ? "USD" : "IDR";
+      const amount = num(c.amount ?? c.amount_idr);
+      return {
+        id: String(c.id || crypto.randomUUID()).slice(0, 64), name: String(c.name).trim().slice(0, 100),
+        currency, amount: currency === "USD" ? Math.round(amount * 100) / 100 : Math.round(amount),
+        kind: c.kind === "opex" ? "opex" : "hpp", // hpp = biaya penyedia layanan (Supabase, Vercel), opex = beban lain
+      };
+    });
   return { kurs, token_pct, anthropic, topups, costs };
 }
 
@@ -172,19 +180,24 @@ Deno.serve(async (req) => {
     const daily = Object.entries(perDay).sort((a, b) => a[0].localeCompare(b[0])).map(([day, usd]) => ({ day, usd: Math.round(usd * 10000) / 10000 }));
 
     const aiMonthUsd = sumUsd((u) => u.created_at >= startOfWibDay(monthStart));
-    const fixedCosts = settings.costs.reduce((s, c) => s + c.amount_idr, 0);
+    const costIdr = (c: { currency: string; amount: number }) => (c.currency === "USD" ? c.amount * kurs : c.amount);
+    const hppFixed = settings.costs.filter((c) => c.kind === "hpp").reduce((s, c) => s + costIdr(c), 0);
+    const opexFixed = settings.costs.filter((c) => c.kind !== "hpp").reduce((s, c) => s + costIdr(c), 0);
+    const fixedCosts = hppFixed + opexFixed;
 
-    // Laba rugi bulanan (akrual): pendapatan = MRR, HPP = biaya AI, beban = biaya tetap.
+    // Laba rugi bulanan (akrual): HPP = biaya AI + biaya tetap berjenis HPP (mis. Supabase); beban = sisanya.
     const aiMonthIdr = aiMonthUsd * kurs;
-    const grossProfit = mrr - aiMonthIdr;
-    const netProfit = grossProfit - fixedCosts;
+    const cogs = aiMonthIdr + hppFixed;
+    const grossProfit = mrr - cogs;
+    const netProfit = grossProfit - opexFixed;
     const pct = (x: number, base: number) => (base > 0 ? Math.round(x / base * 1000) / 10 : null);
-    const gmRatio = mrr > 0 ? grossProfit / mrr : 0;
+    const varRatio = mrr > 0 ? (mrr - aiMonthIdr) / mrr : 0; // biaya AI naik seiring pendapatan, biaya tetap tidak
     const pnl = {
-      revenue: Math.round(mrr), cogs: Math.round(aiMonthIdr), gross_profit: Math.round(grossProfit), gross_margin_pct: pct(grossProfit, mrr),
-      opex: fixedCosts, net_profit: Math.round(netProfit), net_margin_pct: pct(netProfit, mrr),
+      revenue: Math.round(mrr), cogs: Math.round(cogs), cogs_ai: Math.round(aiMonthIdr), cogs_fixed: Math.round(hppFixed),
+      gross_profit: Math.round(grossProfit), gross_margin_pct: pct(grossProfit, mrr),
+      opex: Math.round(opexFixed), net_profit: Math.round(netProfit), net_margin_pct: pct(netProfit, mrr),
       ai_pct_of_revenue: pct(aiMonthIdr, mrr),
-      breakeven_mrr: gmRatio > 0 ? Math.round(fixedCosts / gmRatio) : null,
+      breakeven_mrr: varRatio > 0 ? Math.round(fixedCosts / varRatio) : null,
       deferred_revenue: Math.round(deferred),
     };
 
@@ -194,8 +207,8 @@ Deno.serve(async (req) => {
         mrr: Math.round(mrr), cash_in_month: Math.round(cashInMonth), receivable: Math.round(receivable), overdue_count: overdueCount,
         active_contract_value: Math.round(activeContractValue),
         ai_month_usd: Math.round(aiMonthUsd * 10000) / 10000, ai_month_idr: Math.round(aiMonthUsd * kurs),
-        fixed_costs_idr: fixedCosts,
-        profit_month_idr: Math.round(mrr - fixedCosts - aiMonthUsd * kurs),
+        fixed_costs_idr: Math.round(fixedCosts),
+        profit_month_idr: Math.round(netProfit),
       },
       anthropic: {
         balance_usd: balanceUsd === null ? null : Math.round(balanceUsd * 100) / 100,
