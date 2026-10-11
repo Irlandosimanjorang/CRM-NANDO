@@ -4,7 +4,6 @@ import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw
 import * as db from "../lib/db";
 import TeamLeaderboard from "../components/TeamLeaderboard";
 import ChatSlaCard from "../components/ChatSlaCard";
-import RecEffectCard from "../components/RecEffectCard";
 import { PanelHeader } from "../ui";
 import { isThinNote } from "../lib/noteQuality";
 import { IDLE_DAYS, SEVERITY, collectIdleLeads, countBySeverity } from "../lib/idleLeads";
@@ -449,7 +448,6 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         <TargetsCard api={api} members={members} reloadKey={reloadKey} />
       </div>
 
-      {members.length > 0 && <RecEffectCard />}
 
       {members.length > 0 && <ChatSlaCard leads={leads} members={members} onOpenLead={onOpenLead} />}
 
