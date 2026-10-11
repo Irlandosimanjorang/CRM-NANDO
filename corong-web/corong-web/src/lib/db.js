@@ -1351,6 +1351,18 @@ export async function getChatWebhookLog() {
   return data || [];
 }
 // Semua percakapan chat yang terlihat oleh pengguna (owner dan manager: seluruh organisasi), untuk peringatan chat belum dibalas.
+// Efek rekomendasi AI untuk organisasi pemanggil (owner/manager): jumlah, ditindaklanjuti, maju tahap, menang, kalah.
+export async function getRecommendationEffect(days = 90) {
+  const { data, error } = await supabase.rpc("get_recommendation_effect", { p_days: days });
+  if (error) throw error;
+  return data;
+}
+// Umpan balik eksplisit penerima: "used" atau "not_useful".
+export async function rateRecommendation(id, feedback) {
+  const { error } = await supabase.rpc("rate_recommendation", { p_id: id, p_feedback: feedback });
+  if (error) throw error;
+}
+
 export async function listChatWaiting() {
   const { data, error } = await supabase.from("lead_conversations").select("id, lead_id, platform, campaign, last_inbound_at, last_outbound_at")
     .not("lead_id", "is", null).order("last_inbound_at", { ascending: false, nullsFirst: false }).limit(500);
