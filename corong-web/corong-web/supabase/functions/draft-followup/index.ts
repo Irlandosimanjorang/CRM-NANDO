@@ -1,38 +1,13 @@
 // Supabase Edge Function: draft-followup
-// Dipanggil ON-DEMAND dari LeadModal/Leads/Dashboard (tombol "Draft WhatsApp" /
-// "Draft Email"). Beda dari daily-digest (jalan cron buat SEMUA lead), ini baca
-// histori SATU lead spesifik & bikin draft pesan personal - biaya cuma kejadi
-// pas user beneran klik tombolnya, bukan otomatis.
-//
-// (Riwayat fix lama: draft disimpen ke ai_drafts SEBELUM return + dipake ulang
-// kalau masih <24 jam, tier gate Professional+, rate limit 3x generate baru
-// per bulan (10 Okt 2026: 60x per bulan) lewat RPC atomic, org_memory, max_tokens 900 biar gak
-// kepotong - detail lengkap ada di versi sebelumnya.)
-//
-// === MODEL (29 Sep 2026) === Sonnet 4.6 -> Sonnet 5.5 (lebih murah $2/$10
-// vs $3/$15), tanpa "mikir di awal" (between_tools). Sekalian nambah konteks
-// industri corporate_consultant yang sebelumnya belum ada di sini.
-//
-// === KATALOG PRODUK (30 Sep 2026, Enterprise) === Kalau org Enterprise udah
-// ngisi katalog produk/layanan (org_product_catalog) di Pengaturan, draft
-// nyebut produk yang relevan secara natural - diprioritasin yang udah
-// direkomendasiin Ringkasan Kebutuhan (AI) buat lead ini.
-//
-// === PROFESIONAL (1 Okt 2026, permintaan Nando) ===
-// - Gaya draft WhatsApp dulu "casual tapi sopan" - padahal pesan ini dikirim
-//   ke customer/klien korporat. Sekarang ringkas, sopan, profesional.
-// - Pesan error ke user pakai bahasa baku.
-// - Kuota dikembalikan kalau AI gagal (dulu tetap kepotong).
-// - Org tanpa industri jatuh ke konteks B2B umum, bukan PVC.
+// Dipanggil ON-DEMAND dari LeadModal/Leads/Dashboard (tombol "Draft WhatsApp" / "Draft Email"). Baca histori SATU lead
+// spesifik & bikin draft pesan personal - biaya cuma kejadian pas user beneran klik tombolnya.
+// Kuota: 60x generate baru per bulan (10 Okt 2026, dulu 3x per hari). Tier gate: Professional ke atas.
+// MEMORI NEXTO (11 Okt 2026): prompt ikut membawa konteks memori gabungan (profil perusahaan + produk, pola organisasi,
+// memori pribadi sales ini, kasus serupa yang sudah tertutup) dari fungsi database build_memory_context.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { AsyncLocalStorage } from "node:async_hooks";
 
-// === PENCATAT PEMAKAIAN AI (6 Okt 2026, permintaan Nando) ===
-// Setiap panggilan ke Anthropic/OpenAI dari function ini dicatat ke tabel
-// ai_usage (token, pencarian web, durasi audio, biaya USD) atas nama pengguna
-// yang memicunya - dipakai Command Center untuk pemakaian & biaya per akun.
-// Pengguna diambil dari JWT request; jalur cron/internal memanggil aiSetUser().
-// Harga per 1 juta token: [input, output, tulis cache, baca cache].
+// === PENCATAT PEMAKAIAN AI (6 Okt 2026) === Setiap panggilan ke Anthropic/OpenAI dari function ini dicatat ke tabel ai_usage.
 const AI_FEATURE = "draft-followup";
 const AI_CTX = new AsyncLocalStorage();
 const AI_PRICE = { sonnet: [2, 10, 2.5, 0.2], haiku: [1, 5, 1.25, 0.1] };
@@ -123,10 +98,6 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const DRAFT_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // draft yang masih fresh (<24 jam) dipake ulang, gak generate baru
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-// Kuota bulanan (10 Okt 2026, permintaan Nando: 60x per bulan, bukan lagi 3x per hari). Siklusnya mengikuti
-// langganan: reserve_edge_function_call menghitung periodenya sendiri (draft-followup terdaftar di
-// is_monthly_quota_feature). Lewat RPC atomic: cek + catat dalam satu langkah. Balikin id reservasi (buat dikembalikan
-// kalau AI gagal) atau null kalau kuota habis.
 const MONTHLY_MAX = 60;
 async function reserveMonthly(admin, userId, functionName, maxCalls) {
   const wibNow = new Date(Date.now() + WIB_OFFSET_MS);
@@ -184,8 +155,7 @@ async function getRelevantNotes(supabase, lead) {
   }
 }
 
-// Duplikat ringan dari src/lib/industryTemplates.js (Edge Function jalan di
-// Deno, beda runtime, gak bisa import langsung dari kode React).
+// Duplikat ringan dari src/lib/industryTemplates.js (Edge Function jalan di Deno, beda runtime, gak bisa import langsung).
 const INDUSTRY_CONTEXT = {
   pvc_chemical: "distribusi/manufaktur PVC dan bahan kimia industri. Istilah relevan: tonase, resin, kompon",
   automotive: "dealer kendaraan (mobil/motor). Istilah relevan: test drive, unit, DP, cicilan, trade-in",
@@ -227,8 +197,6 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     if (userErr || !userData?.user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: cors });
 
     // ---- TIER GATE - AI Draft Follow-up itu fitur PROFESSIONAL ke atas.
-    // Dicek DULUAN, sebelum lead di-fetch atau cache di-cek, biar user yang
-    // belum bayar gak numpang biaya AI sama sekali.
     const { data: gateMemberRow } = await supabase.from("organization_members").select("org_id").eq("user_id", userData.user.id).limit(1).maybeSingle();
     const gateOrgResult = gateMemberRow ? await supabase.from("organizations").select("plan").eq("id", gateMemberRow.org_id).maybeSingle() : { data: null };
     const { data: gateSettingsRow } = await supabase.from("settings").select("plan").eq("user_id", userData.user.id).maybeSingle();
@@ -243,17 +211,15 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     const { data: lead, error: leadErr } = await supabase.from("leads").select("*, progress_notes(id, note_date, text)").eq("id", lead_id).single();
     if (leadErr || !lead) return new Response(JSON.stringify({ error: "Lead tidak ditemukan" }), { status: 404, headers: cors });
 
-    // ---- CEK DRAFT TERSIMPAN DULU - kalau ada yang masih fresh (<24 jam) buat
-    // lead+channel yang sama, PAKE ITU LANGSUNG, jangan generate baru. Ini
-    // JUGA gak numpang kuota harian - cuma generate BARU yang dihitung. ----
+    // ---- CEK DRAFT TERSIMPAN DULU - kalau ada yang masih fresh (<24 jam) buat lead+channel yang sama, PAKE ITU LANGSUNG.
+    // Ini JUGA gak numpang kuota - cuma generate BARU yang dihitung. ----
     const { data: cached } = await supabase.from("ai_drafts").select("*").eq("lead_id", lead_id).eq("channel", channel).maybeSingle();
     if (cached && Date.now() - new Date(cached.created_at).getTime() < DRAFT_CACHE_TTL_MS) {
       const cachedResult = channel === "whatsapp" ? { message: cached.message } : { subject: cached.subject, body: cached.body };
       return new Response(JSON.stringify({ ...cachedResult, cached: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ---- RATE LIMIT - 60x GENERATE BARU per bulan per user (10 Okt 2026, dulu 3x per hari; cache
-    // hit di atas gak kena hitungan ini).
+    // ---- RATE LIMIT - 60x GENERATE BARU per bulan per user (10 Okt 2026, dulu 3x per hari; cache hit di atas gak kena hitungan ini).
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     reservationId = await reserveMonthly(admin, userData.user.id, "draft-followup", MONTHLY_MAX);
     if (!reservationId) {
@@ -267,9 +233,7 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       industryKey = org?.industry || "b2b_general";
     }
 
-    // ---- ORG MEMORY (diutamakan) - pola menang/kalah dari SELURUH histori
-    // deal org ini (disintesis pipeline-review). Fallback ke logic
-    // top_win/top_loss lama kalau org_memory belum ada.
+    // ---- ORG MEMORY (diutamakan) - pola menang/kalah dari SELURUH histori deal org ini (disintesis pipeline-review).
     let outcomeMemory = "";
     if (memberRow) {
       try {
@@ -330,6 +294,18 @@ Kalau ada produk di katalog yang nyambung sama kebutuhan/histori ${lead.name}, s
       }
     }
 
+    // ---- MEMORI NEXTO (11 Okt 2026): konteks gabungan dari profil perusahaan, pola organisasi, memori pribadi sales ini, dan
+    // kasus serupa yang sudah tertutup. Gagal membaca tidak menghalangi pembuatan draft.
+    let memoryBlock = "";
+    if (memberRow) {
+      try {
+        const { data: mc } = await admin.rpc("build_memory_context", { p_org: memberRow.org_id, p_user: userData.user.id, p_lead: lead_id });
+        if (mc) memoryBlock = `\nMEMORI NEXTO (pelajaran dari riwayat organisasi dan sales ini; jadikan bahan pertimbangan, jangan disalin mentah, dan jangan menambah fakta di luar data):\n${mc}\n`;
+      } catch (e) {
+        console.log("[draft-followup] gagal baca memori:", String(e));
+      }
+    }
+
     const noun = industryNoun(industryKey);
     const relevantNotes = await getRelevantNotes(supabase, lead);
     const recentProgress = relevantNotes.map((p) => `${p.note_date}: ${(p.text || "").slice(0, 200)}`);
@@ -352,7 +328,7 @@ ATURAN FORMAT (penting):
     const prompt = `Kamu asisten sales yang bantu bikin draft pesan follow-up ke ${noun} di bisnis ${industryContext(industryKey)}.
 
 Data ${noun} ini: ${JSON.stringify(context)}
-${outcomeMemory ? `\nKONTEKS HISTORI ORG INI (dari lead-lead lain yang udah closed sebelumnya): ${outcomeMemory} MANFAATIN ini buat bikin pendekatan yang lebih strategis - misal kalau ada objection yang mirip sama yang sering muncul di org ini, pake cara ngatasin yang udah kebukti berhasil; kalau ada taktik yang kebukti bikin menang, pertimbangkan pendekatan serupa. TAPI tetep personal ke situasi ${lead.name} spesifik, jangan asal tempel pola generik.\n` : ""}${catalogBlock}
+${outcomeMemory ? `\nKONTEKS HISTORI ORG INI (dari lead-lead lain yang udah closed sebelumnya): ${outcomeMemory} MANFAATIN ini buat bikin pendekatan yang lebih strategis - misal kalau ada objection yang mirip sama yang sering muncul di org ini, pake cara ngatasin yang udah kebukti berhasil; kalau ada taktik yang kebukti bikin menang, pertimbangkan pendekatan serupa. TAPI tetep personal ke situasi ${lead.name} spesifik, jangan asal tempel pola generik.\n` : ""}${catalogBlock}${memoryBlock}
 ${channelInstruction}
 
 Personalisasi berdasarkan histori progress di atas - kalau ada pertanyaan/objection yang keliatan belum kejawab, singgung itu secara halus. Kalau belum ada histori progress sama sekali (belum pernah dikontak), buat pesan follow-up perkenalan yang natural, bukan template kaku. JANGAN mengarang detail yang gak ada di data (harga, tanggal spesifik, dst).
@@ -382,15 +358,13 @@ Tulis dalam Bahasa Indonesia baku yang profesional dan luwes.`;
       return new Response(JSON.stringify({ error: "AI gagal membuat draft. Kuota Anda tidak terpakai, silakan coba lagi." }), { status: 500, headers: cors });
     }
 
-    // Jaring pengaman - bersihin karakter "kotak rusak" (replacement character,
-    // U+FFFD) kalau-kalau AI kelolosan nyisipin emoji yang encoding-nya berantakan.
+    // Jaring pengaman - bersihin karakter "kotak rusak" (replacement character, U+FFFD).
     const cleanText = (s) => (s || "").replace(/�/g, "").replace(/ {2,}/g, " ");
     if (obj.message) obj.message = cleanText(obj.message);
     if (obj.subject) obj.subject = cleanText(obj.subject);
     if (obj.body) obj.body = cleanText(obj.body);
 
-    // ---- SIMPEN KE DATABASE SEBELUM RETURN - biar hasil generate TETEP
-    // ke-simpen walau client udah disconnect pas response lagi otw. ----
+    // ---- SIMPEN KE DATABASE SEBELUM RETURN - biar hasil generate TETEP ke-simpen walau client udah disconnect. ----
     if (memberRow) {
       await supabase.from("ai_drafts").upsert(
         {

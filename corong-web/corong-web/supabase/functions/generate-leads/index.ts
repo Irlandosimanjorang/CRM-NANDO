@@ -321,7 +321,7 @@ function parseLeadArray(textOut) {
   return out;
 }
 
-async function callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames, maxSearchUses, passLabel, signal }) {
+async function callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, memoryContext, excludeNames, maxSearchUses, passLabel, signal }) {
   let userRequest = `Kata kunci pencarian: "${keyword}"${province ? ` di ${province}, Indonesia (bisa nama provinsi atau kota spesifik - kalau ini nama kota, FOKUSIN ke kota itu aja, jangan diperluas ke provinsi sekitarnya)` : ` - CARI DI SELURUH INDONESIA (gak dikasih batasan provinsi/kota spesifik, jadi jangan sempitin sendiri ke 1 daerah aja, coba variasiin kota/wilayah biar hasilnya nyebar).`}.`;
   userRequest += ` Kalau kata kunci di atas NYEBUT NAMA PERUSAHAAN SPESIFIK (misal "seperti Halodoc, Gojek"), perusahaan yang disebut itu JUGA WAJIB dimasukin sebagai lead (kecuali ada di daftar "udah ada di database" di bawah) - itu target, bukan cuma contoh. Sisanya diisi perusahaan lain yang profilnya mirip.`;
   if (productSold) {
@@ -345,6 +345,9 @@ async function callAiForLeads({ industryTerms, keyword, province, targetRole, pr
   }
   if (orgMemoryProfile) {
     userRequest += ` IDEAL CUSTOMER PROFILE ORG INI (disintesis dari SELURUH histori deal yang udah closed, bukan cuma contoh di bawah): ${orgMemoryProfile} Pake ini buat ngarahin pencarian & naikin score_buying_signal buat lead yang cocok sama profil ini.`;
+  }
+  if (memoryContext) {
+    userRequest += ` MEMORI NEXTO (profil perusahaan dan produk kita, pola organisasi, serta pelajaran dari deal yang sudah tertutup; jadikan bahan pertimbangan untuk memilih calon pembeli dan menaikkan score_buying_signal, jangan disalin mentah, dan jangan mengarang fakta di luar data): ${memoryContext.replace(/\s*\n\s*/g, " | ")}`;
   }
   if (wonExamples && wonExamples.length > 0) {
     const examplesText = wonExamples.map((w) => `"${w.name}"${w.category ? ` (${w.category}${w.product ? ` - ${w.product}` : ""})` : ""}`).join("; ");
@@ -466,7 +469,16 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
       orgMemoryProfile = "";
     }
 
-    const pass1Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: [...new Set(existingRawNames)], maxSearchUses: FIRST_PASS_MAX_SEARCH, passLabel: "pass1" });
+    // Memori Nexto (11 Okt 2026): konteks gabungan tingkat organisasi + memori pribadi pemakai.
+    let memoryContext = "";
+    try {
+      const { data: mc } = await admin.rpc("build_memory_context", { p_org: orgId, p_user: userId, p_lead: null });
+      memoryContext = mc || "";
+    } catch (e) {
+      console.log("[generate-leads] gagal baca memori:", String(e));
+    }
+
+    const pass1Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, memoryContext, excludeNames: [...new Set(existingRawNames)], maxSearchUses: FIRST_PASS_MAX_SEARCH, passLabel: "pass1" });
     const rank = (l) => overallScore(l.score_industry_match, l.score_buying_signal, l.score_contact_quality) ?? (Number(l.score) || 0);
     const byScore = (a, b) => rank(b) - rank(a);
     let survivors = pass1Raw.filter((l) => !isDuplicateName(normalizeCompanyName(l.name), existingNormSet)).sort(byScore).slice(0, MAX_LEADS);
@@ -483,7 +495,7 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
       const abortController = new AbortController();
       const abortTimer = setTimeout(() => abortController.abort(), remainingSafeBudget);
       try {
-        const pass2Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, excludeNames: excludeForRetry, maxSearchUses: RETRY_PASS_MAX_SEARCH, passLabel: "pass2(retry)", signal: abortController.signal });
+        const pass2Raw = await callAiForLeads({ industryTerms, keyword, province, targetRole, productSold, sellerCatalog, companyScale, targetType, wonExamples, lostExamples, orgMemoryProfile, memoryContext, excludeNames: excludeForRetry, maxSearchUses: RETRY_PASS_MAX_SEARCH, passLabel: "pass2(retry)", signal: abortController.signal });
         for (const l of pass2Raw) {
           if (survivors.length >= MAX_LEADS) break;
           const norm = normalizeCompanyName(l.name);

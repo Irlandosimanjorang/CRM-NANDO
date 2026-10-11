@@ -202,6 +202,17 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       orgMemoryBlock = "";
     }
 
+    // Memori Nexto (11 Okt 2026): profil perusahaan + produk, memori pribadi sales, kasus serupa yang sudah tertutup.
+    let memoryBlock = "";
+    if (memberRow) {
+      try {
+        const { data: mc } = await admin.rpc("build_memory_context", { p_org: memberRow.org_id, p_user: userId, p_lead: lead_id });
+        if (mc) memoryBlock = `\nMEMORI NEXTO (pelajaran dari riwayat organisasi dan sales ini; jadikan bahan pertimbangan, jangan disalin mentah, dan jangan menambah fakta di luar data):\n${mc}\n`;
+      } catch (e) {
+        console.log("[suggest-visit-points] gagal baca memori:", String(e));
+      }
+    }
+
     const stateNote = lead.customer_state?.state_reason ? `Customer state saat ini: ${lead.customer_state.state_reason}.` : "";
     const prompt = `Kamu asisten sales berpengalaman. Sales rep mau visit/meeting ke lead berikut. Baca histori progress notes-nya, terus saranin 3-5 poin SPESIFIK yang perlu didiskusikan/disampein pas ketemu nanti - biar rep gak dateng modal kosong dan langsung nyambung ke konteks terakhir.
 
@@ -211,7 +222,7 @@ Tahap saat ini: ${lead.stage_key || "-"}
 Next action yang tercatat: ${lead.next_action || "-"}
 ${stateNote}
 ${lead.visit_meet ? `Bakal ketemu: ${lead.visit_meet}` : ""}
-${orgMemoryBlock}
+${orgMemoryBlock}${memoryBlock}
 Progress notes (terbaru di bawah):
 ${notes.join("\n")}
 

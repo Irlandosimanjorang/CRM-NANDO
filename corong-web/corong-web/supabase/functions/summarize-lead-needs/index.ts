@@ -215,8 +215,19 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       ? `\nProfil perusahaan KITA (penjual): ${catalog.company_profile || "-"}\nKatalog produk/layanan KITA:\n${catalogProducts.map((p, i) => `${i + 1}. ${p.name}${p.description ? ` - ${p.description}` : ""}${p.fit_for ? ` | Cocok untuk: ${p.fit_for}` : ""}${p.price ? ` | Harga: ${p.price}` : ""}`).join("\n")}\n`
       : "";
 
+    // Memori Nexto (11 Okt 2026): pola organisasi, memori pribadi sales, kasus serupa yang sudah tertutup.
+    let memoryText = "";
+    if (memberRow) {
+      try {
+        const { data: mc } = await admin.rpc("build_memory_context", { p_org: memberRow.org_id, p_user: userData.user.id, p_lead: lead_id });
+        if (mc) memoryText = `\nMEMORI NEXTO (pelajaran dari riwayat organisasi dan sales ini; jadikan bahan pertimbangan untuk menilai kebutuhan dan produk yang cocok, jangan disalin mentah, dan jangan menambah fakta di luar data):\n${mc}\n`;
+      } catch (e) {
+        console.log("[summarize-lead-needs] gagal baca memori:", String(e));
+      }
+    }
+
     const prompt = `Kamu asisten sales yang bantu nyimpulin catatan progress/notulen meeting ke sebuah lead di bisnis ${industryContext(orgRow?.industry)}.
-${catalogText}
+${catalogText}${memoryText}
 Data lead: nama "${lead.name}", produk/scope yang ditawarin "${lead.product || "belum ada info"}", kategori "${lead.category || "-"}".
 
 Berikut SELURUH catatan progress/notulen yang tercatat buat lead ini (urut dari lama ke baru):

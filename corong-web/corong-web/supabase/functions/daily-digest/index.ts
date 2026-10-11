@@ -323,7 +323,7 @@ async function getRelevantNotes(admin, lead) {
   }
 }
 
-async function analyzeLead(admin, c, stages, today, industryKey, outcomeMemory, catalogText) {
+async function analyzeLead(admin, c, stages, today, industryKey, outcomeMemory, catalogText, memoryContext = "") {
   const stageLabel = (key) => (stages || []).find((s) => s.key === key)?.label || key;
   const hasContact = !!(c.key_person && c.key_person.trim());
   const noun = industryNoun(industryKey);
@@ -339,7 +339,7 @@ async function analyzeLead(admin, c, stages, today, industryKey, outcomeMemory, 
   const prompt = `Kamu sales coach yang tajam untuk sales di bisnis ${industryContext(industryKey)}. Hari ini ${today}. Lead/${noun} ini kemungkinan perorangan ATAU perusahaan - sesuaikan bahasa ke konteks datanya, jangan asumsi selalu B2B.
 
 Data ${noun} ini: ${JSON.stringify(payload)}
-${outcomeMemory ? `\nKONTEKS HISTORI ORG INI (Outcome Memory - dari lead-lead lain yang udah closed sebelumnya): ${outcomeMemory} Pake ini buat WASPADA kalau lead ini nunjukkin pola serupa (misal kalau histori org sering kalah karena harga, dan lead ini juga lagi nanya-nanya harga, itu sinyal buat diprioritasin/di-treat hati-hati).\n` : ""}${catalogText ? `\nKATALOG PRODUK/LAYANAN KITA (penjual): ${catalogText} Kalau ada produk di katalog yang nyambung sama kebutuhan/histori lead ini, sebut nama produknya di "action" atau "talking_point" (maks 1 produk paling relevan). JANGAN sebut produk di luar katalog, dan gak usah maksa kalau gak ada yang nyambung.\n` : ""}
+${outcomeMemory ? `\nKONTEKS HISTORI ORG INI (Outcome Memory - dari lead-lead lain yang udah closed sebelumnya): ${outcomeMemory} Pake ini buat WASPADA kalau lead ini nunjukkin pola serupa (misal kalau histori org sering kalah karena harga, dan lead ini juga lagi nanya-nanya harga, itu sinyal buat diprioritasin/di-treat hati-hati).\n` : ""}${catalogText ? `\nKATALOG PRODUK/LAYANAN KITA (penjual): ${catalogText} Kalau ada produk di katalog yang nyambung sama kebutuhan/histori lead ini, sebut nama produknya di "action" atau "talking_point" (maks 1 produk paling relevan). JANGAN sebut produk di luar katalog, dan gak usah maksa kalau gak ada yang nyambung.\n` : ""}${memoryContext ? `\nMEMORI NEXTO (pelajaran dari riwayat organisasi ini dan dari sales pemegang lead ini): jadikan bahan pertimbangan untuk memilih aksi dan produk yang paling tepat. Kalau ada KASUS SERUPA, pelajari alasan menang atau kalahnya. Jangan menyalin mentah, dan jangan menarik kesimpulan kuat bila sampelnya kecil.\n${memoryContext}\n` : ""}
 PENTING - cara kamu menilai lead ini: JANGAN cuma berpatokan ke "days_since_contact" (itu cuma info pendukung, bisa aja gak akurat kalau field-nya lupa di-update). SUMBER UTAMA penilaian kamu adalah ISI recent_progress - baca apa yang beneran terjadi/dibicarakan: apakah ada pertanyaan yang belum kejawab? Objection yang belum diselesaikan? Sinyal minat/buying signal? Atau justru customer-nya sendiri yang eksplisit minta ditunggu/dijadwalkan ulang (kalau iya, itu BUKAN alasan buat urgency tinggi - hormati permintaan mereka, jangan sarankan follow up sebelum waktunya)?
 
 Tugas kamu:
@@ -465,7 +465,17 @@ async function runAdvisorForUser(admin, userId, orgId, myRole) {
     }
   }
 
-  const results = await Promise.all(queue.map((c) => analyzeLead(admin, c, stagesArr, today, industryKey, outcomeMemory, catalogText)));
+  // MEMORI NEXTO (11 Okt 2026): konteks gabungan per lead; gagal membaca tidak menghalangi analisis.
+  const results = await Promise.all(queue.map(async (c) => {
+    let memoryContext = "";
+    try {
+      const { data: mc } = await admin.rpc("build_memory_context", { p_org: orgId, p_user: userId, p_lead: c.id });
+      memoryContext = mc || "";
+    } catch (e) {
+      console.log("[digest] gagal baca memori:", String(e));
+    }
+    return analyzeLead(admin, c, stagesArr, today, industryKey, outcomeMemory, catalogText, memoryContext);
+  }));
   const all = results.filter((r) => r !== null);
 
   await Promise.all(
