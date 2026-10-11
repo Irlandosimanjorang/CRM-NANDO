@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
-import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO } from "../lib/helpers";
+import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO, reasonCategoriesFor } from "../lib/helpers";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 import { getFieldLabel, getQuantityUnits, getDealProductTypes } from "../lib/industryTemplates";
 
@@ -66,6 +66,7 @@ function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSa
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(draft?.sel || null);
   const [stageKey, setStageKey] = useState(draft?.stageKey || wonStages[0]?.key || stages[0]?.key);
+  const [winReason, setWinReason] = useState(draft?.winReason || "");
   const [date, setDate] = useState(draft?.date || todayISO());
   const [chemical, setChemical] = useState(draft?.chemical || "");
   const [tonnage, setTonnage] = useState(draft?.tonnage || "");
@@ -77,9 +78,9 @@ function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSa
   const hadDraft = !!draft?.sel;
 
   useEffect(() => {
-    const data = { sel, stageKey, date, chemical, tonnage, tonnageUnit, valueDigits, productType, customProduct, savedAt: Date.now() };
+    const data = { sel, stageKey, winReason, date, chemical, tonnage, tonnageUnit, valueDigits, productType, customProduct, savedAt: Date.now() };
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch {}
-  }, [sel, stageKey, date, chemical, tonnage, tonnageUnit, valueDigits, productType, customProduct]);
+  }, [sel, stageKey, winReason, date, chemical, tonnage, tonnageUnit, valueDigits, productType, customProduct]);
 
   const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
   const pick = (c) => {
@@ -96,12 +97,15 @@ function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSa
   };
   const save = async () => {
     if (!sel) { alert("Pilih perusahaan terlebih dahulu."); return; }
+    const needsReason = !sel.outcome;
+    if (needsReason && !winReason) { alert("Pilih alasan menang terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
     try {
       // Update tahap lead-nya (misal jadi "Deal/Menang"), TAPI catetnya sebagai
       // transaksi baru - bukan nimpa nilai deal_value/deal_date yang lama, biar
       // repeat order/transaksi berkali-kali ke perusahaan yang sama tetap kehitung semua.
       await db.upsertLead({ ...sel, stage_key: stageKey });
+      if (needsReason) await db.saveOutcome(sel.id, { result: "won", reason_category: winReason, reason: "", ai_generated: false });
       await db.addDealTransaction({ lead_id: sel.id, lead_name: sel.name, deal_date: date, deal_value: Number(valueDigits) || 0, tonnage: Number(tonnage) || 0, tonnage_unit: tonnageUnit, chemical, product_type: productTypes ? productType : null });
       clearDraft();
       onSaved();
@@ -132,6 +136,14 @@ function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSa
             <label className="block mb-3"><span className="text-xs font-medium text-slate-500">Tahap deal</span>
               <select className={inp} value={stageKey} onChange={(e) => setStageKey(e.target.value)}>{wonStages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
             </label>
+            {sel && !sel.outcome && (
+              <label className="block mb-3"><span className="text-xs font-medium text-slate-500">Alasan menang *</span>
+                <select className={inp} value={winReason} onChange={(e) => setWinReason(e.target.value)}>
+                  <option value="">Pilih...</option>
+                  {reasonCategoriesFor("won").map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </label>
+            )}
             <div className="grid grid-cols-2 gap-3 mb-3">
               <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal deal</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
               <label className="block"><span className="text-xs font-medium text-slate-500">{productLabel}</span><input className={inp} value={chemical} onChange={(e) => setChemical(e.target.value)} /></label>

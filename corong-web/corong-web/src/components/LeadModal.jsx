@@ -5,7 +5,7 @@ import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send
 import * as db from "../lib/db";
 import LeadConversation from "./LeadConversation";
 import PaymentTermsCard from "./PaymentTermsCard";
-import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE } from "../lib/helpers";
+import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE, reasonCategoriesFor } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
 
@@ -189,7 +189,6 @@ function fillTemplate(str, lead) {
   return str.replace(/\{\{nama\}\}/g, lead.name || "perusahaan Anda").replace(/\{\{pic\}\}/g, lead.key_person || "Bapak/Ibu");
 }
 
-const REASON_CATEGORIES = ["Harga", "Timing", "Kompetitor", "Tidak ada anggaran", "Tidak ada kebutuhan", "Kualitas/spek", "Respons lambat", "Lainnya"];
 
 // myLevel: 0=Free, 1=Standard, 2=Professional+ (dikirim dari App.jsx) -
 // dipake buat ngunci tombol AI yang backend-nya udah di-gate Professional
@@ -400,6 +399,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
 
   const save = async () => {
     if (!f.name?.trim()) { alert("Nama wajib diisi."); return; }
+    if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
     try {
       await db.upsertLead(f);
@@ -594,10 +594,10 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <div className={`text-xs font-semibold flex items-center gap-1.5 ${outcomeResult === "won" ? "text-emerald-700" : "text-rose-700"}`}>
                 <Sparkles size={13} /> Kenapa {outcomeResult === "won" ? "Menang" : "Kalah"}?
               </div>
-              <Field label="Kategori alasan">
+              <Field label="Kategori alasan *">
                 <select className={inp} value={outcomeCategory} onChange={(e) => setOutcomeCategory(e.target.value)}>
                   <option value="">Pilih...</option>
-                  {REASON_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                  {reasonCategoriesFor(outcomeResult).map((c) => <option key={c}>{c}</option>)}
                 </select>
               </Field>
               <Field label="Detail (opsional)">

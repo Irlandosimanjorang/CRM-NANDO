@@ -126,3 +126,8 @@ export const nameSimilarity = (a, b) => {
   for (const bg of bA) { const idx = pool.indexOf(bg); if (idx !== -1) { matches++; pool.splice(idx, 1); } }
   return (2 * matches) / (bA.length + bB.length);
 };
+
+// Kategori alasan menang/kalah (Outcome Memory). Dipakai form tutup lead dan tab Deal supaya memori Nexto punya data terstruktur.
+export const REASON_CATEGORIES_LOST = ["Harga", "Timing", "Kompetitor", "Tidak ada anggaran", "Tidak ada kebutuhan", "Kualitas/spek", "Respons lambat", "Lainnya"];
+export const REASON_CATEGORIES_WON = ["Harga bersaing", "Kualitas/spek cocok", "Respons cepat", "Hubungan baik", "Timing tepat", "Rekomendasi pelanggan", "Lainnya"];
+export const reasonCategoriesFor = (result) => (result === "won" ? REASON_CATEGORIES_WON : REASON_CATEGORIES_LOST);
