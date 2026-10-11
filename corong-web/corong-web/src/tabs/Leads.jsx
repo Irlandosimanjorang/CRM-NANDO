@@ -258,16 +258,15 @@ export function normalizeLevel(text) {
   if (/perusahaan|company|induk|parent|\bpt\b/.test(t)) return "perusahaan";
   return "";
 }
-// follow = true (mode tandai per baris): baris TANPA tanda yang berada di bawah sebuah
-// perusahaan/holding otomatis menjadi anaknya; peran "Mandiri" memutus konteks itu.
-function deriveHierarchy(rows, follow = false) {
+// strict = true (mode tandai per baris): baris TANPA tanda tidak masuk grup dan memutus konteks Pusat/Holding di atasnya.
+function deriveHierarchy(rows, strict = false) {
   let holding = "";
   let company = "";
   for (const r of rows) {
     let lv = normalizeLevel(r.entity_level);
     delete r.entity_level;
     if (lv === "mandiri") { holding = ""; company = ""; continue; }
-    if (!lv && follow && (holding || company)) lv = "anak";
+    if (!lv && strict) { holding = ""; company = ""; continue; } // mode tandai: baris tanpa tanda tidak masuk grup
     if (lv === "holding") { holding = r.name; company = ""; r._groupRow = true; continue; }
     if (lv === "perusahaan") { company = r.name; r._groupRow = true; if (holding && !r.group_holding) r.group_holding = holding; continue; }
     if (lv === "anak") {
@@ -279,7 +278,7 @@ function deriveHierarchy(rows, follow = false) {
 }
 
 // opts.levels: { <indeks baris data>: "holding" | "perusahaan" | "anak" | "mandiri" } dari penanda
-// per baris di layar import (menang atas kolom peran); opts.follow: lihat deriveHierarchy.
+// per baris di layar import (menang atas kolom peran); opts.strict: baris tanpa tanda tidak masuk grup (lihat deriveHierarchy).
 export function extractRowsFromMapping(dataRows, mapping, firstStage, opts = {}) {
   const get = (row, idx) => (idx === null || idx === undefined || idx === "") ? "" : String(row[idx] ?? "").trim();
   const out = [];
@@ -317,7 +316,7 @@ export function extractRowsFromMapping(dataRows, mapping, firstStage, opts = {})
     if (opts.levels && opts.levels[ri]) obj.entity_level = opts.levels[ri];
     out.push(obj);
   }
-  return deriveHierarchy(out, !!opts.follow);
+  return deriveHierarchy(out, !!opts.strict);
 }
 
 
@@ -360,7 +359,7 @@ function isHotLead(lead, hotKeys) {
 
 /* =========================================================
    BAGAN HOLDING / PERUSAHAAN / ANAK PERUSAHAAN (8 Okt 2026)
-   Pohon dari atas ke bawah: Holding > Perusahaan > Anak perusahaan.
+   Pohon dari atas ke bawah: Holding > Pusat > Cabang.
    node = { lead|null, label, role: "holding"|"perusahaan"|"anak", children[] }.
    Tiap node adalah KARTU lead asli versi kecil (semua tombolnya tetap ada);
    lead null = nama grup yang belum punya lead sendiri (kotak putus-putus).
@@ -368,8 +367,8 @@ function isHotLead(lead, hotKeys) {
 ========================================================= */
 const ORG_ROLE = {
   holding: { label: "Holding", tag: "bg-slate-800 text-white" },
-  perusahaan: { label: "Perusahaan", tag: "bg-orange-500 text-white" },
-  anak: { label: "Anak perusahaan", tag: "bg-slate-200 text-slate-700" },
+  perusahaan: { label: "Pusat", tag: "bg-orange-500 text-white" },
+  anak: { label: "Cabang", tag: "bg-slate-200 text-slate-700" },
 };
 
 function OrgNode({ node, renderLead, upper }) {
@@ -2054,7 +2053,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       >
         {groupView && filtered.length > 0 && !units.some((u) => u.type === "group" || u.type === "holding") && (
           <div className="col-span-full rounded-inner border border-orange-200 bg-orange-50 px-4 py-3 text-[12.5px] text-slate-700">
-            Belum ada lead yang dikelompokkan. Isi <b>Holding / Group</b> dan/atau <b>Perusahaan induk</b> di form lead (klik ikon pensil), atau gunakan kolomnya saat import Excel. Lead dengan nama yang sama (minimal 2) akan dilipat jadi satu baris, bertingkat: Holding &gt; Perusahaan &gt; Anak perusahaan.
+            Belum ada lead yang dikelompokkan. Isi <b>Holding / Group</b> dan/atau <b>Pusat</b> di form lead (klik ikon pensil), atau gunakan kolomnya saat import Excel. Lead dengan nama yang sama (minimal 2) akan dilipat jadi satu baris, bertingkat: Holding &gt; Pusat &gt; Cabang.
           </div>
         )}
 
@@ -2132,7 +2131,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               const perusahaan = u.children.filter((ch) => !(ch.type === "lead" && isSelf(ch.lead, u.label))).length;
               subtitle = `${perusahaan} perusahaan · ${u.members.length} lead`;
             } else {
-              subtitle = `${u.members.filter((m) => !isSelf(m, u.label)).length} anak perusahaan`;
+              subtitle = `${u.members.filter((m) => !isSelf(m, u.label)).length} cabang`;
             }
             const h = header(u, isHolding ? "holding" : "parent", subtitle);
             return (

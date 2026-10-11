@@ -655,8 +655,8 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <input className={inp} list="lead-holding-options" value={f.group_holding || ""} onChange={(e) => set("group_holding", e.target.value)} placeholder="Mis. Maju Group" />
               <datalist id="lead-holding-options">{holdingOptions.map((o) => <option key={o} value={o} />)}</datalist>
             </Field>
-            <Field label="Perusahaan induk (opsional)">
-              <input className={inp} list="lead-parent-options" value={f.parent_company || ""} onChange={(e) => set("parent_company", e.target.value)} placeholder="Isi jika ini anak perusahaan/cabang" />
+            <Field label="Pusat (opsional)">
+              <input className={inp} list="lead-parent-options" value={f.parent_company || ""} onChange={(e) => set("parent_company", e.target.value)} placeholder="Isi jika ini cabang dari sebuah pusat" />
               <datalist id="lead-parent-options">{parentOptions.map((o) => <option key={o} value={o} />)}</datalist>
             </Field>
           </div>

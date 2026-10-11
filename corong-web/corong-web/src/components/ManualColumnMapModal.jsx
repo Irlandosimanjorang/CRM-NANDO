@@ -58,9 +58,9 @@ const BASE_FIELD_OPTIONS = [
   { value: "product", label: "Produk" },
   { value: "city", label: "Kota" },
   { value: "province", label: "Provinsi" },
-  { value: "entity_level", label: "Peran baris (Holding / Perusahaan / Anak)" },
+  { value: "entity_level", label: "Peran baris (Holding / Pusat / Cabang)" },
   { value: "group_holding", label: "Holding / Group" },
-  { value: "parent_company", label: "Perusahaan Induk" },
+  { value: "parent_company", label: "Pusat" },
   { value: "website", label: "Website" },
   { value: "background", label: "Latar Belakang" },
   { value: "notes", label: "Catatan (jadi progress note)" },
@@ -68,13 +68,12 @@ const BASE_FIELD_OPTIONS = [
 const NEW_CUSTOM_VALUE = "__new_custom__";
 
 const MAX_PREVIEW_ROWS = 12;
-// Peran per baris (mode "Tandai hirarki"): holding > perusahaan > anak.
+// Peran per baris (mode "Tandai hirarki"): holding > pusat > cabang. Baris tanpa tanda tidak masuk grup.
 const ROW_ROLES = [
   { value: "", label: "—" },
   { value: "holding", label: "Holding" },
-  { value: "perusahaan", label: "Perusahaan" },
-  { value: "anak", label: "Anak" },
-  { value: "mandiri", label: "Mandiri" },
+  { value: "perusahaan", label: "Pusat" },
+  { value: "anak", label: "Cabang" },
 ];
 
 export default function ManualColumnMapModal({ request, onConfirm, onCancel, onPickSheet }) {
@@ -105,15 +104,14 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
   const [noteExtras, setNoteExtras] = useState(true); // colIdx -> label yang diketik user
   // Mode tandai hirarki (8 Okt 2026): pilih peran tiap baris (Holding/Perusahaan/Anak) langsung di tabel.
   const [hierMode, setHierMode] = useState(() => !!mapDraft?.hierMode);
-  const [follow, setFollow] = useState(() => mapDraft?.follow !== false); // baris tanpa tanda ikut jadi anak
   const [rowRoles, setRowRoles] = useState(() => mapDraft?.rowRoles || {}); // indeks baris mentah -> peran
 
   // Auto-simpen koreksi manual tiap berubah - lihat komentar MANUAL_MAP_DRAFT_KEY.
   useEffect(() => {
     try {
-      localStorage.setItem(MANUAL_MAP_DRAFT_KEY, JSON.stringify({ sheetName, assign, dataStartRow, customLabels, hierMode, follow, rowRoles, savedAt: Date.now() }));
+      localStorage.setItem(MANUAL_MAP_DRAFT_KEY, JSON.stringify({ sheetName, assign, dataStartRow, customLabels, hierMode, rowRoles, savedAt: Date.now() }));
     } catch (_) {}
-  }, [sheetName, assign, dataStartRow, customLabels, hierMode, follow, rowRoles]);
+  }, [sheetName, assign, dataStartRow, customLabels, hierMode, rowRoles]);
 
   const autoGuessed = initialMapping && initialMapping.name !== undefined && initialMapping.name !== null;
 
@@ -178,7 +176,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
       }
     }
     const extraNoteCols = noteExtras ? noteCols.filter((c) => !assign[c.index]) : [];
-    onConfirm(mapping, dataStartRow, customEntries, hierMode ? { levels, follow } : undefined, extraNoteCols);
+    onConfirm(mapping, dataStartRow, customEntries, hierMode ? { levels, strict: true } : undefined, extraNoteCols);
   };
 
   const handleCancel = () => { clearManualMapDraft(); onCancel(); };
@@ -216,17 +214,13 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
         <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
           <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-slate-700">
             <input type="checkbox" className="mt-0.5 h-4 w-4 accent-orange-600" checked={hierMode} onChange={(e) => setHierMode(e.target.checked)} />
-            <span>Tandai Holding / Perusahaan / Anak perusahaan per baris
-              <span className="block text-[11.5px] font-normal text-slate-500">Muncul pilihan di sisi kiri tiap baris. Tandai baris yang menjadi Holding atau Perusahaan; baris tanpa tanda di bawahnya otomatis jadi anak perusahaannya.</span>
+            <span>Tandai Holding / Pusat / Cabang per baris
+              <span className="block text-[11.5px] font-normal text-slate-500">Muncul pilihan di sisi kiri tiap baris. Tandai baris yang menjadi Holding atau Pusat, lalu tandai Cabang di bawahnya. Baris tanpa tanda tidak masuk grup.</span>
             </span>
           </label>
           {hierMode && (
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-600">
-              <label className="flex cursor-pointer items-center gap-1.5">
-                <input type="checkbox" className="h-3.5 w-3.5 accent-orange-600" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
-                Baris tanpa tanda ikut jadi anak dari perusahaan/holding di atasnya
-              </label>
-              <span className="tabular-nums text-slate-500">Ditandai: {roleCount("holding")} holding, {roleCount("perusahaan")} perusahaan, {roleCount("anak")} anak, {roleCount("mandiri")} mandiri</span>
+              <span className="tabular-nums text-slate-500">Ditandai: {roleCount("holding")} holding, {roleCount("perusahaan")} pusat, {roleCount("anak")} cabang</span>
               {Object.keys(rowRoles).length > 0 && <button type="button" onClick={() => setRowRoles({})} className="font-semibold text-orange-700 hover:text-orange-800">Hapus semua tanda</button>}
             </div>
           )}
