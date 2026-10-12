@@ -1358,6 +1358,15 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       toInsert.push({ lead: { ...leadPayload, name }, notes });
     }
 
+    // Nama kembar jadi satu grup otomatis (12 Okt 2026): baris bernama persis sama (mis. banyak cabang "JASA RAHARJA") yang belum
+    // punya Pusat diberi Pusat = namanya sendiri, supaya tampil sebagai satu grup. Lead lama bernama sama ikut masuk grup itu.
+    const nameCount = new Map();
+    for (const t of toInsert) { const k = t.lead.name.trim().toLowerCase(); nameCount.set(k, (nameCount.get(k) || 0) + 1); }
+    for (const t of toInsert) {
+      const k = t.lead.name.trim().toLowerCase();
+      if (!t.lead.parent_company && ((nameCount.get(k) || 0) >= 2 || existingByKey.has(k))) t.lead.parent_company = t.lead.name;
+    }
+
     if (toInsert.length === 0 && duplicates.length === 0) {
       alert("Tidak ada baris yang terbaca. Pastikan ada data nama perusahaan/lead.");
       return;
