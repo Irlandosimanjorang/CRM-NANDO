@@ -59,7 +59,6 @@ const BASE_FIELD_OPTIONS = [
   { value: "city", label: "Kota" },
   { value: "province", label: "Provinsi" },
   { value: "entity_level", label: "Peran baris (Pusat / Cabang)" },
-  { value: "group_holding", label: "Holding / Group" },
   { value: "parent_company", label: "Pusat" },
   { value: "website", label: "Website" },
   { value: "background", label: "Latar Belakang" },

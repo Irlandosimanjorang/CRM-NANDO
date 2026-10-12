@@ -192,7 +192,6 @@ const FIELD_KEY_MAP = {
   city: ["城市", "city", "kota"],
   province: ["省", "province", "provinsi"],
   entity_level: LEVEL_HEADER_KEYS,
-  group_holding: HOLDING_HEADER_KEYS,
   parent_company: PARENT_HEADER_KEYS,
   website: ["网站", "website", "web"],
   background: ["公司背景", "background", "海关"],
