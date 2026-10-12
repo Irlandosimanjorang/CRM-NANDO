@@ -1281,6 +1281,25 @@ export default function Leads({
     const originalLeadNames = new Set(leads.map((l) => l.name));
     const knownNames = leads.map((l) => l.name);
     const seenThisImport = new Set();
+    // Cabang bernama sama (12 Okt 2026, laporan Fitri: semua cabang Jasa Raharja dilewati): nama yang sama dianggap duplikat
+    // HANYA bila kota, telepon, dan kontaknya juga sama. Antar baris dalam satu file, catatan (mis. alamat) ikut dibandingkan.
+    const normText = (v) => String(v || "").toLowerCase().replace(/\s+/g, " ").trim();
+    const normPhone = (v) => String(v || "").replace(/\D/g, "").replace(/^(62|0)/, "");
+    const baseSig = (r) => [normText(r.city), normPhone(r.phone), normText(r.key_person)].join("|");
+    const fullSig = (r) => baseSig(r) + "|" + normText(r.notes);
+    const existingSigs = new Map(); // nama -> set baseSig lead yang sudah ada
+    for (const l of leads) {
+      const k = l.name.trim().toLowerCase();
+      if (!existingSigs.has(k)) existingSigs.set(k, new Set());
+      existingSigs.get(k).add(baseSig(l));
+    }
+    const importSigs = new Map(); // nama -> set fullSig baris yang sudah diterima di file ini
+    const isOtherBranch = (key, r) => {
+      if ((baseSig(r) + normText(r.notes)).replace(/\|/g, "") === "") return false; // tanpa pembeda sama sekali
+      if (existingSigs.get(key)?.has(baseSig(r))) return false;
+      if (importSigs.get(key)?.has(fullSig(r))) return false;
+      return true;
+    };
 
     // Grup/induk perusahaan: baris dari grup yang sama wajar bernama mirip
     // ("Maju Jaya Cabang Bandung" vs "... Surabaya"), jadi dikecualikan dari
@@ -1311,19 +1330,25 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       const key = name.toLowerCase();
 
       const existingExact = existingByKey.get(key);
+      let otherBranch = false;
       if (existingExact || seenThisImport.has(key)) {
-        duplicates.push({ name, matchedName: existingExact || name, score: 1, source: existingExact ? "existing" : "this_import" });
-        continue;
+        otherBranch = isOtherBranch(key, m);
+        if (!otherBranch) {
+          duplicates.push({ name, matchedName: existingExact || name, score: 1, source: existingExact ? "existing" : "this_import" });
+          continue;
+        }
       }
 
       const myKeys = keysOfRow(m);
-      const fuzzyMatchName = knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD && !(myKeys.length && (parentOf.get(n) || []).some((k) => myKeys.includes(k))));
+      const fuzzyMatchName = otherBranch ? null : knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD && !(myKeys.length && (parentOf.get(n) || []).some((k) => myKeys.includes(k))));
       if (fuzzyMatchName) {
         duplicates.push({ name, matchedName: fuzzyMatchName, score: nameSimilarity(fuzzyMatchName, name), source: originalLeadNames.has(fuzzyMatchName) ? "existing" : "this_import" });
         continue;
       }
 
       seenThisImport.add(key);
+      if (!importSigs.has(key)) importSigs.set(key, new Set());
+      importSigs.get(key).add(fullSig(m));
       knownNames.push(name);
       parentOf.set(name, myKeys);
       const notes = m.notes;
@@ -1343,9 +1368,11 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       const chunk = toInsert.slice(i, i + 200);
       const inserted = await db.bulkInsertLeads(chunk.map((c) => c.lead));
       const notesByName = new Map(chunk.map((c) => [c.lead.name.toLowerCase(), c.notes]));
-      for (const row of inserted) {
-        insertedPairs.push({ id: row.id, name: row.name, notes: notesByName.get(row.name.toLowerCase()) || "" });
-      }
+      // Nama kembar (cabang): hasil insert berurutan sama dengan chunk, jadi catatan dipasangkan menurut urutan.
+      const sameOrder = inserted.length === chunk.length && inserted.every((row, k) => String(row.name).toLowerCase() === chunk[k].lead.name.toLowerCase());
+      inserted.forEach((row, k) => {
+        insertedPairs.push({ id: row.id, name: row.name, notes: (sameOrder ? chunk[k].notes : notesByName.get(row.name.toLowerCase())) || "" });
+      });
     }
 
     // Kolom catatan/keterangan dari Excel (kalau ada, lihat mapRow &
