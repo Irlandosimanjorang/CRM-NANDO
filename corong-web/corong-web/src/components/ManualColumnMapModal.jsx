@@ -58,7 +58,7 @@ const BASE_FIELD_OPTIONS = [
   { value: "product", label: "Produk" },
   { value: "city", label: "Kota" },
   { value: "province", label: "Provinsi" },
-  { value: "entity_level", label: "Peran baris (Holding / Pusat / Cabang)" },
+  { value: "entity_level", label: "Peran baris (Pusat / Cabang)" },
   { value: "group_holding", label: "Holding / Group" },
   { value: "parent_company", label: "Pusat" },
   { value: "website", label: "Website" },
@@ -68,10 +68,9 @@ const BASE_FIELD_OPTIONS = [
 const NEW_CUSTOM_VALUE = "__new_custom__";
 
 const MAX_PREVIEW_ROWS = 12;
-// Peran per baris (mode "Tandai hirarki"): holding > pusat > cabang. Baris tanpa tanda tidak masuk grup.
+// Peran per baris (mode "Tandai hirarki"): pusat > cabang. Baris tanpa tanda tidak masuk grup.
 const ROW_ROLES = [
   { value: "", label: "—" },
-  { value: "holding", label: "Holding" },
   { value: "perusahaan", label: "Pusat" },
   { value: "anak", label: "Cabang" },
 ];
@@ -214,13 +213,13 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
         <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
           <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-slate-700">
             <input type="checkbox" className="mt-0.5 h-4 w-4 accent-orange-600" checked={hierMode} onChange={(e) => setHierMode(e.target.checked)} />
-            <span>Tandai Holding / Pusat / Cabang per baris
-              <span className="block text-[11.5px] font-normal text-slate-500">Muncul pilihan di sisi kiri tiap baris. Tandai baris yang menjadi Holding atau Pusat, lalu tandai Cabang di bawahnya. Baris tanpa tanda tidak masuk grup.</span>
+            <span>Tandai Pusat / Cabang per baris
+              <span className="block text-[11.5px] font-normal text-slate-500">Muncul pilihan di sisi kiri tiap baris. Tandai baris yang menjadi Pusat, lalu tandai Cabang di bawahnya. Baris tanpa tanda tidak masuk grup.</span>
             </span>
           </label>
           {hierMode && (
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-600">
-              <span className="tabular-nums text-slate-500">Ditandai: {roleCount("holding")} holding, {roleCount("perusahaan")} pusat, {roleCount("anak")} cabang</span>
+              <span className="tabular-nums text-slate-500">Ditandai: {roleCount("perusahaan")} pusat, {roleCount("anak")} cabang</span>
               {Object.keys(rowRoles).length > 0 && <button type="button" onClick={() => setRowRoles({})} className="font-semibold text-orange-700 hover:text-orange-800">Hapus semua tanda</button>}
             </div>
           )}
@@ -279,7 +278,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => setRole(rowIdx, e.target.value)}
                         aria-label={`Peran baris ${rowIdx}`}
-                        className={`w-[104px] rounded-lg border px-1 py-1 text-[11px] font-sans ${rowRoles[rowIdx] === "holding" ? "border-slate-800 bg-slate-800 text-white" : rowRoles[rowIdx] === "perusahaan" ? "border-orange-400 bg-orange-50 text-orange-800" : rowRoles[rowIdx] ? "border-slate-300 bg-slate-100 text-slate-700" : "border-slate-200 bg-white text-slate-400"}`}
+                        className={`w-[104px] rounded-lg border px-1 py-1 text-[11px] font-sans ${rowRoles[rowIdx] === "perusahaan" ? "border-orange-400 bg-orange-50 text-orange-800" : rowRoles[rowIdx] ? "border-slate-300 bg-slate-100 text-slate-700" : "border-slate-200 bg-white text-slate-400"}`}
                       >
                         {ROW_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </select>
