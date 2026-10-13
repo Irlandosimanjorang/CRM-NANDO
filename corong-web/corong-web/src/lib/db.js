@@ -1426,6 +1426,13 @@ export async function getDealTransactions() {
   return data || [];
 }
 
+// Jumlah menang dan kalah per KEJADIAN perpindahan tahap (repeat order dihitung tiap kali menang).
+export async function getOutcomeEvents(fromISO = null, toISO = null) {
+  const { data, error } = await supabase.rpc("outcome_events", { p_from: fromISO, p_to: toISO });
+  if (error) throw error;
+  return data || { won: 0, lost: 0, by_user: [] };
+}
+
 export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type }) {
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();

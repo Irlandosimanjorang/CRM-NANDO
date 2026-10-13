@@ -35,24 +35,32 @@ export default function Dashboard({
     [leads, stages, myUid]
   );
 
+  // Menang / kalah dihitung per kejadian perpindahan tahap (repeat order tetap terhitung tiap kali menang).
+  const [events, setEvents] = useState(null);
+  useEffect(() => {
+    db.getOutcomeEvents().then(setEvents).catch(() => setEvents(null));
+  }, [leads]);
+
   const stats = useMemo(() => {
     const wonKeys = stages.filter(s => s.type === "won").map(s => s.key);
     const lostKeys = stages.filter(s => s.type === "lost").map(s => s.key);
     const won = leads.filter(l => wonKeys.includes(l.stage_key));
     const lost = leads.filter(l => lostKeys.includes(l.stage_key));
+    const wonN = events ? events.won : won.length;
+    const lostN = events ? events.lost : lost.length;
     const followups = leads.filter(l => l.next_action && String(l.next_action).trim());
     const visits = leads.filter(l => sameDay(l.visit_date));
     return {
       total: leads.length,
-      won: won.length,
-      lost: lost.length,
+      won: wonN,
+      lost: lostN,
       followups: followups.length,
       visits: visits.length,
       deals: dealTransactions.length,
-      winRate: won.length + lost.length ? Math.round((won.length / (won.length + lost.length)) * 100) : 0,
+      winRate: wonN + lostN ? Math.round((wonN / (wonN + lostN)) * 100) : 0,
       wonKeys,
     };
-  }, [leads, stages, dealTransactions]);
+  }, [leads, stages, dealTransactions, events]);
 
   const pipeline = useMemo(() => {
     const usable = stages.filter(s => s.type !== "lost").slice(0, 4);
