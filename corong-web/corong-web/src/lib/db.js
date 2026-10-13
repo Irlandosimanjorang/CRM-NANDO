@@ -755,6 +755,12 @@ export async function saveOutcome(leadId, { result, reason_category, reason, ai_
   return outcome;
 }
 
+// Repeat order: outcome lama dihapus saat lead dibuka lagi dari Menang. Riwayat deal tetap ada di deal_transactions.
+export async function clearOutcome(leadId) {
+  const { error } = await supabase.from("leads").update({ outcome: null }).eq("id", leadId);
+  if (error) throw error;
+}
+
 // AI nebak alasan menang/kalah dari progress notes - on-demand, cuma jalan
 // pas user klik tombolnya (biar males isi manual bisa tetep kecatet).
 export async function guessOutcomeReason(leadId, result) {

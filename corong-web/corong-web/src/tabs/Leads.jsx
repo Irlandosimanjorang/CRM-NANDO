@@ -734,6 +734,17 @@ export default function Leads({
     onChanged({ silent: true });
   };
 
+  // Peluang baru (repeat order) dari kolom Menang: lead kembali ke tahap awal dengan nilai dan outcome kosong.
+  // Deal sebelumnya tetap ada di tab Deal (transaksi tidak dihapus), jadi menang berikutnya dicatat sebagai deal baru.
+  const reopenLead = async (lead, key) => {
+    const cleared = { stage_key: key, deal_value: 0, deal_date: null, outcome: null };
+    await db.upsertLead({ ...lead, ...cleared });
+    await db.clearOutcome(lead.id);
+    await db.addProgress(lead.id, "[Repeat order] dibuka kembali dari Menang. Deal sebelumnya tetap tercatat di tab Deal.");
+    if (onLocalDeal) onLocalDeal(lead.id, cleared, null);
+    onChanged({ silent: true });
+  };
+
   const [edit, setEdit] =
     useState(null);
 
@@ -2134,7 +2145,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
           stages={stages}
           onOpenEdit={setEdit}
           onMove={moveLeadStage}
-          onNewOpportunity={moveLeadStage}
+          onNewOpportunity={reopenLead}
         />
       )}
 

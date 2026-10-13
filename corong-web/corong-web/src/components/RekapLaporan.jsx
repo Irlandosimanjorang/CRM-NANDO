@@ -101,14 +101,17 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
     const sorted = (rows) => rows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
     const sph = byStage("sph_terlayang"), hot = byStage("hot_progress");
-    const lost = live.filter((l) => lostKeys.has(l.stage_key) && ymOf(l.updated_at) === ym);
+    // Kalah dihitung per perpindahan ke tahap Lost (repeat loss tetap terhitung), bukan per lead saat ini.
+    const lost = changes
+      .filter((c) => lostKeys.has(c.to_stage) && !lostKeys.has(c.from_stage) && byId.get(c.lead_id))
+      .map((c) => ({ lead: byId.get(c.lead_id), changedAt: c.changed_at }));
     const sections = [
       { key: "sph", title: "SPH terlayang / info harga", note: "SPH belum diproses, hot progress, dan deal bulan ini", rows: sorted([...sph, ...hot].map((l) => row(l)).concat(deals.map((x) => row(x.lead, x.value, x.date)))) },
       { key: "hot", title: "Hot progress", note: "Calon yang serius, menunggu gambar atau survei", rows: sorted(hot.map((l) => row(l))) },
       { key: "deal", title: "Proyek deal", note: `Deal pada ${MONTHS[month - 1]}`, rows: sorted(deals.filter((x) => x.lead.stage_key === "proyek_deal").map((x) => row(x.lead, x.value, x.date))) },
       { key: "kontrak", title: "Deal kontrak", note: `Deal kontrak pada ${MONTHS[month - 1]}`, rows: sorted(deals.filter((x) => x.lead.stage_key === "deal_kontrak").map((x) => row(x.lead, x.value, x.date))) },
       { key: "so", title: "Deal bulan ini yang sudah proses SO / pengiriman", note: `Deal pada ${MONTHS[month - 1]} yang sudah lanjut`, rows: sorted(deals.filter((x) => ["proses_so", "pengiriman"].includes(x.lead.stage_key)).map((x) => row(x.lead, x.value, x.date))) },
-      { key: "nodeal", title: "No deal", note: `Diubah pada ${MONTHS[month - 1]}`, rows: sorted(lost.map((l) => row(l))) },
+      { key: "nodeal", title: "No deal", note: `Diubah pada ${MONTHS[month - 1]}`, rows: sorted(lost.map((x) => row(x.lead, num(x.lead.deal_value), wibDate(x.changedAt)))) },
     ];
     const prior = [
       { key: "jalan", title: "Project yang berjalan dari bulan sebelumnya", note: "Sudah proses SO atau dalam pengiriman", rows: sorted(byStage("proses_so", "pengiriman").filter(earlier).map((l) => row(l, num(l.deal_value), l.deal_date || wibDate(l.created_at)))) },

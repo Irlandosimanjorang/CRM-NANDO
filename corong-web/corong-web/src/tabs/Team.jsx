@@ -79,6 +79,7 @@ const COLS = [
   { key: "new_leads", label: "Lead baru" },
   { key: "stage_moves", label: "Pindah tahap", clickable: true },
   { key: "deals", label: "Deal", clickable: true },
+  { key: "lost", label: "Kalah", clickable: true },
 ];
 
 function daysSince(iso) {
@@ -726,6 +727,7 @@ function MemberActivityModal({ api, member, kind, range, rangeLabel, stages, lea
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const isDeal = kind === "deals";
+  const isLost = kind === "lost";
   const fromKey = ymdLocal(range.from);
   const toKey = ymdLocal(range.to);
 
@@ -745,9 +747,9 @@ function MemberActivityModal({ api, member, kind, range, rangeLabel, stages, lea
   const typeOf = (key) => stages.find((s) => s.key === key)?.type;
   const leadOf = (id) => leads.find((l) => l.id === id);
 
-  // Deal = perpindahan ke tahap Menang (sama dengan angka di rekap). Pindah tahap = semua perpindahan.
+  // Deal = perpindahan ke tahap Menang, Kalah = perpindahan ke tahap Lost (sama dengan angka di tabel). Pindah tahap = semua perpindahan.
   const list = (rows || [])
-    .filter((r) => (isDeal ? typeOf(r.to_stage) === "won" : true))
+    .filter((r) => (isDeal ? typeOf(r.to_stage) === "won" : isLost ? typeOf(r.to_stage) === "lost" && typeOf(r.from_stage) !== "lost" : true))
     .slice()
     .reverse();
   const dealValueFor = (r) => {
@@ -762,8 +764,8 @@ function MemberActivityModal({ api, member, kind, range, rangeLabel, stages, lea
       <div className="my-8 w-full max-w-lg rounded-panel bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-[16px] font-bold text-ink">{isDeal ? "Deal" : "Pindah tahap"} · {member.name}</h2>
-            <p className="text-[11.5px] text-slate-500">{rangeLabel} · {list.length} {isDeal ? "deal" : "perpindahan"}</p>
+            <h2 className="text-[16px] font-bold text-ink">{isDeal ? "Deal" : isLost ? "Kalah" : "Pindah tahap"} · {member.name}</h2>
+            <p className="text-[11.5px] text-slate-500">{rangeLabel} · {list.length} {isDeal ? "deal" : isLost ? "kalah" : "perpindahan"}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Tutup">✕</button>
         </div>

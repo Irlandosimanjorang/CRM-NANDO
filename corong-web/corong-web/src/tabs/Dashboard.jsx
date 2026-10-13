@@ -300,7 +300,7 @@ export default function Dashboard({
         <Stat value={stats.total} label="Total lead" hint={`${stats.won} menang, ${stats.lost} kalah`} />
         <Stat value={stats.followups} label="Perlu follow-up" hint="Lead dengan langkah berikutnya" tone={stats.followups ? "brand" : "ink"} />
         <Stat value={stats.visits} label="Kunjungan hari ini" hint={nextVisit ? `Berikutnya: ${nextVisit.name}` : "Belum ada jadwal kunjungan"} />
-        <Stat value={stats.won} label="Deal menang" hint={`Win rate ${stats.winRate}%`} tone={stats.won ? "good" : "ink"} />
+        <Stat value={stats.won} label="Deal menang" hint={`${stats.lost} kalah · win rate ${stats.winRate}%`} tone={stats.won ? "good" : "ink"} />
       </StatRow>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-5">
@@ -314,7 +314,7 @@ export default function Dashboard({
                   <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Deal menang</span>
                 </div>
               )} />
-            <div className="mt-4 h-44 -mx-2">
+            <div className="mt-4 h-64 -mx-2">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trend} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
                   <defs>
@@ -329,10 +329,12 @@ export default function Dashboard({
                   </defs>
                   <CartesianGrid vertical={false} stroke="#eef2f7" />
                   <XAxis dataKey="label" tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                  {/* Dua sumbu: lead jauh lebih banyak dari deal, jadi deal dibaca di sumbu kanan sendiri supaya tidak tertimpa. */}
+                  <YAxis yAxisId="leads" tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                  <YAxis yAxisId="deals" orientation="right" domain={[0, "dataMax + 1"]} tick={{ fontSize: 10.5, fill: "#10b981" }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
                   <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} labelStyle={{ fontWeight: 700, color: "#0f172a" }} />
-                  <Area type="monotone" dataKey="leads" name="Lead baru" stroke="#f97316" strokeWidth={2} fill="url(#nextoLeadsGrad)" />
-                  <Area type="monotone" dataKey="deals" name="Deal menang" stroke="#10b981" strokeWidth={2} fill="url(#nextoDealsGrad)" />
+                  <Area yAxisId="leads" type="monotone" dataKey="leads" name="Lead baru" stroke="#f97316" strokeWidth={2} fill="url(#nextoLeadsGrad)" dot={{ r: 3, strokeWidth: 0, fill: "#f97316" }} />
+                  <Area yAxisId="deals" type="monotone" dataKey="deals" name="Deal menang" stroke="#10b981" strokeWidth={2} fill="url(#nextoDealsGrad)" dot={{ r: 3.5, strokeWidth: 0, fill: "#10b981" }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
