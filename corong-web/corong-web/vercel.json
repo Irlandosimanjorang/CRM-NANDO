@@ -1,7 +1,7 @@
 {
   "rewrites": [
     { "source": "/grok-bot", "destination": "/index.html" },
-    { "source": "/demo", "destination": "/index.html" },
+    { "source": "/demo", "destination": "/demo/demo.html" },
     { "source": "/invoice", "destination": "/index.html" }
   ],
   "headers": [

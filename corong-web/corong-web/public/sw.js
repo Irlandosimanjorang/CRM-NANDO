@@ -80,7 +80,8 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((resp) => {
-          if (resp.ok) caches.open(CACHE_NAME).then((cache) => cache.put("/", resp.clone()));
+          // /demo (aplikasi demo terpisah) tidak boleh menimpa shell aplikasi utama di cache.
+          if (resp.ok && !url.pathname.startsWith("/demo")) caches.open(CACHE_NAME).then((cache) => cache.put("/", resp.clone()));
           return resp;
         })
         .catch(() => caches.match("/"))

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "eslint src && vite build",
+    "build": "eslint src && vite build && node scripts/demo/gen-demo-mockdb.cjs && vite build --config vite.demo.config.js",
     "preview": "vite preview",
     "cap:sync": "vite build && npx cap sync android",
     "cap:open:android": "npx cap open android",
