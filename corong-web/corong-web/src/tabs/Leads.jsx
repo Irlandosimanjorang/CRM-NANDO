@@ -619,6 +619,7 @@ function MiniKpi({ icon: Icon, label, value, active, onClick, iconClass = "text-
 ========================================================= */
 
 export default function Leads({
+  onLocalDeal,
   leads,
   stages,
   settings,
@@ -710,19 +711,26 @@ export default function Leads({
   // Simpan di belakang layar: papan sudah menampilkan tahap baru, jadi tidak perlu menunggu muat ulang.
   // Error dilempar lagi ke papan, yang mengembalikan kartu ke tempat semula.
   const moveLeadStage = async (lead, key, extra) => {
+    let tx = null;
+    let leadPatch = { stage_key: key };
     if (extra?.deal) {
       // Transaksi dicatat dulu: dengan transaksi manual, pemicu otomatis tidak menulis ganda.
-      await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: extra.deal.date, deal_value: extra.deal.value, product_type: lead.product || null });
-      await db.upsertLead({ ...lead, stage_key: key, deal_value: extra.deal.value, deal_date: extra.deal.date });
+      tx = await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: extra.deal.date, deal_value: extra.deal.value, product_type: lead.product || null });
+      leadPatch = { ...leadPatch, deal_value: extra.deal.value, deal_date: extra.deal.date };
+      await db.upsertLead({ ...lead, ...leadPatch });
     } else {
       await db.upsertLead({ ...lead, stage_key: key });
     }
     if (extra) {
       // Alasan menang / kalah dicatat sebagai outcome lead, dan juga sebagai catatan progres supaya terlihat di riwayat.
+      const outcome = { result: extra.result, reason_category: extra.reason_category, reason: extra.note || "", ai_generated: false, recorded_at: new Date().toISOString() };
       await db.saveOutcome(lead.id, { result: extra.result, reason_category: extra.reason_category, reason: extra.note, ai_generated: false });
+      leadPatch = { ...leadPatch, outcome };
       const label = extra.result === "won" ? "Menang" : "Kalah";
       await db.addProgress(lead.id, `[${label}] ${extra.reason_category}${extra.note ? " - " + extra.note : ""}`);
     }
+    // Tampilan langsung diperbarui; muat ulang di belakang layar tetap dijalankan sebagai pengaman.
+    if (onLocalDeal) onLocalDeal(lead.id, leadPatch, tx);
     onChanged({ silent: true });
   };
 

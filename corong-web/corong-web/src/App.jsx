@@ -338,6 +338,12 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Terapkan perubahan papan kanban langsung ke data yang tampil (tanpa menunggu muat ulang).
+  const applyLocalDeal = (leadId, leadPatch, tx) => {
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...leadPatch } : l)));
+    if (tx) setDealTransactions((prev) => [tx, ...prev.filter((t) => t.id !== tx.id)]);
+  };
+
   // silent: muat ulang di belakang layar (tanpa layar loading), dipakai setelah pindah tahap dari papan kanban.
   const reload = async (opts) => {
     const silent = !!(opts && opts.silent === true);
@@ -1068,7 +1074,7 @@ export default function App() {
                 <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} hideAiRecs={monitorOwner} myUid={session?.user?.id} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
-                <Leads leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
+                <Leads onLocalDeal={applyLocalDeal} leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
               </div>
               <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
                 {visitedTabs.has("generateleads") && (
