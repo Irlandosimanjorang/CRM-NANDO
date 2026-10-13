@@ -706,9 +706,11 @@ export default function Leads({
 
   // Tampilan daftar (Lead) atau papan kanban per tahap (Kanban). Dipilih dengan dua tombol di atas daftar.
   const [viewMode, setViewMode] = useState("daftar");
+  // Simpan di belakang layar: papan sudah menampilkan tahap baru, jadi tidak perlu menunggu muat ulang.
+  // Error dilempar lagi ke papan, yang mengembalikan kartu ke tempat semula.
   const moveLeadStage = async (lead, key) => {
-    try { await db.upsertLead({ ...lead, stage_key: key }); onChanged(); }
-    catch (e) { alert("Gagal pindah tahap: " + e.message); }
+    await db.upsertLead({ ...lead, stage_key: key });
+    onChanged();
   };
 
   const [edit, setEdit] =
