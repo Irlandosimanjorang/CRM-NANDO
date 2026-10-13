@@ -1,22 +1,24 @@
 // Supabase Edge Function: send-outreach (13 Okt 2026, permintaan Nando)
-// Kirim email perkenalan Nexto ke daftar perusahaan dari Command Center (kartu EMAIL OUTREACH) dengan satu klik.
-// Hanya ADMIN_EMAIL.
+// Kirim email perkenalan Nexto ke perusahaan dari Command Center (kartu EMAIL OUTREACH). Hanya ADMIN_EMAIL.
 //
 // Dua jalur pengiriman:
 //  - GMAIL (dipakai kalau secret GMAIL_APP_PASSWORD terisi): email keluar dari Gmail Nando sendiri lewat SMTP, tiga gambar
-//    (Dashboard, Dashboard Tim, Report) sebagai LAMPIRAN. Lebih kecil kemungkinan masuk spam karena berasal dari alamat pribadi.
+//    (Dashboard, Dashboard Tim, Report) sebagai LAMPIRAN.
 //  - RESEND (cadangan): dari domain nexto.site, gambar tampil langsung di badan email.
 //
-// Body: { action: "list" }                                   -> ringkasan + 30 pengiriman terakhir
-//       { action: "test", to? }                              -> kirim satu email contoh (tidak dicatat), default ke email admin
-//       { action: "send", recipients: [{ email, nama, perusahaan }] }
-//                                                            -> kirim ke tiap alamat yang belum pernah dikirimi
-//       { action: "unsubscribe", email }                     -> tandai berhenti, tidak akan dikirimi lagi
+// Aksi (body.action):
+//   list            -> ringkasan + 30 pengiriman terakhir
+//   queue_list      -> antrean prospek (hasil riset): hitungan per status dan segmen + baris berikutnya
+//   queue_remove    -> { email } keluarkan satu prospek dari antrean
+//   preview         -> { email? } tampilan email untuk satu prospek antrean (atau contoh)
+//   send_queue      -> kirim ke prospek antrean berikutnya sebanyak sisa batas harian
+//   test            -> { to? } kirim satu email contoh (tidak dicatat)
+//   send            -> { recipients: [{ email, nama, perusahaan }] } kirim ke daftar tempel manual
+//   unsubscribe     -> { email } tandai berhenti
 //
 // Pengaman: batas kirim per hari (DAILY_CAP, hari WIB), alamat yang sudah dikirimi atau berhenti dilewati
 // (tabel outreach_log, unik per alamat), jeda antar email, header List-Unsubscribe.
-// Variabel lingkungan: GMAIL_USER (opsional, default OUTREACH_REPLY_TO), GMAIL_APP_PASSWORD (sandi aplikasi Google),
-// OUTREACH_FROM dan OUTREACH_REPLY_TO (jalur Resend).
+// Variabel lingkungan: GMAIL_USER (opsional), GMAIL_APP_PASSWORD, OUTREACH_FROM, OUTREACH_REPLY_TO, RESEND_API_KEY.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
@@ -32,7 +34,6 @@ const GMAIL_APP_PASSWORD = (Deno.env.get("GMAIL_APP_PASSWORD") || "").replace(/\
 const USE_GMAIL = GMAIL_APP_PASSWORD.length > 0;
 
 const DAILY_CAP = 40;
-const MAX_PER_CALL = 40;
 const DELAY_MS = 700;
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 
@@ -110,7 +111,7 @@ Jika Bapak/Ibu tidak ingin menerima email dari kami, cukup balas dengan "berhent
   return { subject, html, text };
 }
 
-// Pengirim: satu fungsi send(to, nama, perusahaan, prefix) -> { ok, error, id }, plus close() untuk menutup koneksi SMTP.
+// Pengirim: send(to, nama, perusahaan, prefix) -> { ok, error, id }; close() menutup koneksi SMTP.
 async function makeSender() {
   if (!USE_GMAIL) {
     return {
@@ -132,7 +133,6 @@ async function makeSender() {
       async close() { /* tidak ada koneksi yang perlu ditutup */ },
     };
   }
-  // Lampiran diunduh sekali per panggilan.
   const files = await Promise.all(ATTACHMENTS.map(async (a) => {
     const r = await fetch(`https://nexto.site/email/${a.file}`);
     if (!r.ok) throw new Error(`Gambar lampiran ${a.file} tidak bisa diunduh (${r.status}).`);
@@ -162,6 +162,8 @@ function wibDayStartISO() {
   return new Date(Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), wib.getUTCDate()) - WIB_OFFSET_MS).toISOString();
 }
 
+type Rec = { email: string; nama: string; perusahaan: string };
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
@@ -175,21 +177,95 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const body = await req.json().catch(() => ({}));
 
-    const summary = async () => {
+    const sentTodayCount = async () => {
+      const { count } = await admin.from("outreach_log").select("id", { count: "exact", head: true }).eq("status", "sent").gte("created_at", wibDayStartISO());
+      return count || 0;
+    };
+
+    // Kirim ke daftar, catat ke outreach_log, dan (opsional) perbarui status prospek. Menghormati batas harian.
+    const sendBatch = async (list: Rec[], markProspects: boolean) => {
+      const { data: known } = await admin.from("outreach_log").select("email, status").in("email", list.map((x) => x.email));
+      const knownMap = new Map((known || []).map((k) => [String(k.email).toLowerCase(), k.status]));
+      const skipped = list.filter((x) => knownMap.get(x.email) === "sent" || knownMap.get(x.email) === "unsubscribed").map((x) => ({ email: x.email, alasan: knownMap.get(x.email) === "sent" ? "sudah pernah dikirimi" : "berhenti" }));
+      const todo = list.filter((x) => !skipped.some((s) => s.email === x.email));
+      const sentToday = await sentTodayCount();
+      const room = Math.max(0, DAILY_CAP - sentToday);
+      const batch = todo.slice(0, room);
+      const deferred = todo.slice(room).map((x) => x.email);
+      if (markProspects && skipped.length > 0) {
+        await admin.from("outreach_prospects").update({ status: "removed", catatan: "sudah pernah dikirimi atau berhenti" }).in("email", skipped.map((s) => s.email));
+      }
+      const sent: string[] = [];
+      const failed: { email: string; error: string }[] = [];
+      if (batch.length > 0) {
+        const sender = await makeSender();
+        for (const r of batch) {
+          const res = await sender.send(r.email, r.nama, r.perusahaan);
+          await admin.from("outreach_log").upsert(
+            { email: r.email, nama: r.nama, perusahaan: r.perusahaan, status: res.ok ? "sent" : "failed", error: res.error, resend_id: res.id },
+            { onConflict: "email" },
+          );
+          if (markProspects) await admin.from("outreach_prospects").update({ status: res.ok ? "sent" : "failed", sent_at: res.ok ? new Date().toISOString() : null, catatan: res.ok ? "" : res.error || "gagal" }).eq("email", r.email);
+          if (res.ok) sent.push(r.email); else failed.push({ email: r.email, error: res.error || "gagal" });
+          await sleep(DELAY_MS);
+        }
+        await sender.close();
+      }
+      return { ok: true, sent: sent.length, failed, skipped, deferred, daily_cap: DAILY_CAP, sent_today: sentToday + sent.length };
+    };
+
+    if (body.action === "list") {
       const since = wibDayStartISO();
-      const [{ count: today }, { count: total }, { count: unsub }, { data: recent }] = await Promise.all([
-        admin.from("outreach_log").select("id", { count: "exact", head: true }).eq("status", "sent").gte("created_at", since),
+      const [{ count: total }, { count: unsub }, { data: recent }] = await Promise.all([
         admin.from("outreach_log").select("id", { count: "exact", head: true }).eq("status", "sent"),
         admin.from("outreach_log").select("id", { count: "exact", head: true }).eq("status", "unsubscribed"),
         admin.from("outreach_log").select("email, nama, perusahaan, status, error, created_at").order("created_at", { ascending: false }).limit(30),
       ]);
-      return {
-        sent_today: today || 0, total_sent: total || 0, unsubscribed: unsub || 0, daily_cap: DAILY_CAP,
+      void since;
+      return json({
+        sent_today: await sentTodayCount(), total_sent: total || 0, unsubscribed: unsub || 0, daily_cap: DAILY_CAP,
         transport: USE_GMAIL ? "gmail" : "resend", from: USE_GMAIL ? GMAIL_USER : FROM, reply_to: USE_GMAIL ? GMAIL_USER : REPLY_TO, recent: recent || [],
-      };
-    };
+      });
+    }
 
-    if (body.action === "list") return json(await summary());
+    if (body.action === "queue_list") {
+      const { data: all } = await admin.from("outreach_prospects").select("segmen, status").limit(5000);
+      const counts: Record<string, number> = { queued: 0, sent: 0, removed: 0, failed: 0 };
+      const bySegmen: Record<string, number> = { kecil: 0, menengah: 0, besar: 0 };
+      for (const r of all || []) {
+        counts[r.status] = (counts[r.status] || 0) + 1;
+        if (r.status === "queued") bySegmen[r.segmen] = (bySegmen[r.segmen] || 0) + 1;
+      }
+      const { data: next } = await admin.from("outreach_prospects").select("email, perusahaan, segmen, industri, kota, nama_kontak, sumber_url")
+        .eq("status", "queued").order("created_at", { ascending: true }).limit(DAILY_CAP);
+      return json({ counts, by_segmen: bySegmen, next: next || [], sent_today: await sentTodayCount(), daily_cap: DAILY_CAP });
+    }
+
+    if (body.action === "queue_remove") {
+      const email = clean(body.email, 200).toLowerCase();
+      const { error } = await admin.from("outreach_prospects").update({ status: "removed", catatan: "dikeluarkan manual" }).eq("email", email).eq("status", "queued");
+      if (error) throw error;
+      return json({ ok: true });
+    }
+
+    if (body.action === "preview") {
+      let nama = "Budi", perusahaan = "PT Contoh Maju", to = "";
+      const email = clean(body.email, 200).toLowerCase();
+      const q = admin.from("outreach_prospects").select("email, nama_kontak, perusahaan").eq("status", "queued");
+      const { data: row } = await (email ? q.eq("email", email) : q.order("created_at", { ascending: true })).limit(1).maybeSingle();
+      if (row) { nama = row.nama_kontak || ""; perusahaan = row.perusahaan; to = row.email; }
+      const mail = buildEmail(nama, perusahaan, USE_GMAIL);
+      return json({ to, subject: mail.subject, html: mail.html, transport: USE_GMAIL ? "gmail" : "resend", attachments: USE_GMAIL ? ATTACHMENTS.map((a) => a.name) : [], from: USE_GMAIL ? GMAIL_USER : FROM });
+    }
+
+    if (body.action === "send_queue") {
+      const room = Math.max(0, DAILY_CAP - (await sentTodayCount()));
+      if (room === 0) return json({ error: `Batas ${DAILY_CAP} email hari ini sudah tercapai. Lanjutkan besok.` }, 400);
+      const { data: rows } = await admin.from("outreach_prospects").select("email, nama_kontak, perusahaan").eq("status", "queued").order("created_at", { ascending: true }).limit(room);
+      const list: Rec[] = (rows || []).filter((r) => EMAIL_RE.test(r.email)).map((r) => ({ email: r.email, nama: r.nama_kontak || "", perusahaan: r.perusahaan }));
+      if (list.length === 0) return json({ error: "Antrean kosong." }, 400);
+      return json({ ...(await sendBatch(list, true)), invalid: [] });
+    }
 
     if (body.action === "test") {
       const to = clean(body.to || userData.user.email, 200).toLowerCase();
@@ -206,13 +282,14 @@ Deno.serve(async (req) => {
       if (!EMAIL_RE.test(email)) return json({ error: "Alamat email tidak valid." }, 400);
       const { error } = await admin.from("outreach_log").upsert({ email, status: "unsubscribed" }, { onConflict: "email" });
       if (error) throw error;
+      await admin.from("outreach_prospects").update({ status: "removed", catatan: "berhenti" }).eq("email", email);
       return json({ ok: true });
     }
 
     if (body.action === "send") {
       const raw = Array.isArray(body.recipients) ? body.recipients.slice(0, 500) : [];
       const seen = new Set<string>();
-      const list: { email: string; nama: string; perusahaan: string }[] = [];
+      const list: Rec[] = [];
       const invalid: string[] = [];
       for (const r of raw) {
         const email = clean(r?.email, 200).toLowerCase();
@@ -222,34 +299,7 @@ Deno.serve(async (req) => {
         list.push({ email, nama: clean(r?.nama), perusahaan: clean(r?.perusahaan) });
       }
       if (list.length === 0) return json({ error: "Tidak ada alamat email yang valid.", invalid }, 400);
-
-      // Alamat yang sudah dikirimi atau berhenti dilewati.
-      const { data: known } = await admin.from("outreach_log").select("email, status").in("email", list.map((x) => x.email));
-      const knownMap = new Map((known || []).map((k) => [String(k.email).toLowerCase(), k.status]));
-      const skipped = list.filter((x) => knownMap.get(x.email) === "sent" || knownMap.get(x.email) === "unsubscribed").map((x) => ({ email: x.email, alasan: knownMap.get(x.email) === "sent" ? "sudah pernah dikirimi" : "berhenti" }));
-      const todo = list.filter((x) => !skipped.some((s) => s.email === x.email));
-
-      const { count: sentToday } = await admin.from("outreach_log").select("id", { count: "exact", head: true }).eq("status", "sent").gte("created_at", wibDayStartISO());
-      const room = Math.max(0, Math.min(DAILY_CAP - (sentToday || 0), MAX_PER_CALL));
-      const batch = todo.slice(0, room);
-      const deferred = todo.slice(room).map((x) => x.email);
-
-      const sent: string[] = [];
-      const failed: { email: string; error: string }[] = [];
-      if (batch.length > 0) {
-        const sender = await makeSender();
-        for (const r of batch) {
-          const res = await sender.send(r.email, r.nama, r.perusahaan);
-          await admin.from("outreach_log").upsert(
-            { email: r.email, nama: r.nama, perusahaan: r.perusahaan, status: res.ok ? "sent" : "failed", error: res.error, resend_id: res.id },
-            { onConflict: "email" },
-          );
-          if (res.ok) sent.push(r.email); else failed.push({ email: r.email, error: res.error || "gagal" });
-          await sleep(DELAY_MS);
-        }
-        await sender.close();
-      }
-      return json({ ok: true, sent: sent.length, failed, skipped, deferred, invalid, daily_cap: DAILY_CAP, sent_today: (sentToday || 0) + sent.length });
+      return json({ ...(await sendBatch(list, false)), invalid });
     }
 
     return json({ error: "Aksi tidak dikenal." }, 400);

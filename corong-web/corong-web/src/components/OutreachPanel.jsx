@@ -40,16 +40,19 @@ export default function OutreachPanel() {
   const [msg, setMsg] = useState("");
   const [result, setResult] = useState(null);
   const [unsub, setUnsub] = useState("");
+  const [q, setQ] = useState(null);
+  const [pv, setPv] = useState(null);
 
   const load = () => db.adminOutreach("list").then(setInfo).catch((e) => setErr(e.message));
-  useEffect(() => { load(); }, []);
+  const loadQ = () => db.adminOutreach("queue_list").then(setQ).catch((e) => setErr(e.message));
+  useEffect(() => { load(); loadQ(); }, []);
 
   const parsed = useMemo(() => parseList(text), [text]);
   const room = info ? Math.max(0, info.daily_cap - info.sent_today) : 0;
 
   const run = async (kind, fn) => {
     setBusy(kind); setErr(""); setMsg("");
-    try { await fn(); await load(); } catch (e) { setErr(e.message); } finally { setBusy(""); }
+    try { await fn(); await load(); await loadQ(); } catch (e) { setErr(e.message); } finally { setBusy(""); }
   };
 
   const sendTest = () => run("test", async () => {
@@ -65,6 +68,18 @@ export default function OutreachPanel() {
     const r = await db.adminOutreach("send", { recipients: parsed.rows });
     setResult(r);
     setMsg(`${r.sent} email terkirim.`);
+  });
+
+  const showPreview = () => run("preview", async () => { setPv(await db.adminOutreach("preview")); });
+  const removeFromQueue = (email) => run("rm", async () => { await db.adminOutreach("queue_remove", { email }); });
+  const sendQueue = () => run("sendq", async () => {
+    const n = Math.min(q?.next?.length || 0, room);
+    if (n === 0) throw new Error(room === 0 ? "Batas harian sudah tercapai. Lanjutkan besok." : "Antrean kosong.");
+    const ok = window.confirm("Kirim email perkenalan ke " + n + " perusahaan di antrean? Pengiriman tidak bisa dibatalkan.");
+    if (!ok) return;
+    const r = await db.adminOutreach("send_queue");
+    setResult(r);
+    setMsg(r.sent + " email terkirim dari antrean.");
   });
 
   const markUnsub = () => run("unsub", async () => {
@@ -88,8 +103,44 @@ export default function OutreachPanel() {
         </div>
       )}
 
+      <div className="rounded-xl border border-orange-500/40 bg-orange-500/5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-orange-500/30 px-4 py-2.5">
+          <span className="text-[13px] font-semibold text-orange-200">Antrean riset hari ini</span>
+          {q && <span className="text-[12px] text-slate-300">Menunggu <b className="text-slate-50">{q.counts.queued}</b> (kecil {q.by_segmen.kecil}, menengah {q.by_segmen.menengah}, besar {q.by_segmen.besar}), terkirim {q.counts.sent}</span>}
+        </div>
+        {q && q.next.length === 0 && <p className="px-4 py-3 text-[12.5px] text-slate-400">Antrean kosong. Daftar perusahaan hasil riset akan muncul di sini.</p>}
+        {q && q.next.length > 0 && (
+          <ul className="max-h-64 divide-y divide-slate-800 overflow-y-auto">
+            {q.next.map((r) => (
+              <li key={r.email} className="flex items-center justify-between gap-3 px-4 py-2 text-[12px]">
+                <span className="min-w-0 truncate">
+                  <b className="text-slate-100">{r.perusahaan}</b> <span className="text-slate-400">{r.segmen}{r.kota ? ", " + r.kota : ""}{r.industri ? ", " + r.industri : ""}</span>
+                  <span className="block truncate text-slate-400">{r.email}{r.nama_kontak ? " (" + r.nama_kontak + ")" : ""}</span>
+                </span>
+                <button type="button" disabled={!!busy} onClick={() => removeFromQueue(r.email)} className="shrink-0 rounded-md border border-slate-600 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:opacity-50">Keluarkan</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex flex-wrap items-center gap-3 border-t border-orange-500/30 px-4 py-3">
+          <button type="button" disabled={!!busy || !q || q.next.length === 0} onClick={showPreview} className="rounded-lg border border-slate-500 px-4 py-2 text-[13px] font-semibold text-slate-100 hover:bg-slate-800 disabled:opacity-50">{busy === "preview" ? "Memuat..." : "Lihat email"}</button>
+          <button type="button" disabled={!!busy || !q || q.next.length === 0 || room === 0} onClick={sendQueue} className="rounded-lg bg-orange-500 px-4 py-2 text-[13px] font-bold text-white hover:bg-orange-400 disabled:opacity-50">{busy === "sendq" ? "Mengirim..." : "Kirim " + Math.min(q?.next?.length || 0, room) + " email dari antrean"}</button>
+          {info && <span className="text-[12px] text-slate-400">Hari ini {info.sent_today} dari {info.daily_cap}</span>}
+        </div>
+      </div>
+
+      {pv && (
+        <div className="rounded-xl border border-slate-700 bg-slate-900/60">
+          <div className="flex items-center justify-between border-b border-slate-700 px-4 py-2 text-[12px] text-slate-300">
+            <span>Preview untuk {pv.to || "contoh"}. Dari <b className="text-slate-100">{pv.from}</b>. Subjek: <b className="text-slate-100">{pv.subject}</b>{pv.attachments.length > 0 ? ". Lampiran: " + pv.attachments.join(", ") : ""}</span>
+            <button type="button" onClick={() => setPv(null)} className="rounded-md border border-slate-600 px-2 py-0.5 text-[11px] hover:bg-slate-800">Tutup</button>
+          </div>
+          <iframe title="Preview email" sandbox="" srcDoc={pv.html} className="h-[420px] w-full rounded-b-xl bg-white" />
+        </div>
+      )}
+
       <div>
-        <label className={lbl}>Daftar penerima (satu baris per perusahaan: email, nama kontak, perusahaan)</label>
+        <label className={lbl}>Tempel manual (satu baris per perusahaan: email, nama kontak, perusahaan)</label>
         <textarea className={field + " min-h-[130px] font-mono text-[12px]"} value={text} onChange={(e) => setText(e.target.value)}
           placeholder={"budi@perusahaan.co.id, Budi Santoso, PT Maju Jaya\nhrd@contoh.com, , PT Contoh Abadi"} />
         <p className="mt-1 text-[11.5px] text-slate-400">
