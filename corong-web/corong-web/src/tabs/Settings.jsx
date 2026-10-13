@@ -711,26 +711,26 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       )}
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
-        <div className="flex items-center justify-between mb-2"><h3 className="font-semibold text-sm">Tahap pipeline</h3><button onClick={addStage} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={13} /> tambah tahap</button></div>
-        <p className="text-xs text-slate-400 mb-3">Tipe menentukan perhitungan dashboard: <b>Deal</b> = menang, <b>Lost</b> = gugur, <b>Normal</b> = masih jalan.</p>
+        <div className="flex items-center justify-between mb-2"><h3 className="font-semibold text-sm">Tahap pipeline</h3>{isOwner && <button onClick={addStage} className="text-xs text-orange-600 flex items-center gap-1"><Plus size={13} /> tambah tahap</button>}</div>
+        <p className="text-xs text-slate-400 mb-3">Tipe menentukan perhitungan dashboard: <b>Deal</b> = menang, <b>Lost</b> = gugur, <b>Normal</b> = masih jalan.{!isOwner && " Hanya owner yang dapat mengubah tahap pipeline; tim mengikuti pengaturan ini."}</p>
         <div className="space-y-2">
           {st.map((s, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-center">
-              <input type="color" className="col-span-1 h-9 rounded border border-slate-300" value={s.hex} onChange={(e) => setStage(i, "hex", e.target.value)} />
-              <input className="col-span-5 px-2 py-1.5 text-sm border border-slate-300 rounded-lg" value={s.label} onChange={(e) => setStage(i, "label", e.target.value)} />
-              <select className="col-span-4 px-2 py-1.5 text-sm border border-slate-300 rounded-lg" value={s.type} onChange={(e) => setStage(i, "type", e.target.value)}>
+              <input type="color" disabled={!isOwner} className="col-span-1 h-9 rounded border border-slate-300 disabled:opacity-60" value={s.hex} onChange={(e) => setStage(i, "hex", e.target.value)} />
+              <input disabled={!isOwner} className="col-span-5 px-2 py-1.5 text-sm border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-600" value={s.label} onChange={(e) => setStage(i, "label", e.target.value)} />
+              <select disabled={!isOwner} className="col-span-4 px-2 py-1.5 text-sm border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-600" value={s.type} onChange={(e) => setStage(i, "type", e.target.value)}>
                 <option value="normal">Normal</option><option value="won">Deal (menang)</option><option value="lost">Lost</option>
               </select>
-              <button onClick={() => delStage(i)} className="col-span-2 text-slate-300 hover:text-rose-500 flex justify-center"><Trash2 size={15} /></button>
+              {isOwner ? <button onClick={() => delStage(i)} className="col-span-2 text-slate-300 hover:text-rose-500 flex justify-center"><Trash2 size={15} /></button> : <span className="col-span-2" />}
             </div>
           ))}
         </div>
       </div>
 
       {msg && <div className={`text-sm rounded-xl p-3 ${msg.startsWith("Gagal") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{msg}</div>}
-      <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan pengaturan</button>
+      {isOwner && <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan pengaturan</button>}
 
-      {isEnterprise && <ProductCatalogCard canManage={canManage} industry={org?.industry} />}
+      {isEnterprise && <ProductCatalogCard canManage={canManage} isOwner={isOwner} industry={org?.industry} />}
 
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Sparkles size={15} className="text-orange-500" /> Rapikan Data</h3>

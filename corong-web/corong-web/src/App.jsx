@@ -476,6 +476,25 @@ export default function App() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [session]);
 
+  // Perubahan konfigurasi organisasi (tahap pipeline, nama/industri, profil perusahaan) oleh owner langsung
+  // dimuat ulang diam-diam di semua akun tim, tanpa perlu menunggu tab dibuka lagi.
+  useEffect(() => {
+    const orgId = org?.id;
+    if (!session || !orgId) return undefined;
+    let timer = null;
+    const refresh = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { silentReload(); window.dispatchEvent(new Event("nexto-org-config")); }, 400);
+    };
+    const channel = supabase.channel(`org-config-${orgId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "stages", filter: `org_id=eq.${orgId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "org_product_catalog", filter: `org_id=eq.${orgId}` }, refresh)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "organizations", filter: `id=eq.${orgId}` }, refresh)
+      .subscribe();
+    return () => { clearTimeout(timer); supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, org?.id]);
+
   // Pull-to-refresh: tarik layar dari paling atas (cuma aktif kalau scroll udah
   // di posisi 0) buat refresh data manual - berguna soalnya PWA yang di-install
   // gak punya tombol refresh browser lagi.

@@ -17,7 +17,7 @@ const EMPTY = { name: "", description: "", fit_for: "", price: "" };
 const trimItem = (x) => ({ name: x.name.trim(), description: x.description.trim(), fit_for: x.fit_for.trim(), price: x.price.trim() });
 const sameItem = (a, b) => !!a && !!b && JSON.stringify(trimItem(a)) === JSON.stringify(trimItem(b));
 
-export default function ProductCatalogCard({ canManage, industry }) {
+export default function ProductCatalogCard({ canManage, isOwner, industry }) {
   const [profile, setProfile] = useState("");
   const [products, setProducts] = useState([]);
   // Versi yang terakhir tersimpan di database - buat nentuin kartu mana yang
@@ -27,17 +27,30 @@ export default function ProductCatalogCard({ canManage, industry }) {
   const [busyKey, setBusyKey] = useState(null);
   const [msg, setMsg] = useState("");
 
+  // Muat ulang kalau owner mengubah katalog (App mengirim sinyal "nexto-org-config" setelah perubahan realtime).
+  // Kalau ada isian yang belum disimpan di sini, tidak ditimpa.
+  const loadCatalog = () => db.getProductCatalog()
+    .then((c) => {
+      const list = Array.isArray(c.products) ? c.products : [];
+      setProfile(c.company_profile || "");
+      setProducts(list);
+      setSaved({ profile: c.company_profile || "", products: list });
+    })
+    .catch(() => {})
+    .finally(() => setLoading(false));
+
   useEffect(() => {
-    db.getProductCatalog()
-      .then((c) => {
-        const list = Array.isArray(c.products) ? c.products : [];
-        setProfile(c.company_profile || "");
-        setProducts(list);
-        setSaved({ profile: c.company_profile || "", products: list });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    loadCatalog();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const hasUnsaved = profile.trim() !== saved.profile || JSON.stringify(products) !== JSON.stringify(saved.products);
+  useEffect(() => {
+    const onChange = () => { if (!busyKey && !hasUnsaved) loadCatalog(); };
+    window.addEventListener("nexto-org-config", onChange);
+    return () => window.removeEventListener("nexto-org-config", onChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busyKey, hasUnsaved]);
 
   const setItem = (i, k, v) => setProducts((p) => p.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
   const addItem = () => setProducts((p) => (p.length >= MAX_PRODUCTS ? p : [...p, { ...EMPTY }]));
@@ -100,12 +113,13 @@ export default function ProductCatalogCard({ canManage, industry }) {
           <textarea
             className={inp + " min-h-[64px]"}
             maxLength={1000}
-            disabled={!canManage}
+            disabled={!isOwner}
             placeholder={getCatalogExample(industry)}
             value={profile}
             onChange={(e) => setProfile(e.target.value)}
           />
-          {canManage && profileDirty && (
+          {!isOwner && <p className="mt-1 text-[11px] text-slate-400">Profil perusahaan hanya diubah owner. Tim mengikuti isi yang sama.</p>}
+          {isOwner && profileDirty && (
             <div className="mt-2 flex justify-end">
               <button onClick={saveProfile} disabled={!!busyKey} className={saveBtn}>
                 {busyKey === "profile" ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Simpan profil
