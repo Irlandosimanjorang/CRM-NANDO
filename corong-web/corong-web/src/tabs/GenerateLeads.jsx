@@ -51,9 +51,13 @@ function Field({ icon: Icon, value }) {
 // bakal keputus/ilang lagi cuma gara-gara ganti tab).
 // Dialog "Tambah pencarian" (8 Okt 2026): pengguna meminta token pencarian tambahan; permintaan
 // masuk ke panel admin (Command Center -> TOKEN ADD-ON). Satu permintaan menunggu per pengguna.
-const TOKEN_CHOICES = [5, 10, 20, 50];
+// Paket token (13 Okt 2026): Rp 15.000 per pencarian. Harga ditampilkan ke pengguna dan dicatat di permintaan.
+const PRICE_PER_TOKEN = 15000;
+const TOKEN_PACKAGES = [10, 25, 50].map((tokens) => ({ tokens, price: tokens * PRICE_PER_TOKEN }));
+const rupiah = (n) => `Rp ${Number(n).toLocaleString("id-ID")}`;
 function TokenRequestDialog({ pending, onClose, onSent }) {
-  const [n, setN] = useState(10);
+  const [n, setN] = useState(TOKEN_PACKAGES[0].tokens);
+  const chosen = TOKEN_PACKAGES.find((p) => p.tokens === n) || TOKEN_PACKAGES[0];
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -64,7 +68,9 @@ function TokenRequestDialog({ pending, onClose, onSent }) {
   }, [busy, onClose]);
   const send = async () => {
     setBusy(true); setErr("");
-    try { const r = await db.requestAddonTokens(n, note.trim()); onSent({ tokens: r.tokens, created_at: r.created_at }); }
+    const paket = `Paket ${chosen.tokens} token, total ${rupiah(chosen.price)}`;
+    const catatan = note.trim() ? `${paket}. ${note.trim()}` : paket;
+    try { const r = await db.requestAddonTokens(chosen.tokens, catatan); onSent({ tokens: r.tokens, created_at: r.created_at }); }
     catch (e) { setErr(e.message || "Gagal mengirim permintaan."); setBusy(false); }
   };
   return (
@@ -84,18 +90,22 @@ function TokenRequestDialog({ pending, onClose, onSent }) {
         ) : (
           <>
             <div className="mt-4">
-              <div className="text-xs font-medium text-slate-500">Jumlah pencarian tambahan</div>
-              <div className="mt-1.5 grid grid-cols-4 gap-2">
-                {TOKEN_CHOICES.map((c) => (
-                  <button key={c} type="button" onClick={() => setN(c)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${n === c ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{c}</button>
+              <div className="text-xs font-medium text-slate-500">Pilih paket token</div>
+              <div className="mt-1.5 grid grid-cols-3 gap-2">
+                {TOKEN_PACKAGES.map((p) => (
+                  <button key={p.tokens} type="button" onClick={() => setN(p.tokens)} className={`rounded-xl border px-3 py-2.5 text-left ${n === p.tokens ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                    <div className="text-sm font-bold">{p.tokens} token</div>
+                    <div className="mt-0.5 text-[11.5px] tabular-nums">{rupiah(p.price)}</div>
+                  </button>
                 ))}
               </div>
+              <p className="mt-2 text-[12px] text-slate-500">Total <b className="text-slate-700">{rupiah(chosen.price)}</b> untuk {chosen.tokens} pencarian (Rp 15.000 per pencarian).</p>
             </div>
             <label className="mt-3 block">
               <span className="text-xs font-medium text-slate-500">Catatan (opsional)</span>
               <textarea rows={2} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-4 focus:ring-violet-500/10" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Misal: untuk pencarian klien baru bulan ini" />
             </label>
-            <p className="mt-2 text-[12px] text-slate-500">Permintaan ini belum menagih apa pun. Admin Nexto akan menghubungi Anda untuk harga dan pembayaran, lalu menambahkan token ke akun Anda.</p>
+            <p className="mt-2 text-[12px] text-slate-500">Permintaan ini belum menagih apa pun. Admin Nexto akan menghubungi Anda untuk pembayaran {rupiah(chosen.price)}, lalu menambahkan {chosen.tokens} token ke akun Anda setelah pembayaran diterima.</p>
             {err && <p className="mt-2 rounded-xl bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">{err}</p>}
           </>
         )}
