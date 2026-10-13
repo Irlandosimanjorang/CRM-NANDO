@@ -267,6 +267,9 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     }
   };
 
+  // Dari papan kanban: lead yang digeser ke Menang / Kalah langsung membuka alur alasan (sama seperti ganti tahap manual).
+  useEffect(() => { if (lead._dropStage) onStageChange(lead._dropStage); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const guessOutcome = async () => {
     if (!lead.id) return;
     if (!isProfessional) { alert("Fitur \"tebak dengan AI\" tersedia untuk paket Professional ke atas. Silakan isi manual terlebih dahulu, atau upgrade di tab Pengaturan."); return; }

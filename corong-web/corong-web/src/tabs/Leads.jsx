@@ -43,6 +43,7 @@ import {
 } from "../lib/helpers";
 
 import LeadModal from "../components/LeadModal";
+import LeadBoard from "../components/LeadBoard";
 import DuplicateModal from "../components/DuplicateModal";
 import DeleteAllLeadsModal from "../components/DeleteAllLeadsModal";
 import { detectHeaderRow, smartMapping, suggestExtras, normalizePhone, parseMoney, parseDate, normalizePriority, matchStage, matchMember } from "../lib/importSmart";
@@ -702,6 +703,13 @@ export default function Leads({
     useState(1);
 
   const PAGE_SIZE = 60;
+
+  // Tampilan daftar (Lead) atau papan kanban per tahap (Kanban). Dipilih dengan dua tombol di atas daftar.
+  const [viewMode, setViewMode] = useState("daftar");
+  const moveLeadStage = async (lead, key) => {
+    try { await db.upsertLead({ ...lead, stage_key: key }); onChanged(); }
+    catch (e) { alert("Gagal pindah tahap: " + e.message); }
+  };
 
   const [edit, setEdit] =
     useState(null);
@@ -2084,8 +2092,31 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
           LEAD CARDS
       ===================================================== */}
 
+      <div className="mt-1 flex items-center gap-1">
+        {[["daftar", "Lead"], ["papan", "Kanban"]].map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setViewMode(k)}
+            className={`text-[12px] font-semibold rounded-inner px-3 py-1.5 border ${viewMode === k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {viewMode === "papan" && (
+        <LeadBoard
+          leads={filtered}
+          stages={stages}
+          onOpenEdit={setEdit}
+          onMove={moveLeadStage}
+          onNewOpportunity={moveLeadStage}
+        />
+      )}
+
       <div
-        className="mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        className={`mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4${viewMode === "papan" ? " hidden" : ""}`}
       >
         {groupView && filtered.length > 0 && !units.some((u) => u.type === "group" || u.type === "holding") && (
           <div className="col-span-full rounded-inner border border-orange-200 bg-orange-50 px-4 py-3 text-[12.5px] text-slate-700">
