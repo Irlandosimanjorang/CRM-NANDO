@@ -709,8 +709,14 @@ export default function Leads({
   useEffect(() => { try { localStorage.setItem("nexto_leads_view", viewMode); } catch (_) { /* abaikan */ } }, [viewMode]);
   // Simpan di belakang layar: papan sudah menampilkan tahap baru, jadi tidak perlu menunggu muat ulang.
   // Error dilempar lagi ke papan, yang mengembalikan kartu ke tempat semula.
-  const moveLeadStage = async (lead, key) => {
+  const moveLeadStage = async (lead, key, extra) => {
     await db.upsertLead({ ...lead, stage_key: key });
+    if (extra) {
+      // Alasan menang / kalah dicatat sebagai outcome lead, dan juga sebagai catatan progres supaya terlihat di riwayat.
+      await db.saveOutcome(lead.id, { result: extra.result, reason_category: extra.reason_category, reason: extra.note, ai_generated: false });
+      const label = extra.result === "won" ? "Menang" : "Kalah";
+      await db.addProgress(lead.id, `[${label}] ${extra.reason_category}${extra.note ? " - " + extra.note : ""}`);
+    }
     onChanged({ silent: true });
   };
 

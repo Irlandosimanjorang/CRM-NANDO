@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fmtRp, fmtDate } from "../lib/helpers";
+import { fmtRp, fmtDate, reasonCategoriesFor } from "../lib/helpers";
 
 // Papan kanban tahap lead (13 Okt 2026). Geser kartu ke kolom lain: kartu langsung pindah di layar (tanpa menunggu),
 // lalu disimpan di belakang layar. Kalau gagal, kartu kembali ke tempat semula dan muncul pesan. Pindah ke Menang
@@ -18,6 +18,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const [overKey, setOverKey] = useState(null);
   // Perubahan yang sudah tampil tapi belum tercermin dari data: id -> tahap baru.
   const [pending, setPending] = useState({});
+  // Pop-up alasan menang / kalah (muncul setelah kartu dipindah).
+  const [closing, setClosing] = useState(null);
 
   // Buang perubahan yang sudah tercermin di data (berarti penyimpanan selesai dan daftar sudah diperbarui).
   useEffect(() => {
@@ -36,11 +38,29 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const moveTo = (lead, key) => {
     if (!lead || stageOf(lead) === key) return;
     const target = cols.find((s) => s.key === key);
-    if (target?.type === "won" || target?.type === "lost") { onOpenEdit({ ...lead, _dropStage: key }); return; }
+    if (target?.type === "won" || target?.type === "lost") {
+      setPending((p) => ({ ...p, [lead.id]: key }));
+      setClosing({ lead, key, result: target.type });
+      return;
+    }
     setPending((p) => ({ ...p, [lead.id]: key }));
     Promise.resolve(onMove(lead, key)).catch((e) => {
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
       alert("Gagal pindah tahap: " + (e?.message || e));
+    });
+  };
+
+  const cancelClose = () => {
+    if (closing) setPending((p) => { const n = { ...p }; delete n[closing.lead.id]; return n; });
+    setClosing(null);
+  };
+
+  const saveClose = (category, note) => {
+    const { lead, key, result } = closing;
+    setClosing(null);
+    Promise.resolve(onMove(lead, key, { result, reason_category: category, note })).catch((e) => {
+      setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
+      alert("Gagal menyimpan: " + (e?.message || e));
     });
   };
 
@@ -56,6 +76,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   return (
     <div className="mt-1 overflow-x-auto pb-4">
+      {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} />}
       <div className="flex min-w-max items-start gap-4">
         {board.map(({ stage: s, items }) => {
           const total = items.reduce((n, l) => n + (Number(l.deal_value) || 0), 0);
@@ -141,6 +162,62 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
             </section>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// Pop-up kecil: alasan menang / kalah, plus catatan opsional yang masuk ke progres lead.
+function CloseDialog({ closing, onCancel, onSave }) {
+  const [category, setCategory] = useState("");
+  const [note, setNote] = useState("");
+  const won = closing.result === "won";
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${won ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+          {won ? "Menang" : "Kalah"}
+        </span>
+        <h3 className="mt-2 text-[15px] font-semibold text-slate-900">Kenapa {won ? "menang" : "kalah"}?</h3>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{closing.lead.name}</p>
+        <div className="mt-4 grid grid-cols-2 gap-1.5">
+          {reasonCategoriesFor(closing.result).map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCategory(c)}
+              className={`rounded-lg border px-2.5 py-2 text-left text-[12px] transition ${category === c ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={2}
+          placeholder="Catatan singkat (opsional)"
+          className="mt-3 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none"
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button
+            type="button"
+            disabled={!category}
+            onClick={() => onSave(category, note.trim())}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
+          >
+            Simpan
+          </button>
+        </div>
       </div>
     </div>
   );
