@@ -167,7 +167,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       {drag && createPortal(
         <div
           className="pointer-events-none fixed left-0 top-0 z-[60] rounded-xl border border-slate-300 bg-white p-3 shadow-[0_18px_40px_-12px_rgba(15,23,42,0.35)]"
-          style={{ transform: `translate(${drag.x - drag.offX}px, ${drag.y - drag.offY}px) rotate(2deg)`, width: drag.w }}
+          style={{ transform: `translate(${drag.x - drag.offX}px, ${drag.y - drag.offY}px)`, width: drag.w }}
         >
           <div className="flex items-center gap-2.5">
             <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-900 text-[11px] font-bold text-white">{initials(drag.lead.name)}</div>
