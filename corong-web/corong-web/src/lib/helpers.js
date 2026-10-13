@@ -88,10 +88,13 @@ export const normalizeCompanyName = (s) => {
 // jumlah jabatan LEBIH BANYAK dari jumlah nama (mis. satu orang berjabatan
 // "Manager, Sales"), seluruh teks jabatan dianggap milik orang pertama, tidak dipecah.
 export const MAX_KEY_PEOPLE = 5;
+// Spasi di ujung TIDAK dipangkas di sini: kolom ini dirender ulang tiap ketikan, dan pemangkasan
+// akan membuang spasi yang baru diketik ("Hendra " jadi "Hendra", lalu "N" menempel). Pemangkasan
+// dilakukan saat menyimpan (normalizePeopleForSave).
 export function parsePeople(keyPerson, keyTitle) {
-  const names = String(keyPerson || "").split(",").map((x) => x.trim());
-  let titles = String(keyTitle || "").split(",").map((x) => x.trim());
-  if (titles.length > names.length) titles = [String(keyTitle || "").trim()];
+  const names = String(keyPerson || "").split(",");
+  let titles = String(keyTitle || "").split(",");
+  if (titles.length > names.length) titles = [String(keyTitle || "")];
   const n = Math.max(names.length, titles.length, 1);
   return Array.from({ length: n }, (_, i) => ({ name: names[i] || "", title: titles[i] || "" }));
 }
@@ -104,7 +107,7 @@ export function joinPeople(rows) {
 }
 // Dipakai saat menyimpan: buang baris yang nama dan jabatannya sama-sama kosong, maksimal 5 orang.
 export function normalizePeopleForSave(keyPerson, keyTitle) {
-  const rows = parsePeople(keyPerson, keyTitle).filter((r) => r.name || r.title).slice(0, MAX_KEY_PEOPLE);
+  const rows = parsePeople(keyPerson, keyTitle).map((r) => ({ name: r.name.trim(), title: r.title.trim() })).filter((r) => r.name || r.title).slice(0, MAX_KEY_PEOPLE);
   return joinPeople(rows.length ? rows : [{ name: "", title: "" }]);
 }
 
