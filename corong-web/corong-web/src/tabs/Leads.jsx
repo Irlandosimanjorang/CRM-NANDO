@@ -710,7 +710,13 @@ export default function Leads({
   // Simpan di belakang layar: papan sudah menampilkan tahap baru, jadi tidak perlu menunggu muat ulang.
   // Error dilempar lagi ke papan, yang mengembalikan kartu ke tempat semula.
   const moveLeadStage = async (lead, key, extra) => {
-    await db.upsertLead({ ...lead, stage_key: key });
+    if (extra?.deal) {
+      // Transaksi dicatat dulu: dengan transaksi manual, pemicu otomatis tidak menulis ganda.
+      await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: extra.deal.date, deal_value: extra.deal.value, product_type: lead.product || null });
+      await db.upsertLead({ ...lead, stage_key: key, deal_value: extra.deal.value, deal_date: extra.deal.date });
+    } else {
+      await db.upsertLead({ ...lead, stage_key: key });
+    }
     if (extra) {
       // Alasan menang / kalah dicatat sebagai outcome lead, dan juga sebagai catatan progres supaya terlihat di riwayat.
       await db.saveOutcome(lead.id, { result: extra.result, reason_category: extra.reason_category, reason: extra.note, ai_generated: false });

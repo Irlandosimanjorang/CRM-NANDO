@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fmtRp, fmtDate, reasonCategoriesFor } from "../lib/helpers";
+import { fmtRp, fmtDate, reasonCategoriesFor, todayISO } from "../lib/helpers";
 
 // Papan kanban tahap lead (13 Okt 2026). Geser kartu ke kolom lain: kartu langsung pindah di layar (tanpa menunggu),
 // lalu disimpan di belakang layar. Kalau gagal, kartu kembali ke tempat semula dan muncul pesan. Pindah ke Menang
@@ -55,10 +55,10 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     setClosing(null);
   };
 
-  const saveClose = (category, note) => {
+  const saveClose = (category, note, deal) => {
     const { lead, key, result } = closing;
     setClosing(null);
-    Promise.resolve(onMove(lead, key, { result, reason_category: category, note })).catch((e) => {
+    Promise.resolve(onMove(lead, key, { result, reason_category: category, note, deal })).catch((e) => {
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
       alert("Gagal menyimpan: " + (e?.message || e));
     });
@@ -172,6 +172,10 @@ function CloseDialog({ closing, onCancel, onSave }) {
   const [category, setCategory] = useState("");
   const [note, setNote] = useState("");
   const won = closing.result === "won";
+  const [value, setValue] = useState(closing.lead.deal_value ? String(closing.lead.deal_value) : "");
+  const [date, setDate] = useState(todayISO());
+  const dealValue = Number(value.replace(/D/g, "")) || 0;
+  const ready = !!category && (!won || dealValue > 0);
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -200,6 +204,29 @@ function CloseDialog({ closing, onCancel, onSave }) {
             </button>
           ))}
         </div>
+        {won && (
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="text-[11px] font-medium text-slate-500">Nilai deal (Rp)</span>
+              <input
+                inputMode="numeric"
+                value={dealValue ? dealValue.toLocaleString("id-ID") : ""}
+                onChange={(e) => setValue(e.target.value.replace(/D/g, ""))}
+                placeholder="0"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] tabular-nums focus:border-slate-400 focus:outline-none"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-slate-500">Tanggal deal</span>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none"
+              />
+            </label>
+          </div>
+        )}
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -211,8 +238,8 @@ function CloseDialog({ closing, onCancel, onSave }) {
           <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
           <button
             type="button"
-            disabled={!category}
-            onClick={() => onSave(category, note.trim())}
+            disabled={!ready}
+            onClick={() => onSave(category, note.trim(), won ? { value: dealValue, date } : null)}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan
