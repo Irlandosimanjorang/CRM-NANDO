@@ -1374,7 +1374,8 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
     const insertedPairs = []; // { id, name, notes }
     for (let i = 0; i < toInsert.length; i += 200) {
       const chunk = toInsert.slice(i, i + 200);
-      const inserted = await db.bulkInsertLeads(chunk.map((c) => c.lead));
+      // Insert bisa berhasil tanpa data balik (null); jangan sampai membaca .length dari null.
+      const inserted = (await db.bulkInsertLeads(chunk.map((c) => c.lead))) || [];
       const notesByName = new Map(chunk.map((c) => [c.lead.name.toLowerCase(), c.notes]));
       // Nama kembar (cabang): hasil insert berurutan sama dengan chunk, jadi catatan dipasangkan menurut urutan.
       const sameOrder = inserted.length === chunk.length && inserted.every((row, k) => String(row.name).toLowerCase() === chunk[k].lead.name.toLowerCase());
