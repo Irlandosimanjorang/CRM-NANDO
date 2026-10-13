@@ -1,6 +1,5 @@
 // Data contoh untuk demo publik (nexto.site/demo). Semua nama, angka, dan catatan fiktif.
 // Dipakai oleh src/demo/main.jsx lewat window.__D; getter di mockdb (dibuat scripts/demo/gen-demo-mockdb.cjs) membacanya.
-import { getIndustryTemplate } from "../lib/industryTemplates";
 
 const DAY = 86400000;
 const dayISO = (n) => new Date(Date.now() + n * DAY).toISOString().slice(0, 10);
@@ -45,13 +44,25 @@ const ROWS = [
   ["Sentosa Print", "Jasa", "Semarang", "Eka Putri", "Owner", "Kertas art paper", "lost", "low", 45, "u2", 48, 22, "", ["Kebutuhan ditunda sampai tahun depan."]],
 ];
 
+// Pipeline demo memakai tahap yang dikenali tab Report (Data Masuk, SPH Terlayang, Hot Progress, Proyek Deal).
+const STAGE_DEFS = [
+  { key: "data_masuk", label: "Data Masuk", hex: "#94a3b8", type: "normal" },
+  { key: "sph_terlayang", label: "SPH Terlayang", hex: "#fbbf24", type: "normal" },
+  { key: "hot_progress", label: "Hot Progress", hex: "#f97316", type: "normal" },
+  { key: "proyek_deal", label: "Proyek Deal", hex: "#10b981", type: "won" },
+  { key: "lost", label: "Lost", hex: "#f43f5e", type: "lost" },
+];
+const STAGE_MAP = { prospek: "data_masuk", sample: "sph_terlayang", quotation: "sph_terlayang", negosiasi: "hot_progress", po: "proyek_deal", lost: "lost" };
+const SOURCES = ["Instagram", "TikTok", "Google", "Referral", "Website", "Pameran"];
+const CAMPAIGNS = { Instagram: "Promo Kertas HVS", TikTok: "Video Katalog Kemasan", Google: "Search Perlengkapan Kantor" };
 const NOTE_DAYS = [1, 3, 6, 10, 15];
 
 function buildLeads(stages) {
   const first = stages.find((s) => s.type === "normal")?.key;
   return ROWS.map((r, i) => {
     const [name, category, city, key_person, title, product, stage, priority, juta, assigned, age, lastContact, next, notes] = r;
-    const stage_key = stages.some((s) => s.key === stage) ? stage : first;
+    const mapped = STAGE_MAP[stage] || stage;
+    const stage_key = stages.some((s) => s.key === mapped) ? mapped : first;
     const won = stages.find((s) => s.key === stage_key)?.type === "won";
     const lost = stages.find((s) => s.key === stage_key)?.type === "lost";
     const id = "demo-l" + (i + 1);
@@ -60,7 +71,7 @@ function buildLeads(stages) {
       id, org_id: "demo-org", user_id: assigned, assigned_to: assigned, name: name.toUpperCase(), category, stage_key, city, province: "", company_type: "PT",
       key_person, key_person_title: title, product, phone: `0812${String(30000000 + i * 7919).slice(0, 8)}`, email: "", website: "", background: "",
       priority, next_action: next, wait_until: null, visit_date: i % 7 === 0 ? dayISO(1) : i % 11 === 3 ? dayISO(0) : null, visit_meet: i % 7 === 0 ? key_person : "", visit_agenda: i % 7 === 0 ? "Presentasi katalog dan penawaran" : "", visit_mode: "offline",
-      deal_value: juta * 1000000, deal_date: won ? dayISO(-Math.min(lastContact, Math.max(new Date().getDate() - 1, 0))) : null, tonnage: 0, tonnage_unit: "pcs", last_contact: dayISO(-lastContact), verified: false, source: i % 4 === 0 ? "Instagram" : i % 4 === 1 ? "Referral" : i % 4 === 2 ? "Website" : "Pameran",
+      deal_value: juta * 1000000, deal_date: won ? dayISO(-Math.min(lastContact, Math.max(new Date().getDate() - 1, 0))) : null, tonnage: 0, tonnage_unit: "pcs", last_contact: dayISO(-lastContact), verified: false, source: SOURCES[i % SOURCES.length], ad_campaign: CAMPAIGNS[SOURCES[i % SOURCES.length]] || "",
       parent_company: "", group_holding: "", created_at: tsISO(-age), updated_at: tsISO(-lastContact), deleted_at: null, latitude: null, longitude: null,
       outcome: won ? { result: "won", reason_category: i % 2 ? "Harga bersaing" : "Respons cepat", reason: "", recorded_at: tsISO(-lastContact) } : lost ? { result: "lost", reason_category: i % 2 ? "Harga" : "Timing", reason: "", recorded_at: tsISO(-lastContact) } : null,
       customer_state: null, progress_notes: progress, progressLog: progress.map((p) => ({ id: p.id, date: p.note_date, text: p.text })).sort((a, b) => (a.date < b.date ? 1 : -1)),
@@ -69,12 +80,11 @@ function buildLeads(stages) {
 }
 
 export function buildDemo() {
-  const tpl = getIndustryTemplate("b2b_general");
-  const stages = tpl.stages.map((s, i) => ({ ...s, id: "demo-s" + i, org_id: "demo-org", position: i }));
+  const stages = STAGE_DEFS.map((s, i) => ({ ...s, id: "demo-s" + i, org_id: "demo-org", position: i }));
   const leads = buildLeads(stages);
   const wonKeys = new Set(stages.filter((s) => s.type === "won").map((s) => s.key));
   const deals = leads.filter((l) => wonKeys.has(l.stage_key)).map((l, i) => ({
-    id: "demo-d" + (i + 1), lead_id: l.id, lead_name: l.name, deal_date: l.deal_date, deal_value: l.deal_value, tonnage: 0, tonnage_unit: "pcs", chemical: l.product, assigned_to: l.assigned_to,
+    id: "demo-d" + (i + 1), lead_id: l.id, lead_name: l.name, deal_date: l.deal_date, deal_value: l.deal_value, tonnage: 0, tonnage_unit: "pcs", chemical: l.product, assigned_to: l.assigned_to, user_id: l.assigned_to,
   }));
   const competitors = [
     { id: "demo-c1", name: "Distributor Kompetitor Makmur", background: "Distributor alat tulis dan kemasan area Jabodetabek", product: "Kertas dan kemasan", notes: "Harga lebih rendah, tetapi pengiriman sering terlambat.", usages: [{ id: "cu1", company: "Dharma Teknik Mandiri", product: "Kemasan karton", price: "Rp14.500 per dus", notes: "Mempertimbangkan pindah vendor." }] },
@@ -93,10 +103,10 @@ export function buildDemo() {
   });
   const feed = [
     { id: "f1", user_id: "u2", kind: "visit", lead_name: "SINAR ABADI DISTRIBUSI", detail: "", created_at: tsISO(0, 10) },
-    { id: "f2", user_id: "u3", kind: "stage", lead_name: "BANK SEJAHTERA MAKMUR", detail: "Sample / Trial → Quotation", created_at: tsISO(0, 9) },
+    { id: "f2", user_id: "u3", kind: "stage", lead_name: "BANK SEJAHTERA MAKMUR", detail: "Data Masuk → SPH Terlayang", created_at: tsISO(0, 9) },
     { id: "f3", user_id: "u2", kind: "note", lead_name: "MITRA LOGISTIK NUSANTARA", detail: "HRD butuh paket untuk 40 supervisor sebelum Q1, minta revisi daftar item.", created_at: tsISO(-1, 16) },
     { id: "f4", user_id: "u4", kind: "lead", lead_name: "DELTA ELEKTRONIK", detail: "", created_at: tsISO(-1, 11) },
-    { id: "f5", user_id: "u3", kind: "stage", lead_name: "ELANG DUTA ASIA", detail: "Negosiasi → PO Diterima", created_at: tsISO(-2, 14) },
+    { id: "f5", user_id: "u3", kind: "stage", lead_name: "ELANG DUTA ASIA", detail: "Hot Progress → Proyek Deal", created_at: tsISO(-2, 14) },
   ];
   const recs = [
     { id: "demo-l3", name: "KARYA PLASTINDO", urgency: "high", action_type: "WhatsApp", assessment: "Menanyakan termin pembayaran minggu lalu dan belum dijawab. Sample sudah lolos uji, sehingga ini sinyal beli yang kuat.", action: "Jawab pertanyaan termin pembayaran hari ini dan tawarkan termin 30 hari.", steps: ["Hubungi Pak Agus Salim", "Konfirmasi volume bulanan", "Kirim draf kesepakatan"], contact_role: "", talking_point: "Pak Agus, kami sudah siapkan opsi termin 30 hari sesuai pertanyaan kemarin.", customer_state: { interest: "high", intent: "high", risk: "low", objection: "termin pembayaran", decision_maker_known: true, expected_decision_date: null, state_reason: "Sample lolos, tinggal termin." } },
@@ -118,15 +128,23 @@ export function buildDemo() {
     const achieved = own.filter((l) => wonKeys.has(l.stage_key) && (l.deal_date || "").startsWith(monthPrefix)).reduce((s, l) => s + l.deal_value, 0);
     const open = own.filter((l) => activeKeys.has(l.stage_key));
     const pipeline = open.reduce((s, l) => s + l.deal_value, 0);
-    const forecast = open.filter((l) => l.stage_key === "negosiasi" || l.stage_key === "quotation").reduce((s, l) => s + Math.round(l.deal_value * 0.4), 0);
+    const forecast = open.filter((l) => l.stage_key === "hot_progress" || l.stage_key === "sph_terlayang").reduce((s, l) => s + Math.round(l.deal_value * 0.4), 0);
     return { user_id: m.user_id, target: targetOf[m.user_id] || 0, achieved, forecast, pipeline, open_without_value: 0 };
   });
   const activityDays = Array.from({ length: 7 }, (_, i) => ({ day: dayISO(i - 6), count: [9, 14, 11, 17, 12, 6, 13][i] }));
-  const org = { id: "demo-org", name: "PT Contoh Distribusi", owner_user_id: "u1", plan: "enterprise", member_limit: 5, industry: "b2b_general", custom_field_labels: {}, features: { owner_monitor: false } };
-  const stageChanges = leads.flatMap((l, i) => (i % 3 === 0 ? [{ lead_id: l.id, from_stage: "prospek", to_stage: l.stage_key, changed_at: tsISO(-((i % 6) + 1)) }] : []));
+  const ads = [];
+  const spanDays = Math.min(new Date().getDate() - 1, 20);
+  for (let k = 0; k <= spanDays; k++) {
+    const day = dayISO(-k);
+    ads.push({ platform: "Meta", campaign: "Promo Kertas HVS", day, spend: 950000 + (k % 5) * 90000, impressions: 41000 + k * 700, clicks: 380 + (k % 4) * 25, results: 3 + (k % 3) });
+    ads.push({ platform: "TikTok", campaign: "Video Katalog Kemasan", day, spend: 620000 + (k % 4) * 60000, impressions: 88000 + k * 1100, clicks: 290 + (k % 5) * 18, results: 2 + (k % 2) });
+    ads.push({ platform: "Google", campaign: "Search Perlengkapan Kantor", day, spend: 480000 + (k % 3) * 70000, impressions: 5200 + k * 90, clicks: 160 + (k % 4) * 12, results: 1 + (k % 2) });
+  }
+  const org = { id: "demo-org", name: "PT Contoh Distribusi", owner_user_id: "u1", plan: "enterprise", member_limit: 5, industry: "b2b_general", custom_field_labels: {}, features: { owner_monitor: false, monthly_report: true } };
+  const stageChanges = leads.flatMap((l, i) => (i % 3 === 0 ? [{ lead_id: l.id, from_stage: "data_masuk", to_stage: l.stage_key, changed_at: tsISO(-((i % 6) + 1)) }] : []));
   return {
     org, settings: { plan: null, community_display_name: "Rina Kusuma", onboarding_level_seen: 2 }, role: "owner", members: MEMBERS, leads, stages, deals, competitors,
-    teamActivity: { members, feed }, feed, advisorRun, targets, stageChanges, activityDays,
+    teamActivity: { members, feed }, feed, advisorRun, targets, stageChanges, activityDays, ads,
     catalog: { company_profile: "Distributor perlengkapan kantor dan kemasan untuk perusahaan di Jabodetabek dan Jawa Timur.", products: [{ name: "Kertas HVS 80 gsm", description: "Kertas cetak standar kantor", fit_for: "Perusahaan dengan kebutuhan cetak rutin", price: "Rp52.000 per rim" }, { name: "Kemasan karton custom", description: "Karton ekspor dan food grade", fit_for: "Pabrik makanan dan ekspor", price: "Sesuai volume" }] },
   };
 }

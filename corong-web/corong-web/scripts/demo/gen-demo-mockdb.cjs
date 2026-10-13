@@ -14,7 +14,7 @@ Object.assign(SPECIAL, {
   getTeamActivity: "window.__D.teamActivity", getTeamFeed: "window.__D.feed", getTeamTargets: "window.__D.targets", listStageChanges: "window.__D.stageChanges",
   getTodayAdvisorRun: "window.__D.advisorRun", getAdvisorHistory: "[window.__D.advisorRun]", getProductCatalog: "window.__D.catalog",
   getMemberNotes: "(window.__D.leads.slice(0, 6).map((l, i) => ({ id: 'mn' + i, lead_id: l.id, text: l.progressLog[0] ? l.progressLog[0].text : '', created_at: new Date(Date.now() - i * 3600000).toISOString(), leads: { name: l.name } })))",
-  getTeamActivityDays: "window.__D.activityDays", getMyNotifications: "[]", getUnreadNotificationCount: "0",
+  listAdSpend: "((from, to) => window.__D.ads.filter((a) => a.day >= from && a.day <= to))(arguments[0], arguments[1])", getTeamActivityDays: "window.__D.activityDays", getMyNotifications: "[]", getUnreadNotificationCount: "0",
 });
 const SYNC = { formatQuotaDate: '(iso) => new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })' };
 let out = "// AUTO-GENERATED oleh scripts/demo/gen-demo-mockdb.cjs - jangan diedit manual.\n";

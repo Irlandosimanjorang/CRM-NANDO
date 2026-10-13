@@ -9,7 +9,7 @@ window.__D = buildDemo();
 document.title = "Nexto - Demo Interaktif";
 try {
   const t = new URLSearchParams(window.location.search).get("tab");
-  const map = { team: "team", tim: "team", leads: "leads", deal: "deal", dashboard: "dashboard", visit: "visitfollowup", kompetitor: "kompetitor" };
+  const map = { team: "team", tim: "team", leads: "leads", deal: "deal", dashboard: "dashboard", visit: "visitfollowup", kompetitor: "kompetitor", report: "laporan", laporan: "laporan" };
   // Selalu mulai dari tab yang diminta (atau Dashboard) supaya demo tidak melanjutkan tab kunjungan sebelumnya.
   saveActiveTab(map[t] || "dashboard");
   localStorage.setItem("nexto_tour_team_seen", "1");
