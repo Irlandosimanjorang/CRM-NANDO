@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Ticket, Coins, Wallet, Cpu } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCircle2, AlertTriangle, X, LifeBuoy, Trash2, Users, Globe, FileText, FileSignature, ToggleRight, Ticket, Coins, Wallet, Cpu, Mail } from "lucide-react";
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
 import QuotationPanel from "../components/QuotationPanel";
 import OrgFeaturesPanel from "../components/OrgFeaturesPanel";
 import AddonTokensPanel from "../components/AddonTokensPanel";
+import OutreachPanel from "../components/OutreachPanel";
 import CashflowPanel from "../components/CashflowPanel";
 import AiFeaturesPanel from "../components/AiFeaturesPanel";
 import { AI_FEATURES } from "../lib/aiFeatureCatalog";
@@ -1507,6 +1508,24 @@ export default function AdminDashboard() {
       statLabel: "PERMINTAAN MASUK",
       statValue: tokenRequests === null ? "-" : tokenRequests,
       content: <AddonTokensPanel />,
+    },
+    {
+      // Email outreach (13 Okt 2026, permintaan Nando): kirim email perkenalan ke daftar perusahaan dengan satu klik.
+      key: "outreach",
+      title: "EMAIL OUTREACH",
+      subtitle: "Kirim perkenalan Nexto",
+      icon: Mail,
+      accentColor: "#fb923c",
+      glowClass: "shadow-[0_0_40px_-25px_rgba(251,146,60,0.6)]",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "tempel daftar, lalu kirim",
+      wide: true,
+      blurb: "Kirim email perkenalan dengan preview Dashboard, Team, dan Report ke banyak perusahaan.",
+      statLabel: "BATAS HARIAN",
+      statValue: 40,
+      content: <OutreachPanel />,
     },
   ];
   const selectedEmployee = employees.find((e) => e.key === selectedEmployeeKey) || employees[0];
