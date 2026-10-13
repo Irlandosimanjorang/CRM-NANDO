@@ -77,7 +77,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   return (
     <div className="mt-1 overflow-x-auto pb-4">
       {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} />}
-      <div className="flex min-w-max items-start gap-4">
+      <div className="flex min-w-max items-stretch gap-4" style={{ height: "calc(100vh - 15rem)", minHeight: "420px" }}>
         {board.map(({ stage: s, items }) => {
           const total = items.reduce((n, l) => n + (Number(l.deal_value) || 0), 0);
           const hi = overKey === s.key && dragId;
@@ -87,7 +87,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
               onDragOver={(e) => { e.preventDefault(); if (overKey !== s.key) setOverKey(s.key); }}
               onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOverKey((k) => (k === s.key ? null : k)); }}
               onDrop={(e) => { e.preventDefault(); onDropCol(s.key); }}
-              className={`flex w-[264px] shrink-0 flex-col rounded-2xl border bg-white transition-all duration-150 ${hi ? "border-orange-400 ring-4 ring-orange-100" : "border-slate-200/80"}`}
+              className={`flex h-full w-[264px] shrink-0 flex-col rounded-2xl border bg-white transition-all duration-150 ${hi ? "border-orange-400 ring-4 ring-orange-100" : "border-slate-200/80"}`}
             >
               <header className="px-3.5 pt-3">
                 <div className="h-1 w-full rounded-full" style={{ backgroundColor: accent(s) }} />
@@ -101,7 +101,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                 </div>
               </header>
 
-              <div className="flex min-h-[120px] flex-1 flex-col gap-2.5 px-2.5 pb-2.5">
+              <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2.5 pb-2.5">
                 {items.map((l) => {
                   const days = daysAgo(l.last_contact);
                   const cold = days === null || days > 7;
