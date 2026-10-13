@@ -2139,18 +2139,23 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         ))}
       </div>
 
+      {/* Pindah Lead <-> Kanban seperti membalik halaman: tampilan yang masuk diputar dari samping. */}
+      <style>{`@keyframes nexto-page-flip{from{opacity:0;transform:perspective(1400px) rotateY(-80deg)}to{opacity:1;transform:perspective(1400px) rotateY(0deg)}}.nexto-page-flip{transform-origin:left center;animation:nexto-page-flip .55s cubic-bezier(.2,.7,.2,1) both}@media (prefers-reduced-motion:reduce){.nexto-page-flip{animation:none}}`}</style>
+
       {viewMode === "papan" && (
-        <LeadBoard
-          leads={filtered}
-          stages={stages}
-          onOpenEdit={setEdit}
-          onMove={moveLeadStage}
-          onNewOpportunity={reopenLead}
-        />
+        <div className="nexto-page-flip">
+          <LeadBoard
+            leads={filtered}
+            stages={stages}
+            onOpenEdit={setEdit}
+            onMove={moveLeadStage}
+            onNewOpportunity={reopenLead}
+          />
+        </div>
       )}
 
       <div
-        className={`mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4${viewMode === "papan" ? " hidden" : ""}`}
+        className={`mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4${viewMode === "papan" ? " hidden" : " nexto-page-flip"}`}
       >
         {groupView && filtered.length > 0 && !units.some((u) => u.type === "group" || u.type === "holding") && (
           <div className="col-span-full rounded-inner border border-orange-200 bg-orange-50 px-4 py-3 text-[12.5px] text-slate-700">
