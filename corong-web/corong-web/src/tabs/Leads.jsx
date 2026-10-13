@@ -2140,7 +2140,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       </div>
 
       {/* Pindah Lead <-> Kanban: tampilan yang masuk meluncur sedikit sambil memudar (Kanban dari kanan, daftar dari kiri). */}
-      <style>{`@keyframes nexto-slide-r{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}@keyframes nexto-slide-l{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}.nexto-slide-r{animation:nexto-slide-r .2s ease-out both}.nexto-slide-l{animation:nexto-slide-l .2s ease-out both}@media (prefers-reduced-motion:reduce){.nexto-slide-r,.nexto-slide-l{animation:none}}`}</style>
+      <style>{`@keyframes nexto-slide-r{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}@keyframes nexto-slide-l{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}.nexto-slide-r{animation:nexto-slide-r .2s ease-out backwards}.nexto-slide-l{animation:nexto-slide-l .2s ease-out backwards}@media (prefers-reduced-motion:reduce){.nexto-slide-r,.nexto-slide-l{animation:none}}`}</style>
 
       {viewMode === "papan" && (
         <div className="nexto-slide-r">

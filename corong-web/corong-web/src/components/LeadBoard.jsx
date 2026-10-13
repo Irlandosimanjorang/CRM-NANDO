@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
@@ -13,7 +14,8 @@ const daysAgo = (d) => {
 };
 const START_DISTANCE = 6; // piksel sebelum tekanan dianggap geser, bukan klik
 const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada di pipeline
-const EDGE = 72; // jarak dari tepi yang memicu gulir otomatis
+const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
+const MAX_SPEED = 26; // piksel per frame saat kursor tepat di tepi
 
 export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
@@ -79,19 +81,21 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   };
 
   // Gulir kolom di bawah kursor saat kursor dekat tepi atas atau bawah, dan papan saat dekat tepi kiri atau kanan.
+  // Kecepatan gulir naik sedikit demi sedikit saat kursor makin dekat tepi (0 jika masih jauh dari tepi).
+  const edgeSpeed = (dist) => (dist >= EDGE ? 0 : Math.ceil(((EDGE - dist) / EDGE) * MAX_SPEED));
   const autoScroll = (x, y) => {
     const el = document.elementFromPoint(x, y);
     const list = el?.closest?.("[data-list]");
     if (list) {
       const r = list.getBoundingClientRect();
-      if (y - r.top < EDGE) list.scrollTop -= 16;
-      else if (r.bottom - y < EDGE) list.scrollTop += 16;
+      list.scrollTop -= edgeSpeed(y - r.top);
+      list.scrollTop += edgeSpeed(r.bottom - y);
     }
     const board = boardRef.current;
     if (board) {
       const r = board.getBoundingClientRect();
-      if (x - r.left < EDGE) board.scrollLeft -= 16;
-      else if (r.right - x < EDGE) board.scrollLeft += 16;
+      board.scrollLeft -= edgeSpeed(x - r.left);
+      board.scrollLeft += edgeSpeed(r.right - x);
     }
   };
 
@@ -99,6 +103,16 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     if (e.button !== 0 || e.target.closest("select")) return;
     suppressClick.current = false;
     const rect = e.currentTarget.getBoundingClientRect();
+    // Posisi kursor terakhir dan loop gulir per frame: papan tetap bergulir walau kursor diam di tepi.
+    let pos = null;
+    let raf = 0;
+    const tick = () => {
+      if (pos) {
+        autoScroll(pos.x, pos.y);
+        setOverKey(stageAt(pos.x, pos.y));
+      }
+      raf = requestAnimationFrame(tick);
+    };
     const onMove = (ev) => {
       const p = press.current;
       if (!p) return;
@@ -107,16 +121,18 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
         p.active = true;
         document.body.style.userSelect = "none";
         setDrag({ lead: p.lead, x: ev.clientX, y: ev.clientY, offX: p.offX, offY: p.offY, w: p.w });
+        raf = requestAnimationFrame(tick);
       }
+      pos = { x: ev.clientX, y: ev.clientY };
       setDrag((d) => (d ? { ...d, x: ev.clientX, y: ev.clientY } : d));
       setOverKey(stageAt(ev.clientX, ev.clientY));
-      autoScroll(ev.clientX, ev.clientY);
     };
     const onUp = (ev) => {
       const p = press.current;
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
+      cancelAnimationFrame(raf);
       press.current = null;
       if (!p || !p.active) return;
       document.body.style.userSelect = "";
@@ -147,7 +163,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     <div ref={boardRef} className="mt-1 overflow-x-auto pb-4">
       {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} />}
 
-      {drag && (
+      {/* Kartu yang diseret dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke wrapper yang punya transform. */}
+      {drag && createPortal(
         <div
           className="pointer-events-none fixed left-0 top-0 z-[60] rounded-xl border border-slate-300 bg-white p-3 shadow-[0_18px_40px_-12px_rgba(15,23,42,0.35)]"
           style={{ transform: `translate(${drag.x - drag.offX}px, ${drag.y - drag.offY}px) rotate(2deg)`, width: drag.w }}
@@ -159,7 +176,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
               <div className="truncate text-[11px] text-slate-500">{drag.lead.deal_value ? fmtRp(drag.lead.deal_value) : "Nilai belum diisi"}</div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="flex min-w-max items-stretch gap-4" style={{ height: "calc(100vh - 15rem)", minHeight: "420px" }}>
