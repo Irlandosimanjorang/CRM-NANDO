@@ -705,12 +705,13 @@ export default function Leads({
   const PAGE_SIZE = 60;
 
   // Tampilan daftar (Lead) atau papan kanban per tahap (Kanban). Dipilih dengan dua tombol di atas daftar.
-  const [viewMode, setViewMode] = useState("daftar");
+  const [viewMode, setViewMode] = useState(() => { try { return localStorage.getItem("nexto_leads_view") === "papan" ? "papan" : "daftar"; } catch (_) { return "daftar"; } });
+  useEffect(() => { try { localStorage.setItem("nexto_leads_view", viewMode); } catch (_) { /* abaikan */ } }, [viewMode]);
   // Simpan di belakang layar: papan sudah menampilkan tahap baru, jadi tidak perlu menunggu muat ulang.
   // Error dilempar lagi ke papan, yang mengembalikan kartu ke tempat semula.
   const moveLeadStage = async (lead, key) => {
     await db.upsertLead({ ...lead, stage_key: key });
-    onChanged();
+    onChanged({ silent: true });
   };
 
   const [edit, setEdit] =

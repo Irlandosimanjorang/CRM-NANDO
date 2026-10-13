@@ -338,8 +338,10 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const reload = async () => {
-    setLoading(true);
+  // silent: muat ulang di belakang layar (tanpa layar loading), dipakai setelah pindah tahap dari papan kanban.
+  const reload = async (opts) => {
+    const silent = !!(opts && opts.silent === true);
+    if (!silent) setLoading(true);
     try {
       let myOrg = null;
       try { myOrg = await db.getMyOrg(); } catch (e) { console.error(e); }
@@ -384,7 +386,7 @@ export default function App() {
       }
       setStages(st); setSettings(se); setLeads(ls); setCompetitors(comp); setDealTransactions(dt);
     } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    finally { if (!silent) setLoading(false); }
   };
 
   const [pickingIndustry, setPickingIndustry] = useState(false);
