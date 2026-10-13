@@ -1,6 +1,11 @@
 // Supabase Edge Function: send-outreach (13 Okt 2026, permintaan Nando)
 // Kirim email perkenalan Nexto ke daftar perusahaan dari Command Center (kartu EMAIL OUTREACH) dengan satu klik.
-// Hanya ADMIN_EMAIL. Pengirim lewat Resend: gambar Dashboard, Team, dan Report tampil langsung di badan email.
+// Hanya ADMIN_EMAIL.
+//
+// Dua jalur pengiriman:
+//  - GMAIL (dipakai kalau secret GMAIL_APP_PASSWORD terisi): email keluar dari Gmail Nando sendiri lewat SMTP, tiga gambar
+//    (Dashboard, Dashboard Tim, Report) sebagai LAMPIRAN. Lebih kecil kemungkinan masuk spam karena berasal dari alamat pribadi.
+//  - RESEND (cadangan): dari domain nexto.site, gambar tampil langsung di badan email.
 //
 // Body: { action: "list" }                                   -> ringkasan + 30 pengiriman terakhir
 //       { action: "test", to? }                              -> kirim satu email contoh (tidak dicatat), default ke email admin
@@ -9,9 +14,11 @@
 //       { action: "unsubscribe", email }                     -> tandai berhenti, tidak akan dikirimi lagi
 //
 // Pengaman: batas kirim per hari (DAILY_CAP, hari WIB), alamat yang sudah dikirimi atau berhenti dilewati
-// (tabel outreach_log, unik per alamat), jeda antar email, dan email diberi Reply-To ke Gmail Nando dan header
-// List-Unsubscribe. Variabel lingkungan opsional: OUTREACH_FROM, OUTREACH_REPLY_TO.
+// (tabel outreach_log, unik per alamat), jeda antar email, header List-Unsubscribe.
+// Variabel lingkungan: GMAIL_USER (opsional, default OUTREACH_REPLY_TO), GMAIL_APP_PASSWORD (sandi aplikasi Google),
+// OUTREACH_FROM dan OUTREACH_REPLY_TO (jalur Resend).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -20,11 +27,20 @@ const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM = Deno.env.get("OUTREACH_FROM") || "Irlando Simanjorang <irlando@nexto.site>";
 const REPLY_TO = Deno.env.get("OUTREACH_REPLY_TO") || "simanjorangirlando@gmail.com";
+const GMAIL_USER = Deno.env.get("GMAIL_USER") || REPLY_TO;
+const GMAIL_APP_PASSWORD = (Deno.env.get("GMAIL_APP_PASSWORD") || "").replace(/\s+/g, "");
+const USE_GMAIL = GMAIL_APP_PASSWORD.length > 0;
 
 const DAILY_CAP = 40;
 const MAX_PER_CALL = 40;
 const DELAY_MS = 700;
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+const ATTACHMENTS = [
+  { file: "demo-dashboard.png", name: "Nexto - Dashboard.png" },
+  { file: "demo-team.png", name: "Nexto - Dashboard Tim.png" },
+  { file: "demo-report.png", name: "Nexto - Report.png" },
+];
 
 const CORS = {
   "Access-Control-Allow-Origin": "https://nexto.site",
@@ -35,22 +51,31 @@ const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]{2,}$/;
 const esc = (s: string) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 const clean = (s: unknown, max = 120) => String(s ?? "").replace(/[\r\n\t]+/g, " ").trim().slice(0, max);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const toBase64 = (bytes: Uint8Array) => {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
 
-function buildEmail(nama: string, perusahaan: string) {
+function buildEmail(nama: string, perusahaan: string, asAttachment: boolean) {
   const sapaan = nama ? `Yth. Bapak/Ibu ${esc(nama)},` : `Yth. Tim Sales ${esc(perusahaan) || "Anda"},`;
   const sapaanText = nama ? `Yth. Bapak/Ibu ${nama},` : `Yth. Tim Sales ${perusahaan || "Anda"},`;
   const subject = perusahaan ? `Apa saja yang dikerjakan tim sales ${perusahaan} hari ini?` : "Apa saja yang dikerjakan tim sales Anda hari ini?";
   const img = (file: string, alt: string, href: string) =>
     `<a href="${href}"><img src="https://nexto.site/email/${file}" width="560" alt="${alt}" style="max-width:100%;height:auto;border:1px solid #e5e7eb;"></a>`;
+  const block = (title: string, desc: string, file: string, alt: string, tab: string, label: string) => asAttachment
+    ? `<p><b>${title}</b> &ndash; ${desc}<br><a href="https://nexto.site/demo?tab=${tab}" style="color:#ea580c;">Buka ${label} di demo</a></p>`
+    : `<p><b>${title}</b> &ndash; ${desc}<br>${img(file, alt, `https://nexto.site/demo?tab=${tab}`)}<br><a href="https://nexto.site/demo?tab=${tab}" style="color:#ea580c;">Buka ${label} di demo</a></p>`;
+  const lampiran = asAttachment ? `<p>Cuplikan tampilannya terlampir dalam tiga gambar: Dashboard, Dashboard Tim, dan Report (data contoh).</p>` : "";
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;max-width:640px;">
 <p>${sapaan}</p>
 <p>Saya Irlando dari Nexto, AI Sales Loop Engine untuk perusahaan dengan tim sales lapangan.</p>
 <p>Kendala yang sering kami dengar dari pimpinan sales: progres tim baru diketahui saat rapat mingguan, laporan kunjungan sulit diverifikasi, dan lead yang terlewat baru ketahuan setelah klien pindah ke kompetitor.</p>
 <p>Nexto menjawabnya dengan satu alur dari lead sampai pembayaran, dan satu layar untuk melihat seluruh tim.</p>
-<p><b>Coba langsung demonya, tanpa daftar:</b><br><a href="https://nexto.site/demo" style="color:#ea580c;font-weight:bold;">https://nexto.site/demo</a><br><span style="font-size:13px;color:#6b7280;">Data di dalamnya contoh.</span></p>
-<p><b>Dashboard</b> &ndash; rekomendasi lead prioritas setiap pagi dan ringkasan pipeline Anda.<br>${img("demo-dashboard.png", "Dashboard Nexto", "https://nexto.site/demo?tab=dashboard")}<br><a href="https://nexto.site/demo?tab=dashboard" style="color:#ea580c;">Buka Dashboard di demo</a></p>
-<p><b>Dashboard Tim</b> &ndash; siapa yang aktif, siapa yang tidak, dan posisi setiap sales terhadap target, dalam satu layar.<br>${img("demo-team.png", "Dashboard Tim Nexto", "https://nexto.site/demo?tab=team")}<br><a href="https://nexto.site/demo?tab=team" style="color:#ea580c;">Buka Dashboard Tim di demo</a></p>
-<p><b>Report penjualan</b> &ndash; omzet, target versus capaian, forecast, dan hasil tiap marketing, otomatis tanpa rekap manual.<br>${img("demo-report.png", "Report Nexto", "https://nexto.site/demo?tab=report")}<br><a href="https://nexto.site/demo?tab=report" style="color:#ea580c;">Buka Report di demo</a></p>
+${lampiran}<p><b>Coba langsung demonya, tanpa daftar:</b><br><a href="https://nexto.site/demo" style="color:#ea580c;font-weight:bold;">https://nexto.site/demo</a><br><span style="font-size:13px;color:#6b7280;">Data di dalamnya contoh.</span></p>
+${block("Dashboard", "rekomendasi lead prioritas setiap pagi dan ringkasan pipeline Anda.", "demo-dashboard.png", "Dashboard Nexto", "dashboard", "Dashboard")}
+${block("Dashboard Tim", "siapa yang aktif, siapa yang tidak, dan posisi setiap sales terhadap target, dalam satu layar.", "demo-team.png", "Dashboard Tim Nexto", "team", "Dashboard Tim")}
+${block("Report penjualan", "omzet, target versus capaian, forecast, dan hasil tiap marketing, otomatis tanpa rekap manual.", "demo-report.png", "Report Nexto", "report", "Report")}
 <p>Di balik layar itu, Nexto bekerja dengan dua hal:</p>
 <p><b>1. Sales Loop Engine.</b> Satu alur yang dibantu AI, dari mencari calon klien, menyusun draf follow-up, check-in kunjungan dengan foto yang diverifikasi, mencatat progres cukup lewat pesan suara, sampai deal dan termin pembayaran.</p>
 <p><b>2. Dashboard Tim.</b> Owner dan manajer melihat apa yang dikerjakan setiap sales hari ini, dan lead yang mulai terbengkalai ditandai otomatis. Laporan tim terkirim setiap minggu.</p>
@@ -66,7 +91,7 @@ Saya Irlando dari Nexto, AI Sales Loop Engine untuk perusahaan dengan tim sales 
 Kendala yang sering kami dengar dari pimpinan sales: progres tim baru diketahui saat rapat mingguan, laporan kunjungan sulit diverifikasi, dan lead yang terlewat baru ketahuan setelah klien pindah ke kompetitor.
 
 Nexto menjawabnya dengan satu alur dari lead sampai pembayaran, dan satu layar untuk melihat seluruh tim.
-
+${asAttachment ? "\nCuplikan tampilannya terlampir dalam tiga gambar: Dashboard, Dashboard Tim, dan Report (data contoh).\n" : ""}
 Coba langsung demonya, tanpa daftar: https://nexto.site/demo
 Dashboard: https://nexto.site/demo?tab=dashboard
 Dashboard Tim: https://nexto.site/demo?tab=team
@@ -85,19 +110,51 @@ Jika Bapak/Ibu tidak ingin menerima email dari kami, cukup balas dengan "berhent
   return { subject, html, text };
 }
 
-async function sendOne(to: string, nama: string, perusahaan: string, subjectPrefix = "") {
-  const mail = buildEmail(nama, perusahaan);
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-    body: JSON.stringify({
-      from: FROM, to: [to], reply_to: REPLY_TO, subject: subjectPrefix + mail.subject, html: mail.html, text: mail.text,
-      headers: { "List-Unsubscribe": `<mailto:${REPLY_TO}?subject=berhenti>` },
-    }),
-  });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) return { ok: false, error: String(data?.message || data?.error || `Resend ${resp.status}`).slice(0, 200), id: null };
-  return { ok: true, error: null, id: (data?.id as string) || null };
+// Pengirim: satu fungsi send(to, nama, perusahaan, prefix) -> { ok, error, id }, plus close() untuk menutup koneksi SMTP.
+async function makeSender() {
+  if (!USE_GMAIL) {
+    return {
+      transport: "resend",
+      async send(to: string, nama: string, perusahaan: string, prefix = "") {
+        const mail = buildEmail(nama, perusahaan, false);
+        const resp = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: FROM, to: [to], reply_to: REPLY_TO, subject: prefix + mail.subject, html: mail.html, text: mail.text,
+            headers: { "List-Unsubscribe": `<mailto:${REPLY_TO}?subject=berhenti>` },
+          }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) return { ok: false, error: String(data?.message || data?.error || `Resend ${resp.status}`).slice(0, 200), id: null };
+        return { ok: true, error: null, id: (data?.id as string) || null };
+      },
+      async close() { /* tidak ada koneksi yang perlu ditutup */ },
+    };
+  }
+  // Lampiran diunduh sekali per panggilan.
+  const files = await Promise.all(ATTACHMENTS.map(async (a) => {
+    const r = await fetch(`https://nexto.site/email/${a.file}`);
+    if (!r.ok) throw new Error(`Gambar lampiran ${a.file} tidak bisa diunduh (${r.status}).`);
+    return { filename: a.name, content: toBase64(new Uint8Array(await r.arrayBuffer())), encoding: "base64", contentType: "image/png" };
+  }));
+  const client = new SMTPClient({ connection: { hostname: "smtp.gmail.com", port: 465, tls: true, auth: { username: GMAIL_USER, password: GMAIL_APP_PASSWORD } } });
+  return {
+    transport: "gmail",
+    async send(to: string, nama: string, perusahaan: string, prefix = "") {
+      const mail = buildEmail(nama, perusahaan, true);
+      try {
+        await client.send({
+          from: `Irlando Simanjorang <${GMAIL_USER}>`, to, subject: prefix + mail.subject, content: mail.text, html: mail.html, attachments: files,
+          headers: { "List-Unsubscribe": `<mailto:${GMAIL_USER}?subject=berhenti>` },
+        });
+        return { ok: true, error: null, id: null };
+      } catch (e) {
+        return { ok: false, error: String((e as Error)?.message || e).slice(0, 200), id: null };
+      }
+    },
+    async close() { try { await client.close(); } catch (_) { /* abaikan */ } },
+  };
 }
 
 function wibDayStartISO() {
@@ -113,7 +170,7 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
     if (!ADMIN_EMAIL || userData.user.email !== ADMIN_EMAIL) return json({ error: "Hanya admin platform yang dapat mengirim email outreach." }, 403);
-    if (!RESEND_API_KEY) return json({ error: "RESEND_API_KEY belum diatur." }, 500);
+    if (!USE_GMAIL && !RESEND_API_KEY) return json({ error: "Belum ada pengirim: isi GMAIL_APP_PASSWORD atau RESEND_API_KEY." }, 500);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const body = await req.json().catch(() => ({}));
@@ -126,7 +183,10 @@ Deno.serve(async (req) => {
         admin.from("outreach_log").select("id", { count: "exact", head: true }).eq("status", "unsubscribed"),
         admin.from("outreach_log").select("email, nama, perusahaan, status, error, created_at").order("created_at", { ascending: false }).limit(30),
       ]);
-      return { sent_today: today || 0, total_sent: total || 0, unsubscribed: unsub || 0, daily_cap: DAILY_CAP, from: FROM, reply_to: REPLY_TO, recent: recent || [] };
+      return {
+        sent_today: today || 0, total_sent: total || 0, unsubscribed: unsub || 0, daily_cap: DAILY_CAP,
+        transport: USE_GMAIL ? "gmail" : "resend", from: USE_GMAIL ? GMAIL_USER : FROM, reply_to: USE_GMAIL ? GMAIL_USER : REPLY_TO, recent: recent || [],
+      };
     };
 
     if (body.action === "list") return json(await summary());
@@ -134,9 +194,11 @@ Deno.serve(async (req) => {
     if (body.action === "test") {
       const to = clean(body.to || userData.user.email, 200).toLowerCase();
       if (!EMAIL_RE.test(to)) return json({ error: "Alamat email uji tidak valid." }, 400);
-      const r = await sendOne(to, "Budi", "PT Contoh Maju", "[UJI] ");
+      const sender = await makeSender();
+      const r = await sender.send(to, "Budi", "PT Contoh Maju", "[UJI] ");
+      await sender.close();
       if (!r.ok) return json({ error: `Gagal mengirim email uji: ${r.error}` }, 502);
-      return json({ ok: true, to });
+      return json({ ok: true, to, transport: sender.transport });
     }
 
     if (body.action === "unsubscribe") {
@@ -174,14 +236,18 @@ Deno.serve(async (req) => {
 
       const sent: string[] = [];
       const failed: { email: string; error: string }[] = [];
-      for (const r of batch) {
-        const res = await sendOne(r.email, r.nama, r.perusahaan);
-        await admin.from("outreach_log").upsert(
-          { email: r.email, nama: r.nama, perusahaan: r.perusahaan, status: res.ok ? "sent" : "failed", error: res.error, resend_id: res.id },
-          { onConflict: "email" },
-        );
-        if (res.ok) sent.push(r.email); else failed.push({ email: r.email, error: res.error || "gagal" });
-        await sleep(DELAY_MS);
+      if (batch.length > 0) {
+        const sender = await makeSender();
+        for (const r of batch) {
+          const res = await sender.send(r.email, r.nama, r.perusahaan);
+          await admin.from("outreach_log").upsert(
+            { email: r.email, nama: r.nama, perusahaan: r.perusahaan, status: res.ok ? "sent" : "failed", error: res.error, resend_id: res.id },
+            { onConflict: "email" },
+          );
+          if (res.ok) sent.push(r.email); else failed.push({ email: r.email, error: res.error || "gagal" });
+          await sleep(DELAY_MS);
+        }
+        await sender.close();
       }
       return json({ ok: true, sent: sent.length, failed, skipped, deferred, invalid, daily_cap: DAILY_CAP, sent_today: (sentToday || 0) + sent.length });
     }

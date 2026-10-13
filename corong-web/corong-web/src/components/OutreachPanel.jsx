@@ -76,7 +76,7 @@ export default function OutreachPanel() {
   return (
     <div className="space-y-4 text-slate-200">
       <p className="text-[12.5px] leading-relaxed text-slate-400">
-        Kirim email perkenalan Nexto ke banyak perusahaan sekaligus. Email berisi gambar Dashboard, Dashboard Tim, dan Report, plus link demo. Setiap penerima dikirimi satu kali, dan balasan masuk ke <b className="text-slate-300">{info?.reply_to || "Gmail Anda"}</b>.
+        Kirim email perkenalan Nexto ke banyak perusahaan sekaligus. {info?.transport === "gmail" ? "Email keluar dari Gmail Anda sendiri dengan tiga gambar (Dashboard, Dashboard Tim, Report) sebagai lampiran, plus link demo." : "Email berisi gambar Dashboard, Dashboard Tim, dan Report di badan email, plus link demo."} Setiap penerima dikirimi satu kali, dan balasan masuk ke <b className="text-slate-300">{info?.reply_to || "Gmail Anda"}</b>.
       </p>
 
       {info && (
@@ -84,7 +84,7 @@ export default function OutreachPanel() {
           <span>Hari ini <b className="text-slate-50">{info.sent_today}</b> dari {info.daily_cap}</span>
           <span>Total terkirim <b className="text-slate-50">{info.total_sent}</b></span>
           <span>Berhenti <b className="text-slate-50">{info.unsubscribed}</b></span>
-          <span className="text-slate-400">Pengirim: {info.from}</span>
+          <span className="text-slate-400">Pengirim: {info.from} ({info.transport === "gmail" ? "Gmail, gambar sebagai lampiran" : "Resend, gambar di badan email"})</span>
         </div>
       )}
 
@@ -110,6 +110,8 @@ export default function OutreachPanel() {
         </button>
       </div>
       {info && parsed.rows.length > room && <p className="text-[12px] text-amber-300">Sisa batas hari ini {room} email. Sisanya ({parsed.rows.length - room}) tidak terkirim hari ini; tempel ulang besok, alamat yang sudah terkirim otomatis dilewati.</p>}
+
+      {info && info.transport !== "gmail" && <p className="text-[12px] text-slate-400">Untuk mengirim dari Gmail Anda sendiri: buat sandi aplikasi Google, lalu isi GMAIL_APP_PASSWORD di Secrets fungsi Supabase. Kartu ini otomatis beralih.</p>}
 
       {err && <p className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[12.5px] text-rose-200">{err}</p>}
       {msg && <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[12.5px] text-emerald-200">{msg}</p>}
