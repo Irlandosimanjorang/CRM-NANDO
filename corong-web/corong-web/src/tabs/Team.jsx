@@ -77,8 +77,8 @@ const COLS = [
   // Klik angkanya untuk melihat daftar lead & isi catatannya (MemberNotesModal).
   { key: "leads_updated", label: "Lead di-update", clickable: true, hint: (m) => `${Number(m.notes) || 0} catatan${Number(m.notes_thin) > 0 ? ` · ${m.notes_thin} terlalu singkat` : ""}`, hintWarn: (m) => Number(m.notes_thin) > 0 },
   { key: "new_leads", label: "Lead baru" },
-  { key: "stage_moves", label: "Pindah tahap" },
-  { key: "deals", label: "Deal" },
+  { key: "stage_moves", label: "Pindah tahap", clickable: true },
+  { key: "deals", label: "Deal", clickable: true },
 ];
 
 function daysSince(iso) {
@@ -261,6 +261,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
   const api = db;
   const [range, setRange] = useState("week");
   const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
+  const [activityFor, setActivityFor] = useState(null); // { member, kind: "stage_moves" | "deals" }
   const [data, setData] = useState(null);
   const [contracts, setContracts] = useState([]);
   const [daysRaw, setDays] = useState(null); // null = belum dimuat
@@ -399,7 +400,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
           {loading && !data ? (
             <div className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-[92px]" />)}</div>
           ) : members.length > COMPACT_AT ? (
-            <MemberTable members={members} maxOf={maxOf} totalOf={totalOf} maxTotal={maxTotal} onOpenNotes={setNotesFor} />
+            <MemberTable members={members} maxOf={maxOf} totalOf={totalOf} maxTotal={maxTotal} onOpenNotes={setNotesFor} onOpenActivity={(m, k) => setActivityFor({ member: m, kind: k })} />
           ) : (
             <div className="divide-y divide-slate-100">
               {members.map((m) => {
@@ -424,7 +425,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
                         return (
                           <div key={c.key} className="min-w-0">
                             {c.clickable && v > 0 ? (
-                              <button onClick={() => setNotesFor(m)} title="Lihat daftar lead & catatannya" className="font-display text-[17px] font-bold leading-none tabular-nums text-ink underline decoration-slate-300 decoration-dotted underline-offset-4 hover:text-brand hover:decoration-brand">{v}</button>
+                              <button onClick={() => (c.key === "leads_updated" ? setNotesFor(m) : setActivityFor({ member: m, kind: c.key }))} title="Lihat daftarnya" className="font-display text-[17px] font-bold leading-none tabular-nums text-ink underline decoration-slate-300 decoration-dotted underline-offset-4 hover:text-brand hover:decoration-brand">{v}</button>
                             ) : (
                               <div className={`font-display text-[17px] font-bold leading-none tabular-nums ${v > 0 ? "text-ink" : "text-slate-300"}`}>{v}</div>
                             )}
@@ -458,6 +459,21 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />
+
+      {activityFor && (
+        <MemberActivityModal
+          api={api}
+          member={activityFor.member}
+          kind={activityFor.kind}
+          range={rangeFor(range)}
+          rangeLabel={rangeLabel}
+          stages={stages}
+          leads={leads}
+          dealTransactions={dealTransactions}
+          onClose={() => setActivityFor(null)}
+          onOpenLead={(id) => { setActivityFor(null); openLeadById(id); }}
+        />
+      )}
 
       {notesFor && (
         <MemberNotesModal
@@ -649,7 +665,7 @@ function IdleLeadsCard({ leads, stages, members, onOpenLead, onChanged }) {
 
 // Rekap ringkas (> COMPACT_AT anggota): satu baris per orang, urut dari yang
 // paling aktif. Angka tertinggi tiap kolom ditebalkan.
-function MemberTable({ members, maxOf, totalOf, maxTotal, onOpenNotes }) {
+function MemberTable({ members, maxOf, totalOf, maxTotal, onOpenNotes, onOpenActivity }) {
   const sorted = [...members].sort((a, b) => totalOf(b) - totalOf(a));
   return (
     <div className="-mx-1 overflow-x-auto">
@@ -685,7 +701,7 @@ function MemberTable({ members, maxOf, totalOf, maxTotal, onOpenNotes }) {
                   const cls = `px-2 py-2.5 text-right tabular-nums ${v === 0 ? "text-slate-300" : top ? "font-bold text-ink" : "text-slate-700"}`;
                   return (
                     <td key={c.key} title={c.hint ? c.hint(m) : undefined} className={cls}>
-                      {c.clickable && v > 0 ? <button onClick={() => onOpenNotes(m)} className="underline decoration-slate-300 decoration-dotted underline-offset-4 hover:text-brand">{v}</button> : v}
+                      {c.clickable && v > 0 ? <button onClick={() => (c.key === "leads_updated" ? onOpenNotes(m) : onOpenActivity(m, c.key))} className="underline decoration-slate-300 decoration-dotted underline-offset-4 hover:text-brand">{v}</button> : v}
                       {c.hintWarn?.(m) && <span className="ml-1 text-[10px] font-semibold text-amber-700">({m.notes_thin} singkat)</span>}
                     </td>
                   );
@@ -703,6 +719,85 @@ function MemberTable({ members, maxOf, totalOf, maxTotal, onOpenNotes }) {
 // Daftar lead yang di-update satu anggota pada periode yang dipilih, beserta
 // isi catatannya (2 Okt 2026). Catatan yang terlalu singkat/generik ditandai
 // (aturan di lib/noteQuality.js) supaya owner bisa menilai kualitasnya.
+// Daftar di balik angka "Pindah tahap" dan "Deal" per anggota (sumbernya sama dengan angka di rekap).
+const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function MemberActivityModal({ api, member, kind, range, rangeLabel, stages, leads, dealTransactions, onClose, onOpenLead }) {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+  const isDeal = kind === "deals";
+  const fromKey = ymdLocal(range.from);
+  const toKey = ymdLocal(range.to);
+
+  useEffect(() => {
+    api.listStageChanges(fromKey, toKey)
+      .then((all) => setRows(all.filter((r) => r.changed_by === member.user_id)))
+      .catch((e) => setErr(e.message || "Gagal memuat daftar"));
+  }, [api, member.user_id, fromKey, toKey]);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const labelOf = (key) => stages.find((s) => s.key === key)?.label || key || "-";
+  const typeOf = (key) => stages.find((s) => s.key === key)?.type;
+  const leadOf = (id) => leads.find((l) => l.id === id);
+
+  // Deal = perpindahan ke tahap Menang (sama dengan angka di rekap). Pindah tahap = semua perpindahan.
+  const list = (rows || [])
+    .filter((r) => (isDeal ? typeOf(r.to_stage) === "won" : true))
+    .slice()
+    .reverse();
+  const dealValueFor = (r) => {
+    const l = leadOf(r.lead_id);
+    const txs = (dealTransactions || []).filter((t) => t.lead_id === r.lead_id && String(t.deal_date || "") === String(r.changed_at || "").slice(0, 10));
+    const tx = txs[0];
+    return tx ? Number(tx.deal_value) || 0 : Number(l?.deal_value) || 0;
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 pb-28 md:pb-4" onClick={onClose}>
+      <div className="my-8 w-full max-w-lg rounded-panel bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-[16px] font-bold text-ink">{isDeal ? "Deal" : "Pindah tahap"} · {member.name}</h2>
+            <p className="text-[11.5px] text-slate-500">{rangeLabel} · {list.length} {isDeal ? "deal" : "perpindahan"}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Tutup">✕</button>
+        </div>
+
+        {err && <p className="text-[12px] text-rose-600">{err}</p>}
+        {!rows && !err && <p className="text-[12px] text-slate-500">Memuat…</p>}
+        {rows && list.length === 0 && <p className="py-6 text-center text-[12.5px] text-slate-500">Belum ada {isDeal ? "deal" : "perpindahan tahap"} di periode ini.</p>}
+
+        <ul className="divide-y divide-slate-100">
+          {list.map((r, i) => {
+            const l = leadOf(r.lead_id);
+            const d = new Date(r.changed_at);
+            return (
+              <li key={i} className="flex items-center justify-between gap-3 py-2.5">
+                <button type="button" onClick={() => onOpenLead(r.lead_id)} className="min-w-0 text-left">
+                  <div className="truncate text-[13px] font-semibold text-ink hover:underline">{l?.name || "Lead terhapus"}</div>
+                  <div className="truncate text-[11.5px] text-slate-500">
+                    {isDeal ? "Menang" : `${labelOf(r.from_stage)} → ${labelOf(r.to_stage)}`}
+                  </div>
+                </button>
+                <div className="shrink-0 text-right">
+                  {isDeal && <div className="text-[12.5px] font-semibold tabular-nums text-ink">{fmtRp(dealValueFor(r))}</div>}
+                  <div className="text-[11px] text-slate-500">{d.toLocaleDateString("id-ID", { day: "numeric", month: "short" })}, {d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function MemberNotesModal({ api, member, range, rangeLabel, onClose, onOpenLead }) {
   const [notes, setNotes] = useState(null);
   const [err, setErr] = useState("");
