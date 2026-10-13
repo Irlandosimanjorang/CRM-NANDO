@@ -559,6 +559,26 @@ export default function App() {
   // jadi dipindah ke atas SINI, sebelum satu pun early return.
   const isEnterprise = org?.plan === "enterprise";
   const canManage = !!(org && session?.user?.id && org.owner_user_id === session.user.id) || myRole === "manager";
+
+  // Aktivitas seluruh tim (lead, pindah tahap, deal, catatan progres) dikirim realtime ke owner dan manager,
+  // jadi Dashboard, Report, dan Team ikut berubah begitu sales rep menyimpan perubahan. Sales rep tidak berlangganan.
+  useEffect(() => {
+    const orgId = org?.id;
+    if (!session || !orgId || !canManage) return undefined;
+    let timer = null;
+    const refresh = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { silentReload(); window.dispatchEvent(new Event("nexto-data-changed")); }, 400);
+    };
+    const channel = supabase.channel(`team-activity-${orgId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads", filter: `org_id=eq.${orgId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "lead_stage_changes", filter: `org_id=eq.${orgId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "deal_transactions", filter: `org_id=eq.${orgId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "progress_notes", filter: `org_id=eq.${orgId}` }, refresh)
+      .subscribe();
+    return () => { clearTimeout(timer); supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, org?.id, canManage]);
   // Saklar owner_monitor (8 Okt 2026): owner hanya memantau lewat Dashboard, Leads, Team, Pengaturan.
   const monitorOwner = !!(org && session?.user?.id && org.owner_user_id === session.user.id && hasOrgFeature(org, "owner_monitor"));
   // Tab terakhir yang diingat bisa saja sudah tidak tersedia untuk akun ini

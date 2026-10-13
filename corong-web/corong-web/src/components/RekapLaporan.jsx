@@ -50,11 +50,19 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
   }, [full]);
   const nameOf = (uid) => members.find((m) => m.user_id === uid)?.display_name || "";
 
+  // Naik setiap ada perubahan tim dari realtime, supaya rekap ikut diperbarui.
+  const [dataTick, setDataTick] = useState(0);
+  useEffect(() => {
+    const onData = () => setDataTick((n) => n + 1);
+    window.addEventListener("nexto-data-changed", onData);
+    return () => window.removeEventListener("nexto-data-changed", onData);
+  }, []);
+
   useEffect(() => {
     let alive = true;
     db.listStageChanges(from, to).then((r) => { if (alive) setChanges(r); }).catch(() => { if (alive) setChanges([]); });
     return () => { alive = false; };
-  }, [from, to]);
+  }, [from, to, dataTick]);
 
   const stageMeta = useMemo(() => Object.fromEntries(stages.map((s) => [s.key, s])), [stages]);
   const firstKey = stages[0]?.key;

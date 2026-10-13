@@ -191,6 +191,14 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   // Aktivitas tiap marketing pada periode yang sama (RPC tab Team; hanya owner/manager Enterprise, selain itu kolom disembunyikan).
   // Aktivitas = kunjungan + lead di-update + lead baru + pindah tahap. Deal tidak dihitung sebagai aktivitas.
   const [act, setAct] = useState(null);
+  // Naik setiap ada perubahan tim dari realtime, supaya angka aktivitas ikut diperbarui.
+  const [dataTick, setDataTick] = useState(0);
+  useEffect(() => {
+    const onData = () => setDataTick((n) => n + 1);
+    window.addEventListener("nexto-data-changed", onData);
+    return () => window.removeEventListener("nexto-data-changed", onData);
+  }, []);
+
   useEffect(() => {
     if (personal || view !== "penjualan") return undefined;
     let alive = true;
@@ -202,7 +210,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
       setAct(m);
     }).catch(() => { if (alive) setAct(null); });
     return () => { alive = false; };
-  }, [personal, view, range.from, range.to]);
+  }, [personal, view, range.from, range.to, dataTick]);
 
   // Perbandingan antar marketing (selalu dari seluruh data, tidak ikut pilihan marketing di atas).
   const team = useMemo(() => {

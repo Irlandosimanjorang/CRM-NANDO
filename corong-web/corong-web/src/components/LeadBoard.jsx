@@ -12,6 +12,7 @@ const daysAgo = (d) => {
   return Number.isNaN(n) ? null : n;
 };
 const START_DISTANCE = 6; // piksel sebelum tekanan dianggap geser, bukan klik
+const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada di pipeline
 const EDGE = 72; // jarak dari tepi yang memicu gulir otomatis
 
 export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity }) {
@@ -42,7 +43,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const stageOf = (l) => pending[l.id] || l.stage_key;
 
   const moveTo = (lead, key) => {
-    if (!lead || stageOf(lead) === key) return;
+    if (!lead || key === UNKNOWN_KEY || stageOf(lead) === key) return;
     const target = cols.find((s) => s.key === key);
     if (target?.type === "won" || target?.type === "lost") {
       setPending((p) => ({ ...p, [lead.id]: key }));
@@ -134,7 +135,12 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // Hapus pendengar kalau papan ditutup di tengah geseran.
   useEffect(() => () => { document.body.style.userSelect = ""; }, []);
 
-  const board = cols.map((s) => ({ stage: s, items: leads.filter((l) => stageOf(l) === s.key) }));
+  // Lead yang tahapnya sudah tidak ada di pipeline (mis. tahap lama dari impor) tetap ditampilkan di kolom khusus,
+  // supaya tidak hilang dari Kanban. Lead itu bisa diseret ke tahap yang benar.
+  const knownKeys = new Set(cols.map((s) => s.key));
+  const orphans = leads.filter((l) => !knownKeys.has(stageOf(l)));
+  const boardCols = orphans.length ? [...cols, { key: UNKNOWN_KEY, label: "Tahap tidak dikenal", hex: "#94a3b8", type: "normal", unknown: true }] : cols;
+  const board = boardCols.map((s) => ({ stage: s, items: s.unknown ? orphans : leads.filter((l) => stageOf(l) === s.key) }));
   const accent = (s) => s.hex || "#94a3b8";
 
   return (

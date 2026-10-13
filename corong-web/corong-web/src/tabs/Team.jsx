@@ -284,6 +284,13 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       .finally(() => setLoading(false));
   };
   useEffect(load, [range]);
+  // Perubahan tim dari sales rep (App mengirim "nexto-data-changed" setelah realtime) langsung masuk ke rekap ini.
+  useEffect(() => {
+    const onData = () => load();
+    window.addEventListener("nexto-data-changed", onData);
+    return () => window.removeEventListener("nexto-data-changed", onData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range]);
 
   const members = data?.members || [];
   const nameOf = Object.fromEntries(members.map((m) => [m.user_id, m.name]));

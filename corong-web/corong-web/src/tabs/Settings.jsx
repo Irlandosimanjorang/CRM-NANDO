@@ -378,6 +378,8 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     }
   };
 
+  const pickStage = (s) => ({ key: s.key, label: s.label, hex: s.hex, type: s.type });
+  const stageDirty = JSON.stringify(st.map(pickStage)) !== JSON.stringify(stages.map(pickStage));
   const setStage = (i, k, v) => setSt((p) => p.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)));
   const addStage = () => setSt((p) => [...p, { key: `tahap_${Date.now()}`, label: "Tahap Baru", hex: "#94a3b8", type: "normal" }]);
   const delStage = (i) => setSt((p) => p.filter((_, idx) => idx !== i));
@@ -728,7 +730,12 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       </div>
 
       {msg && <div className={`text-sm rounded-xl p-3 ${msg.startsWith("Gagal") ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{msg}</div>}
-      {isOwner && <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan pengaturan</button>}
+      {isOwner && (
+        <div className="flex flex-wrap items-center gap-3">
+          <button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan pengaturan</button>
+          {stageDirty && <span className="text-xs font-medium text-amber-600">Ada perubahan tahap yang belum disimpan. Tahap baru berlaku setelah disimpan.</span>}
+        </div>
+      )}
 
       {isEnterprise && <ProductCatalogCard canManage={canManage} isOwner={isOwner} industry={org?.industry} />}
 

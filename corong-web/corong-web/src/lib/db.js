@@ -794,13 +794,12 @@ export async function getStages() {
   if (error) throw error;
   return data;
 }
+// Satu transaksi di database (RPC save_org_stages): hapus dan tulis ulang tahap tidak bisa setengah jalan,
+// dan hanya owner yang lolos pemeriksaan di sana.
 export async function saveStages(stages) {
-  const { data: rows } = await supabase.from("stages").select("id");
-  if (rows?.length) await supabase.from("stages").delete().in("id", rows.map((r) => r.id));
-  const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
-  const payload = stages.map((s, i) => ({ user_id: uid, org_id: orgId, key: s.key, label: s.label, hex: s.hex, type: s.type, position: i }));
-  const { error } = await supabase.from("stages").insert(payload);
+  const payload = stages.map((s) => ({ key: s.key, label: s.label, hex: s.hex, type: s.type }));
+  const { error } = await supabase.rpc("save_org_stages", { p_org_id: orgId, p_stages: payload });
   if (error) throw error;
 }
 
