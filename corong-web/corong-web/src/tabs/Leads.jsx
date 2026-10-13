@@ -2139,11 +2139,11 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         ))}
       </div>
 
-      {/* Pindah Lead <-> Kanban seperti membalik halaman: tampilan yang masuk diputar dari samping. */}
-      <style>{`@keyframes nexto-page-flip{from{opacity:0;transform:perspective(1400px) rotateY(-80deg)}to{opacity:1;transform:perspective(1400px) rotateY(0deg)}}.nexto-page-flip{transform-origin:left center;animation:nexto-page-flip .55s cubic-bezier(.2,.7,.2,1) both}@media (prefers-reduced-motion:reduce){.nexto-page-flip{animation:none}}`}</style>
+      {/* Pindah Lead <-> Kanban: tampilan yang masuk meluncur sedikit sambil memudar (Kanban dari kanan, daftar dari kiri). */}
+      <style>{`@keyframes nexto-slide-r{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}@keyframes nexto-slide-l{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}.nexto-slide-r{animation:nexto-slide-r .2s ease-out both}.nexto-slide-l{animation:nexto-slide-l .2s ease-out both}@media (prefers-reduced-motion:reduce){.nexto-slide-r,.nexto-slide-l{animation:none}}`}</style>
 
       {viewMode === "papan" && (
-        <div className="nexto-page-flip">
+        <div className="nexto-slide-r">
           <LeadBoard
             leads={filtered}
             stages={stages}
@@ -2155,7 +2155,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       )}
 
       <div
-        className={`mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4${viewMode === "papan" ? " hidden" : " nexto-page-flip"}`}
+        className={`mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4${viewMode === "papan" ? " hidden" : " nexto-slide-l"}`}
       >
         {groupView && filtered.length > 0 && !units.some((u) => u.type === "group" || u.type === "holding") && (
           <div className="col-span-full rounded-inner border border-orange-200 bg-orange-50 px-4 py-3 text-[12.5px] text-slate-700">
