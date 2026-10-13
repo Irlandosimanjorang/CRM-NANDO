@@ -207,10 +207,10 @@ function CloseDialog({ closing, onCancel, onSave }) {
         {won && (
           <div className="mt-4 grid grid-cols-2 gap-2">
             <label className="block">
-              <span className="text-[11px] font-medium text-slate-500">Nilai deal (Rp)</span>
+              <span className="text-[11px] font-medium text-slate-500">Nilai deal{dealValue ? " · " + fmtRp(dealValue) : ""}</span>
               <input
                 inputMode="numeric"
-                value={dealValue ? dealValue.toLocaleString("id-ID") : ""}
+                value={value}
                 onChange={(e) => setValue(e.target.value.replace(/D/g, ""))}
                 placeholder="0"
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] tabular-nums focus:border-slate-400 focus:outline-none"
