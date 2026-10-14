@@ -1980,7 +1980,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
         <div className="flex flex-wrap gap-2">
 
-          <label className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink cursor-pointer">
+          <label className="whitespace-nowrap text-[12px] font-medium flex items-center gap-1.5 borderborder-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink cursor-pointer">
 
             <FileSpreadsheet
               size={13}
@@ -2020,7 +2020,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
                 ? "Menunggu persetujuan owner/manager"
                 : undefined
             }
-            className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
+            className="whitespace-nowrap text-[12px] font-medium flex items-center gap-1.5 borderborder-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
           >
 
             <Download
@@ -2050,7 +2050,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               setShowDup(true);
               saveOpenModal("dupcheck", {});
             }}
-            className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
+            className="whitespace-nowrap text-[12px] font-medium flex items-center gap-1.5 borderborder-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
           >
 
             {myLevel < 1 ? <Lock size={12} /> : <Copy size={12} />}
@@ -2069,7 +2069,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               setLinkErr("");
               setShowLinkGen(true);
             }}
-            className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
+            className="whitespace-nowrap text-[12px] font-medium flex items-center gap-1.5 borderborder-slate-200 text-slate-600 rounded-inner px-3 py-1.5 bg-white hover:bg-slate-50 hover:text-ink"
           >
             {myLevel < 1 ? <Lock size={12} /> : <LinkIcon size={12} />}
             Generate dari link
@@ -2091,7 +2091,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             type="button"
             onClick={() => setShowGroupAssign(true)}
             title="Atur Pusat untuk beberapa lead sekaligus, tanpa import"
-            className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 bg-white rounded-inner px-3 py-1.5 hover:bg-slate-50 hover:text-ink"
+            className="whitespace-nowrap text-[12px] font-medium flex items-center gap-1.5 borderborder-slate-200 text-slate-600 bg-white rounded-inner px-3 py-1.5 hover:bg-slate-50 hover:text-ink"
           >
             <Building2 size={12} />
             Atur grup
@@ -2101,7 +2101,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             <button
               type="button"
               onClick={() => setShowRequestAll(true)}
-              className="text-[12px] font-medium flex items-center gap-1.5 border border-rose-200 text-rose-600 rounded-inner px-3 py-1.5 bg-white hover:bg-rose-50"
+              className="whitespace-nowrap text-[12px] font-medium flex items-center gap-1.5 borderborder-rose-200 text-rose-600 rounded-inner px-3 py-1.5 bg-white hover:bg-rose-50"
               title="Mengirim permintaan ke owner atau manager"
             >
               <Trash2 size={12} />
@@ -2113,7 +2113,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             <button
               type="button"
               onClick={() => setShowDeleteAll(true)}
-              className="text-[12px] font-medium flex items-center gap-1.5 border border-rose-200 text-rose-600 rounded-inner px-3 py-1.5 bg-white hover:bg-rose-50"
+              className="whitespace-nowrap text-[12px] font-medium flex items-center gap-1.5 borderborder-rose-200 text-rose-600 rounded-inner px-3 py-1.5 bg-white hover:bg-rose-50"
             >
               <Trash2 size={12} />
               {fAssignee ? `Hapus semua lead ${deleteScopeName}` : "Hapus semua lead"}
