@@ -46,6 +46,7 @@ import LeadModal from "../components/LeadModal";
 import LeadBoard from "../components/LeadBoard";
 import DuplicateModal from "../components/DuplicateModal";
 import DeleteAllLeadsModal from "../components/DeleteAllLeadsModal";
+import GroupAssignDialog from "../components/GroupAssignDialog";
 import { detectHeaderRow, smartMapping, suggestExtras, normalizePhone, parseMoney, parseDate, normalizePriority, matchStage, matchMember } from "../lib/importSmart";
 import ImportSummaryModal from "../components/ImportSummaryModal";
 import ManualColumnMapModal from "../components/ManualColumnMapModal";
@@ -648,6 +649,7 @@ export default function Leads({
   const [fKpi, setFKpi] = useState("");
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [showRequestAll, setShowRequestAll] = useState(false);
+  const [showGroupAssign, setShowGroupAssign] = useState(false);
   const [myUid, setMyUid] = useState(null);
   useEffect(() => { db.getCurrentUserId().then(setMyUid).catch(() => setMyUid(null)); }, []);
 
@@ -2085,6 +2087,18 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             Kelompokkan per grup
           </button>
 
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setShowGroupAssign(true)}
+              title="Atur Pusat dan Holding untuk beberapa lead sekaligus, tanpa import"
+              className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 bg-white rounded-inner px-3 py-1.5 hover:bg-slate-50 hover:text-ink"
+            >
+              <Building2 size={12} />
+              Atur grup
+            </button>
+          )}
+
           {!canManage && isEnterprise && myUid && leads.some((l) => l.assigned_to === myUid) && (
             <button
               type="button"
@@ -2537,6 +2551,18 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
       )}
 
+
+      {showGroupAssign && (
+        <GroupAssignDialog
+          leads={leads}
+          onClose={() => setShowGroupAssign(false)}
+          onDone={(n, clear) => {
+            setShowGroupAssign(false);
+            onChanged({ silent: true });
+            alert(`${n} lead ${clear ? "dilepas dari grupnya" : "sudah diatur ke grup"}.`);
+          }}
+        />
+      )}
 
       {showRequestAll && (
         <DeleteAllLeadsModal
