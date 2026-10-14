@@ -35,6 +35,32 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
     return [...set].filter(Boolean).sort((a, b) => a.localeCompare(b));
   }, [live]);
 
+  // Grup yang sudah ada (pusat beserta jumlah cabangnya). Menghapus grup hanya melepas cabang dari pusatnya.
+  const groups = useMemo(() => {
+    const count = new Map();
+    live.forEach((l) => { const k = (l.parent_company || "").trim(); if (k) count.set(k, (count.get(k) || 0) + 1); });
+    return [...count.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [live]);
+
+  const hapusGrup = async (name, n) => {
+    const targets = live.filter((l) => (l.parent_company || "").trim() === name);
+    if (!window.confirm(`Hapus grup "${name}"? ${n} lead tidak ikut terhapus, hanya dilepas dari grup ini.`)) return;
+    setBusy(true); setErr(""); setProgress(0);
+    let done = 0;
+    try {
+      for (let i = 0; i < targets.length; i += CHUNK) {
+        const chunk = targets.slice(i, i + CHUNK);
+        await Promise.all(chunk.map((l) => db.upsertLead({ ...l, parent_company: "" })));
+        done += chunk.length;
+        setProgress(done);
+      }
+      onDone(targets.length, true);
+    } catch (e) {
+      setErr(`Gagal menghapus grup. ${done} dari ${targets.length} lead sudah dilepas. ${e?.message || e}`);
+      setBusy(false);
+    }
+  };
+
   const jadikanPusat = (l) => {
     setPusat(l.name || "");
     setPicked((cur) => { const n = new Set(cur); n.add(l.id); return n; });
@@ -89,6 +115,23 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
             {pusatOptions.map((o) => <option key={o} value={o} />)}
           </datalist>
         </label>
+
+        {groups.length > 0 && (
+          <div className="mt-4">
+            <div className="text-xs font-medium text-slate-500">Grup yang sudah ada</div>
+            <ul className="mt-1.5 max-h-[120px] divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200">
+              {groups.map(([name, n]) => (
+                <li key={name} className="flex items-center gap-3 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-semibold text-slate-900">{name}</div>
+                    <div className="text-[11.5px] text-slate-500">{n} lead di grup ini</div>
+                  </div>
+                  <button type="button" onClick={() => hapusGrup(name, n)} disabled={busy} className="shrink-0 rounded-lg border border-rose-200 px-2 py-1 text-[11px] font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">Hapus grup</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="mt-4 flex items-center gap-2">
           <div className="relative flex-1">
