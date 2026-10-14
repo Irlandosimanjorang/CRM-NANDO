@@ -3,8 +3,8 @@ import { X, Search, Building2 } from "lucide-react";
 import * as db from "../lib/db";
 
 // Atur grup pusat dan cabang langsung dari tab Leads (13 Okt 2026), tanpa lewat mapping import.
-// Pilih beberapa lead, isi Pusat (perusahaan induk) dan/atau Holding / Group, lalu terapkan sekaligus.
-// Kolom yang dikosongkan tidak menghapus nilai lama, kecuali lewat tombol "Lepas grup".
+// Pilih beberapa lead, isi Pusat (perusahaan induk), lalu terapkan sekaligus. Kolom yang dikosongkan tidak
+// menghapus nilai lama, kecuali lewat tombol "Lepas grup". Holding / Group tidak diubah dari dialog ini.
 const CHUNK = 8; // jumlah penyimpanan paralel per kelompok, supaya tidak membebani server
 const SHOW_LIMIT = 300;
 
@@ -12,7 +12,6 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState(() => new Set());
   const [pusat, setPusat] = useState("");
-  const [holding, setHolding] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState("");
@@ -21,7 +20,7 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
     const list = s
-      ? live.filter((l) => [l.name, l.city, l.parent_company, l.group_holding].some((x) => String(x || "").toLowerCase().includes(s)))
+      ? live.filter((l) => [l.name, l.city, l.parent_company].some((x) => String(x || "").toLowerCase().includes(s)))
       : live;
     return list.slice().sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))).slice(0, SHOW_LIMIT);
   }, [live, q]);
@@ -34,8 +33,7 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
     const targets = live.filter((l) => picked.has(l.id));
     if (!targets.length) return;
     const p = pusat.trim();
-    const h = holding.trim();
-    if (!clear && !p && !h) { setErr("Isi Pusat atau Holding dulu, atau pakai Lepas grup."); return; }
+    if (!clear && !p) { setErr("Isi Pusat dulu, atau pakai Lepas grup."); return; }
     const verb = clear ? "lepas dari grupnya" : "diatur ke grup ini";
     if (!window.confirm(`${targets.length} lead akan ${verb}. Lanjutkan?`)) return;
     setBusy(true); setErr(""); setProgress(0);
@@ -45,8 +43,7 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
         const chunk = targets.slice(i, i + CHUNK);
         await Promise.all(chunk.map((l) => db.upsertLead({
           ...l,
-          parent_company: clear ? "" : (p || l.parent_company || ""),
-          group_holding: clear ? "" : (h || l.group_holding || ""),
+          parent_company: clear ? "" : p,
         })));
         done += chunk.length;
         setProgress(done);
@@ -70,21 +67,15 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
           <button onClick={onClose} disabled={busy} className="text-slate-400 hover:text-slate-700" aria-label="Tutup"><X size={18} /></button>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-xs font-medium text-slate-500">Pusat (perusahaan induk)</span>
-            <input className={`${field} mt-1`} value={pusat} onChange={(e) => setPusat(e.target.value)} placeholder="Misal: PT Sinar Abadi Plastik" disabled={busy} />
-          </label>
-          <label className="block">
-            <span className="text-xs font-medium text-slate-500">Holding / Group (opsional)</span>
-            <input className={`${field} mt-1`} value={holding} onChange={(e) => setHolding(e.target.value)} placeholder="Misal: Grup Sinar Abadi" disabled={busy} />
-          </label>
-        </div>
+        <label className="mt-4 block">
+          <span className="text-xs font-medium text-slate-500">Pusat (perusahaan induk)</span>
+          <input className={`${field} mt-1`} value={pusat} onChange={(e) => setPusat(e.target.value)} placeholder="Misal: PT Sinar Abadi Plastik" disabled={busy} />
+        </label>
 
         <div className="mt-4 flex items-center gap-2">
           <div className="relative flex-1">
             <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input className={`${field} pl-8`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama, kota, pusat, atau holding" disabled={busy} />
+            <input className={`${field} pl-8`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama, kota, atau pusat" disabled={busy} />
           </div>
           <button type="button" onClick={selectShown} disabled={busy || !shown.length} className="whitespace-nowrap rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50 disabled:opacity-50">Pilih yang tampil</button>
           <button type="button" onClick={clearPicked} disabled={busy || !picked.size} className="whitespace-nowrap rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50 disabled:opacity-50">Kosongkan</button>
@@ -100,7 +91,7 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-semibold text-slate-900">{l.name}</div>
                     <div className="truncate text-[11.5px] text-slate-500">
-                      {[l.city, l.parent_company && `Pusat: ${l.parent_company}`, l.group_holding && `Holding: ${l.group_holding}`].filter(Boolean).join(" · ") || "Belum ada grup"}
+                      {[l.city, l.parent_company && `Pusat: ${l.parent_company}`].filter(Boolean).join(" · ") || "Belum ada pusat"}
                     </div>
                   </div>
                 </label>
