@@ -486,12 +486,18 @@ export default function App() {
       clearTimeout(timer);
       timer = setTimeout(() => { silentReload(); window.dispatchEvent(new Event("nexto-org-config")); }, 400);
     };
-    const channel = supabase.channel(`org-config-${orgId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "stages", filter: `org_id=eq.${orgId}` }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "org_product_catalog", filter: `org_id=eq.${orgId}` }, refresh)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "organizations", filter: `id=eq.${orgId}` }, refresh)
-      .subscribe();
-    return () => { clearTimeout(timer); supabase.removeChannel(channel); };
+    // Realtime opsional: kalau WebSocket diblokir peramban (error "The operation is insecure"), app tetap jalan.
+    let channel = null;
+    try {
+      channel = supabase.channel(`org-config-${orgId}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "stages", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "org_product_catalog", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "organizations", filter: `id=eq.${orgId}` }, refresh)
+        .subscribe();
+    } catch (e) {
+      console.warn("Realtime konfigurasi org tidak tersedia:", e);
+    }
+    return () => { clearTimeout(timer); if (channel) supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, org?.id]);
 
@@ -570,13 +576,18 @@ export default function App() {
       clearTimeout(timer);
       timer = setTimeout(() => { silentReload(); window.dispatchEvent(new Event("nexto-data-changed")); }, 400);
     };
-    const channel = supabase.channel(`team-activity-${orgId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "leads", filter: `org_id=eq.${orgId}` }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "lead_stage_changes", filter: `org_id=eq.${orgId}` }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "deal_transactions", filter: `org_id=eq.${orgId}` }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "progress_notes", filter: `org_id=eq.${orgId}` }, refresh)
-      .subscribe();
-    return () => { clearTimeout(timer); supabase.removeChannel(channel); };
+    let channel = null;
+    try {
+      channel = supabase.channel(`team-activity-${orgId}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "leads", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "lead_stage_changes", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "deal_transactions", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "progress_notes", filter: `org_id=eq.${orgId}` }, refresh)
+        .subscribe();
+    } catch (e) {
+      console.warn("Realtime aktivitas tim tidak tersedia:", e);
+    }
+    return () => { clearTimeout(timer); if (channel) supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, org?.id, canManage]);
   // Saklar owner_monitor (8 Okt 2026): owner hanya memantau lewat Dashboard, Leads, Team, Pengaturan.
