@@ -25,10 +25,13 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
     return list.slice().sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))).slice(0, SHOW_LIMIT);
   }, [live, q]);
 
-  // Pilihan pusat: pusat yang sudah dipakai lead lain, ditambah nama lead itu sendiri.
+  // Pilihan pusat: pusat yang sudah dipakai, ditambah semua nama lead supaya bisa dicari dengan mengetik.
   const pusatOptions = useMemo(() => {
     const set = new Set();
-    live.forEach((l) => { if (l.parent_company) set.add(l.parent_company.trim()); });
+    live.forEach((l) => {
+      if (l.parent_company) set.add(l.parent_company.trim());
+      if (l.name) set.add(String(l.name).trim());
+    });
     return [...set].filter(Boolean).sort((a, b) => a.localeCompare(b));
   }, [live]);
 
@@ -81,7 +84,7 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
 
         <label className="mt-4 block">
           <span className="text-xs font-medium text-slate-500">Pusat (perusahaan induk)</span>
-          <input list="grp-pusat-options" className={`${field} mt-1`} value={pusat} onChange={(e) => setPusat(e.target.value)} placeholder="Pilih pusat yang sudah ada, atau ketik baru" disabled={busy} />
+          <input list="grp-pusat-options" className={`${field} mt-1`} value={pusat} onChange={(e) => setPusat(e.target.value)} placeholder="Ketik nama lead atau pusat" disabled={busy} />
           <datalist id="grp-pusat-options">
             {pusatOptions.map((o) => <option key={o} value={o} />)}
           </datalist>
