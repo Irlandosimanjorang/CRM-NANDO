@@ -142,7 +142,7 @@ export default function GroupAssignDialog({ leads, onClose, onDone }) {
           <button type="button" onClick={clearPicked} disabled={busy || !picked.size} className="whitespace-nowrap rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50 disabled:opacity-50">Kosongkan</button>
         </div>
 
-        <div className="mt-3 min-h-[180px] flex-1 overflow-y-auto rounded-xl border border-slate-200">
+        <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl border border-slate-200">
           {shown.length === 0 && <p className="p-4 text-center text-sm text-slate-500">Tidak ada lead yang cocok.</p>}
           <ul className="divide-y divide-slate-100">
             {shown.map((l) => (
