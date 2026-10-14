@@ -2105,7 +2105,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               title="Mengirim permintaan ke owner atau manager"
             >
               <Trash2 size={12} />
-              Hapus semua saya
+              Hapus semua
             </button>
           )}
 
@@ -2116,7 +2116,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               className="whitespace-nowrap text-[12px] font-medium flex items-center gap-1 border border-rose-200 text-rose-600 rounded-inner px-2.5 py-1.5 bg-white hover:bg-rose-50"
             >
               <Trash2 size={12} />
-              {fAssignee ? `Hapus semua lead ${deleteScopeName}` : "Hapus semua lead"}
+              Hapus semua
             </button>
           )}
 
