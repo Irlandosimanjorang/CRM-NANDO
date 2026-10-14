@@ -4,7 +4,7 @@ import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
 import { normalizePlatform } from "../lib/adsImport";
-import { Panel, PanelHeader, StatRow, Stat, Pill, Meter, EmptyState } from "../ui";
+import { Panel, PanelHeader, Pill, Meter, EmptyState } from "../ui";
 import AdsAnalysis from "./AdsAnalysis";
 import RekapLaporan from "./RekapLaporan";
 
@@ -397,33 +397,33 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
         <AdsAnalysis leads={allLeads} stages={stages} dealTransactions={allTx} org={org} ym={ym} from={range.from} to={range.to} periodLabel={periodLabel} canImport={canImport} onChanged={onChanged} />
       ) : (
         <>
-          <Panel className="p-5">
-            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <section className="overflow-hidden rounded-panel bg-ink p-6 text-white">
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
               <div className="min-w-0">
-                <div className="text-[12px] font-semibold text-slate-600">{personal ? `Omzet Anda ${periodWord}` : scopeId === "all" ? `Omzet ${periodWord}` : `Omzet ${scopeName} ${periodWord}`}</div>
-                <div className="mt-1.5 font-display text-[34px] font-bold leading-none tracking-[-0.04em] tabular-nums text-emerald-600">{fmtRp(r.dealValue)}</div>
+                <div className="text-[12.5px] text-slate-400">{personal ? `Omzet Anda ${periodWord}` : scopeId === "all" ? `Omzet ${periodWord}` : `Omzet ${scopeName} ${periodWord}`}</div>
+                <div className="mt-2 font-display text-[32px] font-bold leading-none tracking-[-0.04em] tabular-nums sm:text-[52px]">{fmtRp(r.dealValue)}</div>
               </div>
               {!personal && fullMonth && (
-              <div className="sm:text-right">
-                {editing ? (
-                  <div className="flex items-center gap-2">
-                    <input inputMode="numeric" autoFocus value={targetInput} onChange={(e) => setTargetInput(e.target.value.replace(/[^\d]/g, ""))} placeholder="500000000" aria-label="Target omzet bulanan" className="w-40 rounded-inner border border-slate-300 px-3 py-1.5 text-[13px] tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" />
-                    <button type="button" disabled={saving} onClick={saveTarget} className={cn("inline-flex items-center gap-1 rounded-full bg-ink px-3.5 py-1.5 text-[12px] font-semibold text-white disabled:opacity-60", focus)}><Check size={13} /> Simpan target</button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-[12px] text-slate-500">{scopeId === "all" ? "Target tim" : `Target ${scopeName}`} {target ? fmtRp(target) : "belum diisi"}{target > 0 && <span className="ml-1.5 font-semibold text-ink">{pct(r.dealValue, target)}</span>}</div>
-                    {scopeId === "all" && marketers.length > 0 && <div className="text-[11px] text-slate-400">Jumlah target {marketers.length} marketing, diatur per orang di tab Team</div>}
-                    {canEditTarget && scopeId !== "all" && (
-                      <button type="button" onClick={() => { setTargetInput(String(target || "")); setEditing(true); }} className={cn("mt-1 inline-flex items-center gap-1 rounded-full text-[12px] font-semibold text-brand-strong hover:text-orange-800", focus)}><Pencil size={12} /> {target ? "Ubah target" : "Isi target"}</button>
-                    )}
-                  </>
-                )}
-                {err && <div className="mt-1 text-[11px] text-rose-600">{err}</div>}
-              </div>
+                <div className="sm:text-right">
+                  {editing ? (
+                    <div className="flex items-center gap-2">
+                      <input inputMode="numeric" autoFocus value={targetInput} onChange={(e) => setTargetInput(e.target.value.replace(/[^\d]/g, ""))} placeholder="500000000" aria-label="Target omzet bulanan" className="w-40 rounded-inner border border-white/20 bg-white/10 px-3 py-1.5 text-[13px] tabular-nums text-white placeholder:text-slate-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" />
+                      <button type="button" disabled={saving} onClick={saveTarget} className={cn("inline-flex items-center gap-1 rounded-full bg-white px-3.5 py-1.5 text-[12px] font-semibold text-ink disabled:opacity-60", focus)}><Check size={13} /> Simpan target</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-[12.5px] text-slate-400">{scopeId === "all" ? "Target tim" : `Target ${scopeName}`}</div>
+                      <div className="mt-0.5 font-display text-[20px] font-bold tabular-nums tracking-[-0.02em]">{target ? fmtRp(target) : "Belum diisi"}</div>
+                      {scopeId === "all" && marketers.length > 0 && <div className="mt-1 text-[11.5px] text-slate-500">Jumlah target {marketers.length} marketing, diatur per orang di tab Team</div>}
+                      {canEditTarget && scopeId !== "all" && (
+                        <button type="button" onClick={() => { setTargetInput(String(target || "")); setEditing(true); }} className={cn("mt-1 inline-flex items-center gap-1 rounded-full text-[12px] font-semibold text-orange-300 hover:text-orange-200", focus)}><Pencil size={12} /> {target ? "Ubah target" : "Isi target"}</button>
+                      )}
+                    </>
+                  )}
+                  {err && <div className="mt-1 text-[11px] text-rose-300">{err}</div>}
+                </div>
               )}
             </div>
-            {!personal && fullMonth && <Meter value={reached} max={100} tone="good" className="mt-4 h-2" />}
             {(() => {
               const isNow = ym === todayIso.slice(0, 7);
               const isPast = ym < todayIso.slice(0, 7);
@@ -434,67 +434,80 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               const need = !personal && target > 0 && gap < 0 ? (isNow && left > 0 ? `Sisa ${left} hari. Butuh ${fmtRp(Math.ceil(-gap / left))} per hari untuk mencapai target.` : isNow ? "Hari terakhir bulan ini." : "") : "";
               return (
                 <>
-                  {!personal && target > 0 && (
-                    <div className="mt-4 rounded-inner border border-slate-100 bg-slate-50/60 p-3.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-[12px] font-semibold text-slate-600">Target vs actual</span>
-                        <span className={cn("rounded-full px-2.5 py-1 text-[11.5px] font-semibold ring-1", TONES[st.tone])}>{st.label}</span>
+                  {!personal && fullMonth && (
+                    <div className="mt-6">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[12.5px]">
+                        <span className="inline-flex items-center gap-2 text-slate-400">
+                          Capaian <span className="font-semibold tabular-nums text-white">{target > 0 ? pct(r.dealValue, target) : "-"}</span>
+                        </span>
+                        {target > 0 && <span className={cn("rounded-full px-2.5 py-1 text-[11.5px] font-semibold ring-1", TONES[st.tone])}>{st.label}</span>}
                       </div>
-                      <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
-                        {[
-                          ["Target", fmtRp(target), ""],
-                          ["Actual", fmtRp(r.dealValue), "text-emerald-700"],
-                          ["Achievement", pct(r.dealValue, target), ""],
-                          ["Forecast", st.forecast > 0 && !isPast ? fmtRp(st.forecast) : "-", ""],
-                          ["Gap ke target", gap >= 0 ? `+${fmtRp(gap)}` : `-${fmtRp(-gap)}`, gap >= 0 ? "text-emerald-700" : "text-rose-600"],
-                        ].map(([k, v, c]) => (
-                          <div key={k}><dt className="text-[11px] text-slate-500">{k}</dt><dd className={cn("mt-0.5 text-[14px] font-bold tabular-nums tracking-[-0.02em] text-ink", c)}>{v}</dd></div>
-                        ))}
-                      </dl>
-                      {st.forecast > 0 && isNow && <p className="mt-2 text-[11px] text-slate-400">Forecast dari laju {now.getDate()} hari pertama bila bertahan sampai akhir bulan. Aman: forecast mencapai target, Warning: 80-99%, di bawah 80%: berpotensi tidak tercapai.</p>}
+                      <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-label="Capaian target" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(reached)}>
+                        <div className="h-full rounded-full bg-emerald-400 motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${reached}%` }} />
+                      </div>
                     </div>
                   )}
-                  {(need || delta !== null || prevDeal > 0) && (
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-slate-500">
+                  {!personal && target > 0 && (
+                    <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-white/10 pt-5 sm:grid-cols-3">
+                      {[
+                        ["Forecast", st.forecast > 0 && !isPast ? fmtRp(st.forecast) : "-"],
+                        ["Gap ke target", gap >= 0 ? `+${fmtRp(gap)}` : `-${fmtRp(-gap)}`],
+                        ["Bulan lalu", fmtRp(prevDeal)],
+                      ].map(([k, v]) => (
+                        <div key={k}><dt className="text-[11.5px] text-slate-400">{k}</dt><dd className="mt-1 text-[16px] font-bold tabular-nums tracking-[-0.02em]">{v}</dd></div>
+                      ))}
+                    </dl>
+                  )}
+                  {(need || (fullMonth && delta !== null)) && (
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[12px] text-slate-400">
                       <span>{need}</span>
-                      <span className="inline-flex items-center gap-1.5">
-                        Bulan lalu <span className="font-semibold tabular-nums text-slate-700">{fmtRp(prevDeal)}</span>
-                        {delta !== null && <span className={cn("rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums", delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>{delta >= 0 ? "+" : ""}{delta.toFixed(0)}%</span>}
-                      </span>
+                      {delta !== null && <span className="tabular-nums">{delta >= 0 ? "Naik" : "Turun"} {Math.abs(delta).toFixed(0)}% dari bulan lalu</span>}
                     </div>
                   )}
+                  {st.forecast > 0 && isNow && target > 0 && <p className="mt-3 text-[11px] text-slate-500">Forecast dari laju {now.getDate()} hari pertama bila bertahan sampai akhir bulan. Aman: forecast mencapai target. Warning: 80-99%. Di bawah 80%: berpotensi tidak tercapai.</p>}
                 </>
               );
             })()}
-          </Panel>
+          </section>
 
-          <StatRow>
-            <Stat value={r.masuk.length} label="Data masuk" hint={`Dibuat ${periodWord}`} tone="brand" />
-            <Stat value={r.sphCount} label="SPH belum diproses" hint={fmtRp(r.sphValue)} />
-            <Stat value={r.hotCount} label="Hot progress" hint={fmtRp(r.hotValue)} tone="warn" />
-            <Stat value={r.dealRows.length} label={`Deal ${periodWord}`} hint={fmtRp(r.dealValue)} tone="good" />
-          </StatRow>
+          <div className="grid gap-px overflow-hidden rounded-panel border border-slate-200 bg-slate-200 sm:grid-cols-4">
+            {[
+              [r.masuk.length, "Data masuk", `Dibuat ${periodWord}`, "text-brand-strong"],
+              [r.sphCount, "SPH belum diproses", fmtRp(r.sphValue), "text-ink"],
+              [r.hotCount, "Hot progress", fmtRp(r.hotValue), "text-ink"],
+              [r.dealRows.length, `Deal ${periodWord}`, fmtRp(r.dealValue), "text-emerald-600"],
+            ].map(([v, l, h, c]) => (
+              <div key={l} className="bg-white p-4">
+                <div className="text-[11.5px] font-medium text-slate-500">{l}</div>
+                <div className={cn("mt-1 font-display text-[26px] font-bold leading-none tabular-nums tracking-[-0.03em]", c)}>{v}</div>
+                <div className="mt-1.5 text-[11.5px] tabular-nums text-slate-400">{h}</div>
+              </div>
+            ))}
+          </div>
 
           {!r.hasBsbFlow && (
             <p className="rounded-inner bg-amber-50 px-4 py-2.5 text-[12px] text-amber-800">Pipeline organisasi ini belum memakai tahap SPH Terlayang dan Hot Progress, jadi angka SPH dan hot progress akan kosong.</p>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
             <Panel className="overflow-hidden">
-              <div className="grid grid-cols-7 border-b border-slate-200/80">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4">
+                <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">{MONTHS[month - 1]} {year}</div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-slate-500">
+                  <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-600" /> Deal</span>
+                  <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand" /> Data masuk</span>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-7 border-b border-slate-100">
                 {WEEKDAYS.map((w, i) => (
-                  <div key={w} className={cn("px-2 py-1.5 text-center text-[11px] font-semibold", i >= 5 ? "text-slate-400" : "text-slate-500")}>{w}</div>
+                  <div key={w} className={cn("px-2 py-1.5 text-center text-[11px] font-medium", i >= 5 ? "text-slate-400" : "text-slate-500")}>{w}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 [&>*]:border-b [&>*]:border-r [&>*]:border-slate-100 [&>*:nth-child(7n)]:border-r-0">
+              <div className="grid grid-cols-7 gap-px bg-slate-100">
                 {cells.map((c) => {
                   const deals = r.dealsByDay[c.iso] || [];
                   const masuk = r.masukByDay[c.iso] || [];
                   const isToday = c.iso === todayIso, isSel = c.iso === selected;
-                  const chips = [
-                    ...deals.slice(0, 1).map((d, i) => ({ k: `d${i}`, tone: "deal", text: `${truncate(d.name, 14)} · ${short(d.value)}` })),
-                    ...(masuk.length ? [{ k: "m", tone: "masuk", text: `${masuk.length} data masuk` }] : []),
-                  ];
                   const hidden = deals.length - Math.min(1, deals.length);
                   return (
                     <div
@@ -505,18 +518,21 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                       aria-pressed={isSel}
                       onClick={() => pick(c)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(c); } }}
-                      className={cn("min-h-[48px] cursor-pointer p-1 text-left outline-none transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand sm:min-h-[72px]", c.weekend && "bg-slate-50/60", isSel ? "bg-brand-soft/60" : "hover:bg-slate-50")}
+                      className={cn(
+                        "min-h-[48px] cursor-pointer p-1.5 text-left outline-none transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand sm:min-h-[84px]",
+                        c.inMonth ? (c.weekend ? "bg-slate-50" : "bg-white") : "bg-slate-50/50",
+                        isSel ? "ring-2 ring-inset ring-brand" : "hover:bg-brand-soft/40",
+                      )}
                     >
-                      <div className="flex justify-center sm:justify-start">
-                        <span className={cn("inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums", isToday ? "bg-brand-strong text-white" : c.inMonth ? "text-ink" : "text-slate-300")}>{c.day}</span>
-                      </div>
+                      <span className={cn("inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] font-semibold tabular-nums", isToday ? "bg-ink text-white" : c.inMonth ? "text-ink" : "text-slate-300")}>{c.day}</span>
                       {c.inMonth && (
                         <>
-                          <div className="mt-0.5 hidden space-y-px sm:block">
-                            {chips.map((ch) => (
-                              <div key={ch.k} className={cn("truncate rounded-[4px] px-1.5 text-[10px] font-semibold leading-[15px]", ch.tone === "deal" ? "bg-emerald-600 text-white" : "bg-brand-soft text-brand-strong")}>{ch.text}</div>
+                          <div className="mt-1 hidden space-y-0.5 sm:block">
+                            {deals.slice(0, 1).map((d, i) => (
+                              <div key={`d${i}`} className="truncate rounded-[5px] bg-emerald-50 px-1.5 text-[10.5px] font-semibold leading-[18px] text-emerald-700">{truncate(d.name, 12)} · {short(d.value)}</div>
                             ))}
-                            {hidden > 0 && <div className="px-1.5 text-[10px] font-medium leading-3 text-slate-500">+{hidden} deal lagi</div>}
+                            {hidden > 0 && <div className="px-1 text-[10.5px] font-medium text-emerald-700">+{hidden} deal lagi</div>}
+                            {masuk.length > 0 && <div className="truncate px-1 text-[10.5px] font-medium text-brand-strong">{masuk.length} data masuk</div>}
                           </div>
                           <div className="mt-1 flex justify-center gap-0.5 sm:hidden">
                             {deals.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />}
@@ -528,83 +544,78 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                   );
                 })}
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-200/80 px-4 py-2.5 text-[11px] text-slate-500">
-                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-emerald-600" /> Deal (nama dan nilai)</span>
-                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-brand" /> Data masuk</span>
-                <span>Klik tanggal untuk melihat rinciannya.</span>
-              </div>
             </Panel>
 
-            <div className="space-y-4">
-              <Panel className="p-5">
-                <PanelHeader title={`${DAYS_LONG[selDate.getDay()]}, ${selDate.getDate()} ${MONTHS[selDate.getMonth()]}`} meta={`${selDeals.length} deal, ${selMasuk.length} data masuk`} />
-                {selDeals.length === 0 && selMasuk.length === 0 ? (
-                  <div className="mt-3"><EmptyState>Tidak ada aktivitas pada tanggal ini. Deal dan data masuk tim muncul di sini otomatis.</EmptyState></div>
-                ) : (
-                  <div className="mt-3 divide-y divide-slate-100">
-                    {selDeals.map((d, i) => (
-                      <button key={`d${i}`} type="button" disabled={!d.lead} onClick={() => d.lead && onOpenLead?.(d.lead)} className={cn("flex w-full items-center justify-between gap-3 py-2.5 text-left disabled:cursor-default", focus)}>
-                        <span className="min-w-0">
-                          <span className="block truncate text-[13px] font-semibold text-ink">{d.name}</span>
-                          <span className="block text-[11px] text-slate-500">{d.lead?.company_type || "Deal"}</span>
-                        </span>
-                        <Pill tone="good" className="shrink-0 tabular-nums">{short(d.value)}</Pill>
-                      </button>
-                    ))}
-                    {selMasuk.map((l) => (
-                      <button key={l.id} type="button" onClick={() => onOpenLead?.(l)} className={cn("flex w-full items-center justify-between gap-3 py-2.5 text-left", focus)}>
-                        <span className="min-w-0">
-                          <span className="block truncate text-[13px] font-semibold text-ink">{l.name}</span>
-                          <span className="block text-[11px] text-slate-500">{[l.company_type, l.city].filter(Boolean).join(" · ") || "Data masuk"}</span>
-                        </span>
-                        {sourceOf(l) && <Pill tone="brand" className="shrink-0">{sourceOf(l)}</Pill>}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </Panel>
-            </div>
+            <Panel className="p-5">
+              <PanelHeader title={`${DAYS_LONG[selDate.getDay()]}, ${selDate.getDate()} ${MONTHS[selDate.getMonth()]}`} meta={`${selDeals.length} deal, ${selMasuk.length} data masuk`} />
+              {selDeals.length === 0 && selMasuk.length === 0 ? (
+                <div className="mt-3"><EmptyState>Tidak ada aktivitas pada tanggal ini. Deal dan data masuk tim muncul di sini otomatis.</EmptyState></div>
+              ) : (
+                <div className="mt-3 divide-y divide-slate-100">
+                  {selDeals.map((d, i) => (
+                    <button key={`d${i}`} type="button" disabled={!d.lead} onClick={() => d.lead && onOpenLead?.(d.lead)} className={cn("flex w-full items-center justify-between gap-3 py-2.5 text-left disabled:cursor-default", focus)}>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13px] font-semibold text-ink">{d.name}</span>
+                        <span className="block text-[11px] text-slate-500">{d.lead?.company_type || "Deal"}</span>
+                      </span>
+                      <Pill tone="good" className="shrink-0 tabular-nums">{short(d.value)}</Pill>
+                    </button>
+                  ))}
+                  {selMasuk.map((l) => (
+                    <button key={l.id} type="button" onClick={() => onOpenLead?.(l)} className={cn("flex w-full items-center justify-between gap-3 py-2.5 text-left", focus)}>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13px] font-semibold text-ink">{l.name}</span>
+                        <span className="block text-[11px] text-slate-500">{[l.company_type, l.city].filter(Boolean).join(" · ") || "Data masuk"}</span>
+                      </span>
+                      {sourceOf(l) && <Pill tone="brand" className="shrink-0">{sourceOf(l)}</Pill>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Panel>
           </div>
 
           {!personal && scopeId === "all" && team.length > 0 && (
-            <Panel className="overflow-hidden">
-              <div className="px-5 pb-1 pt-4"><PanelHeader title="Hasil per marketing" meta={`Pipeline dan omzet ${periodLabel}. Target, forecast, dan aktivitas tiap orang ada di tab Team. Klik nama untuk membuka report-nya.`} /></div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
-                      <th className="px-5 py-2.5 text-left">Marketing</th>{act && <th className="px-3 py-2.5 text-right">Aktivitas</th>}<th className="px-3 py-2.5 text-right">Lead masuk</th><th className="px-3 py-2.5 text-right">SPH belum diproses</th><th className="px-3 py-2.5 text-right">Hot progress</th><th className="px-3 py-2.5 text-right">Deal</th>{act && <th className="px-3 py-2.5 text-right" title="Rata-rata aktivitas untuk satu deal">Aktivitas per deal</th>}<th className="px-3 py-2.5 text-right">Omzet</th><th className="px-3 py-2.5 text-right">Capaian target</th><th className="px-3 py-2.5 text-left">Status</th><th className="w-[200px] px-5 py-2.5 text-left">Kontribusi omzet tim</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {team.map((m) => {
-                      const totalOmzet = team.reduce((t, x) => t + x.omzet, 0);
-                      return (
-                        <tr key={m.id}>
-                          <td className="px-5 py-2.5"><button type="button" onClick={() => setMemberId(m.id)} className={cn("text-[12.5px] font-semibold text-ink hover:text-brand-strong", focus)}>{m.name}</button></td>
-                          {act && <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.aktivitas}</td>}
-                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.masuk}</td>
-                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.sph}</td>
-                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.hot}{m.hot > 0 && <span className="ml-1 text-slate-400">({short(m.hotValue)})</span>}</td>
-                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{m.deals}</td>
-                          {act && <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums text-slate-600">{m.deals > 0 ? Math.round(m.aktivitas / m.deals) : "-"}</td>}
-                          <td className="px-3 py-2.5 text-right text-[12.5px] font-semibold tabular-nums text-emerald-700">{fmtRp(m.omzet)}</td>
-                          <td className="px-3 py-2.5 text-right text-[12.5px] tabular-nums">{fullMonth && targetOf(m.id) > 0 ? <span className={m.omzet >= targetOf(m.id) ? "font-semibold text-emerald-700" : "text-slate-700"}>{pct(m.omzet, targetOf(m.id))}</span> : <span className="text-slate-400">-</span>}</td>
-                          <td className="px-3 py-2.5">{!fullMonth ? <span className="text-slate-400">-</span> : (() => { const st = targetStatus({ actual: m.omzet, target: targetOf(m.id), isNow: ym === todayIso.slice(0, 7), isPast: ym < todayIso.slice(0, 7), elapsed: now.getDate(), daysInMonth }); return <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1", TONES[st.tone])}>{st.label === "Berpotensi tidak mencapai target" ? "Berisiko" : st.label}</span>; })()}</td>
-                          <td className="px-5 py-2.5">
-                            {totalOmzet > 0 ? (
-                              <div className="flex items-center gap-2">
-                                <Meter value={(m.omzet / totalOmzet) * 100} max={100} tone="good" className="h-1.5 flex-1" />
-                                <span className="w-12 text-right text-[12px] tabular-nums text-slate-600">{pct(m.omzet, totalOmzet)}</span>
-                              </div>
-                            ) : <span className="text-[12px] text-slate-400">-</span>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <Panel className="p-5">
+              <PanelHeader title="Hasil per marketing" meta={`Pipeline dan omzet ${periodLabel}. Target, forecast, dan aktivitas tiap orang ada di tab Team. Klik nama untuk membuka report-nya.`} />
+              <ul className="mt-2 divide-y divide-slate-100">
+                {team.map((m) => {
+                  const totalOmzet = team.reduce((t, x) => t + x.omzet, 0);
+                  const tgt = targetOf(m.id);
+                  const st = fullMonth ? targetStatus({ actual: m.omzet, target: tgt, isNow: ym === todayIso.slice(0, 7), isPast: ym < todayIso.slice(0, 7), elapsed: now.getDate(), daysInMonth }) : null;
+                  const figures = [["Lead masuk", m.masuk], ["SPH", m.sph], ["Hot", m.hot], ["Deal", m.deals], ...(act ? [["Aktivitas", m.aktivitas]] : [])];
+                  return (
+                    <li key={m.id} className="grid gap-4 py-4 sm:grid-cols-[minmax(0,1fr)_170px_200px] sm:items-center">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => setMemberId(m.id)} className={cn("truncate text-[14px] font-semibold text-ink hover:text-brand-strong", focus)}>{m.name}</button>
+                          {st && <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1", TONES[st.tone])}>{st.label === "Berpotensi tidak mencapai target" ? "Berisiko" : st.label}</span>}
+                        </div>
+                        <dl className="mt-2.5 grid gap-2 text-center" style={{ gridTemplateColumns: `repeat(${figures.length}, minmax(0, 1fr))` }}>
+                          {figures.map(([k, v]) => (
+                            <div key={k} className="rounded-inner bg-slate-50 px-1.5 py-1.5">
+                              <dt className="text-[10.5px] text-slate-500">{k}</dt>
+                              <dd className="mt-0.5 text-[14px] font-semibold tabular-nums text-ink">{v}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                      <div className="sm:text-right">
+                        <div className="text-[11px] text-slate-500">Omzet</div>
+                        <div className="font-display text-[18px] font-bold leading-tight tabular-nums tracking-[-0.02em] text-emerald-700">{fmtRp(m.omzet)}</div>
+                        {fullMonth && tgt > 0 && <div className="mt-0.5 text-[12px] tabular-nums text-slate-600">{pct(m.omzet, tgt)} dari target</div>}
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between text-[11px] text-slate-500">
+                          <span>Kontribusi tim</span>
+                          <span className="font-semibold tabular-nums text-slate-700">{totalOmzet > 0 ? pct(m.omzet, totalOmzet) : "-"}</span>
+                        </div>
+                        <Meter value={totalOmzet > 0 ? (m.omzet / totalOmzet) * 100 : 0} max={100} tone="good" className="mt-1.5 h-1.5" />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             </Panel>
           )}
         </>
