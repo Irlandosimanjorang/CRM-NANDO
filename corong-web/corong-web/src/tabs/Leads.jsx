@@ -2105,7 +2105,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
               title="Mengirim permintaan ke owner atau manager"
             >
               <Trash2 size={12} />
-              Hapus semua lead saya
+              Hapus semua saya
             </button>
           )}
 
