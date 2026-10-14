@@ -2087,17 +2087,15 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             Kelompokkan per grup
           </button>
 
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => setShowGroupAssign(true)}
-              title="Atur Pusat dan Holding untuk beberapa lead sekaligus, tanpa import"
-              className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 bg-white rounded-inner px-3 py-1.5 hover:bg-slate-50 hover:text-ink"
-            >
-              <Building2 size={12} />
-              Atur grup
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setShowGroupAssign(true)}
+            title="Atur Pusat untuk beberapa lead sekaligus, tanpa import"
+            className="text-[12px] font-medium flex items-center gap-1.5 border border-slate-200 text-slate-600 bg-white rounded-inner px-3 py-1.5 hover:bg-slate-50 hover:text-ink"
+          >
+            <Building2 size={12} />
+            Atur grup
+          </button>
 
           {!canManage && isEnterprise && myUid && leads.some((l) => l.assigned_to === myUid) && (
             <button
