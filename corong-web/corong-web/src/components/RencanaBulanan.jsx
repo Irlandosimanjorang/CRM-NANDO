@@ -185,13 +185,21 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
           </div>
         </div>
         {canManage && (
-          <label className="flex items-center gap-2 text-[12px] text-slate-500">
-            Anggota
-            <select className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] text-ink focus:border-slate-400 focus:outline-none" value={filterUser} onChange={(e) => setFilterUser(e.target.value)}>
-              <option value="all">Semua anggota</option>
-              {members.map((x) => <option key={x.user_id} value={x.user_id}>{nameOf(x)}</option>)}
-            </select>
-          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            {filterUser !== "all" && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-[11.5px] font-semibold text-white">
+                {nameOf(memberById[filterUser])} · {items.filter((x) => x.user_id === filterUser).length} rencana
+                <button type="button" onClick={() => setFilterUser("all")} aria-label="Hapus filter anggota" className="rounded-full p-0.5 hover:bg-white/20"><X size={12} /></button>
+              </span>
+            )}
+            <label className="flex items-center gap-2 text-[12px] text-slate-500">
+              Anggota
+              <select className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] text-ink focus:border-slate-400 focus:outline-none" value={filterUser} onChange={(e) => setFilterUser(e.target.value)}>
+                <option value="all">Semua anggota ({items.length})</option>
+                {members.map((x) => <option key={x.user_id} value={x.user_id}>{nameOf(x)} ({items.filter((r) => r.user_id === x.user_id).length})</option>)}
+              </select>
+            </label>
+          </div>
         )}
       </div>
 
