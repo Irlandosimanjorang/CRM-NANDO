@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCatalogExample } from "../lib/industryTemplates";
-import { Package, Plus, Trash2, Save, Loader2, CheckCircle2, Upload, FileText } from "lucide-react";
+import { Package, Plus, Trash2, Save, Loader2, CheckCircle2 } from "lucide-react";
 import * as db from "../lib/db";
 
 // Katalog produk/layanan perusahaan (30 Sep 2026, permintaan Nando dari
@@ -26,9 +26,6 @@ export default function ProductCatalogCard({ canManage, isOwner, industry }) {
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState(null);
   const [msg, setMsg] = useState("");
-  // Dokumen katalog (PDF/Word) yang diupload owner, 16 Okt 2026. Teksnya dibaca AI saat dibutuhkan.
-  const [docName, setDocName] = useState("");
-  const [docBusy, setDocBusy] = useState(false);
 
   // Muat ulang kalau owner mengubah katalog (App mengirim sinyal "nexto-org-config" setelah perubahan realtime).
   // Kalau ada isian yang belum disimpan di sini, tidak ditimpa.
@@ -37,7 +34,6 @@ export default function ProductCatalogCard({ canManage, isOwner, industry }) {
       const list = Array.isArray(c.products) ? c.products : [];
       setProfile(c.company_profile || "");
       setProducts(list);
-      setDocName(c.doc_name || "");
       setSaved({ profile: c.company_profile || "", products: list });
     })
     .catch(() => {})
@@ -99,36 +95,6 @@ export default function ProductCatalogCard({ canManage, isOwner, industry }) {
 
   const profileDirty = profile.trim() !== saved.profile;
 
-  const onPickDoc = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setDocBusy(true);
-    setMsg("");
-    try {
-      const r = await db.uploadProductDoc(file);
-      setDocName(r.doc_name || file.name);
-      flash(`Dokumen "${r.doc_name || file.name}" tersimpan dan dibaca AI`);
-    } catch (err) {
-      flash("Gagal simpan: " + err.message);
-    } finally {
-      setDocBusy(false);
-    }
-  };
-  const removeDoc = async () => {
-    if (!window.confirm("Hapus dokumen katalog produk ini?")) return;
-    setDocBusy(true);
-    setMsg("");
-    try {
-      await db.deleteProductDoc();
-      setDocName("");
-      flash("Dokumen dihapus");
-    } catch (err) {
-      flash("Gagal hapus: " + err.message);
-    } finally {
-      setDocBusy(false);
-    }
-  };
   const inp = "w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-600";
   const saveBtn = "bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5";
 
@@ -161,32 +127,6 @@ export default function ProductCatalogCard({ canManage, isOwner, industry }) {
               </button>
             </div>
           )}
-
-          <div className="mt-4 border border-slate-200 rounded-2xl p-3">
-            <div className="text-xs font-medium text-slate-600 mb-1">Dokumen katalog produk (PDF / Word)</div>
-            <p className="text-[11px] text-slate-400 mb-2">Isi dokumen dibaca AI saat membuat draft follow-up, rekomendasi produk, dan generate leads. Maksimal 5 MB, format .pdf atau .docx.</p>
-            {docName ? (
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-slate-700 flex items-center gap-1.5 min-w-0"><FileText size={14} className="text-orange-500 shrink-0" /><span className="truncate">{docName}</span></span>
-                {isOwner && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <label className={`${saveBtn} cursor-pointer ${docBusy ? "opacity-50 pointer-events-none" : ""}`}>
-                      {docBusy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Ganti
-                      <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={onPickDoc} disabled={docBusy} />
-                    </label>
-                    <button onClick={removeDoc} disabled={docBusy} className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50 transition-colors" title="Hapus dokumen" aria-label="Hapus dokumen"><Trash2 size={16} /></button>
-                  </div>
-                )}
-              </div>
-            ) : isOwner ? (
-              <label className={`${saveBtn} cursor-pointer inline-flex ${docBusy ? "opacity-50 pointer-events-none" : ""}`}>
-                {docBusy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Upload PDF / Word
-                <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={onPickDoc} disabled={docBusy} />
-              </label>
-            ) : (
-              <p className="text-xs text-slate-400">Belum ada dokumen katalog.</p>
-            )}
-          </div>
 
           <div className="mt-4 space-y-3">
             {products.map((p, i) => {
