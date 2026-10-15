@@ -124,7 +124,7 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
                     onClick={() => toggle(x)}
                     disabled={!canAddFor(x.user_id)}
                     aria-label={x.done ? "Tandai belum selesai" : "Tandai selesai"}
-                    className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-colors ${x.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white hover:border-slate-400"}`}
+                    className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-colors disabled:cursor-default ${x.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white hover:border-slate-400"}`}
                   >
                     {x.done && <Check size={12} strokeWidth={3} />}
                   </button>
@@ -144,9 +144,13 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
           )}
         </div>
 
+        {canManage ? (
+          <div className="flex justify-end border-t border-slate-100 px-5 py-3">
+            <button type="button" onClick={() => setSelected(null)} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Tutup</button>
+          </div>
+        ) : (
         <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4">
           <div className="text-[12px] font-semibold text-ink">Tambah rencana saya</div>
-          {canManage && <p className="mt-1 text-[11.5px] text-slate-500">Anda melihat rencana tim. Setiap anggota mengisi rencananya sendiri.</p>}
           {err && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-[12px] text-rose-700">{err}</p>}
           <div className="mt-2 grid grid-cols-2 gap-2.5">
             <label className="col-span-2 text-[11px] font-medium text-slate-500">Kegiatan
@@ -166,6 +170,7 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
             <button type="button" onClick={addItem} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Plus size={13} /> {busy ? "Menyimpan…" : "Simpan rencana"}</button>
           </div>
         </div>
+        )}
       </div>
     </div>
   ) : null;
