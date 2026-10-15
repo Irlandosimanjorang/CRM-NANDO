@@ -7,6 +7,7 @@ import { normalizePlatform } from "../lib/adsImport";
 import { Panel, PanelHeader, Pill, Meter, EmptyState } from "../ui";
 import AdsAnalysis from "./AdsAnalysis";
 import RekapLaporan from "./RekapLaporan";
+import RencanaBulanan from "./RencanaBulanan";
 
 // Tab Laporan (9 Okt 2026, saklar monthly_report; untuk owner dan manager). Dua tampilan:
 //  - Penjualan: target omzet, kalender bulanan ala Google Calendar (deal dan data masuk per tanggal),
@@ -324,7 +325,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">{personal ? "Report saya" : "Report"}</h1>
         <div className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold" role="tablist" aria-label="Jenis laporan">
-          {[["penjualan", "Penjualan"], ["rekap", "Rekap"], ...(personal ? [] : [["iklan", "Iklan"]])].map(([k, l]) => (
+          {[["penjualan", "Penjualan"], ["rekap", "Rekap"], ...(personal ? [] : [["iklan", "Iklan"]]), ["rencana", "Rencana"]].map(([k, l]) => (
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
           ))}
         </div>
@@ -391,7 +392,9 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
       </div>
 
       <div className="min-h-[60vh]">
-      {view === "rekap" ? (
+      {view === "rencana" ? (
+        <RencanaBulanan ym={ym} members={members} canManage={canManage} />
+      ) : view === "rekap" ? (
         <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={scopeId === "all" ? (org?.name || "") : scopeName} target={target} personal={personal} members={members} />
       ) : view === "iklan" ? (
         <AdsAnalysis leads={allLeads} stages={stages} dealTransactions={allTx} members={members} canManage={canManage} org={org} ym={ym} from={range.from} to={range.to} periodLabel={periodLabel} canImport={canImport} onChanged={onChanged} />
