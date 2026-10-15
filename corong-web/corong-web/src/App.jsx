@@ -600,6 +600,7 @@ export default function App() {
     if (isEnterprise && canManage) allowed.add(TEAM_NAV_ITEM.key);
     if (hasOrgFeature(org, "monthly_report")) allowed.add(REPORT_NAV_ITEM.key);
     if (settings?.is_platform_admin) allowed.add(ADMIN_NAV_ITEM.key);
+    if (!settings?.is_platform_admin) allowed.delete("komunitas");
     if (!allowed.has(tab) || (monitorOwner && !OWNER_MONITOR_TABS.includes(tab) && !(settings?.is_platform_admin && tab === ADMIN_NAV_ITEM.key))) setTab("dashboard");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, org, isEnterprise, canManage, monitorOwner, tab, settings?.is_platform_admin]);
@@ -805,6 +806,8 @@ export default function App() {
   // anggota biasa melihat laporan lead miliknya sendiri (aturan akses lead Nexto).
   const reportOn = hasOrgFeature(org, "monthly_report");
   const baseNav = NAV.flatMap((n) => {
+    // Tab Nex (komunitas) hanya untuk admin platform (16 Okt 2026, permintaan Nando): akun umum tidak melihatnya.
+    if (n.key === "komunitas" && !settings?.is_platform_admin) return [];
     const out = [n];
     if (n.key === "leads" && reportOn) out.push(REPORT_NAV_ITEM);
     if (n.key === "visitfollowup" && isEnterprise && canManage) out.push(TEAM_NAV_ITEM);
