@@ -148,7 +148,7 @@ export default function MarketingAdsPanel({ leads = [], dealTransactions = [], m
                 <tr key={r.user} className="border-t border-slate-100">
                   <td className="px-4 py-2.5 font-semibold text-ink">{r.name}</td>
                   <td className="px-4 py-2.5 text-right">
-                    {canManage ? (
+                    {(canManage || r.user === myUid) ? (
                       <input type="number" min="0" defaultValue={r.budget || ""} onBlur={(e) => { if ((Number(e.target.value) || 0) !== r.budget) saveBudget(r.user, e.target.value); }} className="w-32 rounded-inner border border-slate-200 px-2 py-1 text-right text-[12px]" placeholder="0" />
                     ) : fmtRp(r.budget)}
                   </td>
