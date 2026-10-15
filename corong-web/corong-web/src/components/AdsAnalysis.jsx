@@ -7,6 +7,7 @@ import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
 import { normalizePlatform } from "../lib/adsImport";
 import AdsImportModal from "./AdsImportModal";
+import MarketingAdsPanel from "./MarketingAdsPanel";
 
 // Analisis iklan di tab Laporan (9 Okt 2026): biaya iklan hasil impor (Meta/TikTok/Google) disandingkan
 // dengan lead di Nexto per sumber. Lead dihitung dari yang DIBUAT pada bulan terpilih, platform dibaca
@@ -21,7 +22,7 @@ const rpOrDash = (v) => (v === null ? "-" : fmtRp(Math.round(v)));
 // Meta dan Instagram satu akun iklan (Meta Ads), jadi dibandingkan sebagai satu kelompok.
 const groupOf = (p) => (p === "Instagram" ? "Meta" : p);
 
-export default function AdsAnalysis({ leads = [], stages = [], dealTransactions = [], org, ym, from: fromProp, to: toProp, canImport, onChanged }) {
+export default function AdsAnalysis({ leads = [], stages = [], dealTransactions = [], members = [], org, ym, from: fromProp, to: toProp, canImport, canManage = false, myUid = null, onChanged }) {
   // "cohort": lead yang masuk periode ini beserta deal-nya kapan pun. "deal": deal yang tutup periode ini dari lead kapan pun masuknya.
   const [basis, setBasis] = useState("cohort");
   const [year, month] = ym.split("-").map(Number);
@@ -168,6 +169,7 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
 
   return (
     <div className="space-y-4">
+      <MarketingAdsPanel leads={leads} dealTransactions={dealTransactions} members={members} from={from} to={to} ym={ym} canManage={canManage} myUid={myUid} onChanged={onChanged} />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div role="group" aria-label="Cara menghitung deal" title={basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk pada periode ini." : "Deal dan omzet dari semua lead yang deal-nya tutup pada periode ini."} className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold">
           {[["cohort", "Lead masuk periode ini"], ["deal", "Deal tutup periode ini"]].map(([k, label]) => (

@@ -1424,6 +1424,43 @@ export async function deleteAdSpendRange(fromISO, toISO) {
   if (error) throw error;
 }
 
+// ---- PENGELUARAN IKLAN PER MARKETING (15 Okt 2026) ----
+// RLS: marketing hanya melihat & mengubah miliknya; owner & manager melihat semua.
+export async function listAdExpenses(fromISO, toISO) {
+  const { data, error } = await supabase.from("ad_expenses").select("id, user_id, day, platform, campaign, amount, note")
+    .gte("day", fromISO).lte("day", toISO).order("day", { ascending: false }).limit(5000);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addAdExpense({ userId, day, platform, campaign = "", amount, note = "" }) {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("ad_expenses")
+    .insert({ org_id: orgId, user_id: userId, day, platform: String(platform || "").trim(), campaign: String(campaign || "").trim(), amount: Number(amount) || 0, note: String(note || "").trim() })
+    .select("id").single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteAdExpense(id) {
+  const { error } = await supabase.from("ad_expenses").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// Budget bulanan per marketing (period = "YYYY-MM"). Hanya owner & manager yang menyimpan.
+export async function listAdBudgets(period) {
+  const { data, error } = await supabase.from("ad_budgets").select("user_id, amount").eq("period", period);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function setAdBudget({ userId, period, amount }) {
+  const orgId = await getMyOrgId();
+  const { error } = await supabase.from("ad_budgets")
+    .upsert({ org_id: orgId, user_id: userId, period, amount: Number(amount) || 0, updated_at: new Date().toISOString() }, { onConflict: "org_id,user_id,period" });
+  if (error) throw error;
+}
+
 // ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----
 export async function getDealTransactions() {
   const { data, error } = await supabase.from("deal_transactions").select("*").order("deal_date", { ascending: false });

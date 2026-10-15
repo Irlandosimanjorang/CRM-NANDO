@@ -394,7 +394,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
       {view === "rekap" ? (
         <RekapLaporan leads={leads} stages={stages} dealTransactions={dealTransactions} ym={ym} orgName={scopeId === "all" ? (org?.name || "") : scopeName} target={target} personal={personal} members={members} />
       ) : view === "iklan" ? (
-        <AdsAnalysis leads={allLeads} stages={stages} dealTransactions={allTx} org={org} ym={ym} from={range.from} to={range.to} periodLabel={periodLabel} canImport={canImport} onChanged={onChanged} />
+        <AdsAnalysis leads={allLeads} stages={stages} dealTransactions={allTx} members={members} canManage={canManage} org={org} ym={ym} from={range.from} to={range.to} periodLabel={periodLabel} canImport={canImport} onChanged={onChanged} />
       ) : (
         <>
           <section className="overflow-hidden rounded-panel bg-ink p-6 text-white">
