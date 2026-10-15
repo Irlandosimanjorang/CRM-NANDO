@@ -79,9 +79,9 @@ export function loadProfile() {
   }
 }
 
-// Periode dalam bulan untuk hitung harga. Satuan minggu (quotation) dihitung 7/30 bulan per minggu.
+// Pengali harga: untuk satuan minggu, harga per user yang diisi sudah untuk periode yang dipilih (tanpa proporsi).
 export function periodMonths(d) {
-  return d.periodUnit === "week" ? (Number(d.weeks) || 0) * 7 / 30 : (Number(d.months) || 0);
+  return d.periodUnit === "week" ? 1 : (Number(d.months) || 0);
 }
 // Teks durasi yang tampil di quotation dan invoice, misalnya "2 minggu" atau "3 bulan".
 export function periodLabel(d) {

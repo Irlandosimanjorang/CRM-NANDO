@@ -159,7 +159,7 @@ export default function QuotationPanel({ users = [] }) {
     company: company.trim(), contact: contact.trim(), email: email.trim(), address: address.trim(),
     plan, item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item, unit: PLANS[plan].unit,
     ...(plan === "custom" ? { activatePlan } : {}),
-    seats: Math.max(1, Number(seats) || 1), freeSeats: (plan === "enterprise" || (plan === "custom" && activatePlan === "enterprise")) ? Math.min(5, Math.max(0, Math.floor(Number(freeSeats) || 0))) : 0, months: periodUnit === "week" ? Number(((Number(weeks) || 1) * 7 / 30).toFixed(4)) : (Number(months) || 1), periodUnit, weeks: Number(weeks) || 1, pricePerSeat: Number(pricePerSeat) || 0,
+    seats: Math.max(1, Number(seats) || 1), freeSeats: (plan === "enterprise" || (plan === "custom" && activatePlan === "enterprise")) ? Math.min(5, Math.max(0, Math.floor(Number(freeSeats) || 0))) : 0, months: periodUnit === "week" ? 1 : (Number(months) || 1), periodUnit, weeks: Number(weeks) || 1, pricePerSeat: Number(pricePerSeat) || 0,
     discountLabel: discountLabel.trim(), discountType, discountValue: Number(discountValue) || 0,
     date, due: addDays(date, Number(validDays) || 0), start,
     end: periodUnit === "week" ? addDays(start, (Number(weeks) || 1) * 7) : addMonths(start, Number(months) || 1),
