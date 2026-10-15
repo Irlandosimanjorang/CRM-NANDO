@@ -1,0 +1,3 @@
+-- Kode undangan sekali pakai (16 Okt 2026): redeem_invite_code menolak kode yang sudah dipakai (used_by terisi)
+-- dan mencatat pemakainya (used_by, used_at). Logika lain (kedaluwarsa, batas anggota, pindah data) tidak berubah.
+-- Isi fungsi lengkap ada di database (migrasi invite_code_single_use).
