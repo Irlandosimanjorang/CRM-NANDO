@@ -103,6 +103,8 @@ export default function QuotationPanel({ users = [] }) {
   const [freeSeats, setFreeSeats] = useState(0);
   const [seats, setSeats] = useState(PLANS.enterprise.minSeats);
   const [months, setMonths] = useState(1);
+  const [periodUnit, setPeriodUnit] = useState("month"); // "month" atau "week"
+  const [weeks, setWeeks] = useState(2);
   const [pricePerSeat, setPricePerSeat] = useState(priceOf("enterprise"));
   const [discountLabel, setDiscountLabel] = useState("");
   const [discountType, setDiscountType] = useState("amount");
@@ -157,9 +159,10 @@ export default function QuotationPanel({ users = [] }) {
     company: company.trim(), contact: contact.trim(), email: email.trim(), address: address.trim(),
     plan, item: plan === "custom" ? (customItem.trim() || "Layanan Nexto") : PLANS[plan].item, unit: PLANS[plan].unit,
     ...(plan === "custom" ? { activatePlan } : {}),
-    seats: Math.max(1, Number(seats) || 1), freeSeats: (plan === "enterprise" || (plan === "custom" && activatePlan === "enterprise")) ? Math.min(5, Math.max(0, Math.floor(Number(freeSeats) || 0))) : 0, months: Number(months) || 1, pricePerSeat: Number(pricePerSeat) || 0,
+    seats: Math.max(1, Number(seats) || 1), freeSeats: (plan === "enterprise" || (plan === "custom" && activatePlan === "enterprise")) ? Math.min(5, Math.max(0, Math.floor(Number(freeSeats) || 0))) : 0, months: periodUnit === "week" ? Number(((Number(weeks) || 1) * 7 / 30).toFixed(4)) : (Number(months) || 1), periodUnit, weeks: Number(weeks) || 1, pricePerSeat: Number(pricePerSeat) || 0,
     discountLabel: discountLabel.trim(), discountType, discountValue: Number(discountValue) || 0,
-    date, due: addDays(date, Number(validDays) || 0), start, end: addMonths(start, Number(months) || 1),
+    date, due: addDays(date, Number(validDays) || 0), start,
+    end: periodUnit === "week" ? addDays(start, (Number(weeks) || 1) * 7) : addMonths(start, Number(months) || 1),
     note: note.trim(),
     seller: { name: seller.name, address: seller.address, email: seller.email, phone: seller.phone, bank: seller.bank, account: seller.account, holder: seller.holder, signName: seller.signName, signTitle: seller.signTitle, signImage: seller.signImage, stampImage: seller.stampImage },
   };
@@ -216,7 +219,8 @@ export default function QuotationPanel({ users = [] }) {
     if (!window.confirm(`Jadikan ${q.number} sebagai invoice untuk ${q.company} sebesar ${rp(q.total)}? Invoice baru langsung tersimpan (jatuh tempo 7 hari) dan tidak dapat diubah.`)) return;
     const begin = d.start && d.start > today ? d.start : today;
     const invData = {
-      ...d, date: today, due: addDays(today, 7), start: begin, end: addMonths(begin, Number(d.months) || 1),
+      ...d, date: today, due: addDays(today, 7), start: begin,
+      end: d.periodUnit === "week" ? addDays(begin, (Number(d.weeks) || 1) * 7) : addMonths(begin, Number(d.months) || 1),
       note: [`Berdasarkan penawaran ${q.number}.`, d.note].filter(Boolean).join(" "),
       fromQuotation: q.number,
     };
@@ -245,7 +249,7 @@ export default function QuotationPanel({ users = [] }) {
     setCompany(d.company || ""); setContact(d.contact || ""); setEmail(d.email || ""); setAddress(d.address || "");
     const pl = PLANS[d.plan] ? d.plan : "custom";
     setPlan(pl); setCustomItem(pl === "custom" ? (d.item || "") : "");
-    setSeats(d.seats || PLANS[pl].minSeats); setFreeSeats(d.freeSeats || 0); setMonths(d.months || 1); setPricePerSeat(d.pricePerSeat ?? priceOf(pl === "custom" ? "enterprise" : pl));
+    setSeats(d.seats || PLANS[pl].minSeats); setFreeSeats(d.freeSeats || 0); setMonths(d.months || 1); setPeriodUnit(d.periodUnit || "month"); setWeeks(d.weeks || 2); setPricePerSeat(d.pricePerSeat ?? priceOf(pl === "custom" ? "enterprise" : pl));
     setDiscountLabel(d.discountLabel || ""); setDiscountType(d.discountType || "amount"); setDiscountValue(d.discountValue ? String(d.discountValue) : "");
     setNote(d.note || ""); setDate(today); setStart(today);
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -302,9 +306,20 @@ export default function QuotationPanel({ users = [] }) {
                     <div><label className={lbl}>Jumlah {draft.unit}</label><input type="number" min={PLANS[plan].minSeats} className={field} value={seats} onChange={(e) => setSeats(e.target.value)} /></div>
                     <div>
                       <label className={lbl}>Periode</label>
-                      <select className={field} value={months} onChange={(e) => setMonths(e.target.value)}>
-                        <option value={1}>1 bulan</option><option value={3}>3 bulan</option><option value={6}>6 bulan</option><option value={12}>12 bulan</option>
-                      </select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <select className={field} value={periodUnit} onChange={(e) => setPeriodUnit(e.target.value)}>
+                          <option value="week">Minggu</option><option value="month">Bulan</option>
+                        </select>
+                        {periodUnit === "week" ? (
+                          <select className={field} value={weeks} onChange={(e) => setWeeks(e.target.value)}>
+                            <option value={1}>1 minggu</option><option value={2}>2 minggu</option><option value={3}>3 minggu</option><option value={4}>4 minggu</option>
+                          </select>
+                        ) : (
+                          <select className={field} value={months} onChange={(e) => setMonths(e.target.value)}>
+                            <option value={1}>1 bulan</option><option value={3}>3 bulan</option><option value={6}>6 bulan</option><option value={12}>12 bulan</option>
+                          </select>
+                        )}
+                      </div>
                     </div>
                     <div><label className={lbl}>Harga/{PLANS[plan].unit === "anggota tim" ? "anggota" : "pengguna"}</label><input type="number" min="0" step="1000" className={field} value={pricePerSeat} onChange={(e) => setPricePerSeat(e.target.value)} /></div>
                   </div>

@@ -79,9 +79,18 @@ export function loadProfile() {
   }
 }
 
+// Periode dalam bulan untuk hitung harga. Satuan minggu (quotation) dihitung 7/30 bulan per minggu.
+export function periodMonths(d) {
+  return d.periodUnit === "week" ? (Number(d.weeks) || 0) * 7 / 30 : (Number(d.months) || 0);
+}
+// Teks durasi yang tampil di quotation dan invoice, misalnya "2 minggu" atau "3 bulan".
+export function periodLabel(d) {
+  return d.periodUnit === "week" ? `${Number(d.weeks) || 1} minggu` : `${Number(d.months) || 1} bulan`;
+}
+
 // Hitung semua angka dari data invoice (dipakai draf & invoice tersimpan).
 export function computeTotals(d) {
-  const subtotal = (Number(d.seats) || 0) * (Number(d.pricePerSeat) || 0) * (Number(d.months) || 0);
+  const subtotal = Math.round((Number(d.seats) || 0) * (Number(d.pricePerSeat) || 0) * periodMonths(d));
   const raw = d.discountType === "percent" ? subtotal * (Number(d.discountValue) || 0) / 100 : Number(d.discountValue) || 0;
   const discount = Math.min(Math.max(0, Math.round(raw)), subtotal);
   return { subtotal, discount, total: subtotal - discount };
@@ -93,13 +102,13 @@ const PLAN_NAME = { enterprise: "Enterprise", professional: "Professional", stan
 export function subscriptionDetail(d) {
   const key = d.plan === "custom" ? d.activatePlan : d.plan;
   const team = key === "enterprise";
-  const seats = Number(d.seats) || 1, months = Number(d.months) || 1;
+  const seats = Number(d.seats) || 1;
   const free = team ? Math.max(0, Math.floor(Number(d.freeSeats) || 0)) : 0;
   return {
     plan: PLAN_NAME[key] ? `Nexto ${PLAN_NAME[key]}` : (d.item || "Layanan Nexto"),
     people: team ? (free ? `${seats} anggota tim + ${free} kursi owner/manager (gratis)` : `${seats} anggota tim`) : `${seats} pengguna`,
     peopleNote: team ? (free ? "Kursi owner/manager tidak ditagih; anggota tim bergabung lewat kode undangan" : "Termasuk akun owner; anggota bergabung lewat kode undangan") : seats > 1 ? "Setiap pengguna memakai akun masing-masing" : "Satu akun pengguna",
-    duration: `${months} bulan`,
+    duration: periodLabel(d),
     period: d.start && d.end ? `${fmtDate(d.start)} sampai ${fmtDate(d.end)}` : "",
     price: `${rp(d.pricePerSeat)} per ${team ? "anggota" : "pengguna"}/bulan`,
     account: d.email || "",
@@ -201,9 +210,9 @@ export function buildInvoiceHtml(d, meta = {}) {
   <table>
     <thead><tr><th>Deskripsi</th><th class="r">Jumlah</th><th class="r">Harga satuan</th><th class="r">Subtotal</th></tr></thead>
     <tbody><tr>
-      <td class="d"><b>${esc(d.item)}</b><small>${d.seats} ${esc(d.unit)}, ${d.months} bulan${Number(d.freeSeats) > 0 ? ` (+ ${Number(d.freeSeats)} kursi owner/manager gratis)` : ""}</small></td>
+      <td class="d"><b>${esc(d.item)}</b><small>${d.seats} ${esc(d.unit)}, ${periodLabel(d)}${Number(d.freeSeats) > 0 ? ` (+ ${Number(d.freeSeats)} kursi owner/manager gratis)` : ""}</small></td>
       <td class="r">${d.seats}<small>${esc(d.unit)}</small></td>
-      <td class="r">${rp((Number(d.pricePerSeat) || 0) * (Number(d.months) || 0))}<small>per ${esc(d.unit)}, ${d.months} bulan</small></td>
+      <td class="r">${rp(Math.round((Number(d.pricePerSeat) || 0) * periodMonths(d)))}<small>per ${esc(d.unit)}, ${periodLabel(d)}</small></td>
       <td class="r">${rp(subtotal)}</td>
     </tr></tbody>
   </table>
