@@ -905,6 +905,8 @@ export async function upsertLead(lead) {
     // Jenis visit (7 Okt 2026): offline (tatap muka, bawaan) atau online.
     visit_mode: lead.visit_mode === "online" ? "online" : "offline",
     deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
+    // No. SPH dan total diskon (15 Okt 2026): diisi saat pindah ke Proyek Deal atau di LeadModal.
+    sph_number: (lead.sph_number || "").trim(), discount_total: Number(lead.discount_total) || 0,
     last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
   };
   let saved;

@@ -630,6 +630,7 @@ export default function Leads({
   onChanged,
   canManage,
   isEnterprise,
+  projectDeal = false, // saklar org "project_deal" (khusus BSB): tahap Proyek Deal minta data proyek
   uppercaseNames = true, // nama lead tampil HURUF BESAR (perilaku umum)
 }) {
 
@@ -715,6 +716,15 @@ export default function Leads({
   const moveLeadStage = async (lead, key, extra) => {
     let tx = null;
     let leadPatch = { stage_key: key };
+    if (extra?.projectDeal) {
+      // Proyek Deal (15 Okt 2026): tahap normal, bukan deal menang, jadi tidak ada transaksi atau outcome.
+      const p = extra.projectDeal;
+      leadPatch = { stage_key: key, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_total: p.discount_total };
+      await db.upsertLead({ ...lead, ...leadPatch });
+      if (onLocalDeal) onLocalDeal(lead.id, leadPatch, null);
+      onChanged({ silent: true });
+      return;
+    }
     if (extra?.deal) {
       // Transaksi dicatat dulu: dengan transaksi manual, pemicu otomatis tidak menulis ganda.
       tx = await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: extra.deal.date, deal_value: extra.deal.value, product_type: lead.product || null });
@@ -2162,6 +2172,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             onOpenEdit={setEdit}
             onMove={moveLeadStage}
             onNewOpportunity={reopenLead}
+            projectDeal={projectDeal}
           />
         </div>
       )}
@@ -2464,6 +2475,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       {edit && (
 
         <LeadModal
+          projectDeal={projectDeal}
           uppercaseNames={uppercaseNames}
           parentOptions={parentOptions}
           holdingOptions={holdingOptions}
