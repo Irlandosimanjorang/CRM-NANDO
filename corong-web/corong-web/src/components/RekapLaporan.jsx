@@ -307,7 +307,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
             <table className="border-collapse text-left">
               <thead>
                 <tr className="bg-slate-50/60">
-                  <th colSpan={COLS.length} className={cn(th, "sticky left-0 z-10 bg-slate-50")}>{masterRows.length} lead</th>
+                  <th colSpan={COLS.length} className={cn(th, "sticky left-0 z-10 bg-slate-50")} />
                   <th colSpan={daysInMonth} className="border-l border-slate-200 bg-slate-100/70 px-2 py-1.5 text-left text-[12px] font-bold tracking-[0.04em] text-ink">{MONTHS[month - 1].toUpperCase()} {year}</th>
                 </tr>
                 <tr className="bg-slate-50/60">
