@@ -533,6 +533,15 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                                       </div>
                                     )}
                                     {r.source_note && <div className="text-[11px] text-slate-500 mt-1.5 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([r.name, r.city].filter(Boolean).join(" "))}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-lg px-2.5 py-1 hover:bg-sky-500/20"
+                                    >
+                                      <MapPin size={11} /> Buka di Google Maps
+                                    </a>
                                   </div>
                                 </div>
                               </button>
