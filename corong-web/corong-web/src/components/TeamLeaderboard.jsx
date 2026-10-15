@@ -90,7 +90,7 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
   );
 }
 
-export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpenLead, canManage }) {
+export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpenLead, canManage, projectDeal = false }) {
   const [members, setMembers] = useState(null);
   const [checkins, setCheckins] = useState([]);
   const [preview, setPreview] = useState(null); // { title, items }
@@ -145,8 +145,12 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
       const closed = won.length + lost.length;
       const winRate = closed > 0 ? Math.round((won.length / closed) * 100) : null;
 
+      // Org project_deal (BSB): revenue = nilai proyek dari lead yang sekarang di tahap menang (Proyek Selesai).
+      // Org lain tetap memakai transaksi deal.
       const myDeals = (dealTransactions || []).filter((t) => t.user_id === m.user_id);
-      const revenue = myDeals.reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
+      const revenue = projectDeal
+        ? won.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0)
+        : myDeals.reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
       const myCheckins = checkins.filter((c) => c.user_id === m.user_id);
       const commissionRate = commissions[m.user_id] ?? 0;
       const commissionAmount = revenue * (commissionRate / 100);

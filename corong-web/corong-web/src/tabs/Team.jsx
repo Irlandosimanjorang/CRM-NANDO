@@ -258,7 +258,7 @@ function DayBars({ days, selected, onSelect }) {
 
 // ---------- Tab Team ----------
 
-export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage, onChanged }) {
+export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage, onChanged, projectDeal = false }) {
   const api = db;
   const [range, setRange] = useState("week");
   const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
@@ -466,7 +466,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
 
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
-      <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} />
+      <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} projectDeal={projectDeal} />
 
       {activityFor && (
         <MemberActivityModal
