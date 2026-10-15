@@ -1155,7 +1155,7 @@ export default function App() {
                 )}
                 {visitedTabs.has("team") && isEnterprise && canManage && (
                   <div style={{ display: effectiveTab === "team" ? "block" : "none" }}>
-                    <Team leads={leads} stages={stageList} dealTransactions={dealTransactions} onOpenLead={setEditLead} canManage={canManage} onChanged={reload} />
+                    <Team leads={leads} stages={stageList} dealTransactions={dealTransactions} onOpenLead={setEditLead} canManage={canManage} onChanged={reload} projectDeal={hasOrgFeature(org, "project_deal")} />
                   </div>
                 )}
                 {visitedTabs.has("kompetitor") && (
