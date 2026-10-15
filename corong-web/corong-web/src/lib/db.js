@@ -614,9 +614,28 @@ export async function getLeadNeedsSummary(leadId) {
 // baca, cuma owner/manager yang bisa ubah (RLS org_product_catalog).
 export async function getProductCatalog() {
   const orgId = await getMyOrgId();
-  const { data, error } = await supabase.from("org_product_catalog").select("company_profile, products").eq("org_id", orgId).maybeSingle();
+  const { data, error } = await supabase.from("org_product_catalog").select("company_profile, products, doc_name").eq("org_id", orgId).maybeSingle();
   if (error) throw error;
-  return data || { company_profile: "", products: [] };
+  return data || { company_profile: "", products: [], doc_name: "" };
+}
+// Dokumen katalog produk (16 Okt 2026): PDF/Word diupload owner, teksnya diekstrak di edge function product-doc-extract.
+export async function uploadProductDoc(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const { data, error } = await supabase.functions.invoke("product-doc-extract", { body: form });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal mengupload dokumen");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+export async function deleteProductDoc() {
+  const { data, error } = await supabase.functions.invoke("product-doc-extract", { method: "DELETE" });
+  if (error) throw new Error(error.message || "Gagal menghapus dokumen");
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 export async function saveProductCatalog(companyProfile, products) {
   const orgId = await getMyOrgId();
