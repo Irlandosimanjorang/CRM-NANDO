@@ -200,7 +200,7 @@ function fillTemplate(str, lead) {
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true, projectDeal = false }) {
   const aiOff = useAiOff();
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
@@ -252,6 +252,11 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
       setNeedsSummaryBusy(false);
     }
   };
+
+  // Proyek Deal (15 Okt 2026): tahap normal yang mewajibkan data proyek. "enteringProyekDeal" = lead baru masuk tahap ini
+  // (bukan lead yang memang sudah di sana), jadi lead lama tetap bisa diedit tanpa dipaksa isi ulang.
+  const isProyekDeal = projectDeal && f.stage_key === "proyek_deal";
+  const enteringProyekDeal = isProyekDeal && lead.stage_key !== "proyek_deal";
 
   const onStageChange = (newKey) => {
     set("stage_key", newKey);
@@ -402,6 +407,11 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
 
   const save = async () => {
     if (!f.name?.trim()) { alert("Nama wajib diisi."); return; }
+    if (enteringProyekDeal) {
+      if (!f.deal_date) { alert("Tanggal deal wajib diisi untuk tahap Proyek Deal."); return; }
+      if (!(Number(f.deal_value) > 0)) { alert("Nilai proyek wajib diisi untuk tahap Proyek Deal."); return; }
+      if (!String(f.sph_number || "").trim()) { alert("No. SPH wajib diisi untuk tahap Proyek Deal."); return; }
+    }
     if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
     try {
@@ -580,6 +590,34 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             )}
           </div>
           <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => onStageChange(e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
+          {/* Proyek Deal (15 Okt 2026): tanggal, nilai proyek, No. SPH, dan total diskon wajib diisi saat lead masuk tahap ini. */}
+          {isProyekDeal && (
+            <div className="border border-slate-200 bg-slate-50 rounded-2xl p-3 space-y-2.5">
+              <div className="text-xs font-semibold text-slate-700">Data proyek {enteringProyekDeal ? "(wajib diisi)" : ""}</div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Tanggal deal *"><input type="date" className={inp} value={f.deal_date || ""} onChange={(e) => set("deal_date", e.target.value || null)} /></Field>
+                <Field label="Nilai proyek (Rp) *">
+                  <input
+                    className={inp}
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={Number(f.deal_value) ? Number(f.deal_value).toLocaleString("id-ID") : ""}
+                    onChange={(e) => set("deal_value", Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
+                  />
+                </Field>
+                <Field label="No. SPH *"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101" /></Field>
+                <Field label="Total diskon (Rp)">
+                  <input
+                    className={inp}
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={Number(f.discount_total) ? Number(f.discount_total).toLocaleString("id-ID") : ""}
+                    onChange={(e) => set("discount_total", Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
+                  />
+                </Field>
+              </div>
+            </div>
+          )}
 
           {/* Owner ATAU manager yang bisa milih ini - biar bisa langsung
               nentuin lead baru/hasil edit ini punya siapa, gak harus balik ke
@@ -623,7 +661,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
           {/* Enterprise (30 Sep 2026): nilai proyek/kontrak (dipake forecast di
               tab Team) + termin pembayaran per lead. */}
-          {isEnterprise && (
+          {isEnterprise && !isProyekDeal && (
             <Field label="Nilai proyek / kontrak (Rp)">
               <input
                 className={inp}

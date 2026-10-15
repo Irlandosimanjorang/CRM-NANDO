@@ -17,7 +17,7 @@ const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada
 const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
 const MAX_SPEED = 26; // piksel per frame saat kursor tepat di tepi
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
@@ -26,6 +26,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const [pending, setPending] = useState({});
   // Pop-up alasan menang / kalah (muncul setelah kartu dipindah).
   const [closing, setClosing] = useState(null);
+  // Pop-up data proyek saat kartu digeser ke Proyek Deal (tanggal, nilai, No. SPH, total diskon wajib).
+  const [proyek, setProyek] = useState(null);
   const press = useRef(null);
   const suppressClick = useRef(false);
   const boardRef = useRef(null);
@@ -52,6 +54,11 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setClosing({ lead, key, result: target.type });
       return;
     }
+    if (projectDeal && key === "proyek_deal") {
+      setPending((p) => ({ ...p, [lead.id]: key }));
+      setProyek({ lead, key });
+      return;
+    }
     setPending((p) => ({ ...p, [lead.id]: key }));
     Promise.resolve(onMove(lead, key)).catch((e) => {
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
@@ -62,6 +69,20 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const cancelClose = () => {
     if (closing) setPending((p) => { const n = { ...p }; delete n[closing.lead.id]; return n; });
     setClosing(null);
+  };
+
+  const cancelProyek = () => {
+    if (proyek) setPending((p) => { const n = { ...p }; delete n[proyek.lead.id]; return n; });
+    setProyek(null);
+  };
+
+  const saveProyek = (values) => {
+    const { lead, key } = proyek;
+    setProyek(null);
+    Promise.resolve(onMove(lead, key, { projectDeal: values })).catch((e) => {
+      setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
+      alert("Gagal menyimpan: " + (e?.message || e));
+    });
   };
 
   const saveClose = (category, note, deal) => {
@@ -162,6 +183,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   return (
     <div ref={boardRef} className="mt-1 overflow-x-auto pb-4">
       {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} />}
+      {proyek && <ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} />}
 
       {/* Kartu yang diseret dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke wrapper yang punya transform. */}
       {drag && createPortal(
@@ -269,6 +291,65 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
             </section>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// Pop-up data proyek untuk tahap Proyek Deal (15 Okt 2026): tanggal, nilai proyek, No. SPH wajib; total diskon opsional.
+// Nilai proyek bruto; diskon dicatat terpisah.
+function ProyekDealDialog({ lead, onCancel, onSave }) {
+  const [date, setDate] = useState(lead.deal_date || todayISO());
+  const [value, setValue] = useState(lead.deal_value ? String(lead.deal_value) : "");
+  const [sph, setSph] = useState(lead.sph_number || "");
+  const [discount, setDiscount] = useState(lead.discount_total ? String(lead.discount_total) : "");
+  const dealValue = Number(value.replace(/\D/g, "")) || 0;
+  const discountValue = Number(discount.replace(/\D/g, "")) || 0;
+  const ready = !!date && dealValue > 0 && sph.trim().length > 0;
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  const field = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none";
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+        <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">Proyek Deal</span>
+        <h3 className="mt-2 text-[15px] font-semibold text-slate-900">Data proyek</h3>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">Tanggal deal *</span>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">Nilai proyek *{dealValue ? " · " + fmtRp(dealValue) : ""}</span>
+            <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))} placeholder="0" className={field + " tabular-nums"} />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">No. SPH *</span>
+            <input value={sph} onChange={(e) => setSph(e.target.value)} placeholder="Mis. I/10/2026/UPVC/101" className={field} />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">Total diskon{discountValue ? " · " + fmtRp(discountValue) : ""}</span>
+            <input inputMode="numeric" value={discount} onChange={(e) => setDiscount(e.target.value.replace(/\D/g, ""))} placeholder="0" className={field + " tabular-nums"} />
+          </label>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button
+            type="button"
+            disabled={!ready}
+            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_total: discountValue })}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
+          >
+            Simpan
+          </button>
+        </div>
       </div>
     </div>
   );

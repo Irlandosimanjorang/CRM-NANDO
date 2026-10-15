@@ -1124,7 +1124,7 @@ export default function App() {
                 <Dashboard leads={leads} stages={stageList} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} hideAiRecs={monitorOwner} myUid={session?.user?.id} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
-                <Leads onLocalDeal={applyLocalDeal} leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} />
+                <Leads onLocalDeal={applyLocalDeal} leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} projectDeal={hasOrgFeature(org, "project_deal")} />
               </div>
               <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
                 {visitedTabs.has("generateleads") && (
@@ -1234,7 +1234,7 @@ export default function App() {
         </nav>
       </div>
 
-      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} />}
+      {editLead && <LeadModal lead={editLead} stages={stageList} settings={settings} industry={org?.industry} myLevel={myLevel} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); reload(); }} canManage={canManage} isEnterprise={isEnterprise} members={orgMembers} myUid={session?.user?.id} projectDeal={hasOrgFeature(org, "project_deal")} />}
 
       {/* Tombol mengambang NEX Pro (21-22 Sep 2026, permintaan Nando) -
           alternatif dari shortcut icon HP (gak bisa diandelin di iPhone,
