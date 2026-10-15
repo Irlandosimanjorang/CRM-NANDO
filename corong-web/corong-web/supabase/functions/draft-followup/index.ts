@@ -279,17 +279,20 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     let catalogBlock = "";
     if (memberRow && gateIsEnterprise) {
       const [{ data: catalog }, { data: needs }] = await Promise.all([
-        supabase.from("org_product_catalog").select("company_profile, products").eq("org_id", memberRow.org_id).maybeSingle(),
+        supabase.from("org_product_catalog").select("company_profile, products, doc_name, doc_text").eq("org_id", memberRow.org_id).maybeSingle(),
         supabase.from("lead_needs_summaries").select("summary, product_recommendations").eq("lead_id", lead_id).maybeSingle(),
       ]);
       const products = (Array.isArray(catalog?.products) ? catalog.products : []).filter((p) => p?.name).slice(0, 8);
-      if (products.length) {
+      // Dokumen katalog produk (16 Okt 2026): teks PDF/Word yang diupload owner ikut dibaca AI.
+      const docText = String(catalog?.doc_text || "").trim();
+      if (products.length || docText) {
         const list = products.map((p) => `- ${p.name}${p.description ? `: ${p.description}` : ""}${p.fit_for ? ` (cocok untuk: ${p.fit_for})` : ""}${p.price ? ` [harga: ${p.price}]` : ""}`).join("\n");
+        const docBlock = docText ? `Dokumen katalog ${catalog?.doc_name || ""}:\n${docText}\n` : "";
         const recs = (Array.isArray(needs?.product_recommendations) ? needs.product_recommendations : []).filter((r) => r?.product);
-        catalogBlock = `\nPERUSAHAAN KITA (pengirim pesan): ${catalog.company_profile || "-"}
+        catalogBlock = `\nPERUSAHAAN KITA (pengirim pesan): ${catalog?.company_profile || "-"}
 Katalog produk/layanan kita:
 ${list}
-${needs?.summary ? `Ringkasan kebutuhan ${lead.name} (hasil analisis notulen sebelumnya): ${needs.summary}\n` : ""}${recs.length ? `Produk yang udah direkomendasiin buat lead ini: ${recs.map((r) => `${r.product} (${r.reason})`).join("; ")}\n` : ""}
+${docBlock}${needs?.summary ? `Ringkasan kebutuhan ${lead.name} (hasil analisis notulen sebelumnya): ${needs.summary}\n` : ""}${recs.length ? `Produk yang udah direkomendasiin buat lead ini: ${recs.map((r) => `${r.product} (${r.reason})`).join("; ")}\n` : ""}
 Kalau ada produk di katalog yang nyambung sama kebutuhan/histori ${lead.name}, sebut SECARA NATURAL maks 1-2 produk paling relevan${recs.length ? " (prioritasin yang udah direkomendasiin di atas)" : ""}. JANGAN sebut produk di luar katalog, JANGAN bikin pesannya kayak brosur/daftar produk. Harga cuma boleh disebut kalau ada di katalog DAN emang relevan sama obrolannya. Kalau gak ada yang nyambung, gak usah maksa nyebut produk.\n`;
       }
     }

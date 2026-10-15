@@ -207,12 +207,15 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     // Katalog produk/layanan org (30 Sep 2026) - kalau diisi, AI juga
     // rekomendasiin produk dari katalog ini yang cocok sama kebutuhan lead.
     const { data: catalog } = memberRow
-      ? await supabase.from("org_product_catalog").select("company_profile, products").eq("org_id", memberRow.org_id).maybeSingle()
+      ? await supabase.from("org_product_catalog").select("company_profile, products, doc_name, doc_text").eq("org_id", memberRow.org_id).maybeSingle()
       : { data: null };
     const catalogProducts = (Array.isArray(catalog?.products) ? catalog.products : []).filter((p) => p?.name).slice(0, 20);
-    const hasCatalog = catalogProducts.length > 0;
+    // Dokumen katalog produk (16 Okt 2026): teks PDF/Word yang diupload owner ikut dibaca AI.
+    const catalogDoc = String(catalog?.doc_text || "").trim();
+    const hasCatalog = catalogProducts.length > 0 || catalogDoc.length > 0;
+    const hasProducts = catalogProducts.length > 0;
     const catalogText = hasCatalog
-      ? `\nProfil perusahaan KITA (penjual): ${catalog.company_profile || "-"}\nKatalog produk/layanan KITA:\n${catalogProducts.map((p, i) => `${i + 1}. ${p.name}${p.description ? ` - ${p.description}` : ""}${p.fit_for ? ` | Cocok untuk: ${p.fit_for}` : ""}${p.price ? ` | Harga: ${p.price}` : ""}`).join("\n")}\n`
+      ? `\nProfil perusahaan KITA (penjual): ${catalog?.company_profile || "-"}\n${catalogProducts.length ? `Katalog produk/layanan KITA:\n${catalogProducts.map((p, i) => `${i + 1}. ${p.name}${p.description ? ` - ${p.description}` : ""}${p.fit_for ? ` | Cocok untuk: ${p.fit_for}` : ""}${p.price ? ` | Harga: ${p.price}` : ""}`).join("\n")}\n` : ""}${catalogDoc ? `Dokumen katalog produk KITA (${catalog?.doc_name || "dokumen"}):\n${catalogDoc}\n` : ""}`
       : "";
 
     // Memori Nexto (11 Okt 2026): pola organisasi, memori pribadi sales, kasus serupa yang sudah tertutup.
@@ -237,13 +240,13 @@ Baca semua catatan di atas, lalu simpulkan:
 1. Kebutuhan konkret apa aja yang keliatan dari klien ini (produk/layanan/scope spesifik yang dia butuhin) - bukan cuma "butuh produk kita" doang, tapi detail spesifik yang kesebut/tersirat di catatan (misal: "butuh sistem CRM buat 5 sales", bukan cuma "butuh software").
 2. Kenapa dia butuh itu (alasan/masalah bisnis yang melatarbelakangi, kalau kesebut).
 3. Ada sinyal soal budget/anggaran gak (disebut nominal/range, atau "tidak ada budget khusus", atau memang tidak ada info sama sekali).
-4. Seberapa urgent (ada tenggat waktu/target tertentu yang kesebut, atau nggak).${hasCatalog ? `
+4. Seberapa urgent (ada tenggat waktu/target tertentu yang kesebut, atau nggak).${hasProducts ? `
 5. Produk/layanan dari KATALOG KITA di atas yang paling cocok buat kebutuhan klien ini (maks 3, urut dari paling cocok), masing-masing dengan alasan singkat yang nyambungin ke kebutuhan spesifik di catatan. Nama produk WAJIB persis sama kayak di katalog - JANGAN rekomendasiin produk yang gak ada di katalog. Kalau gak ada yang cocok, kosongin array-nya.` : ""}
 
 ATURAN PENTING: JANGAN mengarang detail yang gak ada atau gak tersirat jelas di catatan. Kalau suatu poin gak ada informasinya sama sekali, tulis terus terang "Tidak ada info di catatan" - jangan ditebak-tebak atau dihalusin biar keliatan lengkap.
 
 Balas HANYA dengan JSON object, tanpa markdown, persis format ini:
-{"summary":"ringkasan kebutuhan klien dalam 2-4 kalimat","needs":["poin kebutuhan spesifik 1","poin kebutuhan spesifik 2"],"budget_signal":"deskripsi singkat sinyal budget, atau 'Tidak ada info di catatan'","urgency":"Tinggi/Sedang/Rendah/Tidak jelas - beserta alasan singkat"${hasCatalog ? `,"product_recommendations":[{"product":"nama persis dari katalog","reason":"alasan singkat 1 kalimat"}]` : ""}}
+{"summary":"ringkasan kebutuhan klien dalam 2-4 kalimat","needs":["poin kebutuhan spesifik 1","poin kebutuhan spesifik 2"],"budget_signal":"deskripsi singkat sinyal budget, atau 'Tidak ada info di catatan'","urgency":"Tinggi/Sedang/Rendah/Tidak jelas - beserta alasan singkat"${hasProducts ? `,"product_recommendations":[{"product":"nama persis dari katalog","reason":"alasan singkat 1 kalimat"}]` : ""}}
 Tulis dalam Bahasa Indonesia baku yang profesional (sapa pembaca dengan "Anda" kalau perlu, jangan pakai bahasa gaul seperti "gak", "udah", "banget").`;
 
     const resp = await fetch("https://api.anthropic.com/v1/messages", {

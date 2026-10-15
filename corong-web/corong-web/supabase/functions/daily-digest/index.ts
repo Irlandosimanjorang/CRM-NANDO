@@ -455,10 +455,12 @@ async function runAdvisorForUser(admin, userId, orgId, myRole) {
   let catalogText = "";
   if (orgRes.data?.plan === "enterprise") {
     try {
-      const { data: catalog } = await admin.from("org_product_catalog").select("company_profile, products").eq("org_id", orgId).maybeSingle();
+      const { data: catalog } = await admin.from("org_product_catalog").select("company_profile, products, doc_text").eq("org_id", orgId).maybeSingle();
       const products = (Array.isArray(catalog?.products) ? catalog.products : []).filter((p) => p?.name).slice(0, 8);
-      if (products.length) {
-        catalogText = `${catalog.company_profile ? `${catalog.company_profile} ` : ""}Produk: ${products.map((p) => `${p.name}${p.fit_for ? ` (cocok untuk: ${p.fit_for})` : ""}`).join("; ")}.`;
+      // Dokumen katalog produk (16 Okt 2026): teks PDF/Word ikut dibaca, dipotong supaya prompt tidak membengkak.
+      const docText = String(catalog?.doc_text || "").trim().slice(0, 6000);
+      if (products.length || docText) {
+        catalogText = `${catalog?.company_profile ? `${catalog.company_profile} ` : ""}${products.length ? `Produk: ${products.map((p) => `${p.name}${p.fit_for ? ` (cocok untuk: ${p.fit_for})` : ""}`).join("; ")}.` : ""}${docText ? ` Dokumen katalog produk: ${docText}` : ""}`;
       }
     } catch (e) {
       console.log("[digest] gagal baca katalog produk:", String(e));

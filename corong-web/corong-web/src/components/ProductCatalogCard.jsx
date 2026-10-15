@@ -94,6 +94,7 @@ export default function ProductCatalogCard({ canManage, isOwner, industry }) {
   };
 
   const profileDirty = profile.trim() !== saved.profile;
+
   const inp = "w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-600";
   const saveBtn = "bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5";
 

@@ -635,10 +635,12 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     // yang dijual org ini & siapa calon pembelinya.
     let sellerCatalog = "";
     if (orgRow?.plan === "enterprise") {
-      const { data: catalog } = await admin.from("org_product_catalog").select("company_profile, products").eq("org_id", orgId).maybeSingle();
+      const { data: catalog } = await admin.from("org_product_catalog").select("company_profile, products, doc_text").eq("org_id", orgId).maybeSingle();
       const products = (Array.isArray(catalog?.products) ? catalog.products : []).filter((p) => p?.name).slice(0, 8);
-      if (products.length) {
-        sellerCatalog = `${catalog.company_profile ? `Profil: ${catalog.company_profile}. ` : ""}Produk: ${products.map((p) => `${p.name}${p.fit_for ? ` (cocok untuk: ${p.fit_for})` : ""}`).join("; ")}.`;
+      // Dokumen katalog produk (16 Okt 2026): teks PDF/Word ikut dibaca, dipotong supaya prompt tidak membengkak.
+      const docText = String(catalog?.doc_text || "").trim().slice(0, 6000);
+      if (products.length || docText) {
+        sellerCatalog = `${catalog?.company_profile ? `Profil: ${catalog.company_profile}. ` : ""}${products.length ? `Produk: ${products.map((p) => `${p.name}${p.fit_for ? ` (cocok untuk: ${p.fit_for})` : ""}`).join("; ")}.` : ""}${docText ? ` Dokumen katalog produk: ${docText}` : ""}`;
       }
     }
 
