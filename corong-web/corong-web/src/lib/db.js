@@ -618,6 +618,29 @@ export async function getProductCatalog() {
   if (error) throw error;
   return data || { company_profile: "", products: [] };
 }
+// ---- RENCANA TIM (16 Okt 2026): rencana kegiatan per tanggal, sesuai aturan RLS tabel rencana. ----
+export async function listRencana(from, to) {
+  const { data, error } = await supabase.from("rencana").select("*").gte("plan_date", from).lte("plan_date", to).order("plan_date").order("created_at");
+  if (error) throw error;
+  return data || [];
+}
+export async function addRencana({ userId, planDate, title, kind, targetValue }) {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("rencana").insert({
+    org_id: orgId, user_id: userId, plan_date: planDate, title: (title || "").trim(), kind: kind || "lainnya", target_value: Number(targetValue) || 0,
+  }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function setRencanaDone(id, done) {
+  const { error } = await supabase.from("rencana").update({ done, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw error;
+}
+export async function deleteRencana(id) {
+  const { error } = await supabase.from("rencana").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function saveProductCatalog(companyProfile, products) {
   const orgId = await getMyOrgId();
   const uid = (await supabase.auth.getUser()).data.user.id;
