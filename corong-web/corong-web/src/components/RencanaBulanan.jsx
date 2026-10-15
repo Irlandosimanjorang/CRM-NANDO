@@ -67,28 +67,22 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
   const total = visible.length;
   const doneCount = visible.filter((x) => x.done).length;
   const selectedItems = selected ? (byDay.get(selected) || []) : [];
-  const canAddFor = (uid) => canManage || uid === myUid;
+  // Rencana hanya ditulis pemiliknya (marketing). Owner dan manager hanya melihat rencana seluruh tim.
+  const canAddFor = (uid) => !!uid && uid === myUid;
 
   const openDay = (iso) => {
     setSelected(iso);
     setErr("");
-    setForm({
-      title: "",
-      kind: KINDS[0],
-      targetValue: "",
-      userId: canManage ? (filterUser !== "all" ? filterUser : (myUid || members[0]?.user_id || "")) : (myUid || ""),
-    });
+    setForm({ title: "", kind: KINDS[0], targetValue: "" });
   };
 
   const addItem = async () => {
     const title = form.title.trim();
-    const uid = form.userId || myUid;
     if (!title) { setErr("Isi nama kegiatan terlebih dahulu."); return; }
-    if (!uid) { setErr("Pilih anggota terlebih dahulu."); return; }
-    if (!canAddFor(uid)) { setErr("Anda hanya bisa mengisi rencana sendiri."); return; }
+    if (!myUid) { setErr("Sesi tidak ditemukan. Silakan muat ulang halaman."); return; }
     setBusy(true); setErr("");
     try {
-      await db.addRencana({ userId: uid, planDate: selected, title, kind: form.kind, targetValue: form.targetValue });
+      await db.addRencana({ userId: myUid, planDate: selected, title, kind: form.kind, targetValue: form.targetValue });
       setForm((f) => ({ ...f, title: "", targetValue: "" }));
       load();
     } catch (e) {
@@ -128,6 +122,7 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
                   <button
                     type="button"
                     onClick={() => toggle(x)}
+                    disabled={!canAddFor(x.user_id)}
                     aria-label={x.done ? "Tandai belum selesai" : "Tandai selesai"}
                     className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-colors ${x.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white hover:border-slate-400"}`}
                   >
@@ -150,7 +145,8 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
         </div>
 
         <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4">
-          <div className="text-[12px] font-semibold text-ink">Tambah rencana</div>
+          <div className="text-[12px] font-semibold text-ink">Tambah rencana saya</div>
+          {canManage && <p className="mt-1 text-[11.5px] text-slate-500">Anda melihat rencana tim. Setiap anggota mengisi rencananya sendiri.</p>}
           {err && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-[12px] text-rose-700">{err}</p>}
           <div className="mt-2 grid grid-cols-2 gap-2.5">
             <label className="col-span-2 text-[11px] font-medium text-slate-500">Kegiatan
@@ -164,13 +160,6 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
             <label className="text-[11px] font-medium text-slate-500">Target (opsional)
               <input type="number" min="0" className={field} value={form.targetValue} onChange={(e) => setForm((f) => ({ ...f, targetValue: e.target.value }))} placeholder="0" />
             </label>
-            {canManage && (
-              <label className="col-span-2 text-[11px] font-medium text-slate-500">Untuk anggota
-                <select className={field} value={form.userId} onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}>
-                  {members.map((x) => <option key={x.user_id} value={x.user_id}>{nameOf(x)}</option>)}
-                </select>
-              </label>
-            )}
           </div>
           <div className="mt-3 flex justify-end gap-2">
             <button type="button" onClick={() => setSelected(null)} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Tutup</button>
@@ -187,7 +176,7 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
         <div>
           <div className="font-display text-[17px] font-bold tracking-[-0.02em] text-ink">Rencana {MONTHS[m - 1]} {y}</div>
           <div className="mt-0.5 text-[12px] text-slate-500">
-            {total} rencana, {doneCount} sudah selesai. Klik tanggal untuk melihat atau menambah rencana.
+            {total} rencana, {doneCount} sudah selesai. {canManage ? "Tim marketing mengisi rencananya sendiri." : "Klik tanggal untuk melihat atau menambah rencana."}
           </div>
         </div>
         {canManage && (
