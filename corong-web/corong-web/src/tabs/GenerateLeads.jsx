@@ -534,7 +534,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                                     )}
                                     {r.source_note && <div className="text-[11px] text-slate-500 mt-1.5 italic flex items-center gap-1"><Factory size={11} /> via {r.source_note}</div>}
                                     <a
-                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([r.name, r.city].filter(Boolean).join(" "))}`}
+                                      href={r.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([r.name, r.city].filter(Boolean).join(" "))}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
