@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Printer, Presentation } from "lucide-react";
+import { downloadReportPpt } from "../lib/reportPpt";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
@@ -297,6 +298,31 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const sourceOf = (l) => Object.entries(l).find(([k, v]) => /^custom_field_\d+$/.test(k) && SOURCES.includes(v))?.[1] || "";
   const pick = (c) => { setSelected(c.iso); if (!c.inMonth) { setMode("month"); setYm(c.iso.slice(0, 7)); } };
 
+  // Unduh PowerPoint: data yang sama dengan cetak PDF (omzet, corong, deal bulan ini, dan hasil per marketing).
+  const downloadPpt = async () => {
+    try {
+      const deals = [...r.dealRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      await downloadReportPpt({
+        orgName: org?.name || "",
+        who: personal ? "Report saya" : scopeId === "all" ? "Semua tim" : scopeName,
+        periodLabel,
+        fmtRp,
+        pct,
+        filtered,
+        target,
+        summary: {
+          dealValue: r.dealValue, dealCount: deals.length, masuk: r.masuk.length,
+          sphCount: r.sphCount, sphValue: r.sphValue, hotCount: r.hotCount, hotValue: r.hotValue,
+        },
+        deals: deals.map((d) => ({ date: d.date, name: d.name, value: d.value })),
+        showTeam: !personal && scopeId === "all",
+        team: team.map((m) => ({ name: m.name, masuk: m.masuk, sph: m.sph, hot: m.hot, deals: m.deals, omzet: m.omzet, target: targetOf(m.id) })),
+      });
+    } catch (e) {
+      alert("Gagal membuat PowerPoint: " + (e?.message || e));
+    }
+  };
+
   // Cetak ke PDF lewat dialog cetak peramban: ringkasan omzet, pipeline, deal bulan ini, dan perbandingan marketing.
   const printReport = () => {
     const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -388,6 +414,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             </>
           )}
           {view === "penjualan" && <button type="button" onClick={printReport} title="Cetak / simpan PDF" aria-label="Cetak atau simpan PDF" className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50", focus)}><Printer size={14} /></button>}
+          {view === "penjualan" && <button type="button" onClick={downloadPpt} className={cn("inline-flex h-8 items-center gap-1.5 rounded-full bg-ink px-3 text-[12px] font-semibold text-white hover:bg-slate-800", focus)}><Presentation size={14} /> Unduh PPT</button>}
         </div>
       </div>
 
