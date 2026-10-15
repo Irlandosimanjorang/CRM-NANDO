@@ -414,7 +414,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             </>
           )}
           {view === "penjualan" && <button type="button" onClick={printReport} title="Cetak / simpan PDF" aria-label="Cetak atau simpan PDF" className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50", focus)}><Printer size={14} /></button>}
-          {view === "penjualan" && <button type="button" onClick={downloadPpt} className={cn("inline-flex h-8 items-center gap-1.5 rounded-full bg-ink px-3 text-[12px] font-semibold text-white hover:bg-slate-800", focus)}><Presentation size={14} /> Unduh PPT</button>}
+          {view === "penjualan" && canManage && <button type="button" onClick={downloadPpt} className={cn("inline-flex h-8 items-center gap-1.5 rounded-full bg-ink px-3 text-[12px] font-semibold text-white hover:bg-slate-800", focus)}><Presentation size={14} /> Unduh PPT</button>}
         </div>
       </div>
 
