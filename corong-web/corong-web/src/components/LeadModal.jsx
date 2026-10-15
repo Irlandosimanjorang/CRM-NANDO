@@ -590,8 +590,9 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             )}
           </div>
           <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => onStageChange(e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
-          {/* Proyek Deal (15 Okt 2026): tanggal, nilai proyek, No. SPH, dan total diskon wajib diisi saat lead masuk tahap ini. */}
-          {isProyekDeal && (
+          {/* Data proyek (15 Okt 2026, saklar project_deal): selalu tampil untuk org yang punya saklar. Tanggal, nilai, dan No. SPH
+              wajib saat lead masuk tahap Proyek Deal. */}
+          {projectDeal && (
             <div className="border border-slate-200 bg-slate-50 rounded-2xl p-3 space-y-2.5">
               <div className="text-xs font-semibold text-slate-700">Data proyek {enteringProyekDeal ? "(wajib diisi)" : ""}</div>
               <div className="grid grid-cols-2 gap-3">
@@ -661,7 +662,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           <Field label={lbl("product", "Produk")}><input className={inp} value={f.product || ""} onChange={(e) => set("product", e.target.value)} /></Field>
           {/* Enterprise (30 Sep 2026): nilai proyek/kontrak (dipake forecast di
               tab Team) + termin pembayaran per lead. */}
-          {isEnterprise && !isProyekDeal && (
+          {isEnterprise && !projectDeal && (
             <Field label="Nilai proyek / kontrak (Rp)">
               <input
                 className={inp}
