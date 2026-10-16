@@ -1,0 +1,5 @@
+-- Performa sales hanya milik sendiri (16 Okt 2026). Sales tidak lagi melihat total perusahaan.
+-- get_sales_company_view: company = null untuk sales (owner/manager tetap dapat total org).
+-- get_org_dashboard_stats: sales hanya menghitung lead dan deal miliknya.
+-- outcome_events: sales hanya menghitung kejadian menang/kalah miliknya.
+-- Isi fungsi lengkap ada di database (migrasi performa_sales_hanya_diri_sendiri).
