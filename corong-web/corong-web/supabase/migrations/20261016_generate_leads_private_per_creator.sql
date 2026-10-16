@@ -1,0 +1,3 @@
+-- Hasil Generate Leads (16 Okt 2026): sales hanya melihat hasil yang dibuatnya sendiri (created_by / user_id).
+-- Owner dan manager tetap melihat semua hasil organisasi.
+-- Isi policy lengkap ada di database (migrasi generate_leads_private_per_creator).
