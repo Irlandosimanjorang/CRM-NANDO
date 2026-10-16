@@ -43,6 +43,22 @@ function initials(name, uid) {
   return uid.slice(0, 2).toUpperCase();
 }
 
+// Penjelasan singkat kenapa lead ini dihitung deal (16 Okt 2026): dari data lead yang sudah ada, tanpa AI.
+function dealDetail(l, stages) {
+  const lines = [];
+  const stageLabel = stages.find((s) => s.key === l.stage_key)?.label || l.stage_key;
+  const dateTxt = l.deal_date ? new Date(`${String(l.deal_date).slice(0, 10)}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "";
+  lines.push(`Ada di tahap ${stageLabel}${dateTxt ? ` sejak ${dateTxt}` : ""}`);
+  if (l.sph_number) lines.push(`No. SPH: ${l.sph_number}`);
+  if (Number(l.discount_total) > 0) lines.push(`Diskon: ${Number(l.discount_total).toLocaleString("id-ID")}`);
+  if (l.outcome?.result === "won") {
+    lines.push(`Alasan menang: ${l.outcome.reason_category || "-"}${l.outcome.reason ? ` - ${l.outcome.reason}` : ""}`);
+  } else {
+    lines.push("Alasan menang belum dicatat");
+  }
+  return lines;
+}
+
 // Popup daftar item (lead/deal/visit) - klik 1 baris buka lead aslinya kalau
 // masih ketemu (bisa aja udah kehapus/gak punya lead_id, di situ dibiarin
 // gak bisa diklik daripada nge-crash).
@@ -77,6 +93,11 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
                   <div className="min-w-0">
                     <div className="truncate text-[12.5px] font-semibold text-slate-700">{it.primary}</div>
                     {it.secondary && <div className="mt-0.5 truncate text-[11px] text-slate-500">{it.secondary}</div>}
+                    {it.detail?.length > 0 && (
+                      <ul className="mt-1.5 space-y-0.5 border-l-2 border-emerald-200 pl-2">
+                        {it.detail.map((d) => <li key={d} className="text-[11px] leading-snug text-slate-600">{d}</li>)}
+                      </ul>
+                    )}
                   </div>
                   {clickable && <ChevronRight size={15} className="shrink-0 text-slate-300" />}
                 </Tag>
@@ -160,14 +181,17 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
         uid: m.user_id,
         name: m.display_name || `Anggota ${m.user_id.slice(0, 8)}`,
         leadCount: mine.length,
-        dealCount: myDeals.length,
+        dealCount: projectDeal ? won.length : myDeals.length,
         visitCount: myCheckins.length,
         winRate,
         revenue,
         commissionRate,
         commissionAmount,
         leadItems: mine.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: l.category || l.city || "" })),
-        dealItems: myDeals.map((t) => ({ id: t.id, leadId: t.lead_id, primary: t.lead_name || "Deal", secondary: [fmtRp(t.deal_value), t.deal_date].filter(Boolean).join(" · ") })),
+        // Org project_deal: daftar deal = lead menang (sumber yang sama dengan omzet), dengan penjelasan singkat per deal.
+        dealItems: projectDeal
+          ? won.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: [fmtRp(l.deal_value), l.deal_date].filter(Boolean).join(" · "), detail: dealDetail(l, stages) }))
+          : myDeals.map((t) => ({ id: t.id, leadId: t.lead_id, primary: t.lead_name || "Deal", secondary: [fmtRp(t.deal_value), t.deal_date].filter(Boolean).join(" · ") })),
         visitItems: myCheckins.map((c) => ({ id: c.id, leadId: c.lead_id, primary: c.lead_name || "Kunjungan", secondary: c.checked_in_at ? new Date(c.checked_in_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "" })),
       };
     })
