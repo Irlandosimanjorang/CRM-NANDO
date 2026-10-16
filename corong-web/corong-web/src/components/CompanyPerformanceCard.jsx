@@ -65,7 +65,10 @@ export default function CompanyPerformanceCard() {
     );
   }
 
-  const { company, me, trend } = view;
+  // Sales hanya menerima performa miliknya (company = null). Data perusahaan hanya untuk owner/manager.
+  const { company: companyRaw, me, trend } = view;
+  const isCompany = !!companyRaw;
+  const company = companyRaw || { revenue: 0, target: 0, deals: 0 };
   const monthLabel = new Date(view.month + "T00:00:00Z").toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" });
   const companyPct = pctOf(company.revenue, company.target);
   const share = pctOf(me.revenue, company.revenue);
@@ -77,14 +80,24 @@ export default function CompanyPerformanceCard() {
     <section className={cardCls}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">Performa perusahaan</h2>
-          <p className="mt-0.5 text-[11.5px] text-slate-500">Seluruh team, {monthLabel}</p>
+          <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{isCompany ? "Performa perusahaan" : "Performa saya"}</h2>
+          <p className="mt-0.5 text-[11.5px] text-slate-500">{isCompany ? `Seluruh team, ${monthLabel}` : monthLabel}</p>
         </div>
-        <span className="text-[10.5px] text-slate-500">Rincian per sales hanya dapat dilihat manager</span>
+        {isCompany && <span className="text-[10.5px] text-slate-500">Rincian per sales hanya dapat dilihat manager</span>}
       </div>
 
       <div className="mt-4 grid gap-px overflow-hidden rounded-inner border border-slate-100 bg-slate-100 md:grid-cols-3">
-        <Col title="Target perusahaan">
+        {!isCompany && (
+          <Col title="Revenue saya">
+            <div className="mt-3">
+              <div className="font-display text-[24px] font-bold leading-none tracking-[-0.04em] tabular-nums text-ink">{fmtJt(me.revenue)}</div>
+              <div className="mt-1 text-[11px] text-slate-500">Revenue bulan ini dari deal Anda</div>
+            </div>
+            <div className="mt-auto pt-2 text-center text-[10.5px] text-slate-500">{me.deals} deal closing bulan ini</div>
+          </Col>
+        )}
+
+        {isCompany && <Col title="Target perusahaan">
           {Number(company.target) > 0 ? (
             <div className="mt-2 flex flex-col items-center text-center">
               <Gauge pct={companyPct} />
@@ -97,9 +110,9 @@ export default function CompanyPerformanceCard() {
             </div>
           )}
           <div className="mt-auto pt-2 text-center text-[10.5px] text-slate-500">{company.deals} deal closing bulan ini</div>
-        </Col>
+        </Col>}
 
-        <Col title="Kontribusi Anda">
+        {isCompany && <Col title="Kontribusi Anda">
           <div className="mt-3 font-display text-[26px] font-bold leading-none tracking-[-0.04em] tabular-nums text-ink">{share}%</div>
           <div className="mt-1 text-[11px] text-slate-500">
             {Number(company.revenue) > 0
@@ -113,7 +126,7 @@ export default function CompanyPerformanceCard() {
             <span>Deal Anda: {me.deals}</span>
             <span>Anggota lain: {Math.max(0, Number(company.deals) - Number(me.deals))}</span>
           </div>
-        </Col>
+        </Col>}
 
         <Col title="Target pribadi">
           {Number(me.target) > 0 ? (
@@ -130,7 +143,7 @@ export default function CompanyPerformanceCard() {
 
       <div className="mt-4 grid gap-4 border-t border-slate-100 pt-4 lg:grid-cols-[1.3fr_1fr]">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500">Revenue perusahaan 6 bulan terakhir</div>
+          <div className="text-[11px] font-semibold text-slate-500">{isCompany ? "Revenue perusahaan 6 bulan terakhir" : "Revenue saya 6 bulan terakhir"}</div>
           <div className="mt-2 grid grid-cols-6 gap-2">
             {trend.map((t, i) => {
               const cur = i === trend.length - 1;
@@ -149,7 +162,7 @@ export default function CompanyPerformanceCard() {
         </div>
         {allTime && (
           <div>
-            <div className="text-[11px] font-semibold text-slate-500">Sepanjang masa</div>
+            <div className="text-[11px] font-semibold text-slate-500">{isCompany ? "Sepanjang masa" : "Performa saya sepanjang masa"}</div>
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3">
               {[
                 [allTime.total, "Total lead"],
