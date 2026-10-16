@@ -52,7 +52,10 @@ function targetStatus({ actual, target, isNow, isPast, elapsed, daysInMonth }) {
 }
 const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
-export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTx = [], members = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead }) {
+export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTxRaw = [], members = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead, projectDeal = false }) {
+  // Omzet org project_deal (16 Okt 2026, keputusan Nando): nilai proyek lead di tahap menang, bukan transaksi deal.
+  // Transaksi dikosongkan supaya perhitungan memakai fallback lead menang (deal_value & deal_date) yang sudah ada.
+  const allTx = useMemo(() => (projectDeal ? [] : allTxRaw), [allTxRaw, projectDeal]);
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const [ymSel, setYm] = useState(todayIso.slice(0, 7));

@@ -31,4 +31,5 @@ Function ini aktif di produksi tapi kodenya belum ada di repo: `track-visit`, `c
 ## 7. Revenue dihitung di dua tempat
 - Team (leaderboard, org dengan `project_deal`): jumlah `deal_value` lead di tahap menang.
 - Report (Penjualan, Rekap): jumlah transaksi deal dan lead menang.
-- Belum disatukan. Jika angka di dua tempat berbeda, cek sumber ini dulu.
+- Sudah disatukan untuk org `project_deal` (16 Okt 2026): omzet Team dan Report = nilai proyek lead di tahap menang. Transaksi deal tidak dipakai untuk omzet di org itu.
+- Dashboard masih membaca transaksi deal (jumlah deal dan grafik). Belum diubah.
