@@ -28,6 +28,7 @@ export default function Dashboard({
   canManage = false,
   hideAiRecs = false,
   myUid = null,
+  projectDeal = false,
 }) {
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
   const myIdle = useMemo(
@@ -56,11 +57,12 @@ export default function Dashboard({
       lost: lostN,
       followups: followups.length,
       visits: visits.length,
-      deals: dealTransactions.length,
+      // Org project_deal (16 Okt 2026): deal = lead di tahap menang, sama dengan Report dan Team.
+      deals: projectDeal ? won.length : dealTransactions.length,
       winRate: wonN + lostN ? Math.round((wonN / (wonN + lostN)) * 100) : 0,
       wonKeys,
     };
-  }, [leads, stages, dealTransactions, events]);
+  }, [leads, stages, dealTransactions, events, projectDeal]);
 
   const pipeline = useMemo(() => {
     const usable = stages.filter(s => s.type !== "lost").slice(0, 4);
@@ -119,7 +121,11 @@ export default function Dashboard({
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (key in idxByKey) months[idxByKey[key]].leads += 1;
     });
-    dealTransactions.forEach((dt) => {
+    // Org project_deal: deal dihitung dari lead di tahap menang (sumber yang sama dengan Report dan Team).
+    const dealRows = projectDeal
+      ? leads.filter((l) => stages.some((s) => s.type === "won" && s.key === l.stage_key)).map((l) => ({ deal_date: l.deal_date, created_at: l.created_at }))
+      : dealTransactions;
+    dealRows.forEach((dt) => {
       const raw = dt.deal_date || dt.created_at;
       if (!raw) return;
       const d = new Date(raw);
@@ -127,7 +133,7 @@ export default function Dashboard({
       if (key in idxByKey) months[idxByKey[key]].deals += 1;
     });
     return months;
-  }, [leads, dealTransactions]);
+  }, [leads, dealTransactions, stages, projectDeal]);
 
   // BUG FIX (16 Sep 2026, ketauan pas audit): db.getTodayAdvisorRun() itu
   // fungsi yang MEMANG dibikin buat kartu "Next best action" ini (lihat
