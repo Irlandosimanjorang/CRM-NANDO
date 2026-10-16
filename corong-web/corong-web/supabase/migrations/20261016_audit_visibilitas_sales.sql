@@ -1,0 +1,2 @@
+-- Audit visibilitas sales (16 Okt 2026): approval_requests select dibatasi ke pembuat atau owner/manager.
+-- Isi policy lengkap ada di database (migrasi approval_requests_select_own_or_manager).
