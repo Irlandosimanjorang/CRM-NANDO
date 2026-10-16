@@ -297,6 +297,13 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       const res = await db.generateLeads({ keyword, province, targetRole, productSold, companyScale, targetType });
       waitForEnrichment(res.run_id, res.count);
     } catch (e) {
+      // Timeout gateway atau koneksi putus TIDAK berarti pencarian gagal: proses di server tetap jalan dan hasilnya
+      // tetap masuk. Untuk kasus ini jangan tampilkan error merah; biarkan pollJob yang menentukan hasil akhirnya.
+      const transient = e?.name === "FunctionsFetchError" || e?.name === "FunctionsRelayError" || (e?.context?.status >= 500);
+      if (transient) {
+        setMsg("Pencarian masih berjalan di server. Hasilnya akan muncul otomatis di daftar di bawah.");
+        return;
+      }
       stopPolling();
       setMsg("Gagal: " + e.message);
       onNotify?.(`Generate Leads gagal: ${e.message}`, "error");
