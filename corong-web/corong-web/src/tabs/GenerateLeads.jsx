@@ -118,6 +118,10 @@ function TokenRequestDialog({ pending, onClose, onSent }) {
   );
 }
 
+// Hasil "tidak ada lead baru" (semua sudah ada di daftar, atau pencarian memang kosong) bukan error:
+// server mencatatnya sebagai status failed, jadi di sini dibedakan supaya tidak tampil merah.
+const isInfoOutcome = (m) => /sudah ada di daftar|Tidak ditemukan lead yang sesuai/.test(m || "");
+
 export default function GenerateLeads({ stages, industry, onChanged, onNotify }) {
   const example = getGenerateLeadsExample(industry);
   const [keyword, setKeyword] = useState("");
@@ -238,8 +242,13 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       if (job.status === "failed") {
         stopPolling();
         setBusy(false);
-        setMsg("Gagal: " + (job.error_message || "terjadi kesalahan."));
-        onNotify?.(`Generate Leads gagal: ${job.error_message || "terjadi kesalahan."}`, "error");
+        if (isInfoOutcome(job.error_message)) {
+          setMsg(job.error_message);
+          onNotify?.(job.error_message, "info");
+        } else {
+          setMsg("Gagal: " + (job.error_message || "terjadi kesalahan."));
+          onNotify?.(`Generate Leads gagal: ${job.error_message || "terjadi kesalahan."}`, "error");
+        }
         load();
         return;
       }
@@ -305,9 +314,15 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
         return;
       }
       stopPolling();
-      setMsg("Gagal: " + e.message);
-      onNotify?.(`Generate Leads gagal: ${e.message}`, "error");
       setBusy(false);
+      // Hasil yang semuanya sudah ada di daftar bukan kegagalan: tampilkan sebagai info, bukan error merah.
+      if (isInfoOutcome(e.message)) {
+        setMsg(e.message);
+        onNotify?.(e.message, "info");
+      } else {
+        setMsg("Gagal: " + e.message);
+        onNotify?.(`Generate Leads gagal: ${e.message}`, "error");
+      }
     }
   };
 
