@@ -275,6 +275,20 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                       >
                         {cols.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
                       </select>
+
+                      {/* Status proyek di kartu (17 Okt 2026, BSB): pilih Berjalan langsung memindahkan lead ke Proyek Berjalan. */}
+                      {projectDeal && stageOf(l) === "proyek_deal" && (
+                        <select
+                          aria-label="Status proyek"
+                          value="belum"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onChange={(e) => { if (e.target.value === "berjalan") moveTo(l, "proyek_berjalan"); }}
+                          className="mt-2.5 w-full rounded-lg border border-blue-200 bg-blue-50/60 px-2 py-1.5 text-[11.5px] font-medium text-blue-800"
+                        >
+                          <option value="belum">Status: Belum berjalan</option>
+                          <option value="berjalan">Berjalan, pindah ke Proyek Berjalan</option>
+                        </select>
+                      )}
                     </article>
                   );
                 })}
