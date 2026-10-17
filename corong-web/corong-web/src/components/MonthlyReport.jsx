@@ -358,25 +358,6 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
       setErr(e.message || "Gagal membuat PowerPoint");
     }
   };
-  // Ekspor Excel (17 Okt 2026): ringkasan periode dan daftar deal sesuai filter yang sedang aktif.
-  const exportExcel = async () => {
-    const XLSX = await import("xlsx");
-    const wb = XLSX.utils.book_new();
-    const nameOf = (id) => members.find((m) => m.user_id === id)?.display_name || "";
-    const summary = [
-      ["Ringkasan"],
-      ["Periode", periodLabel],
-      ["Cakupan", personal ? (org?.name || "") : (scopeName || "Semua tim")],
-      ["Omzet", r.dealValue],
-      ["Target", target],
-      ["Capaian (%)", target > 0 ? Math.round((r.dealValue / target) * 100) : ""],
-      ["Jumlah deal", r.dealRows.length],
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), "Ringkasan");
-    const deals = r.dealRows.map((d) => ({ Tanggal: d.date, Lead: d.name, Nilai: d.value, Marketing: nameOf(d.lead?.assigned_to || d.lead?.user_id) }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(deals.length ? deals : [{ Tanggal: "", Lead: "Belum ada deal", Nilai: 0, Marketing: "" }]), "Deal");
-    XLSX.writeFile(wb, `nexto-report-${ym}.xlsx`);
-  };
 
   return (
     <div className="space-y-4">
@@ -387,7 +368,6 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
           ))}
         </div>
-        <button type="button" onClick={exportExcel} className={cn("rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}>Unduh Excel</button>
         {/* Sinkron ke Google Sheets (17 Okt 2026): belum aktif, klik hanya menampilkan pemberitahuan. */}
         <div className="relative">
           <button

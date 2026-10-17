@@ -241,7 +241,7 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
                       key={x.id}
                       className={`block truncate rounded-md border-l-2 px-1.5 py-0.5 text-[11px] ${x.done ? "border-emerald-500 bg-emerald-50 text-emerald-700 line-through" : "border-slate-400 bg-slate-100 text-slate-700"}`}
                     >
-                      {x.title}
+                      {canManage ? <b className="font-semibold">{nameOf(memberById[x.user_id]).split(" ")[0]}</b> : null}{canManage ? " · " : ""}{x.title}
                     </span>
                   ))}
                   {list.length > 2 && <span className="px-1 text-[10.5px] font-medium text-slate-500">+{list.length - 2} lagi</span>}
