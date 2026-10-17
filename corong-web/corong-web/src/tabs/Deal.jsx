@@ -246,8 +246,15 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="flex items-center gap-2"><Trophy size={20} className="text-emerald-500" /><h1 className="text-2xl font-bold tracking-tight">Deal</h1><span className="text-sm text-slate-400">({groups.length})</span></div>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-50 text-emerald-600"><Trophy size={20} /></span>
+          <div>
+            <h1 className="text-[22px] font-bold leading-tight tracking-[-0.02em] text-slate-900">Deal</h1>
+            <p className="text-[12.5px] text-slate-500">Lead yang sudah menang, lengkap dengan nilai dan transaksinya.</p>
+          </div>
+          <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[12px] font-semibold text-slate-600 tabular-nums">{groups.length}</span>
+        </div>
         {/* Org project_deal (BSB): deal tercatat otomatis saat lead pindah ke Proyek Selesai, tidak diinput manual di sini. */}
         {!projectDeal && <button onClick={() => { setAdd(true); saveOpenModal("deal", {}); }} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah Deal</button>}
       </div>
@@ -255,8 +262,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Trophy size={32} className="mx-auto text-slate-300 mb-3" />Belum ada deal. Klik "Tambah Deal" atau ubah tahap lead jadi "Deal (menang)".</div>
       ) : (
         <>
-          <div className="bg-white border border-slate-100 rounded-panel p-4 mb-4">
-            <div className={`grid ${units ? "grid-cols-3" : "grid-cols-2"} divide-x divide-slate-100`}>
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm mb-5">
+            <div className={`grid gap-y-4 ${units ? "grid-cols-3" : "grid-cols-2"} divide-x divide-slate-100`}>
               <div className="px-3 first:pl-1">
                 <div className="text-xs text-slate-400 flex items-center gap-1.5"><Trophy size={13} /> Total Deal</div>
                 <div className="font-bold text-2xl text-emerald-600 mt-1.5 tabular-nums">{groups.length}</div>
@@ -288,9 +295,9 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               </div>
             </div>
           </div>
-          <div className="bg-white border border-slate-100 rounded-panel overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50/80 text-slate-500 text-[11.5px] font-semibold"><tr>
+              <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500"><tr>
                 <th className="px-3 py-2 font-medium" style={{ width: "28px" }}></th>
                 <th className="text-left px-3 py-2 font-medium">{getFieldLabel(industry, "name_short", "Lead")}</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Sales</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">{productLabel}</th>{units && <th className="hidden sm:table-cell text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th>}{projectDeal && <th className="hidden md:table-cell text-left px-3 py-2 font-medium">No. SPH</th>}{projectDeal && <th className="hidden md:table-cell text-left px-3 py-2 font-medium">Diskon (%)</th>}<th className="text-left px-3 py-2 font-medium">Total Rp</th>{projectDeal && <th className="hidden md:table-cell text-left px-3 py-2 font-medium">Total diskon</th>}
               </tr></thead>
