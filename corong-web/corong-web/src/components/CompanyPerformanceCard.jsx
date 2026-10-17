@@ -86,7 +86,7 @@ export default function CompanyPerformanceCard() {
         {isCompany && <span className="text-[10.5px] text-slate-500">Rincian per sales hanya dapat dilihat manager</span>}
       </div>
 
-      <div className="mt-4 grid gap-px overflow-hidden rounded-inner border border-slate-100 bg-slate-100 md:grid-cols-3">
+      <div className={`mt-4 grid gap-px overflow-hidden rounded-inner border border-slate-100 bg-slate-100 ${isCompany ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
         {!isCompany && (
           <Col title="Revenue saya">
             <div className="mt-3">
