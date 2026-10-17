@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
@@ -46,6 +46,13 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   const stageOf = (l) => pending[l.id] || l.stage_key;
 
+  // Pindah tahap dianimasikan seperti kartu yang diseret ke kolom tujuan (View Transitions). Browser yang tidak
+  // mendukung tetap pindah tanpa animasi.
+  const animateMove = (fn) => {
+    if (typeof document !== "undefined" && document.startViewTransition) document.startViewTransition(() => flushSync(fn));
+    else fn();
+  };
+
   const moveTo = (lead, key) => {
     if (!lead || key === UNKNOWN_KEY || stageOf(lead) === key) return;
     const target = cols.find((s) => s.key === key);
@@ -59,7 +66,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setProyek({ lead, key });
       return;
     }
-    setPending((p) => ({ ...p, [lead.id]: key }));
+    animateMove(() => setPending((p) => ({ ...p, [lead.id]: key })));
     Promise.resolve(onMove(lead, key)).catch((e) => {
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
       alert("Gagal pindah tahap: " + (e?.message || e));
@@ -233,6 +240,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                   return (
                     <article
                       key={l.id}
+                      style={{ viewTransitionName: `lead-${l.id}` }}
                       onPointerDown={(e) => onCardPointerDown(e, l)}
                       className={`group relative cursor-grab touch-pan-y select-none rounded-xl border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[box-shadow,border-color,opacity] duration-150 hover:border-slate-300 hover:shadow-[0_6px_16px_-8px_rgba(15,23,42,0.18)] active:cursor-grabbing ${isDragging ? "opacity-30" : ""} ${moving ? "ring-2 ring-orange-200" : ""}`}
                     >
@@ -285,8 +293,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                           onChange={(e) => { if (e.target.value === "berjalan") moveTo(l, "proyek_berjalan"); }}
                           className="mt-2.5 w-full rounded-lg border border-blue-200 bg-blue-50/60 px-2 py-1.5 text-[11.5px] font-medium text-blue-800"
                         >
-                          <option value="belum">Status: Belum berjalan</option>
-                          <option value="berjalan">Berjalan, pindah ke Proyek Berjalan</option>
+                          <option value="belum">Belum berjalan</option>
+                          <option value="berjalan">Berjalan</option>
                         </select>
                       )}
                     </article>
