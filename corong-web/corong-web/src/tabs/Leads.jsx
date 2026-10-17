@@ -719,7 +719,9 @@ export default function Leads({
     if (extra?.projectDeal) {
       // Proyek Deal (15 Okt 2026): tahap normal, bukan deal menang, jadi tidak ada transaksi atau outcome.
       const p = extra.projectDeal;
-      leadPatch = { stage_key: key, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_total: p.discount_total };
+      // Status "Berjalan" (17 Okt 2026, BSB): lead langsung ke tahap Proyek Berjalan.
+      const nextKey = p.berjalan ? "proyek_berjalan" : key;
+      leadPatch = { stage_key: nextKey, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_pct: p.discount_pct, discount_total: p.discount_total };
       await db.upsertLead({ ...lead, ...leadPatch });
       if (onLocalDeal) onLocalDeal(lead.id, leadPatch, null);
       onChanged({ silent: true });
@@ -731,7 +733,9 @@ export default function Leads({
       leadPatch = { ...leadPatch, deal_value: extra.deal.value, deal_date: extra.deal.date };
       await db.upsertLead({ ...lead, ...leadPatch });
     } else {
-      await db.upsertLead({ ...lead, stage_key: key });
+      // Org project_deal (BSB): tanggal deal mengikuti tanggal Proyek Selesai. Record deal dibuat otomatis dari lead ini.
+      await db.upsertLead({ ...lead, stage_key: key, ...(extra?.wonDate ? { deal_date: extra.wonDate } : {}) });
+      if (extra?.wonDate) leadPatch = { ...leadPatch, deal_date: extra.wonDate };
     }
     if (extra) {
       // Alasan menang / kalah dicatat sebagai outcome lead, dan juga sebagai catatan progres supaya terlihat di riwayat.

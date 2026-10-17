@@ -309,6 +309,22 @@ Kalau ada produk di katalog yang nyambung sama kebutuhan/histori ${lead.name}, s
       }
     }
 
+    // ---- CONTOH GAYA DARI PENILAIAN USER (17 Okt 2026): draft yang dijempol user jadi contoh, yang di-dislike dihindari.
+    // Hanya penilaian user yang sedang membuat draft ini. Gagal membaca tidak menghalangi pembuatan draft. ----
+    let styleBlock = "";
+    try {
+      const { data: fb } = await admin.from("ai_feedback").select("rating, snapshot").eq("user_id", userData.user.id).eq("feature", "draft-followup").not("snapshot", "is", null).order("updated_at", { ascending: false }).limit(20);
+      const isEmail = (s) => String(s || "").startsWith("Subjek:");
+      const sameChannel = (fb || []).filter((r) => (channel === "email") === isEmail(r.snapshot));
+      const liked = sameChannel.filter((r) => r.rating === 1).slice(0, 2).map((r) => String(r.snapshot).slice(0, 600));
+      const disliked = sameChannel.filter((r) => r.rating === -1).slice(0, 2).map((r) => String(r.snapshot).slice(0, 600));
+      if (liked.length || disliked.length) {
+        styleBlock = `\nGAYA PENULISAN SALES INI (dari penilaiannya sebelumnya):${liked.length ? `\nContoh yang DISUKAI (tiru nada dan panjangnya, jangan salin isinya):\n${liked.map((s) => `---\n${s}`).join("\n")}` : ""}${disliked.length ? `\nContoh yang TIDAK DISUKAI (hindari gaya ini):\n${disliked.map((s) => `---\n${s}`).join("\n")}` : ""}\n`;
+      }
+    } catch (e) {
+      console.log("[draft-followup] gagal baca penilaian:", String(e));
+    }
+
     const noun = industryNoun(industryKey);
     const relevantNotes = await getRelevantNotes(supabase, lead);
     const recentProgress = relevantNotes.map((p) => `${p.note_date}: ${(p.text || "").slice(0, 200)}`);
@@ -328,10 +344,12 @@ ATURAN FORMAT (penting):
 - Kalau pesannya lumayan panjang (lebih dari ~2 kalimat, atau ngebahas lebih dari 1 topik/poin), PECAH jadi beberapa baris pendek dipisah baris kosong (kayak orang WhatsApp beneran ngetik per-poin, bukan satu paragraf gede numpuk semua).`
       : `Tulis email follow-up yang profesional - ada salam pembuka & penutup singkat, kasih subjek email yang relevan juga. Bahasa Indonesia baku, sopan, tidak bertele-tele. JANGAN pakai emoji atau simbol dekoratif. Titik koma (;) boleh dipake buat gabungin klausa yang berkaitan erat kalau pas secara gramatikal.`;
 
-    const prompt = `Kamu asisten sales yang bantu bikin draft pesan follow-up ke ${noun} di bisnis ${industryContext(industryKey)}.
+    // CACHING (17 Okt 2026): bagian statis (instruksi, memori org, katalog, memori sales) dikirim sebagai system dengan
+    // cache_control, jadi panggilan berikutnya dari org/sales yang sama membaca dari cache (lebih murah). Data lead
+    // yang berubah-ubah dikirim terpisah di pesan user.
+    const staticPrompt = `Kamu asisten sales yang bantu bikin draft pesan follow-up ke ${noun} di bisnis ${industryContext(industryKey)}.
 
-Data ${noun} ini: ${JSON.stringify(context)}
-${outcomeMemory ? `\nKONTEKS HISTORI ORG INI (dari lead-lead lain yang udah closed sebelumnya): ${outcomeMemory} MANFAATIN ini buat bikin pendekatan yang lebih strategis - misal kalau ada objection yang mirip sama yang sering muncul di org ini, pake cara ngatasin yang udah kebukti berhasil; kalau ada taktik yang kebukti bikin menang, pertimbangkan pendekatan serupa. TAPI tetep personal ke situasi ${lead.name} spesifik, jangan asal tempel pola generik.\n` : ""}${catalogBlock}${memoryBlock}
+${outcomeMemory ? `\nKONTEKS HISTORI ORG INI (dari lead-lead lain yang udah closed sebelumnya): ${outcomeMemory} MANFAATIN ini buat bikin pendekatan yang lebih strategis - misal kalau ada objection yang mirip sama yang sering muncul di org ini, pake cara ngatasin yang udah kebukti berhasil; kalau ada taktik yang kebukti bikin menang, pertimbangkan pendekatan serupa. TAPI tetep personal ke situasi lead yang sedang dibuatkan draft (lihat data lead di pesan), jangan asal tempel pola generik.\n` : ""}${catalogBlock}${memoryBlock}${styleBlock}
 ${channelInstruction}
 
 Personalisasi berdasarkan histori progress di atas - kalau ada pertanyaan/objection yang keliatan belum kejawab, singgung itu secara halus. Kalau belum ada histori progress sama sekali (belum pernah dikontak), buat pesan follow-up perkenalan yang natural, bukan template kaku. JANGAN mengarang detail yang gak ada di data (harga, tanggal spesifik, dst).
@@ -339,11 +357,16 @@ Personalisasi berdasarkan histori progress di atas - kalau ada pertanyaan/object
 Balas HANYA dengan JSON object, tanpa markdown, persis:
 ${channel === "whatsapp" ? '{"message":"..."}' : '{"subject":"...","body":"..."}'}
 Tulis dalam Bahasa Indonesia baku yang profesional dan luwes.`;
+    const leadPrompt = `Data ${noun} ini: ${JSON.stringify(context)}`;
 
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-5-5", max_tokens: 900, thinking: { type: "between_tools" }, output_config: { effort: "medium" }, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({
+        model: "claude-sonnet-5-5", max_tokens: 900, thinking: { type: "between_tools" }, output_config: { effort: "medium" },
+        system: [{ type: "text", text: staticPrompt, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: leadPrompt }],
+      }),
     });
     if (!resp.ok) {
       await releaseQuota();

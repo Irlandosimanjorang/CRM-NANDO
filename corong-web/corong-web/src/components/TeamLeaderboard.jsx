@@ -50,7 +50,8 @@ function dealDetail(l, stages) {
   const dateTxt = l.deal_date ? new Date(`${String(l.deal_date).slice(0, 10)}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "";
   lines.push(`Ada di tahap ${stageLabel}${dateTxt ? ` sejak ${dateTxt}` : ""}`);
   if (l.sph_number) lines.push(`No. SPH: ${l.sph_number}`);
-  if (Number(l.discount_total) > 0) lines.push(`Diskon: ${Number(l.discount_total).toLocaleString("id-ID")}`);
+  if (Number(l.discount_pct) > 0) lines.push(`Diskon: ${Number(l.discount_pct)}% (${Number(l.discount_total).toLocaleString("id-ID")})`);
+  else if (Number(l.discount_total) > 0) lines.push(`Diskon: ${Number(l.discount_total).toLocaleString("id-ID")}`);
   if (l.outcome?.result === "won") {
     lines.push(`Alasan menang: ${l.outcome.reason_category || "-"}${l.outcome.reason ? ` - ${l.outcome.reason}` : ""}`);
   } else {
@@ -111,9 +112,11 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
   );
 }
 
-export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpenLead, canManage, projectDeal = false }) {
-  const [members, setMembers] = useState(null);
-  const [checkins, setCheckins] = useState([]);
+// externalMembers / externalCheckins: dipakai tampilan tim org lain (read-only, lewat izin berbagi).
+// Kalau diisi, komponen tidak mengambil data sendiri dari org yang sedang login.
+export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpenLead, canManage, projectDeal = false, externalMembers = null, externalCheckins = null }) {
+  const [members, setMembers] = useState(externalMembers);
+  const [checkins, setCheckins] = useState(externalCheckins || []);
   const [preview, setPreview] = useState(null); // { title, items }
   // Sistem komisi (18 Sep 2026, permintaan Nando) - map user_id -> rate %,
   // cuma di-fetch/ditampilin kalau canManage (owner/manager) - sales_rep gak
@@ -125,9 +128,9 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
   const [rateBusy, setRateBusy] = useState(false);
 
   useEffect(() => {
-    db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
-    db.getCheckins().then(setCheckins).catch(() => setCheckins([]));
-    if (canManage) {
+    if (!externalMembers) db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
+    if (!externalCheckins) db.getCheckins().then(setCheckins).catch(() => setCheckins([]));
+    if (canManage && !externalMembers) {
       db.getMemberCommissions()
         .then((rows) => setCommissions(Object.fromEntries(rows.map((r) => [r.user_id, Number(r.commission_rate_pct)]))))
         .catch(() => setCommissions({}));

@@ -193,7 +193,7 @@ function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSa
   );
 }
 
-export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged }) {
+export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged, projectDeal = false }) {
   const productLabel = getFieldLabel(industry, "product", "Produk");
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
   const units = getQuantityUnits(industry);
@@ -248,7 +248,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     <div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2"><Trophy size={20} className="text-emerald-500" /><h1 className="text-2xl font-bold tracking-tight">Deal</h1><span className="text-sm text-slate-400">({groups.length})</span></div>
-        <button onClick={() => { setAdd(true); saveOpenModal("deal", {}); }} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah Deal</button>
+        {/* Org project_deal (BSB): deal tercatat otomatis saat lead pindah ke Proyek Selesai, tidak diinput manual di sini. */}
+        {!projectDeal && <button onClick={() => { setAdd(true); saveOpenModal("deal", {}); }} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah Deal</button>}
       </div>
       {groups.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Trophy size={32} className="mx-auto text-slate-300 mb-3" />Belum ada deal. Klik "Tambah Deal" atau ubah tahap lead jadi "Deal (menang)".</div>
@@ -291,7 +292,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 text-slate-500 text-[11.5px] font-semibold"><tr>
                 <th className="px-3 py-2 font-medium" style={{ width: "28px" }}></th>
-                <th className="text-left px-3 py-2 font-medium">{getFieldLabel(industry, "name_short", "Lead")}</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Sales</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">{productLabel}</th>{units && <th className="hidden sm:table-cell text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th>}<th className="text-left px-3 py-2 font-medium">Total Rp</th>
+                <th className="text-left px-3 py-2 font-medium">{getFieldLabel(industry, "name_short", "Lead")}</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Kota</th><th className="text-left px-3 py-2 font-medium">Tahap</th><th className="hidden sm:table-cell text-left px-3 py-2 font-medium">Sales</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">Tanggal terakhir</th><th className="hidden md:table-cell text-left px-3 py-2 font-medium">{productLabel}</th>{units && <th className="hidden sm:table-cell text-left px-3 py-2 font-medium"><span className="inline-flex items-center gap-1">{quantityLabel}<button onClick={(e) => { e.stopPropagation(); setQtyRevealed((v) => !v); }} className="text-slate-400 hover:text-slate-700 normal-case" title={qtyRevealed ? "Sembunyikan" : "Tampilkan"}>{qtyRevealed ? <EyeOff size={12} /> : <Eye size={12} />}</button></span></th>}{projectDeal && <th className="hidden md:table-cell text-left px-3 py-2 font-medium">No. SPH</th>}{projectDeal && <th className="hidden md:table-cell text-left px-3 py-2 font-medium">Diskon (%)</th>}<th className="text-left px-3 py-2 font-medium">Total Rp</th>{projectDeal && <th className="hidden md:table-cell text-left px-3 py-2 font-medium">Total diskon</th>}
               </tr></thead>
               <tbody>
                 {groups.map((g) => {
@@ -319,7 +320,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                       <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.deal_date ? fmtDate(latest.deal_date) : "—"}</td>
                       <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.product_type && <span className="mr-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">{latest.product_type}</span>}{latest.chemical || (latest.product_type ? "" : "—")}</td>
                       {units && <td className="hidden sm:table-cell px-3 py-2 text-xs font-mono text-slate-700">{latest.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${unitLabel(units, latest.tonnage_unit)}` : "••••••") : "—"}</td>}
+                      {projectDeal && <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-700">{lead?.sph_number || "—"}</td>}
+                      {projectDeal && <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-700 tabular-nums">{Number(lead?.discount_pct) > 0 ? `${Number(lead.discount_pct)}%` : "—"}</td>}
                       <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{groupTotalRp ? (rpRevealed ? fmtRp(groupTotalRp) : "••••••") : "—"}</td>
+                      {projectDeal && <td className="hidden md:table-cell px-3 py-2 text-xs font-mono text-slate-700 tabular-nums">{Number(lead?.discount_total) > 0 ? (rpRevealed ? fmtRp(lead.discount_total) : "••••••") : "—"}</td>}
                     </tr>
                     {isOpen && g.txs.map((t) => (
                       <tr key={t.id} className="border-t border-slate-50 bg-slate-50/50 text-xs">
@@ -331,12 +335,15 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                         <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.deal_date ? fmtDate(t.deal_date) : "—"}</td>
                         <td className="hidden md:table-cell px-3 py-1.5 text-slate-600">{t.product_type && <span className="mr-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">{t.product_type}</span>}{t.chemical || (t.product_type ? "" : "—")}</td>
                         {units && <td className="hidden sm:table-cell px-3 py-1.5 font-mono text-slate-600">{t.tonnage ? (qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : "••••••") : "—"}</td>}
+                        {projectDeal && <td className="hidden md:table-cell px-3 py-1.5"></td>}
+                        {projectDeal && <td className="hidden md:table-cell px-3 py-1.5"></td>}
                         <td className="px-3 py-1.5 font-mono text-emerald-700 font-semibold">
                           <div className="flex items-center justify-between gap-2">
                             {t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : "••••••") : "—"}
                             <button onClick={(e) => { e.stopPropagation(); delTx(t.id); }} disabled={deletingTxIds.has(t.id)} className="text-slate-300 hover:text-rose-500 disabled:opacity-40"><Trash2 size={12} /></button>
                           </div>
                         </td>
+                        {projectDeal && <td className="hidden md:table-cell px-3 py-1.5"></td>}
                       </tr>
                     ))}
                   </Fragment>

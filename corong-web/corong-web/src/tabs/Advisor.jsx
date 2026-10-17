@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Lightbulb, Loader2, AlertCircle, CheckCircle2, User, MessageCircle, ExternalLink, Calendar } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, daysSince } from "../lib/helpers";
+import FeedbackThumbs from "../components/FeedbackThumbs";
 
 const uMeta = { high: { label: "High", hex: "#e11d48" }, medium: { label: "Medium", hex: "#d97706" }, low: { label: "Low", hex: "#64748b" } };
 
@@ -15,6 +16,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy, demoR
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null); // run_date yang dipilih
+  const [leadScore, setLeadScore] = useState({}); // lead_id -> total jempol user untuk lead itu
 
   const load = async () => {
     // Contoh per industri (lib/industryDemo.js) buat user yang tab-nya masih terkunci.
@@ -24,6 +26,12 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy, demoR
       const rows = await db.getAdvisorHistory();
       setHistory(rows);
       setSelected(rows[0]?.run_date || null);
+      // Urutan kartu: lead yang sering dijempol user naik, yang sering di-dislike turun (ref_key = "<tanggal>:<lead_id>").
+      db.getMyAiRatings("advisor").then((ratings) => {
+        const score = {};
+        for (const r of ratings) { const leadId = String(r.ref_key).split(":")[1]; if (leadId) score[leadId] = (score[leadId] || 0) + r.rating; }
+        setLeadScore(score);
+      }).catch(() => {});
     } catch (e) { setError(`Gagal muat histori: ${e.message}`); }
     finally { setLoading(false); }
   };
@@ -68,7 +76,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy, demoR
   };
 
   const current = history.find((h) => h.run_date === selected);
-  const recs = current?.recs || [];
+  const recs = [...(current?.recs || [])].sort((a, b) => (leadScore[b.id] || 0) - (leadScore[a.id] || 0));
 
   return (
     <div>
@@ -119,6 +127,7 @@ export default function Advisor({ leads, stages, onApplied, onOpen, dummy, demoR
                       </div>
                     </div>
                     <p className="text-sm text-slate-600 mt-2">{r.assessment}</p>
+                    {!dummy && <div className="mt-2 flex justify-end"><FeedbackThumbs feature="advisor" refKey={`${selected}:${r.id}`} /></div>}
                     <div className="text-sm mt-1.5 flex items-start gap-1.5 text-orange-800 bg-orange-50 rounded-xl px-3 py-2"><Lightbulb size={14} className="mt-0.5 shrink-0 text-orange-500" /> <span><b>Rekomendasi:</b> {r.action}</span></div>
                     {Array.isArray(r.steps) && r.steps.length > 0 && <ul className="mt-2 space-y-1 pl-1">{r.steps.map((st, si) => <li key={si} className="text-xs text-slate-600 flex items-start gap-1.5"><span className="text-orange-500 mt-px">•</span><span>{st}</span></li>)}</ul>}
 

@@ -631,8 +631,9 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
         }
         const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
         const myPlanLevel = orgPlanRow?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settingsRow?.plan] ?? 0);
-        if (myPlanLevel < 1) {
-          console.log("[digest] skip, plan Free (bukan Standard+):", u.id);
+        // Digest AI khusus Professional ke atas (17 Okt 2026, keputusan Nando). Standard dan Free tidak mendapatkannya.
+        if (myPlanLevel < 2) {
+          console.log("[digest] skip, plan di bawah Professional:", u.id);
           continue;
         }
         if (!forceRun && !onlyUserId && !(await isRecentlyActive(admin, u))) {

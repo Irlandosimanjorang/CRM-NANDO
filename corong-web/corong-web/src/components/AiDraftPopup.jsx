@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { X, Sparkles, MessageCircle, Mail, Copy, Loader2, Send, Lock } from "lucide-react";
 import * as db from "../lib/db";
 import { waLink } from "../lib/helpers";
+import FeedbackThumbs from "./FeedbackThumbs";
 
 // === BUG FIX (5 Sep 2026) ===
 // 1. Draft (WA/Email) sekarang disimpen di server (tabel ai_drafts) SEBELUM
@@ -37,6 +38,7 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState("");
   const [wasCached, setWasCached] = useState(false);
+  const [fbKey, setFbKey] = useState(null); // kunci penilaian jempol untuk draft yang sedang tampil
 
   const runDraft = async (ch) => {
     if (!isProfessional) { setChannel(ch); setError("Draft Follow-up (AI) itu fitur khusus paket Professional ke atas."); return; }
@@ -55,6 +57,7 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
       // komentar BUG FIX di atas). Field `cached` cuma buat info di UI.
       const res = await db.draftFollowup(lead.id, ch);
       setWasCached(!!res.cached);
+      setFbKey(`${lead.id}:${ch}:${res.id || ""}`);
       if (ch === "whatsapp") setWaText(res.message || "");
       else { setEmailSubject(res.subject || ""); setEmailBody(res.body || ""); }
     } catch (e) {
@@ -121,7 +124,7 @@ export default function AiDraftPopup({ lead, rect, onClose, onSent, initialChann
       >
         <div className="px-4 pt-4 pb-3 bg-white border-b border-slate-100 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[11.5px] font-semibold text-ai flex items-center gap-1"><Sparkles size={12} /> Draft follow-up (AI)</div>
+            <div className="flex items-center justify-between gap-2"><div className="text-[11.5px] font-semibold text-ai flex items-center gap-1"><Sparkles size={12} /> Draft follow-up (AI)</div>{fbKey && <FeedbackThumbs feature="draft-followup" refKey={fbKey} snapshot={channel === "whatsapp" ? waText : `Subjek: ${emailSubject}\n\n${emailBody}`} />}</div>
             <div className="font-bold text-slate-900 text-sm mt-0.5 truncate">{lead.name}</div>
           </div>
           <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-slate-600"><X size={16} /></button>

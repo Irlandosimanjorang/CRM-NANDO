@@ -36,6 +36,12 @@ export default function MarketingAdsPanel({ leads = [], dealTransactions = [], m
       .catch((e) => setErr(e.message || "Gagal memuat pengeluaran iklan"));
   };
   useEffect(load, [from, to, ym]);
+  // Perubahan iklan, budget, atau lead dari tim marketing (realtime) langsung masuk ke panel ini.
+  useEffect(() => {
+    const onData = () => load();
+    window.addEventListener("nexto-data-changed", onData);
+    return () => window.removeEventListener("nexto-data-changed", onData);
+  }, [from, to, ym]);
 
   useEffect(() => { if (!fUser) setFUser(myUid || members[0]?.user_id || ""); }, [myUid, members, fUser]);
 

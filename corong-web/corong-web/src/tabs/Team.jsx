@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail, CheckCircle2, X, ChevronDown } from "lucide-react";
 import * as db from "../lib/db";
 import TeamLeaderboard from "../components/TeamLeaderboard";
+import ShareGrantCard from "../components/ShareGrantCard";
+import SharedOrgTeam from "../components/SharedOrgTeam";
 import ChatSlaCard from "../components/ChatSlaCard";
 import { PanelHeader } from "../ui";
 import { isThinNote } from "../lib/noteQuality";
@@ -258,7 +260,7 @@ function DayBars({ days, selected, onSelect }) {
 
 // ---------- Tab Team ----------
 
-export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage, onChanged, projectDeal = false }) {
+export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage, onChanged, projectDeal = false, isOwner = false }) {
   const api = db;
   const [range, setRange] = useState("week");
   const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
@@ -333,7 +335,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
           <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">Team</h1>
           <p className="mt-0.5 text-[12px] text-slate-500">Aktivitas dan target tiap anggota. Hasil penjualan ada di tab Report. Khusus owner dan manager.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <SharedOrgTeam />
           <Segmented options={RANGES.map((r) => [r.key, r.label])} value={range} onChange={setRange} />
           <button onClick={load} disabled={loading} className="rounded-inner border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-slate-900 disabled:opacity-50" title="Muat ulang" aria-label="Muat ulang">
             <RefreshCw size={14} className={loading ? "motion-safe:animate-spin" : ""} />
@@ -467,6 +470,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} projectDeal={projectDeal} />
+
+      {isOwner && <ShareGrantCard />}
 
       {activityFor && (
         <MemberActivityModal

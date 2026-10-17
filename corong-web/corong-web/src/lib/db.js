@@ -618,6 +618,28 @@ export async function getProductCatalog() {
   if (error) throw error;
   return data || { company_profile: "", products: [] };
 }
+// ---- BAGI DATA LINTAS ORG (17 Okt 2026): owner mengizinkan org terhubung (sister company) membaca datanya, read-only. ----
+export async function getShareGrantTargets() {
+  const { data, error } = await supabase.rpc("get_share_grant_targets");
+  if (error) throw error;
+  return data || [];
+}
+export async function setShareGrant(granteeOrgId, enabled) {
+  const { error } = await supabase.from("share_grants").update({ enabled, updated_at: new Date().toISOString() }).eq("grantee_org_id", granteeOrgId);
+  if (error) throw error;
+}
+// Izin masuk: org mana saja yang mengizinkan org saya melihat datanya (dipakai untuk menampilkan tombol di tab Team).
+export async function getIncomingShareGrants() {
+  const { data, error } = await supabase.rpc("get_incoming_share_grants");
+  if (error) throw error;
+  return data || [];
+}
+export async function getSharedOrgSnapshot(orgId) {
+  const { data, error } = await supabase.rpc("get_shared_org_snapshot", { p_org: orgId });
+  if (error) throw error;
+  return data;
+}
+
 // ---- RENCANA TIM (16 Okt 2026): rencana kegiatan per tanggal, sesuai aturan RLS tabel rencana. ----
 export async function listRencana(from, to) {
   const { data, error } = await supabase.from("rencana").select("*").gte("plan_date", from).lte("plan_date", to).order("plan_date").order("created_at");
@@ -929,7 +951,11 @@ export async function upsertLead(lead) {
     visit_mode: lead.visit_mode === "online" ? "online" : "offline",
     deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
     // No. SPH dan total diskon (15 Okt 2026): diisi saat pindah ke Proyek Deal atau di LeadModal.
-    sph_number: (lead.sph_number || "").trim(), discount_total: Number(lead.discount_total) || 0,
+    // Diskon diisi dalam persen (17 Okt 2026, BSB): nominal Rp dihitung dari persen terhadap nilai proyek.
+    sph_number: (lead.sph_number || "").trim(),
+    ...(Number(lead.discount_pct) > 0
+      ? { discount_pct: Number(lead.discount_pct), discount_total: Math.round((Number(lead.deal_value) || 0) * Number(lead.discount_pct) / 100) }
+      : { discount_pct: null, discount_total: Number(lead.discount_total) || 0 }),
     last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
   };
   let saved;
@@ -1808,6 +1834,31 @@ export async function deleteReply(id) {
 export async function getCurrentUserId() {
   const { data } = await supabase.auth.getUser();
   return data?.user?.id || null;
+}
+
+// ---- JEMPOL AI (17 Okt 2026): penilaian like/dislike per user untuk digest, draft, dan fitur AI lain. ----
+export async function getMyAiRating(feature, refKey) {
+  const uid = await getCurrentUserId();
+  if (!uid) return null;
+  const { data, error } = await supabase.from("ai_feedback").select("rating").eq("user_id", uid).eq("feature", feature).eq("ref_key", refKey).maybeSingle();
+  if (error) throw error;
+  return data?.rating ?? null;
+}
+export async function setAiRating(feature, refKey, rating, snapshot = null) {
+  const uid = await getCurrentUserId();
+  const orgId = await getMyOrgId();
+  if (!uid || !orgId) throw new Error("Belum login.");
+  const row = { org_id: orgId, user_id: uid, feature, ref_key: refKey, rating, updated_at: new Date().toISOString() };
+  if (snapshot !== null) row.snapshot = snapshot;
+  const { error } = await supabase.from("ai_feedback").upsert(row, { onConflict: "user_id,feature,ref_key" });
+  if (error) throw error;
+}
+export async function getMyAiRatings(feature) {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data, error } = await supabase.from("ai_feedback").select("ref_key, rating").eq("user_id", uid).eq("feature", feature);
+  if (error) throw error;
+  return data || [];
 }
 
 // ---- DATA CLEANUP ----

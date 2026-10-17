@@ -392,7 +392,11 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
       </div>
 
       <div className="bg-white border border-slate-100 rounded-panel p-5">
-        {/* Penghitung kuota tidak ditampilkan ke pengguna (6 Okt 2026, permintaan Nando) - dipantau admin di Command Center. */}
+        {/* Keterangan kuota (17 Okt 2026, permintaan Nando): batas 4x per periode ditampilkan ke pengguna. */}
+        <p className="mb-3 text-[12px] text-slate-500">
+          Kuota Generate Leads: <b className="text-slate-800">{Math.max(0, cooldown.quotaMax - cooldown.usedThisMonth)} dari {cooldown.quotaMax}</b> pencarian tersisa untuk periode ini.
+          {cooldown.addonTokens > 0 ? ` Token tambahan: ${cooldown.addonTokens}.` : ""}
+        </p>
 
         {!cooldown.canGenerate ? (
           <div className="flex items-center gap-2.5 text-sm text-amber-700 bg-amber-50 rounded-2xl p-4">

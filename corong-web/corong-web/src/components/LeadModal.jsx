@@ -2,6 +2,7 @@ import { useAiOff } from "../lib/aiOff";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
+import FeedbackThumbs from "./FeedbackThumbs";
 import * as db from "../lib/db";
 import LeadConversation from "./LeadConversation";
 import PaymentTermsCard from "./PaymentTermsCard";
@@ -532,6 +533,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               {needsSummary ? (
                 <>
                   <p className="mt-2 text-xs text-slate-700">{needsSummary.summary}</p>
+                  {lead?.id && <div className="mt-1 flex justify-end"><FeedbackThumbs feature="needs-summary" refKey={`lead:${lead.id}`} /></div>}
                   {needsSummary.needs?.length > 0 && (
                     <ul className="mt-2 space-y-1 list-disc list-inside">
                       {needsSummary.needs.map((n, i) => <li key={i} className="text-xs text-slate-700">{n}</li>)}
@@ -607,13 +609,13 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                   />
                 </Field>
                 <Field label="No. SPH *"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101" /></Field>
-                <Field label="Total diskon (Rp)">
+                <Field label={`Total diskon (%)${Number(f.discount_pct) > 0 ? ` · ${Math.round((Number(f.deal_value) || 0) * Number(f.discount_pct) / 100).toLocaleString("id-ID")}` : ""}`}>
                   <input
                     className={inp}
-                    inputMode="numeric"
+                    inputMode="decimal"
                     placeholder="0"
-                    value={Number(f.discount_total) ? Number(f.discount_total).toLocaleString("id-ID") : ""}
-                    onChange={(e) => set("discount_total", Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
+                    value={f.discount_pct ?? ""}
+                    onChange={(e) => set("discount_pct", Math.min(100, Math.max(0, Number(e.target.value.replace(/[^\d.]/g, "")) || 0)) || null)}
                   />
                 </Field>
               </div>

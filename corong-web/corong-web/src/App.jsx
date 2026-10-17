@@ -583,6 +583,12 @@ export default function App() {
         .on("postgres_changes", { event: "*", schema: "public", table: "lead_stage_changes", filter: `org_id=eq.${orgId}` }, refresh)
         .on("postgres_changes", { event: "*", schema: "public", table: "deal_transactions", filter: `org_id=eq.${orgId}` }, refresh)
         .on("postgres_changes", { event: "*", schema: "public", table: "progress_notes", filter: `org_id=eq.${orgId}` }, refresh)
+        // Kunjungan, iklan, budget, target, dan rencana tim marketing juga langsung masuk ke dashboard manager (17 Okt 2026).
+        .on("postgres_changes", { event: "*", schema: "public", table: "visit_checkins", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "ad_expenses", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "ad_budgets", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "sales_targets", filter: `org_id=eq.${orgId}` }, refresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "rencana", filter: `org_id=eq.${orgId}` }, refresh)
         .subscribe();
     } catch (e) {
       console.warn("Realtime aktivitas tim tidak tersedia:", e);
@@ -793,7 +799,7 @@ export default function App() {
     // advisor diturunin ke Standard (16 Sep 2026, permintaan Nando) - daily
     // digest (backend) emang udah lama ngelayanin Standard+ juga, tab
     // Advisor-nya doang yang ketinggalan masih di-lock Professional.
-    generateleads: 2, deal: 2, visitfollowup: 1, kompetitor: 2, advisor: 1,
+    generateleads: 2, deal: 2, visitfollowup: 1, kompetitor: 2, advisor: 2,
   };
 
 
@@ -1140,7 +1146,7 @@ export default function App() {
                 {visitedTabs.has("deal") && (
                   <div style={{ display: effectiveTab === "deal" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("deal")} minLevel={TAB_MIN_LEVEL.deal}>
-                      <Deal leads={isLocked("deal") ? demo.leads : leads} stages={stageList} dealTransactions={isLocked("deal") ? demo.deals : dealTransactions} industry={org?.industry} onEdit={setEditLead} onChanged={reload} />
+                      <Deal leads={isLocked("deal") ? demo.leads : leads} stages={stageList} dealTransactions={isLocked("deal") ? demo.deals : dealTransactions} industry={org?.industry} onEdit={setEditLead} onChanged={reload} projectDeal={hasOrgFeature(org, "project_deal")} />
                     </PreviewLock>
                   </div>
                 )}
@@ -1158,7 +1164,7 @@ export default function App() {
                 )}
                 {visitedTabs.has("team") && isEnterprise && canManage && (
                   <div style={{ display: effectiveTab === "team" ? "block" : "none" }}>
-                    <Team leads={leads} stages={stageList} dealTransactions={dealTransactions} onOpenLead={setEditLead} canManage={canManage} onChanged={reload} projectDeal={hasOrgFeature(org, "project_deal")} />
+                    <Team leads={leads} stages={stageList} dealTransactions={dealTransactions} onOpenLead={setEditLead} canManage={canManage} onChanged={reload} projectDeal={hasOrgFeature(org, "project_deal")} isOwner={!!(org && session?.user?.id && org.owner_user_id === session.user.id)} />
                   </div>
                 )}
                 {visitedTabs.has("kompetitor") && (

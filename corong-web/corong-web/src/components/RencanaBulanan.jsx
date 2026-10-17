@@ -34,6 +34,12 @@ export default function RencanaBulanan({ ym, members = [], canManage = false }) 
     db.listRencana(from, to).then(setItems).catch((e) => setErr(e.message || "Gagal memuat rencana"));
   };
   useEffect(load, [from, to]);
+  // Rencana yang ditambah tim marketing (realtime) langsung muncul di kalender manager.
+  useEffect(() => {
+    const onData = () => load();
+    window.addEventListener("nexto-data-changed", onData);
+    return () => window.removeEventListener("nexto-data-changed", onData);
+  }, [from, to]);
   useEffect(() => { db.getCurrentUserId().then(setMyUid).catch(() => setMyUid(null)); }, []);
   useEffect(() => { setSelected(null); }, [ym]);
 

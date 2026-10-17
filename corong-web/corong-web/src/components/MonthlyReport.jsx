@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Printer, Presentation } from "lucide-react";
+import { downloadReportPpt } from "../lib/reportPpt";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
@@ -323,6 +324,60 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
     w.focus(); setTimeout(() => w.print(), 300);
   };
 
+  const [sheetsSoon, setSheetsSoon] = useState(false);
+  // Unduh PowerPoint (17 Okt 2026, permintaan Nando): tombol untuk akun tim marketing (tampilan pribadi), bukan manager.
+  const downloadPpt = async () => {
+    try {
+      const deals = [...r.dealRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      await downloadReportPpt({
+        orgId: org?.id || null,
+        orgName: org?.name || "",
+        who: personal ? "Laporan pribadi" : scopeId === "all" ? "Semua tim" : scopeName,
+        periodLabel,
+        fmtRp,
+        pct,
+        filtered,
+        target,
+        extra: {
+          prevDeal,
+          lostCount: r.lostCount,
+          lostValue: r.lostValue,
+          runningValue: r.runningValue,
+          running: r.running.map((l) => ({ name: l.name, value: num(l.deal_value), stage: stages.find((s) => s.key === l.stage_key)?.label || l.stage_key })),
+        },
+        summary: {
+          dealValue: r.dealValue, dealCount: deals.length, masuk: r.masuk.length,
+          sphCount: r.sphCount, sphValue: r.sphValue, hotCount: r.hotCount, hotValue: r.hotValue,
+        },
+        deals: deals.map((d) => ({ date: d.date, name: d.name, value: d.value })),
+        showTeam: !personal && scopeId === "all",
+        // Tampilan pribadi (marketing) tidak pernah menerima data tim lain.
+        team: personal ? [] : team.map((m) => ({ name: m.name, masuk: m.masuk, sph: m.sph, hot: m.hot, deals: m.deals, omzet: m.omzet, target: targetOf(m.id) })),
+      });
+    } catch (e) {
+      setErr(e.message || "Gagal membuat PowerPoint");
+    }
+  };
+  // Ekspor Excel (17 Okt 2026): ringkasan periode dan daftar deal sesuai filter yang sedang aktif.
+  const exportExcel = async () => {
+    const XLSX = await import("xlsx");
+    const wb = XLSX.utils.book_new();
+    const nameOf = (id) => members.find((m) => m.user_id === id)?.display_name || "";
+    const summary = [
+      ["Ringkasan"],
+      ["Periode", periodLabel],
+      ["Cakupan", personal ? (org?.name || "") : (scopeName || "Semua tim")],
+      ["Omzet", r.dealValue],
+      ["Target", target],
+      ["Capaian (%)", target > 0 ? Math.round((r.dealValue / target) * 100) : ""],
+      ["Jumlah deal", r.dealRows.length],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), "Ringkasan");
+    const deals = r.dealRows.map((d) => ({ Tanggal: d.date, Lead: d.name, Nilai: d.value, Marketing: nameOf(d.lead?.assigned_to || d.lead?.user_id) }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(deals.length ? deals : [{ Tanggal: "", Lead: "Belum ada deal", Nilai: 0, Marketing: "" }]), "Deal");
+    XLSX.writeFile(wb, `nexto-report-${ym}.xlsx`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -331,6 +386,27 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
           {[["penjualan", "Penjualan"], ["rekap", "Rekap"], ...(personal ? [] : [["iklan", "Iklan"]]), ["rencana", "Rencana"]].map(([k, l]) => (
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
           ))}
+        </div>
+        <button type="button" onClick={exportExcel} className={cn("rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}>Unduh Excel</button>
+        {/* Sinkron ke Google Sheets (17 Okt 2026): belum aktif, klik hanya menampilkan pemberitahuan. */}
+        <div className="relative">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={false}
+            onClick={() => setSheetsSoon(true)}
+            className={cn("inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}
+          >
+            <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-slate-300"><span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" /></span>
+            Sinkron Google Sheets
+          </button>
+          {sheetsSoon && (
+            <div role="dialog" aria-label="Sinkron Google Sheets" className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 text-[12px] text-slate-700 shadow-lg">
+              <p className="font-semibold text-ink">Sedang dipersiapkan</p>
+              <p className="mt-1 text-slate-500">Sinkron otomatis ke Google Sheets akan tersedia setelah persiapan selesai. Untuk sekarang, gunakan tombol Unduh Excel.</p>
+              <button type="button" onClick={() => setSheetsSoon(false)} className="mt-2 rounded-lg bg-slate-900 px-3 py-1.5 text-[11.5px] font-semibold text-white">Mengerti</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -391,6 +467,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             </>
           )}
           {view === "penjualan" && <button type="button" onClick={printReport} title="Cetak / simpan PDF" aria-label="Cetak atau simpan PDF" className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50", focus)}><Printer size={14} /></button>}
+          {view === "penjualan" && personal && <button type="button" onClick={downloadPpt} className={cn("inline-flex h-8 items-center gap-1.5 rounded-full bg-ink px-3 text-[12px] font-semibold text-white hover:bg-slate-800", focus)}><Presentation size={14} /> Unduh PPT</button>}
         </div>
       </div>
 
