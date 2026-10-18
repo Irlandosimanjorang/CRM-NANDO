@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
 import * as db from "../lib/db";
 
 // Kartu "Performa Perusahaan" di Dashboard - khusus sales_rep plan Enterprise
@@ -100,7 +99,7 @@ export default function CompanyPerformanceCard() {
     const ht = view.company ? view.company.target : view.me.target;
     const hd = view.company ? view.company.deals : view.me.deals;
     const hp = ht > 0 ? Math.min(100, Math.round((hv / ht) * 100)) : 0;
-    const ring = 2 * Math.PI * 18;
+    const ring = 2 * Math.PI * 24;
     const done = hp >= 100;
     return (
       <section className="rounded-panel border border-white/10 bg-[#0b1220] p-4 text-white shadow-lg">
@@ -122,27 +121,26 @@ export default function CompanyPerformanceCard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <div className="font-display text-[19px] font-bold leading-none tabular-nums text-amber-300">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</div>
-              <div className="mt-1 text-[11px] tabular-nums text-white/50">{ht > 0 ? "dari target" : "target belum ditetapkan"} · {hd} deal</div>
+              <div className="text-[11px] tabular-nums text-white/50">{ht > 0 ? "dari target" : "target belum ditetapkan"} · {hd} deal</div>
             </div>
-            <span className="relative grid h-11 w-11 place-items-center">
-              <svg width="44" height="44" viewBox="0 0 44 44" className="absolute inset-0" aria-hidden="true">
-                <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
+            <span className="relative grid h-14 w-14 place-items-center">
+              <svg width="56" height="56" viewBox="0 0 56 56" className="absolute inset-0" aria-hidden="true">
+                <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
                 <circle
-                  cx="22"
-                  cy="22"
-                  r="18"
+                  cx="28"
+                  cy="28"
+                  r="24"
                   fill="none"
                   stroke={done ? "#34d399" : "#f59e0b"}
                   strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray={ring}
                   strokeDashoffset={ring * (1 - hp / 100)}
-                  transform="rotate(-90 22 22)"
+                  transform="rotate(-90 28 28)"
                   style={{ transition: "stroke-dashoffset 900ms ease", filter: done ? "drop-shadow(0 0 6px rgba(52,211,153,0.8))" : undefined }}
                 />
               </svg>
-              <ChevronDown size={16} className="relative text-white/80" />
+              <span className="relative text-[12.5px] font-bold tabular-nums text-white">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
             </span>
           </div>
         </button>
