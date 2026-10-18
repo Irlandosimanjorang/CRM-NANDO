@@ -42,27 +42,14 @@ function OmzetChart({ labels, values, aktif, onPilih, rpRevealed }) {
   const tinggi = bawah - atas;
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-52 w-full overflow-visible" role="img" aria-label="Grafik omzet 6 bulan terakhir">
+      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full overflow-visible" role="img" aria-label="Grafik omzet 6 bulan terakhir">
         <defs>
           <linearGradient id="deal-batang-aktif" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#fdba74" />
             <stop offset="100%" stopColor="#f97316" />
           </linearGradient>
-          <linearGradient id="deal-batang-lain" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#475569" />
-            <stop offset="100%" stopColor="#1e293b" />
-          </linearGradient>
-          <filter id="deal-cahaya" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="6" result="kabur" />
-            <feMerge>
-              <feMergeNode in="kabur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
-        {[0, 0.5, 1].map((f) => (
-          <line key={f} x1="0" x2={W} y1={bawah - f * tinggi} y2={bawah - f * tinggi} stroke="#1e293b" strokeWidth="1" strokeDasharray={f === 0 ? undefined : "3 6"} />
-        ))}
+        <line x1="0" x2={W} y1={bawah} y2={bawah} stroke="#1e293b" strokeWidth="1" />
         {values.map((v, i) => {
           const x = i * (bw + celah);
           const h = v > 0 ? Math.max(6, (v / maks) * tinggi) : 3;
@@ -76,14 +63,13 @@ function OmzetChart({ labels, values, aktif, onPilih, rpRevealed }) {
                 y={bawah - h}
                 width={bw}
                 height={h}
-                rx="7"
-                fill={on ? "url(#deal-batang-aktif)" : "url(#deal-batang-lain)"}
-                filter={on ? "url(#deal-cahaya)" : undefined}
-                opacity={redup ? 0.4 : 1}
+                rx="4"
+                fill={on ? "url(#deal-batang-aktif)" : "#334155"}
+                opacity={redup ? 0.35 : 1}
                 className="transition-[transform,opacity] duration-700 ease-out motion-reduce:transition-none"
                 style={{ transformBox: "fill-box", transformOrigin: "50% 100%", transform: siap ? "scaleY(1)" : "scaleY(0)", transitionDelay: `${i * 70}ms` }}
               />
-              <text x={x + bw / 2} y={H - 2} textAnchor="middle" fontSize="12" fill={on ? "#fdba74" : "#94a3b8"}>{labelBulanSingkat(labels[i])}</text>
+              <text x={x + bw / 2} y={H - 2} textAnchor="middle" fontSize="11" fontWeight={on ? "600" : "400"} fill={on ? "#fdba74" : "#64748b"}>{labelBulanSingkat(labels[i])}</text>
             </g>
           );
         })}
