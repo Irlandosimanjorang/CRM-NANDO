@@ -71,6 +71,25 @@ export async function switchDemoIndustry(industryKey) {
 // UUID mentah ("Anggota 45dadf81") yang gak kebaca sama sekali.
 // Rekap aktivitas tim (tab "Tim", 30 Sep 2026) - khusus owner/manager
 // Enterprise, dicek ulang di RPC-nya. Balikin { members: [...], feed: [...] }.
+// Riwayat perpindahan tahap seluruh lead org, urut waktu. Dipakai untuk jejak tahap di tab Deal.
+export async function getStageHistory() {
+  const PAGE_SIZE = 1000;
+  let rows = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("lead_stage_changes")
+      .select("lead_id, from_stage, to_stage, changed_at")
+      .order("changed_at", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows = rows.concat(data || []);
+    if (!data || data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return rows;
+}
+
 // Deal (lead menang dengan tanggal deal di rentang from..to, format YYYY-MM-DD) langsung dari server.
 // Sumber yang sama dengan Rekap aktivitas tim, supaya angka Report tidak bergantung pada daftar lead di aplikasi.
 export async function getDealsRange(from, to) {

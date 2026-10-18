@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Trophy, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
@@ -23,6 +23,27 @@ function qtyTotals(deals, units) {
   return Object.entries(byUnit).map(([u, n]) => ({ unit: u, n }));
 }
 
+// Bulan dalam format YYYY-MM -> "Oktober 2026".
+const namaBulan = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+const labelBulanSingkat = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "short" });
+
+// Grafik garis kecil omzet 6 bulan. Satu-satunya elemen yang menonjol: titik bulan ini.
+function Sparkline({ values }) {
+  const w = 156, h = 46, pad = 5;
+  const max = Math.max(1, ...values);
+  const step = values.length > 1 ? (w - pad * 2) / (values.length - 1) : 0;
+  const pts = values.map((v, i) => [pad + i * step, h - pad - (v / max) * (h - pad * 2)]);
+  const d = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Omzet 6 bulan terakhir" className="overflow-visible">
+      <line x1={pad} x2={w - pad} y1={h - pad} y2={h - pad} stroke="#e2e8f0" strokeWidth="1" />
+      <path d={d} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={lx} cy={ly} r="3.5" fill="#f97316" />
+    </svg>
+  );
+}
+
 export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged, projectDeal = false }) {
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
   const units = getQuantityUnits(industry);
@@ -30,6 +51,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const [rpRevealed, setRpRevealed] = useState(false);
   const [expanded, setExpanded] = useState(new Set());
   const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
+  const labelTahap = useMemo(() => Object.fromEntries((stages || []).map((s) => [s.key, s.label])), [stages]);
 
   // Satu aturan deal di semua tab: hanya transaksi milik lead yang sekarang di tahap menang yang ditampilkan.
   // Total nilai = jumlah deal_value lead menang (sama dengan Report dan Komisi).
@@ -42,7 +64,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const totals = qtyTotals(deals, units);
 
   // 1 baris per lead menang. Nilai baris = deal_value lead (satu aturan deal di semua tab).
-  // Transaksi di bawahnya (repeat order) hanya rincian, tidak dijumlah lagi. Dibuka lewat ikon panah.
+  // Transaksi di bawahnya (repeat order) hanya rincian, tidak dijumlah lagi.
   const groups = useMemo(() => {
     const txByLead = {};
     for (const t of deals) (txByLead[t.lead_id] ||= []).push(t);
@@ -56,13 +78,73 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
       .sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
   }, [deals, wonIds, leadsById]);
 
+  // Dikelompokkan per bulan deal (terbaru di atas), dengan subtotal dan nilai terbesar tiap bulan.
+  const bulanKey = (g) => String(g.lead?.deal_date || g.txs[0]?.deal_date || "").slice(0, 7);
+  const monthGroups = useMemo(() => {
+    const map = new Map();
+    for (const g of groups) {
+      const ym = bulanKey(g) || "Tanpa tanggal";
+      if (!map.has(ym)) map.set(ym, []);
+      map.get(ym).push(g);
+    }
+    return [...map.entries()].map(([ym, items]) => {
+      const nilai = items.map((g) => Number(g.lead?.deal_value) || 0);
+      return { ym, items, total: nilai.reduce((a, b) => a + b, 0), max: Math.max(0, ...nilai) };
+    });
+  }, [groups]);
+
+  // Enam bulan terakhir (WIB) untuk grafik omzet di ringkasan.
+  const bulanIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }).slice(0, 7);
+  const enamBulan = useMemo(() => {
+    const [y, m] = bulanIni.split("-").map(Number);
+    return Array.from({ length: 6 }, (_, i) => new Date(Date.UTC(y, m - 1 - (5 - i), 1)).toISOString().slice(0, 7));
+  }, [bulanIni]);
+  const omzetPerBulan = useMemo(() => {
+    const map = Object.fromEntries(enamBulan.map((k) => [k, 0]));
+    for (const g of groups) {
+      const k = bulanKey(g);
+      if (k in map) map[k] += Number(g.lead?.deal_value) || 0;
+    }
+    return enamBulan.map((k) => map[k]);
+  }, [groups, enamBulan]);
+
+  // Jejak tahap per lead, dari riwayat perpindahan tahap. Dimuat ulang saat data tim berubah.
+  const [riwayat, setRiwayat] = useState({});
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const onData = () => setTick((n) => n + 1);
+    window.addEventListener("nexto-data-changed", onData);
+    return () => window.removeEventListener("nexto-data-changed", onData);
+  }, []);
+  useEffect(() => {
+    let alive = true;
+    db.getStageHistory()
+      .then((rows) => {
+        if (!alive) return;
+        const map = {};
+        for (const r of rows) (map[r.lead_id] ||= []).push(r);
+        setRiwayat(map);
+      })
+      .catch(() => { if (alive) setRiwayat({}); });
+    return () => { alive = false; };
+  }, [tick]);
+
+  // Langkah jejak tahap: tahap berurutan, tanpa pengulangan tahap yang sama berturut-turut.
+  const jejakOf = (leadId) => {
+    const steps = [];
+    for (const r of riwayat[leadId] || []) {
+      if (!r.to_stage) continue;
+      if (steps.length && steps[steps.length - 1].to === r.to_stage) continue;
+      steps.push({ to: r.to_stage, at: r.changed_at });
+    }
+    return steps;
+  };
+
   const toggleExpand = (leadId) => setExpanded((prev) => { const n = new Set(prev); n.has(leadId) ? n.delete(leadId) : n.add(leadId); return n; });
 
   // BUG FIX (11 Sep 2026, ketauan pas audit) - klik ganda cepet di tombol
   // hapus sebelumnya bisa nembak 2x db.deleteDealTransaction buat id yang
-  // sama sebelum list sempet re-render, bikin panggilan kedua gagal (row
-  // udah gak ada) & muncul alert "Gagal hapus" yang gak perlu. Digurad
-  // pake Set id yang lagi diproses.
+  // sama sebelum list sempet re-render. Digurad pake Set id yang lagi diproses.
   const [deletingTxIds, setDeletingTxIds] = useState(() => new Set());
   const delTx = async (id) => {
     if (deletingTxIds.has(id)) return;
@@ -73,9 +155,124 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     finally { setDeletingTxIds((prev) => { const n = new Set(prev); n.delete(id); return n; }); }
   };
 
-
   const mask = "••••••";
   const bagikan = (rp) => (rp ? (rpRevealed ? fmtRp(rp) : mask) : "—");
+
+  const renderRow = (g, maxBulan) => {
+    const lead = g.lead;
+    const sm = lead ? stageMeta(stages, lead.stage_key) : null;
+    const latest = g.txs[0];
+    const isOpen = expanded.has(g.leadId);
+    const nilai = Number(lead?.deal_value) || 0;
+    const tanggal = lead?.deal_date || latest?.deal_date;
+    const jejak = jejakOf(g.leadId);
+    const punyaRincian = g.txs.length > 1;
+    const bisaBuka = punyaRincian || jejak.length > 0;
+    const durasi = jejak.length > 1 ? Math.round((Date.parse(jejak[jejak.length - 1].at) - Date.parse(jejak[0].at)) / 86400000) : null;
+    return (
+      <li key={g.leadId} className="py-4">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-6 gap-y-2 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto]">
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={() => lead && onEdit(lead)}
+              className="block max-w-full truncate rounded text-left text-[15px] font-semibold tracking-[-0.01em] text-ink hover:text-orange-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
+            >
+              {lead?.name || latest?.lead_name || "—"}
+            </button>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+              {lead?.city && <span>{lead.city}</span>}
+              {lead?.sales_owner && <span>{lead.sales_owner}</span>}
+              {tanggal && <span className="tabular-nums">{fmtDate(tanggal)}</span>}
+              {projectDeal && lead?.sph_number && <span>SPH {lead.sph_number}</span>}
+              {projectDeal && Number(lead?.discount_pct) > 0 && <span>Diskon {Number(lead.discount_pct)}%</span>}
+            </div>
+          </div>
+
+          <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
+            {sm && <span className="rounded-full border px-2.5 py-0.5 text-[11.5px] font-medium" style={chipStyle(sm.hex)}>{sm.label}</span>}
+            {(latest?.product_type || latest?.chemical) && (
+              <span className="truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-[11.5px] font-medium text-slate-700">{latest.product_type || latest.chemical}</span>
+            )}
+            {typeBadge(lead?.company_type) && <span className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{typeBadge(lead.company_type)}</span>}
+          </div>
+
+          <div className="text-right">
+            <div className="font-display text-[18px] font-bold leading-none tracking-[-0.02em] tabular-nums text-ink">{bagikan(nilai)}</div>
+            <div className="ml-auto mt-2 h-1 w-20 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+              <div className="h-full rounded-full bg-orange-400" style={{ width: `${maxBulan > 0 ? (nilai / maxBulan) * 100 : 0}%` }} />
+            </div>
+            {bisaBuka && (
+              <button
+                type="button"
+                onClick={() => toggleExpand(g.leadId)}
+                aria-expanded={isOpen}
+                className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-slate-500 hover:text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
+              >
+                {punyaRincian ? `${g.txs.length} transaksi` : "Jejak tahap"}
+                {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {isOpen && bisaBuka && (
+          <div className="mt-4 border-l-2 border-orange-200 pl-4">
+            {jejak.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[11.5px] font-medium text-slate-500">
+                  Jejak tahap{durasi !== null ? `, ${durasi} hari dari awal sampai sekarang` : ""}
+                </p>
+                <ol className="mt-3 flex flex-wrap items-start gap-x-5 gap-y-3">
+                  {jejak.map((s, i) => {
+                    const terakhir = i === jejak.length - 1;
+                    return (
+                      <li key={`${s.to}-${i}`} className="min-w-[6rem]">
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${terakhir ? "bg-orange-500" : "bg-slate-300"}`} aria-hidden="true" />
+                          <span className={`text-[12px] ${terakhir ? "font-semibold text-ink" : "text-slate-600"}`}>{labelTahap[s.to] || s.to}</span>
+                        </div>
+                        <div className="ml-4 text-[11px] tabular-nums text-slate-400">{fmtDate(String(s.at).slice(0, 10))}</div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            )}
+
+            {punyaRincian && (
+              <>
+                <p className="text-[11.5px] text-slate-400">Rincian transaksi. Nilai ini tidak dijumlahkan lagi ke total.</p>
+                <ul className="mt-2 divide-y divide-slate-100">
+                  {g.txs.map((t) => (
+                    <li key={t.id} className="flex items-center justify-between gap-4 py-2 text-[12.5px]">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
+                        <span className="tabular-nums">{t.deal_date ? fmtDate(t.deal_date) : "—"}</span>
+                        {t.product_type && <span>{t.product_type}</span>}
+                        {units && t.tonnage && <span className="font-mono">{qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : mask}</span>}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3 font-semibold tabular-nums text-slate-800">
+                        {t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : mask) : "—"}
+                        <button
+                          type="button"
+                          onClick={() => delTx(t.id)}
+                          disabled={deletingTxIds.has(t.id)}
+                          aria-label="Hapus transaksi"
+                          className="rounded p-1 text-slate-300 hover:text-rose-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 disabled:opacity-40"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
+      </li>
+    );
+  };
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -110,6 +307,14 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               <p className="mt-2.5 text-[13px] text-slate-500">{groups.length} deal menang</p>
             </div>
 
+            <div className="flex flex-col items-start gap-1.5">
+              <Sparkline values={omzetPerBulan} />
+              <div className="flex w-[156px] justify-between text-[10.5px] text-slate-400">
+                <span>{labelBulanSingkat(enamBulan[0])}</span>
+                <span>{labelBulanSingkat(enamBulan[5])}</span>
+              </div>
+            </div>
+
             {units && (
               <div className="min-w-[10rem]">
                 <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
@@ -127,91 +332,20 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             )}
           </section>
 
-          <ul className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
-            {groups.map((g) => {
-              const lead = g.lead;
-              const sm = lead ? stageMeta(stages, lead.stage_key) : null;
-              const latest = g.txs[0];
-              const isOpen = expanded.has(g.leadId);
-              const nilai = Number(lead?.deal_value) || 0;
-              const tanggal = lead?.deal_date || latest?.deal_date;
-              const punyaRincian = g.txs.length > 1;
-              return (
-                <li key={g.leadId} className="py-4">
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-6 gap-y-2 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto]">
-                    <div className="min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => lead && onEdit(lead)}
-                        className="block max-w-full truncate rounded text-left text-[15px] font-semibold tracking-[-0.01em] text-ink hover:text-orange-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
-                      >
-                        {lead?.name || latest?.lead_name || "—"}
-                      </button>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
-                        {lead?.city && <span>{lead.city}</span>}
-                        {lead?.sales_owner && <span>{lead.sales_owner}</span>}
-                        {tanggal && <span className="tabular-nums">{fmtDate(tanggal)}</span>}
-                        {projectDeal && lead?.sph_number && <span>SPH {lead.sph_number}</span>}
-                        {projectDeal && Number(lead?.discount_pct) > 0 && <span>Diskon {Number(lead.discount_pct)}%</span>}
-                      </div>
-                    </div>
-
-                    <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
-                      {sm && <span className="rounded-full border px-2.5 py-0.5 text-[11.5px] font-medium" style={chipStyle(sm.hex)}>{sm.label}</span>}
-                      {(latest?.product_type || latest?.chemical) && (
-                        <span className="truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-[11.5px] font-medium text-slate-700">{latest.product_type || latest.chemical}</span>
-                      )}
-                      {typeBadge(lead?.company_type) && <span className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{typeBadge(lead.company_type)}</span>}
-                    </div>
-
-                    <div className="text-right">
-                      <div className="font-display text-[18px] font-bold leading-none tracking-[-0.02em] tabular-nums text-ink">{bagikan(nilai)}</div>
-                      {punyaRincian && (
-                        <button
-                          type="button"
-                          onClick={() => toggleExpand(g.leadId)}
-                          aria-expanded={isOpen}
-                          className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-slate-500 hover:text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
-                        >
-                          {g.txs.length} transaksi
-                          {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {isOpen && punyaRincian && (
-                    <div className="mt-4 border-l-2 border-orange-200 pl-4">
-                      <p className="text-[11.5px] text-slate-400">Rincian transaksi. Nilai ini tidak dijumlahkan lagi ke total.</p>
-                      <ul className="mt-2 divide-y divide-slate-100">
-                        {g.txs.map((t) => (
-                          <li key={t.id} className="flex items-center justify-between gap-4 py-2 text-[12.5px]">
-                            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
-                              <span className="tabular-nums">{t.deal_date ? fmtDate(t.deal_date) : "—"}</span>
-                              {t.product_type && <span>{t.product_type}</span>}
-                              {units && t.tonnage && <span className="font-mono">{qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : mask}</span>}
-                            </div>
-                            <div className="flex shrink-0 items-center gap-3 font-semibold tabular-nums text-slate-800">
-                              {t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : mask) : "—"}
-                              <button
-                                type="button"
-                                onClick={() => delTx(t.id)}
-                                disabled={deletingTxIds.has(t.id)}
-                                aria-label="Hapus transaksi"
-                                className="rounded p-1 text-slate-300 hover:text-rose-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 disabled:opacity-40"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          {monthGroups.map(({ ym, items, total, max }) => (
+            <section key={ym} className="mt-9">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="font-display text-[15px] font-semibold text-ink">{ym === "Tanpa tanggal" ? ym : namaBulan(ym)}</h2>
+                <p className="text-[12.5px] tabular-nums text-slate-500">
+                  {items.length} deal
+                  <span className="ml-3 font-semibold text-slate-700">{bagikan(total)}</span>
+                </p>
+              </div>
+              <ul className="mt-3 divide-y divide-slate-200 border-y border-slate-200">
+                {items.map((g) => renderRow(g, max))}
+              </ul>
+            </section>
+          ))}
         </>
       )}
     </div>
