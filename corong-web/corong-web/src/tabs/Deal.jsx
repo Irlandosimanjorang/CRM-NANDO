@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Trophy, Eye, EyeOff, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
@@ -26,69 +27,6 @@ function qtyTotals(deals, units) {
 // Bulan dalam format YYYY-MM -> "Oktober 2026".
 const namaBulan = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 const labelBulanSingkat = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "short" });
-
-// Grafik batang omzet 6 bulan. Batang bulan terpilih menyala, batang lain redup.
-// Batang naik satu per satu saat pertama tampil. Klik batang untuk memilih bulan itu.
-function OmzetChart({ labels, values, aktif, onPilih, rpRevealed }) {
-  const [hover, setHover] = useState(null);
-  const [siap, setSiap] = useState(false);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setSiap(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
-  // Setiap bulan punya slot selebar W / jumlah bulan; batang ramping di tengah slot.
-  const W = 600, H = 200, atas = 24, bawah = 168;
-  const slot = W / labels.length;
-  const bw = 18;
-  const maks = Math.max(1, ...values);
-  const tinggi = bawah - atas;
-  return (
-    <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full overflow-visible" role="img" aria-label="Grafik omzet 6 bulan terakhir">
-        <defs>
-          <linearGradient id="deal-batang-aktif" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#fdba74" />
-            <stop offset="100%" stopColor="#f97316" />
-          </linearGradient>
-        </defs>
-        <line x1="0" x2={W} y1={bawah} y2={bawah} stroke="#1e293b" strokeWidth="1" />
-        {values.map((v, i) => {
-          const x = i * slot + (slot - bw) / 2;
-          // Batang tertinggi dibatasi 70% tinggi area supaya grafik tidak terasa terlalu besar.
-          const h = v > 0 ? Math.max(6, (v / maks) * tinggi * 0.7) : 3;
-          const on = labels[i] === aktif;
-          const redup = hover !== null && hover !== i;
-          return (
-            <g key={labels[i]} className="cursor-pointer" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onClick={() => onPilih(labels[i])}>
-              <rect x={i * slot} y={0} width={slot} height={H} fill="transparent" />
-              <rect
-                x={x}
-                y={bawah - h}
-                width={bw}
-                height={h}
-                rx="4"
-                fill={on ? "url(#deal-batang-aktif)" : "#334155"}
-                opacity={redup ? 0.35 : 1}
-                className="transition-[transform,opacity] duration-700 ease-out motion-reduce:transition-none"
-                style={{ transformBox: "fill-box", transformOrigin: "50% 100%", transform: siap ? "scaleY(1)" : "scaleY(0)", transitionDelay: `${i * 70}ms` }}
-              />
-              <text x={i * slot + slot / 2} y={H - 2} textAnchor="middle" fontSize="11" fontWeight={on ? "600" : "400"} fill={on ? "#fdba74" : "#64748b"}>{labelBulanSingkat(labels[i])}</text>
-            </g>
-          );
-        })}
-      </svg>
-      {hover !== null && (
-        <div
-          className="pointer-events-none absolute top-0 z-10 whitespace-nowrap rounded-xl bg-white px-3 py-2 text-[12px] text-ink shadow-lg"
-          style={{ left: `${((hover * slot + slot / 2) / W) * 100}%`, transform: "translate(-50%, -4px) translateY(-100%)" }}
-        >
-          <div className="font-medium text-slate-500">{namaBulan(labels[hover])}</div>
-          <div className="font-display text-[15px] font-bold tabular-nums">{rpRevealed ? fmtRp(values[hover]) : "••••••"}</div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged, projectDeal = false }) {
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
@@ -220,6 +158,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     finally { setDeletingTxIds((prev) => { const n = new Set(prev); n.delete(id); return n; }); }
   };
 
+  const chartData = enamBulan.map((ym, i) => ({ ym, label: labelBulanSingkat(ym), omzet: omzetPerBulan[i] }));
   const mask = "••••••";
   const bagikan = (rp) => (rp ? (rpRevealed ? fmtRp(rp) : mask) : "—");
 
@@ -433,14 +372,42 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               )}
             </div>
 
-            <div className="relative mt-5 max-w-xl">
-              <div className="mb-2 flex items-center justify-between text-[12px] text-slate-400">
-                <span>Omzet 6 bulan terakhir</span>
-                <span className="hidden sm:inline">Klik batang untuk memilih bulan</span>
-              </div>
-              <OmzetChart labels={enamBulan} values={omzetPerBulan} aktif={bulanPilih} onPilih={(ym) => setBulanPilih(ym)} rpRevealed={rpRevealed} />
-            </div>
           </section>
+          <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[14px] font-bold tracking-[-0.01em] text-ink">Omzet 6 bulan terakhir</p>
+                <p className="mt-0.5 text-[11.5px] text-slate-500">Klik titik untuk memilih bulan</p>
+              </div>
+              <span className="flex items-center gap-1.5 text-[12px] text-slate-500"><span className="h-2 w-2 rounded-full bg-brand" />Omzet</span>
+            </div>
+            <div className="mt-4 h-56 -mx-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 4, right: 8, left: -18, bottom: 0 }}
+                  onClick={(e) => { const ym = e?.activePayload?.[0]?.payload?.ym; if (ym) setBulanPilih(ym); }}
+                >
+                  <defs>
+                    <linearGradient id="dealOmzetGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f97316" stopOpacity={0.22} />
+                      <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="#eef2f7" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={24} hide={!rpRevealed} tickFormatter={(v) => (v >= 1e6 ? `${Math.round(v / 1e6)}jt` : v)} />
+                  <Tooltip
+                    formatter={(v) => (rpRevealed ? fmtRp(v) : "••••••")}
+                    labelFormatter={(label, payload) => (payload?.[0]?.payload?.ym ? namaBulan(payload[0].payload.ym) : label)}
+                    contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                    labelStyle={{ fontWeight: 700, color: "#0f172a" }}
+                  />
+                  <Area type="monotone" dataKey="omzet" name="Omzet" stroke="#f97316" strokeWidth={2} fill="url(#dealOmzetGrad)" dot={{ r: 3, strokeWidth: 0, fill: "#f97316" }} activeDot={{ r: 5, strokeWidth: 0 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
           {monthGroups.filter((g) => bulanPilih === "all" || g.ym === bulanPilih).map(({ ym, items, total, max }) => (
             <section key={ym} className="mt-9">
