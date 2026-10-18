@@ -39,7 +39,7 @@ function OmzetChart({ labels, values, aktif, onPilih, rpRevealed }) {
   // Setiap bulan punya slot selebar W / jumlah bulan; batang ramping di tengah slot.
   const W = 600, H = 200, atas = 24, bawah = 168;
   const slot = W / labels.length;
-  const bw = 12;
+  const bw = 18;
   const maks = Math.max(1, ...values);
   const tinggi = bawah - atas;
   return (
