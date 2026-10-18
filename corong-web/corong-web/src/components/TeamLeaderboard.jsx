@@ -126,6 +126,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
   const [editingRate, setEditingRate] = useState(null); // user_id yang lagi diedit
   const [rateInput, setRateInput] = useState("");
   const [rateBusy, setRateBusy] = useState(false);
+  const [komisiBulan, setKomisiBulan] = useState(null); // YYYY-MM, null = bulan berjalan
 
   useEffect(() => {
     if (!externalMembers) db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
@@ -166,7 +167,14 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
   const picByLeadId = new Map((leads || []).map((l) => [l.id, l.assigned_to || l.user_id]));
   // Bulan berjalan dalam WIB (format YYYY-MM), dicocokkan dengan tanggal deal (YYYY-MM-DD).
   const bulanIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }).slice(0, 7);
-  const inBulanIni = (tanggal) => String(tanggal || "").slice(0, 7) === bulanIni;
+  const bulanKomisi = komisiBulan || bulanIni;
+  const inBulanKomisi = (tanggal) => String(tanggal || "").slice(0, 7) === bulanKomisi;
+  // 12 bulan terakhir (termasuk bulan berjalan) untuk pilihan bulan komisi.
+  const pilihanBulan = Array.from({ length: 12 }, (_, i) => {
+    const [y, mo] = bulanIni.split("-").map(Number);
+    const tgl = new Date(Date.UTC(y, mo - 1 - i, 1));
+    return { key: tgl.toISOString().slice(0, 7), label: tgl.toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }) };
+  });
   const dealPic = (t) => picByLeadId.get(t.lead_id) || t.user_id;
 
   const rows = members
@@ -185,8 +193,8 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
         : myDeals.reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
       // Komisi dihitung per bulan berjalan (WIB), berdasarkan tanggal deal.
       const commissionRevenue = projectDeal
-        ? won.filter((l) => inBulanIni(l.deal_date)).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0)
-        : myDeals.filter((t) => inBulanIni(t.deal_date)).reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
+        ? won.filter((l) => inBulanKomisi(l.deal_date)).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0)
+        : myDeals.filter((t) => inBulanKomisi(t.deal_date)).reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
       const myCheckins = checkins.filter((c) => c.user_id === m.user_id);
       const commissionRate = commissions[m.user_id] ?? 0;
       const commissionAmount = commissionRevenue * (commissionRate / 100);
@@ -283,16 +291,26 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
           manager set rate-nya. */}
       {canManage && (
         <div className="mt-6 border-t border-slate-100 pt-5">
-          <div className="mb-3">
-            <h3 className="text-[14px] font-bold tracking-[-0.02em] text-ink">Komisi team</h3>
-            <p className="mt-0.5 text-[11.5px] text-slate-500">% dari revenue closing bulan ini - atur rate tiap anggota</p>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-[14px] font-bold tracking-[-0.02em] text-ink">Komisi team</h3>
+              <p className="mt-0.5 text-[11.5px] text-slate-500">% dari revenue closing {pilihanBulan.find((p) => p.key === bulanKomisi)?.label} - atur rate tiap anggota</p>
+            </div>
+            <select
+              value={bulanKomisi}
+              onChange={(e) => setKomisiBulan(e.target.value)}
+              className="shrink-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-slate-700 focus:outline-none focus:border-orange-500"
+              aria-label="Pilih bulan komisi"
+            >
+              {pilihanBulan.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
           </div>
           <div className="space-y-2">
             {rows.map((r) => (
               <div key={r.key} className="flex items-center justify-between gap-3 rounded-inner bg-slate-50 px-3.5 py-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[12.5px] font-semibold text-slate-700">{r.name}</div>
-                  <div className="text-[10.5px] text-slate-500">Revenue bulan ini {fmtRp(r.commissionRevenue)}</div>
+                  <div className="text-[10.5px] text-slate-500">Revenue {fmtRp(r.commissionRevenue)}</div>
                 </div>
                 {editingRate === r.uid ? (
                   <div className="flex shrink-0 items-center gap-1.5">
