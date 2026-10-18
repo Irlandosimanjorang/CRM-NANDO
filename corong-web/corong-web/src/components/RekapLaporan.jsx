@@ -124,7 +124,7 @@ export default function RekapLaporan({ leads = [], stages = [], ym, orgName = ""
 
     const sum = (rows) => rows.reduce((t, r) => t + r.value, 0);
     const sphAll = sum(sections[0].rows);
-    return { master, events, sections, prior, sphAll, hotAll: sum(sections[1].rows), dealAll: sum(deals), dealCount: deals.length, sphStageCount: sph.length, hotCount: hot.length, lostCount: lost.length, lostAll: sum(sections.find((x) => x.key === "nodeal").rows), pending: sph.reduce((t, l) => t + num(l.deal_value), 0), masukCount: live.filter((l) => ymOf(wibDate(l.created_at)) === ym).length };
+    return { master, events, sections, prior, sphAll, hotAll: sum(sections[1].rows), dealAll: sum(deals), dealCount: deals.length, sphStageCount: sph.length + hot.length, hotCount: hot.length, lostCount: lost.length, lostAll: sum(sections.find((x) => x.key === "nodeal").rows), pending: [...sph, ...hot].reduce((t, l) => t + num(l.deal_value), 0), masukCount: live.filter((l) => ymOf(wibDate(l.created_at)) === ym).length };
   }, [leads, stages, changes, ym, from, firstKey, month]);
 
   const cells = (r, i) => [
@@ -394,7 +394,7 @@ export default function RekapLaporan({ leads = [], stages = [], ym, orgName = ""
       })()}
 
       <Panel className="overflow-hidden">
-        <div className="px-5 pb-1 pt-4"><PanelHeader title="Ringkasan nilai project dan bobot" meta="Bobot terhadap seluruh nilai SPH, seperti di bagian bawah laporan Excel" /></div>
+        <div className="px-5 pb-1 pt-4"><PanelHeader title="Ringkasan nilai project dan bobot" meta="Bobot terhadap seluruh nilai SPH. Omzet tercapai dibandingkan dengan target." /></div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] border-collapse">
             <thead><tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-500"><th className="px-5 py-2.5 text-left">Keterangan</th><th className="px-4 py-2.5 text-right">Jumlah</th><th className="px-4 py-2.5 text-right">Nilai project</th><th className="px-5 py-2.5 text-right">Bobot</th></tr></thead>
