@@ -4,7 +4,7 @@ import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw
 import * as db from "../lib/db";
 import TeamLeaderboard from "../components/TeamLeaderboard";
 import ShareGrantCard from "../components/ShareGrantCard";
-import SharedOrgTeam from "../components/SharedOrgTeam";
+import SharedOrgTeam, { SharedOrgPage } from "../components/SharedOrgTeam";
 import ChatSlaCard from "../components/ChatSlaCard";
 import { PanelHeader } from "../ui";
 import { isThinNote } from "../lib/noteQuality";
@@ -262,6 +262,8 @@ function DayBars({ days, selected, onSelect }) {
 
 export default function Team({ leads, stages, dealTransactions, onOpenLead, canManage, onChanged, projectDeal = false, isOwner = false }) {
   const api = db;
+  // Tim organisasi lain yang sedang dibuka (halaman read-only), null = tampilan Team biasa.
+  const [sharedOrg, setSharedOrg] = useState(null);
   const [range, setRange] = useState("week");
   const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
   const [activityFor, setActivityFor] = useState(null); // { member, kind: "stage_moves" | "deals" }
@@ -328,6 +330,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
     sky: "bg-sky-400/10 text-sky-200 ring-sky-300/20",
   };
 
+  if (sharedOrg) return <SharedOrgPage org={sharedOrg} onBack={() => setSharedOrg(null)} />;
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -336,7 +340,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
           <p className="mt-0.5 text-[12px] text-slate-500">Aktivitas dan target tiap anggota. Hasil penjualan ada di tab Report. Khusus owner dan manager.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <SharedOrgTeam />
+          <SharedOrgTeam onOpen={setSharedOrg} />
           <Segmented options={RANGES.map((r) => [r.key, r.label])} value={range} onChange={setRange} />
           <button onClick={load} disabled={loading} className="rounded-inner border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-slate-900 disabled:opacity-50" title="Muat ulang" aria-label="Muat ulang">
             <RefreshCw size={14} className={loading ? "motion-safe:animate-spin" : ""} />
