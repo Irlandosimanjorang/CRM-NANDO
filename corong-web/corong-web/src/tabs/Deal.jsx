@@ -207,8 +207,14 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const [expanded, setExpanded] = useState(new Set());
   const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
 
-  const deals = dealTransactions || [];
-  const totalValue = deals.reduce((a, c) => a + (Number(c.deal_value) || 0), 0);
+  // Satu aturan deal di semua tab: hanya transaksi milik lead yang sekarang di tahap menang yang ditampilkan.
+  // Total nilai = jumlah deal_value lead menang (sama dengan Report dan Komisi).
+  const wonIds = useMemo(() => {
+    const wonKeys = new Set((stages || []).filter((s) => s.type === "won").map((s) => s.key));
+    return new Set((leads || []).filter((l) => !l.deleted_at && wonKeys.has(l.stage_key)).map((l) => l.id));
+  }, [leads, stages]);
+  const deals = useMemo(() => (dealTransactions || []).filter((t) => wonIds.has(t.lead_id)), [dealTransactions, wonIds]);
+  const totalValue = useMemo(() => (leads || []).filter((l) => wonIds.has(l.id)).reduce((a, l) => a + (Number(l.deal_value) || 0), 0), [leads, wonIds]);
   const totals = qtyTotals(deals, units);
 
   // Kelompokin semua transaksi per perusahaan - 1 baris per perusahaan di tabel,

@@ -918,7 +918,15 @@ export async function getLeads() {
 // Nama lead selalu disimpan HURUF BESAR (8 Okt 2026, perilaku umum untuk semua organisasi).
 const upperName = (name) => (typeof name === "string" ? name.toUpperCase() : name);
 
+// Batas wajar nilai deal (sama dengan batas di database): 0 sampai 10 miliar.
+const BATAS_NILAI_DEAL = 10000000000;
+function cekNilaiDeal(v) {
+  const n = Number(v) || 0;
+  if (n < 0 || n > BATAS_NILAI_DEAL) throw new Error("Nilai deal harus antara Rp 0 dan Rp 10 miliar. Periksa kembali nilainya.");
+}
+
 export async function upsertLead(lead) {
+  cekNilaiDeal(lead?.deal_value);
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
   const row = {
@@ -1527,6 +1535,7 @@ export async function getOutcomeEvents(fromISO = null, toISO = null) {
 }
 
 export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type }) {
+  cekNilaiDeal(deal_value);
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("deal_transactions").insert({
