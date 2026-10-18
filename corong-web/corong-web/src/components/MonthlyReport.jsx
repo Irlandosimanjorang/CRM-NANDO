@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Printer, Presentation } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Printer, Presentation, Info } from "lucide-react";
 import { downloadReportPpt } from "../lib/reportPpt";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
@@ -52,6 +52,24 @@ function targetStatus({ actual, target, isNow, isPast, elapsed, daysInMonth }) {
   return { forecast, tone: "bad", label: "Berpotensi tidak mencapai target" };
 }
 const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+
+// Penjelasan singkat untuk kartu target: muncul saat ikon (i) diklik.
+const TARGET_INFO = {
+  "Forecast": "Perkiraan omzet sampai akhir bulan, dihitung dari laju omzet sampai hari ini. Mulai dihitung dari hari ke-5.",
+  "Gap ke target": "Omzet sekarang dikurangi target bulan ini. Minus berarti masih kurang.",
+  "Bulan lalu": "Total omzet bulan sebelumnya pada lingkup yang sama.",
+};
+function InfoTip({ text }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button type="button" aria-label="Penjelasan" aria-expanded={open} onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)} className={`ml-1 rounded-full text-slate-400 hover:text-slate-200 ${focus}`}>
+        <Info size={12} />
+      </button>
+      {open && <span role="tooltip" className="absolute left-0 top-full z-20 mt-1.5 w-56 rounded-lg bg-white p-2.5 text-[11px] font-normal leading-relaxed text-slate-700 shadow-lg ring-1 ring-slate-200">{text}</span>}
+    </span>
+  );
+}
 
 export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTxRaw = [], members = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead, projectDeal = false }) {
   // Omzet org project_deal (16 Okt 2026, keputusan Nando): nilai proyek lead di tahap menang, bukan transaksi deal.
@@ -504,7 +522,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                         ["Gap ke target", gap >= 0 ? `+${fmtRp(gap)}` : `-${fmtRp(-gap)}`],
                         ["Bulan lalu", fmtRp(prevDeal)],
                       ].map(([k, v]) => (
-                        <div key={k}><dt className="text-[11.5px] text-slate-400">{k}</dt><dd className="mt-1 text-[16px] font-bold tabular-nums tracking-[-0.02em]">{v}</dd></div>
+                        <div key={k}><dt className="flex items-center text-[11.5px] text-slate-400">{k}<InfoTip text={TARGET_INFO[k]} /></dt><dd className="mt-1 text-[16px] font-bold tabular-nums tracking-[-0.02em]">{v}</dd></div>
                       ))}
                     </dl>
                   )}
