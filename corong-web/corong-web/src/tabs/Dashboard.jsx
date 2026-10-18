@@ -5,8 +5,15 @@ import { NextoRobotHead } from "../Auth";
 import * as db from "../lib/db";
 import CompanyPerformanceCard from "../components/CompanyPerformanceCard";
 import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../ui";
-import { todayISO } from "../lib/helpers";
+
 import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
+import { todayISO } from "../lib/helpers";
+
+// Kartu dashboard: sudut lebih membulat, bayangan lembut, dan jarak dalam lebih lega (gaya kartu Nexto yang baru).
+const DASH_CARD = "rounded-3xl border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(15,23,42,0.14)]";
+function DashPanel({ className = "", ...rest }) {
+  return <Panel className={`${DASH_CARD} ${className}`} {...rest} />;
+}
 
 const cn = (...v) => v.filter(Boolean).join(" ");
 
@@ -311,7 +318,7 @@ export default function Dashboard({
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-5">
         {/* Kolom kiri: tren + kedalaman riwayat */}
         <div className="space-y-5 min-w-0">
-          <Panel className="p-5">
+          <DashPanel className="p-5">
             <PanelHeader title="Tren lead & deal" meta="6 bulan terakhir"
               right={(
                 <div className="flex items-center gap-4 text-[11px] text-slate-500">
@@ -343,9 +350,9 @@ export default function Dashboard({
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </Panel>
+          </DashPanel>
 
-          <Panel className="p-5">
+          <DashPanel className="p-5">
             <PanelHeader title="Kedalaman riwayat lead" meta="Makin banyak catatan, makin tepat saran AI untuk lead tersebut" action="Lihat lead" onAction={() => onGo?.("leads")} />
             {depthTotal > 0 ? (
               <div className="mt-4">
@@ -385,12 +392,12 @@ export default function Dashboard({
                 <Pill>Belum dinilai</Pill>
               )}
             </div>
-          </Panel>
+          </DashPanel>
         </div>
 
         {/* Kolom kanan: yang bisa langsung dikerjakan */}
         <div className="space-y-5 min-w-0">
-          <Panel className="p-5">
+          <DashPanel className="p-5">
             <PanelHeader title="Tugas terdekat" action="Lihat semua" onAction={() => onGo?.("visitfollowup")} />
             {taskList.length ? (
               <ul className="mt-3 -mx-2 divide-y divide-slate-100">
@@ -409,13 +416,13 @@ export default function Dashboard({
             ) : (
               <div className="mt-3"><EmptyState action="Buka Visit & Follow-up" onAction={() => onGo?.("visitfollowup")}>Belum ada tugas. Isi langkah berikutnya atau jadwal kunjungan di lead agar muncul di sini.</EmptyState></div>
             )}
-          </Panel>
+          </DashPanel>
 
           {/* Lead milik user ini yang terbengkalai (2 Okt 2026) - biar sales
               membereskannya sendiri sebelum terlihat owner di tab Team.
               Logika sama dengan panel di tab Team (lib/idleLeads.js). */}
           {myIdle.length > 0 && (
-            <Panel className="p-5">
+            <DashPanel className="p-5">
               <PanelHeader title="Lead Anda yang terbengkalai" meta={`${myIdle.length} lead tanpa progress lebih dari ${IDLE_DAYS} hari`} />
               <ul className="mt-3 -mx-2 divide-y divide-slate-100">
                 {myIdle.slice(0, 5).map((l) => (
@@ -431,10 +438,10 @@ export default function Dashboard({
                 ))}
               </ul>
               {myIdle.length > 5 && <p className="mt-2 text-[11.5px] text-slate-500">dan {myIdle.length - 5} lead lainnya. Yang paling dekat closing ditampilkan lebih dulu.</p>}
-            </Panel>
+            </DashPanel>
           )}
 
-          <Panel className="p-5">
+          <DashPanel className="p-5">
             <PanelHeader title="Lead prioritas" action="Lihat semua" onAction={() => onGo?.("leads")} />
             {keyAccounts.length ? (
               <ul className="mt-3 -mx-2">
@@ -466,20 +473,20 @@ export default function Dashboard({
                 ))}
               </div>
             </div>
-          </Panel>
+          </DashPanel>
         </div>
       </div>
 
       {/* (30 Sep 2026) Performa Team ada di tab "Team" (owner/manager
           Enterprise) - Dashboard cukup nampilin pintasan ke sana. */}
       {isEnterprise && canManage && (
-        <Panel as="button" onClick={() => onGo?.("team")} className="w-full px-5 py-4 flex items-center gap-3 text-left hover:border-brand-line transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+        <DashPanel as="button" onClick={() => onGo?.("team")} className="w-full px-5 py-4 flex items-center gap-3 text-left hover:border-brand-line transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-bold text-ink">Rekap aktivitas & performa team</div>
             <div className="text-[11.5px] text-slate-500">Kunjungan, notulen, target, dan kontrak setiap sales ada di tab Team.</div>
           </div>
           <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-strong">Buka tab Team <ArrowRight size={13} /></span>
-        </Panel>
+        </DashPanel>
       )}
 
       <p className="pb-2 text-center text-[11.5px] text-slate-500">"Discipline in follow-up creates freedom in revenue." - Nexto</p>
