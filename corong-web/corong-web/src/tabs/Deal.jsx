@@ -315,32 +315,6 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             </div>
           </div>
 
-          {bulanPilih !== "all" && (
-            <dl className="mt-5 grid grid-cols-2 gap-x-8 gap-y-4 border-y border-slate-200 py-4 sm:grid-cols-4">
-              <div>
-                <dt className="text-[11.5px] font-medium text-slate-500">Omzet bulan ini</dt>
-                <dd className="mt-1 font-display text-[18px] font-bold tabular-nums text-ink">{bagikan(totalBulan)}</dd>
-              </div>
-              <div>
-                <dt className="text-[11.5px] font-medium text-slate-500">Jumlah deal</dt>
-                <dd className="mt-1 font-display text-[18px] font-bold tabular-nums text-ink">{jumlahBulan}</dd>
-              </div>
-              <div>
-                <dt className="text-[11.5px] font-medium text-slate-500">Dibanding bulan lalu</dt>
-                <dd className={`mt-1 font-display text-[18px] font-bold tabular-nums ${selisihPersen === null ? "text-slate-400" : selisihPersen >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
-                  {selisihPersen === null ? "—" : `${selisihPersen >= 0 ? "+" : ""}${selisihPersen}%`}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[11.5px] font-medium text-slate-500">Capaian target</dt>
-                <dd className="mt-1 font-display text-[18px] font-bold tabular-nums text-ink">
-                  {targetBulan > 0 ? `${Math.round((totalBulan / targetBulan) * 100)}%` : "—"}
-                </dd>
-                <dd className="text-[11px] text-slate-400">{targetBulan > 0 ? `dari ${rpRevealed ? fmtRp(targetBulan) : mask}` : "Target belum diisi di tab Team"}</dd>
-              </div>
-            </dl>
-          )}
-
           <section className="relative mt-6 overflow-hidden rounded-2xl bg-[#0f172a] p-5 text-white shadow-lg shadow-slate-900/10 sm:p-6">
             <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-orange-500/20 blur-3xl" aria-hidden="true" />
             <div className="relative flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
@@ -353,6 +327,23 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                 </div>
                 <div className="mt-1.5 font-display text-[30px] font-bold leading-none tracking-[-0.04em] tabular-nums text-white">{rpRevealed ? fmtRp(totalBulan) : mask}</div>
                 <p className="mt-2.5 text-[13px] text-slate-400">{jumlahBulan} deal menang</p>
+                {bulanPilih !== "all" && (
+                  <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-4 border-t border-white/10 pt-4">
+                    <div>
+                      <dt className="text-[11.5px] font-medium text-slate-400">Dibanding bulan lalu</dt>
+                      <dd className={`mt-1 font-display text-[17px] font-bold tabular-nums ${selisihPersen === null ? "text-slate-500" : selisihPersen >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {selisihPersen === null ? "—" : `${selisihPersen >= 0 ? "+" : ""}${selisihPersen}%`}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[11.5px] font-medium text-slate-400">Capaian target</dt>
+                      <dd className="mt-1 font-display text-[17px] font-bold tabular-nums text-white">
+                        {targetBulan > 0 ? `${Math.round((totalBulan / targetBulan) * 100)}%` : "—"}
+                      </dd>
+                      <dd className="mt-0.5 text-[11px] text-slate-500">{targetBulan > 0 ? `dari ${rpRevealed ? fmtRp(targetBulan) : mask}` : "Target belum diisi di tab Team"}</dd>
+                    </div>
+                  </dl>
+                )}
               </div>
 
               {units && (
