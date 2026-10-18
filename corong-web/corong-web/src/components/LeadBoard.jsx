@@ -94,7 +94,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setClosing({ lead, key, result: target.type });
       return;
     }
-    if (projectDeal && key === "proyek_deal") {
+    // Pop-up data proyek muncul di pipeline yang punya tahap Proyek Berjalan (pipeline BSB), tidak hanya di org project_deal.
+    if (key === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan")) {
       setPending((p) => ({ ...p, [lead.id]: key }));
       setProyek({ lead, key });
       return;
