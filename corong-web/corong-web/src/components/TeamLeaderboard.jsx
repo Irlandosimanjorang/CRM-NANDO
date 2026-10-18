@@ -114,7 +114,7 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
 
 // externalMembers / externalCheckins: dipakai tampilan tim org lain (read-only, lewat izin berbagi).
 // Kalau diisi, komponen tidak mengambil data sendiri dari org yang sedang login.
-export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpenLead, canManage, projectDeal = false, externalMembers = null, externalCheckins = null }) {
+export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, externalMembers = null, externalCheckins = null }) {
   const [members, setMembers] = useState(externalMembers);
   const [checkins, setCheckins] = useState(externalCheckins || []);
   const [preview, setPreview] = useState(null); // { title, items }
@@ -162,9 +162,8 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
     if (lead) { onOpenLead?.(lead); setPreview(null); }
   };
 
-  // Deal/omzet milik penanggung jawab lead (assigned_to), bukan pembuat transaksi.
-  // Sama dengan get_team_activity (Rekap aktivitas) dan Report, supaya angkanya tidak beda antar tab.
-  const picByLeadId = new Map((leads || []).map((l) => [l.id, l.assigned_to || l.user_id]));
+  // Satu aturan deal di semua tab: deal = lead yang sekarang di tahap menang, nilainya deal_value lead.
+  // Penanggung jawab = assigned_to, atau pembuat lead kalau belum ditugaskan.
   // Bulan berjalan dalam WIB (format YYYY-MM), dicocokkan dengan tanggal deal (YYYY-MM-DD).
   const bulanIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }).slice(0, 7);
   const bulanKomisi = komisiBulan || bulanIni;
@@ -175,26 +174,17 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
     const tgl = new Date(Date.UTC(y, mo - 1 - i, 1));
     return { key: tgl.toISOString().slice(0, 7), label: tgl.toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }) };
   });
-  const dealPic = (t) => picByLeadId.get(t.lead_id) || t.user_id;
-
   const rows = members
     .map((m) => {
-      const mine = (leads || []).filter((l) => l.assigned_to === m.user_id && !l.deleted_at);
+      const mine = (leads || []).filter((l) => (l.assigned_to || l.user_id) === m.user_id && !l.deleted_at);
       const won = mine.filter((l) => wonKeys.includes(l.stage_key));
       const lost = mine.filter((l) => lostKeys.includes(l.stage_key));
       const closed = won.length + lost.length;
       const winRate = closed > 0 ? Math.round((won.length / closed) * 100) : null;
 
-      // Org project_deal (BSB): revenue = nilai proyek dari lead yang sekarang di tahap menang (Proyek Selesai).
-      // Org lain tetap memakai transaksi deal.
-      const myDeals = (dealTransactions || []).filter((t) => dealPic(t) === m.user_id);
-      const revenue = projectDeal
-        ? won.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0)
-        : myDeals.reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
-      // Komisi dihitung per bulan berjalan (WIB), berdasarkan tanggal deal.
-      const commissionRevenue = projectDeal
-        ? won.filter((l) => inBulanKomisi(l.deal_date)).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0)
-        : myDeals.filter((t) => inBulanKomisi(t.deal_date)).reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
+      const revenue = won.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+      // Komisi dihitung per bulan yang dipilih (WIB), berdasarkan tanggal deal.
+      const commissionRevenue = won.filter((l) => inBulanKomisi(l.deal_date)).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
       const myCheckins = checkins.filter((c) => c.user_id === m.user_id);
       const commissionRate = commissions[m.user_id] ?? 0;
       const commissionAmount = commissionRevenue * (commissionRate / 100);
