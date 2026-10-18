@@ -126,10 +126,10 @@ export default function CompanyPerformanceCard() {
             <span className="relative grid h-11 w-11 place-items-center">
               <svg width="44" height="44" viewBox="0 0 56 56" className="absolute inset-0" aria-hidden="true">
                 <defs>
-                  {/* Dari oranye muda (putih-ke-oranye) ke oranye gelap supaya ring tetap terlihat di latar putih */}
+                  {/* Dari putih ke oranye gelap supaya ujung ring yang pekat tetap terlihat di latar putih */}
                   <linearGradient id="perf-ring-grad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#fed7aa" />
-                    <stop offset="100%" stopColor="#ea580c" />
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor="#9a3412" />
                   </linearGradient>
                 </defs>
                 <circle cx="28" cy="28" r="24" fill="none" stroke="#ffedd5" strokeWidth="3" />
@@ -147,7 +147,7 @@ export default function CompanyPerformanceCard() {
                   style={{ transition: "stroke-dashoffset 900ms ease", filter: "drop-shadow(0 0 3px rgba(249,115,22,0.35))" }}
                 />
               </svg>
-              <span className="relative text-[11.5px] font-bold tabular-nums text-ink">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
+              <span className="relative text-[10px] font-bold tabular-nums text-ink">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
             </span>
           </div>
         </button>
