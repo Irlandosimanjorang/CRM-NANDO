@@ -285,6 +285,9 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   }, [year, month, daysInMonth]);
 
   const selDeals = r.dealsByDay[selected] || [];
+  // Klik deal di panel kanan menampilkan detail deal saja (bukan lead modal). Hilang otomatis saat ganti hari.
+  const [pilihDeal, setPilihDeal] = useState(null);
+  const detailDeal = pilihDeal ? selDeals.find((d) => d.lead?.id === pilihDeal) : null;
   const selMasuk = r.masukByDay[selected] || [];
   const selDate = new Date(`${selected}T00:00:00`);
   const sourceOf = (l) => Object.entries(l).find(([k, v]) => /^custom_field_\d+$/.test(k) && SOURCES.includes(v))?.[1] || "";
@@ -590,10 +593,31 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               <PanelHeader title={`${DAYS_LONG[selDate.getDay()]}, ${selDate.getDate()} ${MONTHS[selDate.getMonth()]}`} meta={`${selDeals.length} deal, ${selMasuk.length} data masuk`} />
               {selDeals.length === 0 && selMasuk.length === 0 ? (
                 <div className="mt-3"><EmptyState>Tidak ada aktivitas pada tanggal ini. Deal dan data masuk tim muncul di sini otomatis.</EmptyState></div>
+              ) : detailDeal ? (
+                <div className="mt-3">
+                  <button type="button" onClick={() => setPilihDeal(null)} className={cn("mb-3 inline-flex items-center gap-1 rounded-full text-[12px] font-semibold text-slate-500 hover:text-ink", focus)}><ChevronLeft size={13} /> Kembali</button>
+                  <div className="text-[15px] font-bold tracking-[-0.02em] text-ink">{detailDeal.name}</div>
+                  <div className="mt-0.5 font-display text-[22px] font-bold tabular-nums tracking-[-0.03em] text-emerald-700">{fmtRp(detailDeal.value)}</div>
+                  <dl className="mt-4 divide-y divide-slate-100 text-[12.5px]">
+                    {[
+                      ["Tanggal deal", detailDeal.date ? fmtD(String(detailDeal.date).slice(0, 10)) : "-"],
+                      ["Penanggung jawab", marketers.find((m) => m.id === (detailDeal.lead?.assigned_to || detailDeal.lead?.user_id))?.name || "-"],
+                      ["Tahap", stages.find((s) => s.key === detailDeal.lead?.stage_key)?.label || "-"],
+                      ["Jenis", detailDeal.lead?.company_type || "-"],
+                      ["Kota", detailDeal.lead?.city || "-"],
+                      ["Sumber", sourceOf(detailDeal.lead || {}) || "-"],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex items-center justify-between gap-3 py-2">
+                        <dt className="text-slate-500">{k}</dt>
+                        <dd className="text-right font-semibold text-slate-800">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
               ) : (
                 <div className="mt-3 divide-y divide-slate-100">
                   {selDeals.map((d, i) => (
-                    <button key={`d${i}`} type="button" disabled={!d.lead} onClick={() => d.lead && onOpenLead?.(d.lead)} className={cn("flex w-full items-center justify-between gap-3 py-2.5 text-left disabled:cursor-default", focus)}>
+                    <button key={`d${i}`} type="button" disabled={!d.lead} onClick={() => d.lead && setPilihDeal(d.lead.id)} className={cn("flex w-full items-center justify-between gap-3 py-2.5 text-left disabled:cursor-default", focus)}>
                       <span className="min-w-0">
                         <span className="block truncate text-[13px] font-semibold text-ink">{d.name}</span>
                         <span className="block text-[11px] text-slate-500">{d.lead?.company_type || "Deal"}</span>
