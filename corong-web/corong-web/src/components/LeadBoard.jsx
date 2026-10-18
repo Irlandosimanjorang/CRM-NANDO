@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal, flushSync } from "react-dom";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
@@ -46,12 +46,33 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   const stageOf = (l) => pending[l.id] || l.stage_key;
 
-  // Pindah tahap dianimasikan seperti kartu yang diseret ke kolom tujuan (View Transitions). Browser yang tidak
-  // mendukung tetap pindah tanpa animasi.
-  const animateMove = (fn) => {
-    if (typeof document !== "undefined" && document.startViewTransition) document.startViewTransition(() => flushSync(fn));
-    else fn();
+  // Pindah tahap: kartu terangkat (pop-up) di kolom asal, lalu meluncur ke kolom tujuan. Posisi awal dicatat sebelum
+  // perubahan, lalu dianimasikan setelah kolom baru dirender (FLIP).
+  const flipRef = useRef(null);
+  const flipMove = (lead, fn) => {
+    const el = document.querySelector(`[data-lead-id="${lead.id}"]`);
+    if (el) flipRef.current = { id: lead.id, r0: el.getBoundingClientRect() };
+    fn();
   };
+  useLayoutEffect(() => {
+    const f = flipRef.current;
+    if (!f) return;
+    flipRef.current = null;
+    const el = document.querySelector(`[data-lead-id="${f.id}"]`);
+    if (!el || typeof el.animate !== "function") return;
+    const r1 = el.getBoundingClientRect();
+    const dx = f.r0.left - r1.left;
+    const dy = f.r0.top - r1.top;
+    el.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(1)`, boxShadow: "0 1px 2px rgba(15,23,42,0.04)", offset: 0 },
+        { transform: `translate(${dx}px, ${dy - 22}px) scale(1.07)`, boxShadow: "0 26px 44px -14px rgba(15,23,42,0.42)", offset: 0.38 },
+        { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 10}px) scale(1.03)`, boxShadow: "0 16px 30px -14px rgba(15,23,42,0.28)", offset: 0.72 },
+        { transform: "translate(0px, 0px) scale(1)", boxShadow: "0 1px 2px rgba(15,23,42,0.04)", offset: 1 },
+      ],
+      { duration: 620, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
+    );
+  });
 
   const moveTo = (lead, key) => {
     if (!lead || key === UNKNOWN_KEY || stageOf(lead) === key) return;
@@ -66,7 +87,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setProyek({ lead, key });
       return;
     }
-    animateMove(() => setPending((p) => ({ ...p, [lead.id]: key })));
+    flipMove(lead, () => setPending((p) => ({ ...p, [lead.id]: key })));
     Promise.resolve(onMove(lead, key)).catch((e) => {
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
       alert("Gagal pindah tahap: " + (e?.message || e));
@@ -240,7 +261,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                   return (
                     <article
                       key={l.id}
-                      style={{ viewTransitionName: `lead-${l.id}` }}
+                      data-lead-id={l.id}
                       onPointerDown={(e) => onCardPointerDown(e, l)}
                       className={`group relative cursor-grab touch-pan-y select-none rounded-xl border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[box-shadow,border-color,opacity] duration-150 hover:border-slate-300 hover:shadow-[0_6px_16px_-8px_rgba(15,23,42,0.18)] active:cursor-grabbing ${isDragging ? "opacity-30" : ""} ${moving ? "ring-2 ring-orange-200" : ""}`}
                     >
