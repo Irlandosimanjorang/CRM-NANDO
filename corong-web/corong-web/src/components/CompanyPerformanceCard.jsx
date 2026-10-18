@@ -54,7 +54,12 @@ export default function CompanyPerformanceCard() {
     return next;
   });
   // Angka omzet di bar ringkas naik perlahan (count-up) saat kartu disembunyikan. Hook harus dipanggil sebelum return apa pun.
-  const heroValue = view && view !== false ? Number((view.company ? view.company.revenue : view.me?.revenue) || 0) : 0;
+  const heroValue = (() => {
+    if (!view || view === false) return 0;
+    const v = Number((view.company ? view.company.revenue : view.me?.revenue) || 0);
+    const t = Number((view.company ? view.company.target : view.me?.target) || 0);
+    return t > 0 ? (v / t) * 100 : 0;
+  })();
   const [shownValue, setShownValue] = useState(0);
   useEffect(() => {
     if (!hidden) return undefined;
@@ -117,8 +122,8 @@ export default function CompanyPerformanceCard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <div className="font-display text-[19px] font-bold leading-none tabular-nums text-amber-300">{fmtJt(shownValue)}</div>
-              <div className="mt-1 text-[11px] tabular-nums text-white/50">{ht > 0 ? `${pctOf(hv, ht)}% dari target` : "target belum ditetapkan"} · {hd} deal</div>
+              <div className="font-display text-[19px] font-bold leading-none tabular-nums text-amber-300">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</div>
+              <div className="mt-1 text-[11px] tabular-nums text-white/50">{ht > 0 ? "dari target" : "target belum ditetapkan"} · {hd} deal</div>
             </div>
             <span className="relative grid h-11 w-11 place-items-center">
               <svg width="44" height="44" viewBox="0 0 44 44" className="absolute inset-0" aria-hidden="true">
