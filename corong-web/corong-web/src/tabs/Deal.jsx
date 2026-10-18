@@ -1,10 +1,8 @@
-import { useMemo, useState, useEffect, Fragment } from "react";
-import { createPortal } from "react-dom";
-import { Trophy, Building2, TrendingUp, Plus, Search, Save, X, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { useMemo, useState, Fragment } from "react";
+import { Trophy, Building2, TrendingUp, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
-import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate, todayISO, reasonCategoriesFor } from "../lib/helpers";
-import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
-import { getFieldLabel, getQuantityUnits, getDealProductTypes } from "../lib/industryTemplates";
+import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
+import { getFieldLabel, getQuantityUnits } from "../lib/industryTemplates";
 
 // Label satuan dari daftar satuan industri; fallback ke kode mentah.
 const unitLabel = (units, v) => ((units || []).find((u) => u.v === v)?.label || v || "").toLowerCase();
@@ -25,183 +23,10 @@ function qtyTotals(deals, units) {
   return Object.entries(byUnit).map(([u, n]) => ({ unit: u, n }));
 }
 
-const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
-const DRAFT_KEY = "nexto_add_deal_draft";
-const DRAFT_MAX_AGE = 24 * 60 * 60 * 1000; // 24 jam
-
-function formatThousands(digitsStr) {
-  if (!digitsStr) return "";
-  return Number(digitsStr).toLocaleString("id-ID");
-}
-
-function loadDraft() {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return null;
-    const d = JSON.parse(raw);
-    if (Date.now() - d.savedAt > DRAFT_MAX_AGE) { localStorage.removeItem(DRAFT_KEY); return null; }
-    return d;
-  } catch { return null; }
-}
-function clearDraft() {
-  try { localStorage.removeItem(DRAFT_KEY); } catch {}
-}
-
-const CUSTOM_PRODUCT = "__custom__";
-
-function AddDealModal({ leads, stages, industry, dealTransactions, onClose, onSaved }) {
-  const productLabel = getFieldLabel(industry, "product", "Produk");
-  // Pilihan "Produk" = daftar bawaan industri + isian sendiri yang pernah
-  // dipakai di deal sebelumnya (biar gak ngetik ulang).
-  const baseProductTypes = getDealProductTypes(industry);
-  const productTypes = useMemo(() => {
-    if (!baseProductTypes) return null;
-    const used = (dealTransactions || []).map((t) => (t.product_type || "").trim()).filter(Boolean);
-    return [...new Set([...baseProductTypes, ...used])];
-  }, [baseProductTypes, dealTransactions]);
-  const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
-  const units = getQuantityUnits(industry);
-  const wonStages = stages.filter((s) => s.type === "won");
-  const draft = loadDraft();
-  const [q, setQ] = useState("");
-  const [sel, setSel] = useState(draft?.sel || null);
-  const [stageKey, setStageKey] = useState(draft?.stageKey || wonStages[0]?.key || stages[0]?.key);
-  const [winReason, setWinReason] = useState(draft?.winReason || "");
-  const [date, setDate] = useState(draft?.date || todayISO());
-  const [chemical, setChemical] = useState(draft?.chemical || "");
-  const [tonnage, setTonnage] = useState(draft?.tonnage || "");
-  const [tonnageUnit, setTonnageUnit] = useState(() => (units || []).some((u) => u.v === draft?.tonnageUnit) ? draft.tonnageUnit : units?.[0]?.v || "");
-  const [valueDigits, setValueDigits] = useState(draft?.valueDigits || "");
-  const [productType, setProductType] = useState(draft?.productType || "");
-  const [customProduct, setCustomProduct] = useState(!!draft?.customProduct);
-  const [busy, setBusy] = useState(false);
-  const hadDraft = !!draft?.sel;
-
-  useEffect(() => {
-    const data = { sel, stageKey, winReason, date, chemical, tonnage, tonnageUnit, valueDigits, productType, customProduct, savedAt: Date.now() };
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch {}
-  }, [sel, stageKey, winReason, date, chemical, tonnage, tonnageUnit, valueDigits, productType, customProduct]);
-
-  const matches = q.trim() ? leads.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8) : [];
-  const pick = (c) => {
-    setSel(c); setQ("");
-    // Sengaja field-field ini dikosongin (bukan diisi dari deal lead sebelumnya) -
-    // ini transaksi BARU, bukan nimpa transaksi lama.
-    setChemical(""); setTonnage(""); setTonnageUnit(units?.[0]?.v || "");
-    setValueDigits(""); setProductType(""); setCustomProduct(false);
-    setDate(todayISO());
-  };
-  const onValueChange = (e) => {
-    const digits = e.target.value.replace(/\D/g, "");
-    setValueDigits(digits);
-  };
-  const save = async () => {
-    if (!sel) { alert("Pilih perusahaan terlebih dahulu."); return; }
-    const needsReason = !sel.outcome;
-    if (needsReason && !winReason) { alert("Pilih alasan menang terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
-    setBusy(true);
-    try {
-      // Update tahap lead-nya (misal jadi "Deal/Menang"), TAPI catetnya sebagai
-      // transaksi baru - bukan nimpa nilai deal_value/deal_date yang lama, biar
-      // repeat order/transaksi berkali-kali ke perusahaan yang sama tetap kehitung semua.
-      await db.upsertLead({ ...sel, stage_key: stageKey });
-      if (needsReason) await db.saveOutcome(sel.id, { result: "won", reason_category: winReason, reason: "", ai_generated: false });
-      await db.addDealTransaction({ lead_id: sel.id, lead_name: sel.name, deal_date: date, deal_value: Number(valueDigits) || 0, tonnage: Number(tonnage) || 0, tonnage_unit: tonnageUnit, chemical, product_type: productTypes ? productType : null });
-      clearDraft();
-      onSaved();
-    } catch (e) { alert("Gagal simpan: " + e.message); setBusy(false); }
-  };
-  // BUG FIX (17 Sep 2026, laporan Nando): createPortal ke document.body -
-  // biar posisi "fixed" gak kekurung ancestor, presisi ke viewport beneran.
-  return createPortal(
-    <div className="fixed inset-0 bg-slate-900/50 flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-panel shadow-2xl w-full max-w-xl my-8 p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4"><h2 className="font-bold text-lg flex items-center gap-2"><Trophy size={18} className="text-emerald-500" /> Tambah Deal</h2><button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X size={20} /></button></div>
-        {hadDraft && <div className="mb-3 text-xs bg-orange-50 text-orange-700 border border-orange-200 rounded-xl px-3 py-2">Melanjutkan draft yang belum disimpan.</div>}
-        <div className="space-y-3">
-          <div>
-            <span className="text-xs font-medium text-slate-500">Lead *</span>
-            {sel ? (
-              <div className="mt-1 flex items-center justify-between border border-orange-300 bg-orange-50 rounded-xl px-3 py-2"><span className="text-sm font-medium">{sel.name}</span><button onClick={() => setSel(null)} className="text-xs text-slate-500 hover:text-rose-500">ganti</button></div>
-            ) : (
-              <div className="relative">
-                <Search size={15} className="absolute left-2.5 top-3.5 text-slate-400" />
-                <input autoFocus className="w-full mt-1 pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari company dari leads…" />
-                {matches.length > 0 && <div className="mt-1 border border-slate-200 rounded-xl bg-white shadow-sm max-h-52 overflow-y-auto">{matches.map((c) => <div key={c.id} onClick={() => pick(c)} className="px-3 py-2 text-sm hover:bg-orange-50 cursor-pointer border-b border-slate-50 last:border-0"><div className="font-medium">{c.name}</div><div className="text-[11px] text-slate-400">{[c.city, c.category].filter(Boolean).join(" · ")}</div></div>)}</div>}
-                {q.trim() && matches.length === 0 && <p className="text-xs text-slate-400 mt-1">Lead tidak ditemukan. Tambahkan terlebih dahulu di tab Leads.</p>}
-              </div>
-            )}
-          </div>
-          <div className={sel ? "" : "opacity-40 pointer-events-none"}>
-            <label className="block mb-3"><span className="text-xs font-medium text-slate-500">Tahap deal</span>
-              <select className={inp} value={stageKey} onChange={(e) => setStageKey(e.target.value)}>{wonStages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
-            </label>
-            {sel && !sel.outcome && (
-              <label className="block mb-3"><span className="text-xs font-medium text-slate-500">Alasan menang *</span>
-                <select className={inp} value={winReason} onChange={(e) => setWinReason(e.target.value)}>
-                  <option value="">Pilih...</option>
-                  {reasonCategoriesFor("won").map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </label>
-            )}
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <label className="block"><span className="text-xs font-medium text-slate-500">Tanggal deal</span><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></label>
-              <label className="block"><span className="text-xs font-medium text-slate-500">{productLabel}</span><input className={inp} value={chemical} onChange={(e) => setChemical(e.target.value)} /></label>
-            </div>
-            {productTypes && (
-              <div className="mb-3">
-                <label className="block"><span className="text-xs font-medium text-slate-500">Produk</span>
-                  <select
-                    className={inp}
-                    value={customProduct ? CUSTOM_PRODUCT : productType}
-                    onChange={(e) => {
-                      if (e.target.value === CUSTOM_PRODUCT) { setCustomProduct(true); setProductType(""); }
-                      else { setCustomProduct(false); setProductType(e.target.value); }
-                    }}
-                  >
-                    <option value="">Pilih produk</option>
-                    {productTypes.map((p) => <option key={p} value={p}>{p}</option>)}
-                    <option value={CUSTOM_PRODUCT}>Lainnya (tulis sendiri)</option>
-                  </select>
-                </label>
-                {customProduct && <input autoFocus className={inp} placeholder="Nama produk" value={productType} onChange={(e) => setProductType(e.target.value)} maxLength={60} />}
-              </div>
-            )}
-            {units && <div className="grid grid-cols-3 gap-3">
-              <label className="block col-span-2"><span className="text-xs font-medium text-slate-500">{quantityLabel}</span><input type="number" step="any" className={inp} value={tonnage} onChange={(e) => setTonnage(e.target.value)} /></label>
-              <label className="block"><span className="text-xs font-medium text-slate-500">Satuan</span>
-                <select className={inp} value={tonnageUnit} onChange={(e) => setTonnageUnit(e.target.value)}>
-                  {units.map((u) => <option key={u.v} value={u.v}>{u.label}</option>)}
-                </select>
-              </label>
-            </div>}
-            <label className="block mt-3"><span className="text-xs font-medium text-slate-500">Total Rp</span>
-              <input
-                className={inp}
-                inputMode="numeric"
-                placeholder="0"
-                value={formatThousands(valueDigits)}
-                onChange={onValueChange}
-              />
-            </label>
-          </div>
-        </div>
-        <div className="flex gap-2 mt-5"><button onClick={save} disabled={busy} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5 shadow-sm shadow-orange-600/20"><Save size={15} /> Simpan deal</button><button onClick={onClose} className="text-sm px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50">Tutup</button></div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged, projectDeal = false }) {
   const productLabel = getFieldLabel(industry, "product", "Produk");
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
   const units = getQuantityUnits(industry);
-  // BUG FIX (6 Sep 2026): modal ini udah lama punya sistem draft field
-  // (lihat DRAFT_KEY di atas) - tapi visibilitas modal-nya sendiri belum
-  // ke-restore abis reload paksa, jadi orangnya harus klik "+Tambah Deal"
-  // manual lagi biar draft-nya keliatan. Sekarang otomatis kebuka lagi.
-  const [add, setAdd] = useState(() => !!getOpenModal("deal"));
   const [qtyRevealed, setQtyRevealed] = useState(false);
   const [rpRevealed, setRpRevealed] = useState(false);
   const [expanded, setExpanded] = useState(new Set());
@@ -261,10 +86,9 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
           <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[12px] font-semibold text-slate-600 tabular-nums">{groups.length}</span>
         </div>
         {/* Org project_deal (BSB): deal tercatat otomatis saat lead pindah ke Proyek Selesai, tidak diinput manual di sini. */}
-        {!projectDeal && <button onClick={() => { setAdd(true); saveOpenModal("deal", {}); }} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm px-3 py-2 rounded-xl font-medium shadow-sm shadow-orange-600/20"><Plus size={15} /> Tambah Deal</button>}
       </div>
       {groups.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Trophy size={32} className="mx-auto text-slate-300 mb-3" />Belum ada deal. Klik "Tambah Deal" atau ubah tahap lead jadi "Deal (menang)".</div>
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-sm text-slate-400"><Trophy size={32} className="mx-auto text-slate-300 mb-3" />Belum ada deal. Deal muncul otomatis saat lead dipindah ke tahap menang.</div>
       ) : (
         <>
           <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm mb-5">
@@ -366,7 +190,6 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
           </div>
         </>
       )}
-      {add && <AddDealModal leads={leads} stages={stages} industry={industry} dealTransactions={dealTransactions} onClose={() => { setAdd(false); clearOpenModal("deal"); }} onSaved={() => { setAdd(false); clearOpenModal("deal"); onChanged(); }} />}
     </div>
   );
 }
