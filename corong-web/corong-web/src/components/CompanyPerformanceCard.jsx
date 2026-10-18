@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import * as db from "../lib/db";
 
 // Kartu "Performa Perusahaan" di Dashboard - khusus sales_rep plan Enterprise
@@ -73,12 +74,30 @@ export default function CompanyPerformanceCard() {
   }
 
   if (hidden) {
+    // Saat disembunyikan, kartu tinggal satu bar berisi ringkasan. Seluruh bar bisa diklik untuk membuka kartunya lagi.
+    const hv = view.company ? view.company.revenue : view.me.revenue;
+    const ht = view.company ? view.company.target : view.me.target;
+    const hd = view.company ? view.company.deals : view.me.deals;
     return (
       <section className={cardCls}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
-          <button type="button" onClick={toggleHidden} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[12px] font-semibold text-slate-600 hover:bg-slate-50">Tampilkan</button>
-        </div>
+        <button
+          type="button"
+          onClick={toggleHidden}
+          aria-expanded="false"
+          className="flex w-full flex-wrap items-center justify-between gap-3 text-left"
+        >
+          <div>
+            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
+            <p className="mt-0.5 text-[11.5px] text-slate-500">Ketuk untuk membuka</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="font-display text-[17px] font-bold leading-none tabular-nums text-ink">{fmtJt(hv)}</div>
+              <div className="mt-1 text-[11px] tabular-nums text-slate-500">{ht > 0 ? `${pctOf(hv, ht)}% dari target` : "target belum ditetapkan"} · {hd} deal</div>
+            </div>
+            <span className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 bg-white text-slate-500"><ChevronDown size={16} /></span>
+          </div>
+        </button>
       </section>
     );
   }
