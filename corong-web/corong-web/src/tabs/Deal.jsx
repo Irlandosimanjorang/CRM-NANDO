@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Trophy, Eye, EyeOff, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
@@ -377,34 +377,34 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[14px] font-bold tracking-[-0.01em] text-ink">Omzet 6 bulan terakhir</p>
-                <p className="mt-0.5 text-[11.5px] text-slate-500">Klik titik untuk memilih bulan</p>
+                <p className="mt-0.5 text-[11.5px] text-slate-500">Klik batang untuk memilih bulan</p>
               </div>
-              <span className="flex items-center gap-1.5 text-[12px] text-slate-500"><span className="h-2 w-2 rounded-full bg-brand" />Omzet</span>
+              <span className="flex items-center gap-1.5 text-[12px] text-slate-500"><span className="h-2 w-2 rounded-full bg-orange-500" />Bulan terpilih</span>
             </div>
             <div className="mt-4 h-56 -mx-2">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
+                <BarChart
                   data={chartData}
                   margin={{ top: 4, right: 8, left: -18, bottom: 0 }}
+                  barCategoryGap="38%"
                   onClick={(e) => { const ym = e?.activePayload?.[0]?.payload?.ym; if (ym) setBulanPilih(ym); }}
                 >
-                  <defs>
-                    <linearGradient id="dealOmzetGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f97316" stopOpacity={0.22} />
-                      <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid vertical={false} stroke="#eef2f7" />
                   <XAxis dataKey="label" tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={24} hide={!rpRevealed} tickFormatter={(v) => (v >= 1e6 ? `${Math.round(v / 1e6)}jt` : v)} />
+                  <YAxis tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={24} allowDecimals={false} hide={!rpRevealed} tickFormatter={(v) => (v >= 1e6 ? `${Math.round(v / 1e6)}jt` : v)} />
                   <Tooltip
+                    cursor={{ fill: "#f8fafc" }}
                     formatter={(v) => (rpRevealed ? fmtRp(v) : "••••••")}
                     labelFormatter={(label, payload) => (payload?.[0]?.payload?.ym ? namaBulan(payload[0].payload.ym) : label)}
                     contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
                     labelStyle={{ fontWeight: 700, color: "#0f172a" }}
                   />
-                  <Area type="monotone" dataKey="omzet" name="Omzet" stroke="#f97316" strokeWidth={2} fill="url(#dealOmzetGrad)" dot={{ r: 3, strokeWidth: 0, fill: "#f97316" }} activeDot={{ r: 5, strokeWidth: 0 }} />
-                </AreaChart>
+                  <Bar dataKey="omzet" name="Omzet" radius={[6, 6, 0, 0]} maxBarSize={28} cursor="pointer">
+                    {chartData.map((d) => (
+                      <Cell key={d.ym} fill={d.ym === bulanPilih ? "#f97316" : "#e2e8f0"} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
