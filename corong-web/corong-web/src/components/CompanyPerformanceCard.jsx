@@ -131,13 +131,13 @@ export default function CompanyPerformanceCard() {
                   cy="28"
                   r="24"
                   fill="none"
-                  stroke={done ? "#34d399" : "#f59e0b"}
+                  stroke={done ? "#ea580c" : "#f97316"}
                   strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray={ring}
                   strokeDashoffset={ring * (1 - hp / 100)}
                   transform="rotate(-90 28 28)"
-                  style={{ transition: "stroke-dashoffset 900ms ease", filter: done ? "drop-shadow(0 0 6px rgba(52,211,153,0.8))" : undefined }}
+                  style={{ transition: "stroke-dashoffset 900ms ease", filter: done ? "drop-shadow(0 0 6px rgba(249,115,22,0.6))" : undefined }}
                 />
               </svg>
               <span className="relative text-[12.5px] font-bold tabular-nums text-ink">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
