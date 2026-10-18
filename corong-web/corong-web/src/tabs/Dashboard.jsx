@@ -10,7 +10,7 @@ import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
 import { todayISO } from "../lib/helpers";
 
 // Kartu dashboard: sudut lebih membulat, bayangan lembut, dan jarak dalam lebih lega (gaya kartu Nexto yang baru).
-const DASH_CARD = "rounded-[28px] border-slate-200/60 shadow-[0_2px_6px_rgba(15,23,42,0.05),0_18px_40px_-18px_rgba(15,23,42,0.22)]";
+const DASH_CARD = "!rounded-[28px] border-slate-200/60 shadow-[0_2px_6px_rgba(15,23,42,0.05),0_18px_40px_-18px_rgba(15,23,42,0.22)]";
 function DashPanel({ className = "", ...rest }) {
   return <Panel className={`${DASH_CARD} ${className}`} {...rest} />;
 }
