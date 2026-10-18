@@ -53,6 +53,22 @@ export default function CompanyPerformanceCard() {
     try { localStorage.setItem("nexto_perf_hidden", next ? "1" : "0"); } catch (_) { /* abaikan */ }
     return next;
   });
+  // Angka omzet di bar ringkas naik perlahan (count-up) saat kartu disembunyikan. Hook harus dipanggil sebelum return apa pun.
+  const heroValue = view && view !== false ? Number((view.company ? view.company.revenue : view.me?.revenue) || 0) : 0;
+  const [shownValue, setShownValue] = useState(0);
+  useEffect(() => {
+    if (!hidden) return undefined;
+    let raf;
+    const start = performance.now();
+    const dur = 900;
+    const tick = (t) => {
+      const k = Math.min(1, (t - start) / dur);
+      setShownValue(heroValue * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [hidden, heroValue]);
 
   useEffect(() => {
     let alive = true;
@@ -78,24 +94,51 @@ export default function CompanyPerformanceCard() {
     const hv = view.company ? view.company.revenue : view.me.revenue;
     const ht = view.company ? view.company.target : view.me.target;
     const hd = view.company ? view.company.deals : view.me.deals;
+    const hp = ht > 0 ? Math.min(100, Math.round((hv / ht) * 100)) : 0;
+    const ring = 2 * Math.PI * 18;
+    const done = hp >= 100;
     return (
-      <section className={cardCls}>
+      <section className="rounded-panel border border-white/10 bg-[#0b1220] p-4 text-white shadow-lg">
         <button
           type="button"
           onClick={toggleHidden}
           aria-expanded="false"
           className="flex w-full flex-wrap items-center justify-between gap-3 text-left"
         >
-          <div>
-            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
-            <p className="mt-0.5 text-[11.5px] text-slate-500">Ketuk untuk membuka</p>
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            </span>
+            <div>
+              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-white">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
+              <p className="mt-0.5 text-[11.5px] text-white/50">Ketuk untuk membuka · tersinkron</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <div className="font-display text-[17px] font-bold leading-none tabular-nums text-ink">{fmtJt(hv)}</div>
-              <div className="mt-1 text-[11px] tabular-nums text-slate-500">{ht > 0 ? `${pctOf(hv, ht)}% dari target` : "target belum ditetapkan"} · {hd} deal</div>
+              <div className="font-display text-[19px] font-bold leading-none tabular-nums text-amber-300">{fmtJt(shownValue)}</div>
+              <div className="mt-1 text-[11px] tabular-nums text-white/50">{ht > 0 ? `${pctOf(hv, ht)}% dari target` : "target belum ditetapkan"} · {hd} deal</div>
             </div>
-            <span className="grid h-8 w-8 place-items-center rounded-full border border-slate-200 bg-white text-slate-500"><ChevronDown size={16} /></span>
+            <span className="relative grid h-11 w-11 place-items-center">
+              <svg width="44" height="44" viewBox="0 0 44 44" className="absolute inset-0" aria-hidden="true">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="18"
+                  fill="none"
+                  stroke={done ? "#34d399" : "#f59e0b"}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeDasharray={ring}
+                  strokeDashoffset={ring * (1 - hp / 100)}
+                  transform="rotate(-90 22 22)"
+                  style={{ transition: "stroke-dashoffset 900ms ease", filter: done ? "drop-shadow(0 0 6px rgba(52,211,153,0.8))" : undefined }}
+                />
+              </svg>
+              <ChevronDown size={16} className="relative text-white/80" />
+            </span>
           </div>
         </button>
       </section>
