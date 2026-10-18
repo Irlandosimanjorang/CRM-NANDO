@@ -161,6 +161,11 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
     if (lead) { onOpenLead?.(lead); setPreview(null); }
   };
 
+  // Deal/omzet milik penanggung jawab lead (assigned_to), bukan pembuat transaksi.
+  // Sama dengan get_team_activity (Rekap aktivitas) dan Report, supaya angkanya tidak beda antar tab.
+  const picByLeadId = new Map((leads || []).map((l) => [l.id, l.assigned_to || l.user_id]));
+  const dealPic = (t) => picByLeadId.get(t.lead_id) || t.user_id;
+
   const rows = members
     .map((m) => {
       const mine = (leads || []).filter((l) => l.assigned_to === m.user_id && !l.deleted_at);
@@ -171,7 +176,7 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
 
       // Org project_deal (BSB): revenue = nilai proyek dari lead yang sekarang di tahap menang (Proyek Selesai).
       // Org lain tetap memakai transaksi deal.
-      const myDeals = (dealTransactions || []).filter((t) => t.user_id === m.user_id);
+      const myDeals = (dealTransactions || []).filter((t) => dealPic(t) === m.user_id);
       const revenue = projectDeal
         ? won.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0)
         : myDeals.reduce((sum, t) => sum + (Number(t.deal_value) || 0), 0);
