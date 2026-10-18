@@ -72,6 +72,18 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       ],
       { duration: 620, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
     );
+    // Kolom tujuan menyala sebentar saat kartu mendarat, supaya tujuan perpindahan langsung terlihat.
+    const col = el.closest("[data-stage]");
+    if (col && typeof col.animate === "function") {
+      col.animate(
+        [
+          { boxShadow: "inset 0 0 0 0 rgba(249,115,22,0)" },
+          { boxShadow: "inset 0 0 0 2px rgba(249,115,22,0.55)", offset: 0.25 },
+          { boxShadow: "inset 0 0 0 0 rgba(249,115,22,0)" },
+        ],
+        { duration: 700, delay: 560, easing: "ease-out" }
+      );
+    }
   });
 
   const moveTo = (lead, key) => {
