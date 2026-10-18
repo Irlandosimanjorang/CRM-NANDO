@@ -102,7 +102,7 @@ export default function CompanyPerformanceCard() {
     const ring = 2 * Math.PI * 24;
     const done = hp >= 100;
     return (
-      <section className="rounded-panel border border-white/10 bg-[#0b1220] p-4 text-white shadow-lg">
+      <section className={cardCls}>
         <button
           type="button"
           onClick={toggleHidden}
@@ -115,17 +115,17 @@ export default function CompanyPerformanceCard() {
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
             </span>
             <div>
-              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-white">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
-              <p className="mt-0.5 text-[11.5px] text-white/50">Ketuk untuk membuka · tersinkron</p>
+              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
+              <p className="mt-0.5 text-[11.5px] text-slate-500">Ketuk untuk membuka · tersinkron</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <div className="text-[11px] tabular-nums text-white/50">{ht > 0 ? "dari target" : "target belum ditetapkan"} · {hd} deal</div>
+              <div className="text-[11px] tabular-nums text-slate-500">{ht > 0 ? "dari target" : "target belum ditetapkan"} · {hd} deal</div>
             </div>
             <span className="relative grid h-14 w-14 place-items-center">
               <svg width="56" height="56" viewBox="0 0 56 56" className="absolute inset-0" aria-hidden="true">
-                <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
+                <circle cx="28" cy="28" r="24" fill="none" stroke="#e2e8f0" strokeWidth="4" />
                 <circle
                   cx="28"
                   cy="28"
@@ -140,7 +140,7 @@ export default function CompanyPerformanceCard() {
                   style={{ transition: "stroke-dashoffset 900ms ease", filter: done ? "drop-shadow(0 0 6px rgba(52,211,153,0.8))" : undefined }}
                 />
               </svg>
-              <span className="relative text-[12.5px] font-bold tabular-nums text-white">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
+              <span className="relative text-[12.5px] font-bold tabular-nums text-ink">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
             </span>
           </div>
         </button>
