@@ -111,8 +111,9 @@ export default function CompanyPerformanceCard() {
         >
           <div className="flex items-center gap-3">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-40 [animation-duration:2s]" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-400" />
+              {/* Warnanya sama dengan gradasi ring (putih ke oranye gelap) */}
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-40 [animation-duration:2s]" style={{ background: "linear-gradient(135deg, #ffffff, #9a3412)" }} />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: "linear-gradient(135deg, #ffffff, #9a3412)" }} />
             </span>
             <div>
               <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
