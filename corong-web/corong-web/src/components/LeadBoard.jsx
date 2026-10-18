@@ -318,7 +318,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                       </select>
 
                       {/* Status proyek di kartu (17 Okt 2026, BSB): pilih Berjalan langsung memindahkan lead ke Proyek Berjalan. */}
-                      {projectDeal && stageOf(l) === "proyek_deal" && (
+                      {stageOf(l) === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan") && (
                         <select
                           aria-label="Status proyek"
                           value="belum"
