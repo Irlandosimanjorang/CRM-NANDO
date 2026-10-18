@@ -153,6 +153,8 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     setYm(`${t.getFullYear()}-${pad(t.getMonth() + 1)}`);
   };
 
+  // Deal dibaca dari server (rentang bulan lalu sampai akhir periode), lihat efek di bawah.
+  const [dealsSrv, setDealsSrv] = useState([]);
   // Deal dari server, disaring lingkup marketing dan filter sumber/tahap seperti tabel lead.
   const dealLeads = useMemo(() => dealsSrv.filter((l) => !l.deleted_at && (scopeId === "all" || (l.assigned_to || l.user_id) === scopeId) && passF(l)), [dealsSrv, scopeId, srcF, stF, srcSlot]);
 
@@ -215,7 +217,6 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     const pFrom = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-01`;
     return range.from < pFrom ? range.from : pFrom;
   }, [year, month, range.from]);
-  const [dealsSrv, setDealsSrv] = useState([]);
   useEffect(() => {
     let alive = true;
     db.getDealsRange(dealFrom, range.to).then((d) => { if (alive) setDealsSrv(d); }).catch(() => { if (alive) setDealsSrv([]); });
