@@ -49,9 +49,9 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // Pindah tahap: kartu terangkat (pop-up) di kolom asal, lalu meluncur ke kolom tujuan. Posisi awal dicatat sebelum
   // perubahan, lalu dianimasikan setelah kolom baru dirender (FLIP).
   const flipRef = useRef(null);
-  const flipMove = (lead, fn) => {
-    const el = document.querySelector(`[data-lead-id="${lead.id}"]`);
-    if (el) flipRef.current = { id: lead.id, r0: el.getBoundingClientRect() };
+  const flipMove = (lead, fn, fromRect = null) => {
+    const r0 = fromRect || document.querySelector(`[data-lead-id="${lead.id}"]`)?.getBoundingClientRect();
+    if (r0) flipRef.current = { id: lead.id, r0 };
     fn();
   };
   useLayoutEffect(() => {
@@ -86,7 +86,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     }
   });
 
-  const moveTo = (lead, key) => {
+  const moveTo = (lead, key, fromRect = null) => {
     if (!lead || key === UNKNOWN_KEY || stageOf(lead) === key) return;
     const target = cols.find((s) => s.key === key);
     if (target?.type === "won" || target?.type === "lost") {
@@ -99,7 +99,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setProyek({ lead, key });
       return;
     }
-    flipMove(lead, () => setPending((p) => ({ ...p, [lead.id]: key })));
+    flipMove(lead, () => setPending((p) => ({ ...p, [lead.id]: key })), fromRect);
     Promise.resolve(onMove(lead, key)).catch((e) => {
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
       alert("Gagal pindah tahap: " + (e?.message || e));
@@ -201,7 +201,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setDrag(null);
       setOverKey(null);
       const key = stageAt(ev.clientX, ev.clientY);
-      if (key) moveTo(p.lead, key);
+      if (key) moveTo(p.lead, key, { left: ev.clientX - p.offX, top: ev.clientY - p.offY });
     };
     press.current = { lead, sx: e.clientX, sy: e.clientY, offX: e.clientX - rect.left, offY: e.clientY - rect.top, w: rect.width, active: false };
     window.addEventListener("pointermove", onMove);
