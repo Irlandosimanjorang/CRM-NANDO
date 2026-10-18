@@ -217,21 +217,20 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const totalValue = useMemo(() => (leads || []).filter((l) => wonIds.has(l.id)).reduce((a, l) => a + (Number(l.deal_value) || 0), 0), [leads, wonIds]);
   const totals = qtyTotals(deals, units);
 
-  // Kelompokin semua transaksi per perusahaan - 1 baris per perusahaan di tabel,
-  // transaksi lainnya kebuka lewat tombol expand.
+  // 1 baris per lead menang. Nilai baris = deal_value lead (satu aturan deal di semua tab).
+  // Transaksi di bawahnya (repeat order) hanya rincian, tidak dijumlah lagi. Dibuka lewat ikon panah.
   const groups = useMemo(() => {
-    const map = {};
-    for (const t of deals) {
-      if (!map[t.lead_id]) map[t.lead_id] = [];
-      map[t.lead_id].push(t);
-    }
-    return Object.entries(map)
-      .map(([leadId, txs]) => ({
+    const txByLead = {};
+    for (const t of deals) (txByLead[t.lead_id] ||= []).push(t);
+    const dateOf = (g) => String(g.lead?.deal_date || g.txs[0]?.deal_date || "");
+    return [...wonIds]
+      .map((leadId) => ({
         leadId,
-        txs: txs.sort((a, b) => (b.deal_date || "").localeCompare(a.deal_date || "")),
+        lead: leadsById[leadId],
+        txs: (txByLead[leadId] || []).slice().sort((a, b) => String(b.deal_date || "").localeCompare(String(a.deal_date || ""))),
       }))
-      .sort((a, b) => (b.txs[0].deal_date || "").localeCompare(a.txs[0].deal_date || ""));
-  }, [deals]);
+      .sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
+  }, [deals, wonIds, leadsById]);
 
   const toggleExpand = (leadId) => setExpanded((prev) => { const n = new Set(prev); n.has(leadId) ? n.delete(leadId) : n.add(leadId); return n; });
 
@@ -257,7 +256,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-50 text-emerald-600"><Trophy size={20} /></span>
           <div>
             <h1 className="text-[22px] font-bold leading-tight tracking-[-0.02em] text-slate-900">Deal</h1>
-            <p className="text-[12.5px] text-slate-500">Lead yang sudah menang, lengkap dengan nilai dan transaksinya.</p>
+            <p className="text-[12.5px] text-slate-500">Lead yang sudah menang. Nilai deal mengikuti nilai lead, transaksi tambahan ada di rincian.</p>
           </div>
           <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[12px] font-semibold text-slate-600 tabular-nums">{groups.length}</span>
         </div>
@@ -309,30 +308,31 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               </tr></thead>
               <tbody>
                 {groups.map((g) => {
-                  const lead = leadsById[g.leadId];
+                  const lead = g.lead;
                   const sm = lead ? stageMeta(stages, lead.stage_key) : null;
                   const latest = g.txs[0];
                   const isOpen = expanded.has(g.leadId);
-                  const groupTotalRp = g.txs.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
+                  const groupTotalRp = Number(lead?.deal_value) || 0;
+                  const tanggal = lead?.deal_date || latest?.deal_date;
                   return (
                   <Fragment key={g.leadId}>
                     <tr className="border-t border-slate-100 hover:bg-orange-50/40 cursor-pointer" onClick={() => lead && onEdit(lead)}>
-                      <td className="px-3 py-2" onClick={(e) => { e.stopPropagation(); toggleExpand(g.leadId); }}>
+                      <td className="px-3 py-2" onClick={(e) => { e.stopPropagation(); if (g.txs.length > 1) toggleExpand(g.leadId); }}>
                         {g.txs.length > 1 && (isOpen ? <ChevronDown size={15} className="text-slate-400" /> : <ChevronRight size={15} className="text-slate-400" />)}
                       </td>
                       <td className="px-3 py-2">
                         <div className="font-medium flex items-center gap-1.5">
-                          {latest.lead_name}
+                          {lead?.name || latest?.lead_name || "—"}
                           {lead && typeBadge(lead.company_type) && <span className="text-[10px] font-bold px-1 rounded bg-slate-200 text-slate-600">{typeBadge(lead.company_type)}</span>}
-                          {g.txs.length > 1 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">{g.txs.length}x</span>}
+                          {g.txs.length > 1 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700" title="Jumlah transaksi (repeat order)">{g.txs.length} transaksi</span>}
                         </div>
                       </td>
                       <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{lead?.city || "—"}</td>
                       <td className="px-3 py-2">{sm ? <span className="text-[11px] border rounded-full px-2 py-0.5" style={chipStyle(sm.hex)}>{sm.label}</span> : <span className="text-slate-300 text-xs">—</span>}</td>
                       <td className="hidden sm:table-cell px-3 py-2 text-xs text-slate-600">{lead?.sales_owner || "—"}</td>
-                      <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.deal_date ? fmtDate(latest.deal_date) : "—"}</td>
-                      <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest.product_type && <span className="mr-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">{latest.product_type}</span>}{latest.chemical || (latest.product_type ? "" : "—")}</td>
-                      {units && <td className="hidden sm:table-cell px-3 py-2 text-xs font-mono text-slate-700">{latest.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${unitLabel(units, latest.tonnage_unit)}` : "••••••") : "—"}</td>}
+                      <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{tanggal ? fmtDate(tanggal) : "—"}</td>
+                      <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-600">{latest?.product_type && <span className="mr-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">{latest.product_type}</span>}{latest?.chemical || (latest?.product_type ? "" : "—")}</td>
+                      {units && <td className="hidden sm:table-cell px-3 py-2 text-xs font-mono text-slate-700">{latest?.tonnage ? (qtyRevealed ? `${Number(latest.tonnage).toLocaleString("id-ID")} ${unitLabel(units, latest.tonnage_unit)}` : "••••••") : "—"}</td>}
                       {projectDeal && <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-700">{lead?.sph_number || "—"}</td>}
                       {projectDeal && <td className="hidden md:table-cell px-3 py-2 text-xs text-slate-700 tabular-nums">{Number(lead?.discount_pct) > 0 ? `${Number(lead.discount_pct)}%` : "—"}</td>}
                       <td className="px-3 py-2 text-xs font-mono text-emerald-700 font-semibold">{groupTotalRp ? (rpRevealed ? fmtRp(groupTotalRp) : "••••••") : "—"}</td>
@@ -341,7 +341,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                     {isOpen && g.txs.map((t) => (
                       <tr key={t.id} className="border-t border-slate-50 bg-slate-50/50 text-xs">
                         <td></td>
-                        <td className="px-3 py-1.5 pl-8 text-slate-400" colSpan={1}>↳ transaksi</td>
+                        <td className="px-3 py-1.5 pl-8 text-slate-400" colSpan={1}>↳ rincian transaksi</td>
                         <td className="hidden sm:table-cell px-3 py-1.5"></td>
                         <td className="px-3 py-1.5"></td>
                         <td className="hidden sm:table-cell px-3 py-1.5"></td>
