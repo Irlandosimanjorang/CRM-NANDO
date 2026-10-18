@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Trophy, Eye, EyeOff, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { Trophy, Eye, EyeOff, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
 import { getFieldLabel, getQuantityUnits } from "../lib/industryTemplates";
@@ -107,6 +107,25 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     }
     return enamBulan.map((k) => map[k]);
   }, [groups, enamBulan]);
+
+  // Tracking per bulan: pilih satu bulan (atau "all" untuk semua). Default bulan berjalan.
+  const [bulanPilih, setBulanPilih] = useState(bulanIni);
+  const shiftBulan = (ym, d) => { const [y, m] = ym.split("-").map(Number); return new Date(Date.UTC(y, m - 1 + d, 1)).toISOString().slice(0, 7); };
+  const grupBulan = bulanPilih === "all" ? null : monthGroups.find((g) => g.ym === bulanPilih) || null;
+  const totalBulan = bulanPilih === "all" ? totalValue : (grupBulan?.total || 0);
+  const jumlahBulan = bulanPilih === "all" ? groups.length : (grupBulan?.items.length || 0);
+  const totalBulanLalu = bulanPilih === "all" ? 0 : (monthGroups.find((g) => g.ym === shiftBulan(bulanPilih, -1))?.total || 0);
+  const selisihPersen = totalBulanLalu > 0 ? Math.round(((totalBulan - totalBulanLalu) / totalBulanLalu) * 100) : null;
+  // Target tim bulan terpilih dari tab Team (sales_targets). Kosong kalau belum diisi atau tidak punya akses.
+  const [targetBulan, setTargetBulan] = useState(0);
+  useEffect(() => {
+    if (bulanPilih === "all") { setTargetBulan(0); return undefined; }
+    let alive = true;
+    db.getTeamTargets(`${bulanPilih}-01`)
+      .then((rows) => { if (alive) setTargetBulan((rows || []).reduce((s, x) => s + (Number(x.target) || 0), 0)); })
+      .catch(() => { if (alive) setTargetBulan(0); });
+    return () => { alive = false; };
+  }, [bulanPilih]);
 
   // Jejak tahap per lead, dari riwayat perpindahan tahap. Dimuat ulang saat data tim berubah.
   const [riwayat, setRiwayat] = useState({});
@@ -295,16 +314,58 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         </div>
       ) : (
         <>
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => setBulanPilih(shiftBulan(bulanPilih === "all" ? bulanIni : bulanPilih, -1))} disabled={bulanPilih === "all"} aria-label="Bulan sebelumnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 disabled:opacity-30">
+                <ChevronLeft size={16} />
+              </button>
+              <span className="min-w-[11rem] text-center font-display text-[17px] font-semibold text-ink">{bulanPilih === "all" ? "Semua bulan" : namaBulan(bulanPilih)}</span>
+              <button type="button" onClick={() => setBulanPilih(shiftBulan(bulanPilih, 1))} disabled={bulanPilih === "all" || bulanPilih >= bulanIni} aria-label="Bulan berikutnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 disabled:opacity-30">
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <div className="inline-flex rounded-full bg-slate-100 p-1 text-[12.5px] font-medium">
+              <button type="button" onClick={() => setBulanPilih(bulanIni)} aria-pressed={bulanPilih === bulanIni} className={`rounded-full px-3.5 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${bulanPilih === bulanIni ? "bg-white text-ink shadow-sm" : "text-slate-500"}`}>Bulan ini</button>
+              <button type="button" onClick={() => setBulanPilih("all")} aria-pressed={bulanPilih === "all"} className={`rounded-full px-3.5 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${bulanPilih === "all" ? "bg-white text-ink shadow-sm" : "text-slate-500"}`}>Semua</button>
+            </div>
+          </div>
+
+          {bulanPilih !== "all" && (
+            <dl className="mt-5 grid grid-cols-2 gap-x-8 gap-y-4 border-y border-slate-200 py-4 sm:grid-cols-4">
+              <div>
+                <dt className="text-[11.5px] font-medium text-slate-500">Omzet bulan ini</dt>
+                <dd className="mt-1 font-display text-[18px] font-bold tabular-nums text-ink">{bagikan(totalBulan)}</dd>
+              </div>
+              <div>
+                <dt className="text-[11.5px] font-medium text-slate-500">Jumlah deal</dt>
+                <dd className="mt-1 font-display text-[18px] font-bold tabular-nums text-ink">{jumlahBulan}</dd>
+              </div>
+              <div>
+                <dt className="text-[11.5px] font-medium text-slate-500">Dibanding bulan lalu</dt>
+                <dd className={`mt-1 font-display text-[18px] font-bold tabular-nums ${selisihPersen === null ? "text-slate-400" : selisihPersen >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                  {selisihPersen === null ? "—" : `${selisihPersen >= 0 ? "+" : ""}${selisihPersen}%`}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11.5px] font-medium text-slate-500">Capaian target</dt>
+                <dd className="mt-1 font-display text-[18px] font-bold tabular-nums text-ink">
+                  {targetBulan > 0 ? `${Math.round((totalBulan / targetBulan) * 100)}%` : "—"}
+                </dd>
+                <dd className="text-[11px] text-slate-400">{targetBulan > 0 ? `dari ${rpRevealed ? fmtRp(targetBulan) : mask}` : "Target belum diisi di tab Team"}</dd>
+              </div>
+            </dl>
+          )}
+
           <section className="mt-7 flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
             <div>
               <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
-                Total nilai deal
+                {bulanPilih === "all" ? "Total nilai deal" : `Omzet ${namaBulan(bulanPilih)}`}
                 <button type="button" onClick={() => setRpRevealed((v) => !v)} aria-label={rpRevealed ? "Sembunyikan nilai" : "Tampilkan nilai"} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500">
                   {rpRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
                 </button>
               </div>
-              <div className="mt-2 font-display text-[44px] font-bold leading-none tracking-[-0.045em] tabular-nums text-ink">{rpRevealed ? fmtRp(totalValue) : mask}</div>
-              <p className="mt-2.5 text-[13px] text-slate-500">{groups.length} deal menang</p>
+              <div className="mt-2 font-display text-[44px] font-bold leading-none tracking-[-0.045em] tabular-nums text-ink">{rpRevealed ? fmtRp(totalBulan) : mask}</div>
+              <p className="mt-2.5 text-[13px] text-slate-500">{jumlahBulan} deal menang</p>
             </div>
 
             <div className="flex flex-col items-start gap-1.5">
@@ -332,20 +393,28 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             )}
           </section>
 
-          {monthGroups.map(({ ym, items, total, max }) => (
+          {monthGroups.filter((g) => bulanPilih === "all" || g.ym === bulanPilih).map(({ ym, items, total, max }) => (
             <section key={ym} className="mt-9">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <h2 className="font-display text-[15px] font-semibold text-ink">{ym === "Tanpa tanggal" ? ym : namaBulan(ym)}</h2>
-                <p className="text-[12.5px] tabular-nums text-slate-500">
-                  {items.length} deal
-                  <span className="ml-3 font-semibold text-slate-700">{bagikan(total)}</span>
-                </p>
-              </div>
-              <ul className="mt-3 divide-y divide-slate-200 border-y border-slate-200">
+              {bulanPilih === "all" && (
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h2 className="font-display text-[15px] font-semibold text-ink">{ym === "Tanpa tanggal" ? ym : namaBulan(ym)}</h2>
+                  <p className="text-[12.5px] tabular-nums text-slate-500">
+                    {items.length} deal
+                    <span className="ml-3 font-semibold text-slate-700">{bagikan(total)}</span>
+                  </p>
+                </div>
+              )}
+              <ul className={`${bulanPilih === "all" ? "mt-3" : "mt-6"} divide-y divide-slate-200 border-y border-slate-200`}>
                 {items.map((g) => renderRow(g, max))}
               </ul>
             </section>
           ))}
+          {bulanPilih !== "all" && !grupBulan && (
+            <div className="mt-9 rounded-2xl border border-dashed border-slate-300 px-6 py-10 text-center">
+              <p className="font-display text-[16px] font-semibold text-ink">Belum ada deal di {namaBulan(bulanPilih)}</p>
+              <p className="mt-1.5 text-[13px] text-slate-500">Pilih bulan lain di atas, atau pilih Semua untuk melihat seluruh deal.</p>
+            </div>
+          )}
         </>
       )}
     </div>
