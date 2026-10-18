@@ -299,24 +299,23 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         </div>
       ) : (
         <>
-          <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1">
-              <button type="button" onClick={() => setBulanPilih(shiftBulan(bulanPilih === "all" ? bulanIni : bulanPilih, -1))} disabled={bulanPilih === "all"} aria-label="Bulan sebelumnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 disabled:opacity-30">
-                <ChevronLeft size={16} />
-              </button>
-              <span className="min-w-[11rem] text-center font-display text-[17px] font-semibold text-ink">{bulanPilih === "all" ? "Semua bulan" : namaBulan(bulanPilih)}</span>
-              <button type="button" onClick={() => setBulanPilih(shiftBulan(bulanPilih, 1))} disabled={bulanPilih === "all" || bulanPilih >= bulanIni} aria-label="Bulan berikutnya" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 disabled:opacity-30">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-            <div className="inline-flex rounded-full bg-slate-100 p-1 text-[12.5px] font-medium">
-              <button type="button" onClick={() => setBulanPilih(bulanIni)} aria-pressed={bulanPilih === bulanIni} className={`rounded-full px-3.5 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${bulanPilih === bulanIni ? "bg-white text-ink shadow-sm" : "text-slate-500"}`}>Bulan ini</button>
-              <button type="button" onClick={() => setBulanPilih("all")} aria-pressed={bulanPilih === "all"} className={`rounded-full px-3.5 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${bulanPilih === "all" ? "bg-white text-ink shadow-sm" : "text-slate-500"}`}>Semua</button>
-            </div>
-          </div>
-
           <section className="relative mt-6 overflow-hidden rounded-2xl bg-[#0f172a] p-5 text-white shadow-lg shadow-slate-900/10 sm:p-6">
             <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-orange-500/20 blur-3xl" aria-hidden="true" />
+            <div className="relative mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => setBulanPilih(shiftBulan(bulanPilih === "all" ? bulanIni : bulanPilih, -1))} disabled={bulanPilih === "all"} aria-label="Bulan sebelumnya" className="rounded-full p-1.5 text-slate-400 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 disabled:opacity-30">
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="min-w-[10rem] text-center font-display text-[15px] font-semibold text-white">{bulanPilih === "all" ? "Semua bulan" : namaBulan(bulanPilih)}</span>
+                <button type="button" onClick={() => setBulanPilih(shiftBulan(bulanPilih, 1))} disabled={bulanPilih === "all" || bulanPilih >= bulanIni} aria-label="Bulan berikutnya" className="rounded-full p-1.5 text-slate-400 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 disabled:opacity-30">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+              <div className="inline-flex rounded-full bg-white/5 p-1 text-[12px] font-medium">
+                <button type="button" onClick={() => setBulanPilih(bulanIni)} aria-pressed={bulanPilih === bulanIni} className={`rounded-full px-3 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${bulanPilih === bulanIni ? "bg-white/15 text-white" : "text-slate-400 hover:text-white"}`}>Bulan ini</button>
+                <button type="button" onClick={() => setBulanPilih("all")} aria-pressed={bulanPilih === "all"} className={`rounded-full px-3 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${bulanPilih === "all" ? "bg-white/15 text-white" : "text-slate-400 hover:text-white"}`}>Semua</button>
+              </div>
+            </div>
             <div className="relative flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
               <div>
                 <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-400">
