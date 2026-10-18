@@ -27,20 +27,77 @@ function qtyTotals(deals, units) {
 const namaBulan = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 const labelBulanSingkat = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "short" });
 
-// Grafik garis kecil omzet 6 bulan. Satu-satunya elemen yang menonjol: titik bulan ini.
-function Sparkline({ values }) {
-  const w = 156, h = 46, pad = 5;
-  const max = Math.max(1, ...values);
-  const step = values.length > 1 ? (w - pad * 2) / (values.length - 1) : 0;
-  const pts = values.map((v, i) => [pad + i * step, h - pad - (v / max) * (h - pad * 2)]);
-  const d = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
-  const [lx, ly] = pts[pts.length - 1];
+// Grafik batang omzet 6 bulan. Batang bulan terpilih menyala, batang lain redup.
+// Batang naik satu per satu saat pertama tampil. Klik batang untuk memilih bulan itu.
+function OmzetChart({ labels, values, aktif, onPilih, rpRevealed }) {
+  const [hover, setHover] = useState(null);
+  const [siap, setSiap] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setSiap(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const W = 600, H = 200, atas = 24, bawah = 168, celah = 18;
+  const bw = (W - celah * (labels.length - 1)) / labels.length;
+  const maks = Math.max(1, ...values);
+  const tinggi = bawah - atas;
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Omzet 6 bulan terakhir" className="overflow-visible">
-      <line x1={pad} x2={w - pad} y1={h - pad} y2={h - pad} stroke="#e2e8f0" strokeWidth="1" />
-      <path d={d} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={lx} cy={ly} r="3.5" fill="#f97316" />
-    </svg>
+    <div className="relative">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-52 w-full overflow-visible" role="img" aria-label="Grafik omzet 6 bulan terakhir">
+        <defs>
+          <linearGradient id="deal-batang-aktif" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#fdba74" />
+            <stop offset="100%" stopColor="#f97316" />
+          </linearGradient>
+          <linearGradient id="deal-batang-lain" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#475569" />
+            <stop offset="100%" stopColor="#1e293b" />
+          </linearGradient>
+          <filter id="deal-cahaya" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="6" result="kabur" />
+            <feMerge>
+              <feMergeNode in="kabur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        {[0, 0.5, 1].map((f) => (
+          <line key={f} x1="0" x2={W} y1={bawah - f * tinggi} y2={bawah - f * tinggi} stroke="#1e293b" strokeWidth="1" strokeDasharray={f === 0 ? undefined : "3 6"} />
+        ))}
+        {values.map((v, i) => {
+          const x = i * (bw + celah);
+          const h = v > 0 ? Math.max(6, (v / maks) * tinggi) : 3;
+          const on = labels[i] === aktif;
+          const redup = hover !== null && hover !== i;
+          return (
+            <g key={labels[i]} className="cursor-pointer" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onClick={() => onPilih(labels[i])}>
+              <rect x={x} y={0} width={bw} height={H} fill="transparent" />
+              <rect
+                x={x}
+                y={bawah - h}
+                width={bw}
+                height={h}
+                rx="7"
+                fill={on ? "url(#deal-batang-aktif)" : "url(#deal-batang-lain)"}
+                filter={on ? "url(#deal-cahaya)" : undefined}
+                opacity={redup ? 0.4 : 1}
+                className="transition-[transform,opacity] duration-700 ease-out motion-reduce:transition-none"
+                style={{ transformBox: "fill-box", transformOrigin: "50% 100%", transform: siap ? "scaleY(1)" : "scaleY(0)", transitionDelay: `${i * 70}ms` }}
+              />
+              <text x={x + bw / 2} y={H - 2} textAnchor="middle" fontSize="12" fill={on ? "#fdba74" : "#94a3b8"}>{labelBulanSingkat(labels[i])}</text>
+            </g>
+          );
+        })}
+      </svg>
+      {hover !== null && (
+        <div
+          className="pointer-events-none absolute top-0 z-10 whitespace-nowrap rounded-xl bg-white px-3 py-2 text-[12px] text-ink shadow-lg"
+          style={{ left: `${((hover * (bw + celah) + bw / 2) / W) * 100}%`, transform: "translate(-50%, -4px) translateY(-100%)" }}
+        >
+          <div className="font-medium text-slate-500">{namaBulan(labels[hover])}</div>
+          <div className="font-display text-[15px] font-bold tabular-nums">{rpRevealed ? fmtRp(values[hover]) : "••••••"}</div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -356,41 +413,44 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             </dl>
           )}
 
-          <section className="mt-7 flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
-            <div>
-              <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
-                {bulanPilih === "all" ? "Total nilai deal" : `Omzet ${namaBulan(bulanPilih)}`}
-                <button type="button" onClick={() => setRpRevealed((v) => !v)} aria-label={rpRevealed ? "Sembunyikan nilai" : "Tampilkan nilai"} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500">
-                  {rpRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
-                </button>
-              </div>
-              <div className="mt-2 font-display text-[44px] font-bold leading-none tracking-[-0.045em] tabular-nums text-ink">{rpRevealed ? fmtRp(totalBulan) : mask}</div>
-              <p className="mt-2.5 text-[13px] text-slate-500">{jumlahBulan} deal menang</p>
-            </div>
-
-            <div className="flex flex-col items-start gap-1.5">
-              <Sparkline values={omzetPerBulan} />
-              <div className="flex w-[156px] justify-between text-[10.5px] text-slate-400">
-                <span>{labelBulanSingkat(enamBulan[0])}</span>
-                <span>{labelBulanSingkat(enamBulan[5])}</span>
-              </div>
-            </div>
-
-            {units && (
-              <div className="min-w-[10rem]">
-                <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
-                  Total {quantityLabel}
-                  <button type="button" onClick={() => setQtyRevealed((v) => !v)} aria-label={qtyRevealed ? "Sembunyikan jumlah" : "Tampilkan jumlah"} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500">
-                    {qtyRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+          <section className="relative mt-7 overflow-hidden rounded-3xl bg-[#0f172a] p-6 text-white shadow-xl shadow-slate-900/10 sm:p-8">
+            <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-orange-500/20 blur-3xl" aria-hidden="true" />
+            <div className="relative flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+              <div>
+                <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-400">
+                  {bulanPilih === "all" ? "Total nilai deal" : `Omzet ${namaBulan(bulanPilih)}`}
+                  <button type="button" onClick={() => setRpRevealed((v) => !v)} aria-label={rpRevealed ? "Sembunyikan nilai" : "Tampilkan nilai"} className="rounded-full p-1 text-slate-500 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500">
+                    {rpRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
                 </div>
-                <div className="mt-2 font-display text-[22px] font-bold leading-tight tracking-[-0.02em] tabular-nums text-slate-800">
-                  {qtyRevealed
-                    ? (totals.length ? totals.map((t) => <span key={t.unit} className="mr-3 inline-block">{t.n.toLocaleString("id-ID")} <span className="text-[13px] font-medium text-slate-400">{unitLabel(units, t.unit)}</span></span>) : "0")
-                    : mask}
-                </div>
+                <div className="mt-2 font-display text-[44px] font-bold leading-none tracking-[-0.045em] tabular-nums text-white">{rpRevealed ? fmtRp(totalBulan) : mask}</div>
+                <p className="mt-2.5 text-[13px] text-slate-400">{jumlahBulan} deal menang</p>
               </div>
-            )}
+
+              {units && (
+                <div className="min-w-[10rem]">
+                  <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-400">
+                    Total {quantityLabel}
+                    <button type="button" onClick={() => setQtyRevealed((v) => !v)} aria-label={qtyRevealed ? "Sembunyikan jumlah" : "Tampilkan jumlah"} className="rounded-full p-1 text-slate-500 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500">
+                      {qtyRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                  </div>
+                  <div className="mt-2 font-display text-[22px] font-bold leading-tight tracking-[-0.02em] tabular-nums text-white">
+                    {qtyRevealed
+                      ? (totals.length ? totals.map((t) => <span key={t.unit} className="mr-3 inline-block">{t.n.toLocaleString("id-ID")} <span className="text-[13px] font-medium text-slate-400">{unitLabel(units, t.unit)}</span></span>) : "0")
+                      : mask}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="relative mt-8">
+              <div className="mb-3 flex items-center justify-between text-[12px] text-slate-400">
+                <span>Omzet 6 bulan terakhir</span>
+                <span className="hidden sm:inline">Klik batang untuk memilih bulan</span>
+              </div>
+              <OmzetChart labels={enamBulan} values={omzetPerBulan} aktif={bulanPilih} onPilih={(ym) => setBulanPilih(ym)} rpRevealed={rpRevealed} />
+            </div>
           </section>
 
           {monthGroups.filter((g) => bulanPilih === "all" || g.ym === bulanPilih).map(({ ym, items, total, max }) => (
