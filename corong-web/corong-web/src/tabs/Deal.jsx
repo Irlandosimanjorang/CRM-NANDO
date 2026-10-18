@@ -402,7 +402,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             </dl>
           )}
 
-          <section className="relative mt-7 overflow-hidden rounded-3xl bg-[#0f172a] p-6 text-white shadow-xl shadow-slate-900/10 sm:p-8">
+          <section className="relative mt-6 overflow-hidden rounded-2xl bg-[#0f172a] p-5 text-white shadow-lg shadow-slate-900/10 sm:p-6">
             <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-orange-500/20 blur-3xl" aria-hidden="true" />
             <div className="relative flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
               <div>
@@ -412,7 +412,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                     {rpRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
                 </div>
-                <div className="mt-2 font-display text-[44px] font-bold leading-none tracking-[-0.045em] tabular-nums text-white">{rpRevealed ? fmtRp(totalBulan) : mask}</div>
+                <div className="mt-1.5 font-display text-[30px] font-bold leading-none tracking-[-0.04em] tabular-nums text-white">{rpRevealed ? fmtRp(totalBulan) : mask}</div>
                 <p className="mt-2.5 text-[13px] text-slate-400">{jumlahBulan} deal menang</p>
               </div>
 
@@ -433,8 +433,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               )}
             </div>
 
-            <div className="relative mt-8">
-              <div className="mb-3 flex items-center justify-between text-[12px] text-slate-400">
+            <div className="relative mt-5 max-w-xl">
+              <div className="mb-2 flex items-center justify-between text-[12px] text-slate-400">
                 <span>Omzet 6 bulan terakhir</span>
                 <span className="hidden sm:inline">Klik batang untuk memilih bulan</span>
               </div>
