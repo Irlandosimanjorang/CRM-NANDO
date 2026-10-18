@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import * as db from "../lib/db";
@@ -48,14 +48,23 @@ export default function SharedOrgTeam({ onOpen }) {
 export function SharedOrgPage({ org, onBack }) {
   const [snap, setSnap] = useState(null);
   const [err, setErr] = useState("");
+  const [diperbarui, setDiperbarui] = useState(null);
+  const [memuat, setMemuat] = useState(false);
+
+  // Memuat ulang data tim org pemberi. Dipanggil saat halaman dibuka, tiap 30 detik, dan lewat tombol refresh.
+  const muatUlang = useCallback(() => {
+    setMemuat(true);
+    db.getSharedOrgSnapshot(org.grantor_org_id)
+      .then((d) => { setSnap(d); setErr(""); setDiperbarui(new Date()); })
+      .catch((e) => setErr(e.message || "Gagal memuat data tim"))
+      .finally(() => setMemuat(false));
+  }, [org.grantor_org_id]);
 
   useEffect(() => {
-    let alive = true;
-    db.getSharedOrgSnapshot(org.grantor_org_id)
-      .then((d) => { if (alive) setSnap(d); })
-      .catch((e) => { if (alive) setErr(e.message || "Gagal memuat data tim"); });
-    return () => { alive = false; };
-  }, [org.grantor_org_id]);
+    muatUlang();
+    const id = setInterval(muatUlang, 30000);
+    return () => clearInterval(id);
+  }, [muatUlang]);
 
   const view = useMemo(() => {
     if (!snap) return null;
@@ -136,7 +145,18 @@ export function SharedOrgPage({ org, onBack }) {
             <p className="mt-0.5 text-[12px] text-slate-500">Tampilan read-only. Data dibagikan oleh pemilik organisasi.</p>
           </div>
         </div>
-        <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white">read-only</span>
+        <div className="flex items-center gap-2">
+          {diperbarui && <span className="text-[11px] tabular-nums text-slate-500">Diperbarui {diperbarui.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>}
+          <button
+            type="button"
+            onClick={muatUlang}
+            disabled={memuat}
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
+          >
+            {memuat ? "Memuat…" : "Refresh"}
+          </button>
+          <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white">read-only</span>
+        </div>
       </div>
 
       {err && <p className="rounded-inner bg-rose-50 p-3 text-[12.5px] text-rose-700">{err}</p>}
