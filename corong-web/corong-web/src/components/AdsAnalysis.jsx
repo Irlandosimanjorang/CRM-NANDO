@@ -22,7 +22,7 @@ const rpOrDash = (v) => (v === null ? "-" : fmtRp(Math.round(v)));
 // Meta dan Instagram satu akun iklan (Meta Ads), jadi dibandingkan sebagai satu kelompok.
 const groupOf = (p) => (p === "Instagram" ? "Meta" : p);
 
-export default function AdsAnalysis({ leads = [], stages = [], dealTransactions = [], members = [], org, ym, from: fromProp, to: toProp, canImport, canManage = false, myUid = null, onChanged }) {
+export default function AdsAnalysis({ leads = [], stages = [], members = [], org, ym, from: fromProp, to: toProp, canImport, canManage = false, myUid = null, onChanged }) {
   // "cohort": lead yang masuk periode ini beserta deal-nya kapan pun. "deal": deal yang tutup periode ini dari lead kapan pun masuknya.
   const [basis, setBasis] = useState("cohort");
   const [year, month] = ym.split("-").map(Number);
@@ -48,21 +48,12 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
     const inR = (d) => { const k = String(d || "").slice(0, 10); return k >= from && k <= to; };
     const isCohort = (l) => inR(l.created_at);
     const cohort = live.filter(isCohort);
-    // Omzet dari nilai transaksi deal (termasuk repeat order). Lead menang tanpa transaksi memakai nilai deal di lead.
-    const txByLead = new Map();
-    for (const t of dealTransactions) { if (!t.lead_id) continue; const arr = txByLead.get(t.lead_id) || []; arr.push(t); txByLead.set(t.lead_id, arr); }
+    // Satu aturan deal di semua tab: deal = lead yang sekarang di tahap menang, nilainya deal_value lead.
     const dealInfo = (l) => {
-      const txs = txByLead.get(l.id) || [];
       const won = wonKeys.has(l.stage_key);
-      if (basis === "deal") {
-        const m = txs.filter((t) => inR(t.deal_date));
-        if (m.length) return { deal: true, value: m.reduce((t, x) => t + num(x.deal_value), 0) };
-        if (won && !txs.length && inR(l.deal_date)) return { deal: true, value: num(l.deal_value) };
-        return { deal: false, value: 0 };
-      }
-      if (!isCohort(l)) return { deal: false, value: 0 };
-      if (txs.length) return { deal: true, value: txs.reduce((t, x) => t + num(x.deal_value), 0) };
-      return won ? { deal: true, value: num(l.deal_value) } : { deal: false, value: 0 };
+      if (!won) return { deal: false, value: 0 };
+      if (basis === "deal") return inR(l.deal_date) ? { deal: true, value: num(l.deal_value) } : { deal: false, value: 0 };
+      return isCohort(l) ? { deal: true, value: num(l.deal_value) } : { deal: false, value: 0 };
     };
 
     const by = new Map();
@@ -120,7 +111,7 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
     }
     for (const r of adRows.filter((x) => x.leads === 0)) insights.push(`${r.platform}: biaya ${fmtRp(Math.round(r.spend))} tetapi belum ada lead dengan sumber ini di Nexto. Pastikan sales mengisi "Sumber lead".`);
     return { slot, rows, adRows, tot, campaigns, unmatchedLeads, insights, cohortCount: cohort.length, noSource: cohort.filter((l) => sourceOf(l) === "Tidak diisi").length };
-  }, [ads, leads, stages, dealTransactions, org, from, to, basis]);
+  }, [ads, leads, stages, org, from, to, basis]);
 
   const colorOf = (p, i) => COLORS[p] || EXTRA[i % EXTRA.length];
   const leadPie = a.rows.filter((r) => r.leads > 0).map((r) => ({ name: r.platform, value: r.leads }));
@@ -169,7 +160,7 @@ export default function AdsAnalysis({ leads = [], stages = [], dealTransactions 
 
   return (
     <div className="space-y-4">
-      <MarketingAdsPanel leads={leads} dealTransactions={dealTransactions} members={members} from={from} to={to} ym={ym} canManage={canManage} myUid={myUid} onChanged={onChanged} />
+      <MarketingAdsPanel leads={leads} stages={stages} members={members} from={from} to={to} ym={ym} canManage={canManage} myUid={myUid} onChanged={onChanged} />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div role="group" aria-label="Cara menghitung deal" title={basis === "cohort" ? "Lead, deal, dan omzet dari lead yang masuk pada periode ini." : "Deal dan omzet dari semua lead yang deal-nya tutup pada periode ini."} className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold">
           {[["cohort", "Lead masuk periode ini"], ["deal", "Deal tutup periode ini"]].map(([k, label]) => (

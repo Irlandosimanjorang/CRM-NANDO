@@ -42,6 +42,7 @@ export default function Dashboard({
     db.getOutcomeEvents().then(setEvents).catch(() => setEvents(null));
   }, [leads]);
 
+  const bulanIniWib = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }).slice(0, 7);
   const stats = useMemo(() => {
     const wonKeys = stages.filter(s => s.type === "won").map(s => s.key);
     const lostKeys = stages.filter(s => s.type === "lost").map(s => s.key);
@@ -57,8 +58,8 @@ export default function Dashboard({
       lost: lostN,
       followups: followups.length,
       visits: visits.length,
-      // Satu aturan deal di semua tab: deal = lead yang sekarang di tahap menang.
-      deals: won.length,
+      // Satu aturan deal di semua tab: deal = lead yang sekarang di tahap menang, menurut tanggal deal (bulan berjalan WIB).
+      deals: won.filter(l => String(l.deal_date || "").slice(0, 7) === bulanIniWib).length,
       winRate: wonN + lostN ? Math.round((wonN / (wonN + lostN)) * 100) : 0,
       wonKeys,
     };
@@ -304,7 +305,7 @@ export default function Dashboard({
         <Stat value={stats.total} label="Total lead" hint={`${stats.won} menang, ${stats.lost} kalah`} />
         <Stat value={stats.followups} label="Perlu follow-up" hint="Lead dengan langkah berikutnya" tone={stats.followups ? "brand" : "ink"} />
         <Stat value={stats.visits} label="Kunjungan hari ini" hint={nextVisit ? `Berikutnya: ${nextVisit.name}` : "Belum ada jadwal kunjungan"} />
-        <Stat value={stats.won} label="Deal menang" hint={`${stats.lost} kalah · win rate ${stats.winRate}%`} tone={stats.won ? "good" : "ink"} />
+        <Stat value={stats.deals} label="Deal bulan ini" hint={`${stats.lost} kalah · win rate ${stats.winRate}% (sepanjang masa)`} tone={stats.deals ? "good" : "ink"} />
       </StatRow>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] gap-5">

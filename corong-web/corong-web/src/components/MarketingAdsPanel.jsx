@@ -10,7 +10,7 @@ const todayIso = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0,
 const inRange = (iso, from, to) => !!iso && String(iso).slice(0, 10) >= from && String(iso).slice(0, 10) <= to;
 const nameOf = (m) => m?.display_name || m?.name || `Anggota ${String(m?.user_id || "").slice(0, 8)}`;
 
-export default function MarketingAdsPanel({ leads = [], dealTransactions = [], members = [], from, to, ym, canManage, myUid: myUidProp = null, onChanged }) {
+export default function MarketingAdsPanel({ leads = [], stages = [], members = [], from, to, ym, canManage, myUid: myUidProp = null, onChanged }) {
   const [myUidState, setMyUidState] = useState(myUidProp);
   const myUid = myUidProp || myUidState;
   useEffect(() => { if (!myUidProp) db.getCurrentUserId().then(setMyUidState).catch(() => setMyUidState(null)); }, [myUidProp]);
@@ -51,14 +51,16 @@ export default function MarketingAdsPanel({ leads = [], dealTransactions = [], m
   const rows = useMemo(() => {
     const ids = new Set([...members.map((m) => m.user_id), ...expenses.map((e) => e.user_id), ...Object.keys(budgets)]);
     const periodLeads = leads.filter((l) => !l.deleted_at && inRange(l.created_at, from, to));
+    // Deal = lead yang sekarang di tahap menang, menurut tanggal deal (satu aturan di semua tab).
+    const wonKeys = new Set(stages.filter((s) => s.type === "won").map((s) => s.key));
+    const wonLeads = leads.filter((l) => !l.deleted_at && wonKeys.has(l.stage_key) && inRange(l.deal_date, from, to));
     return [...ids].filter((u) => canManage || u === myUid).map((u) => {
       const ex = expenses.filter((e) => e.user_id === u);
       const spent = ex.reduce((n, e) => n + (Number(e.amount) || 0), 0);
       const platforms = new Set(ex.map((e) => String(e.platform || "").trim().toLowerCase()).filter(Boolean));
       const adLeads = periodLeads.filter((l) => (l.assigned_to || l.user_id) === u && platforms.has(String(l.source || "").trim().toLowerCase()));
-      const adLeadIds = new Set(adLeads.map((l) => l.id));
-      const deals = dealTransactions.filter((t) => adLeadIds.has(t.lead_id) && inRange(t.deal_date, from, to));
-      const omzet = deals.reduce((n, t) => n + (Number(t.deal_value) || 0), 0);
+      const deals = wonLeads.filter((l) => (l.assigned_to || l.user_id) === u && platforms.has(String(l.source || "").trim().toLowerCase()));
+      const omzet = deals.reduce((n, l) => n + (Number(l.deal_value) || 0), 0);
       const budget = budgets[u] || 0;
       return {
         user: u, name: nameOf(memberById[u]), budget, spent, sisa: budget - spent,
@@ -66,7 +68,7 @@ export default function MarketingAdsPanel({ leads = [], dealTransactions = [], m
         deals: deals.length, perDeal: deals.length ? spent / deals.length : null, omzet,
       };
     }).sort((a, b) => b.spent - a.spent);
-  }, [members, expenses, budgets, leads, dealTransactions, from, to, canManage, myUid, memberById]);
+  }, [members, expenses, budgets, leads, stages, from, to, canManage, myUid, memberById]);
 
   const addExpense = async () => {
     const amount = Number(fAmount);
