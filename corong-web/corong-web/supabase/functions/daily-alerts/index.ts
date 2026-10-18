@@ -33,14 +33,13 @@ Deno.serve(async (req) => {
 
     const results: unknown[] = [];
     for (const org of (orgs || []).filter((o) => o.features?.daily_alerts === true)) {
-      const [{ data: leads }, { data: stages }, { data: notes }, { data: convs }, { data: members }, { data: targets }, { data: tx }] = await Promise.all([
-        admin.from("leads").select("id, name, stage_key, deal_value, last_contact, created_at, assigned_to, user_id").eq("org_id", org.id).is("deleted_at", null).limit(5000),
+      const [{ data: leads }, { data: stages }, { data: notes }, { data: convs }, { data: members }, { data: targets }] = await Promise.all([
+        admin.from("leads").select("id, name, stage_key, deal_value, deal_date, last_contact, created_at, assigned_to, user_id").eq("org_id", org.id).is("deleted_at", null).limit(5000),
         admin.from("stages").select("key, type").eq("org_id", org.id),
         admin.from("progress_notes").select("lead_id, created_at").eq("org_id", org.id).order("created_at", { ascending: false }).limit(20000),
         admin.from("lead_conversations").select("lead_id, platform, campaign, last_inbound_at, last_outbound_at").eq("org_id", org.id).not("lead_id", "is", null).limit(2000),
         admin.from("organization_members").select("user_id, role").eq("org_id", org.id),
         admin.from("sales_targets").select("user_id, amount").eq("org_id", org.id).eq("month", monthStart),
-        admin.from("deal_transactions").select("user_id, deal_value").eq("org_id", org.id).gte("deal_date", monthStart),
       ]);
 
       const ids = (members || []).map((m) => m.user_id);
@@ -49,7 +48,13 @@ Deno.serve(async (req) => {
       const lastNote = new Map<string, string>();
       for (const n of notes || []) if (!lastNote.has(n.lead_id)) lastNote.set(n.lead_id, n.created_at);
       const achieved = new Map<string, number>();
-      for (const t of tx || []) achieved.set(t.user_id, (achieved.get(t.user_id) || 0) + (Number(t.deal_value) || 0));
+      // Satu aturan deal di semua tab: capaian = nilai lead menang dengan tanggal deal bulan ini, per penanggung jawab.
+      const wonKeys = new Set((stages || []).filter((s) => s.type === "won").map((s) => s.key));
+      for (const l of leads || []) {
+        const pic = l.assigned_to || l.user_id;
+        if (!pic || !wonKeys.has(l.stage_key) || String(l.deal_date || "").slice(0, 10) < monthStart) continue;
+        achieved.set(pic, (achieved.get(pic) || 0) + (Number(l.deal_value) || 0));
+      }
 
       const alerts = buildAlerts({
         now,
