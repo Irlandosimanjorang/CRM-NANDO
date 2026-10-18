@@ -111,8 +111,8 @@ export default function CompanyPerformanceCard() {
         >
           <div className="flex items-center gap-3">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-300 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-300" />
             </span>
             <div>
               <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
@@ -131,13 +131,13 @@ export default function CompanyPerformanceCard() {
                   cy="28"
                   r="24"
                   fill="none"
-                  stroke={done ? "#ea580c" : "#f97316"}
+                  stroke={done ? "#fb923c" : "#fdba74"}
                   strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray={ring}
                   strokeDashoffset={ring * (1 - hp / 100)}
                   transform="rotate(-90 28 28)"
-                  style={{ transition: "stroke-dashoffset 900ms ease", filter: done ? "drop-shadow(0 0 6px rgba(249,115,22,0.6))" : undefined }}
+                  style={{ transition: "stroke-dashoffset 900ms ease", filter: done ? "drop-shadow(0 0 4px rgba(251,146,60,0.45))" : undefined }}
                 />
               </svg>
               <span className="relative text-[12.5px] font-bold tabular-nums text-ink">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
