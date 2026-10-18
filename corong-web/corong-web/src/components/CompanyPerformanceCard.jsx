@@ -45,6 +45,13 @@ function Col({ title, children }) {
 export default function CompanyPerformanceCard() {
   const [view, setView] = useState(null);
   const [allTime, setAllTime] = useState(null);
+  // Kartu bisa disembunyikan (17-18 Okt 2026). Pilihan disimpan di perangkat ini saja.
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem("nexto_perf_hidden") === "1"; } catch (_) { return false; } });
+  const toggleHidden = () => setHidden((v) => {
+    const next = !v;
+    try { localStorage.setItem("nexto_perf_hidden", next ? "1" : "0"); } catch (_) { /* abaikan */ }
+    return next;
+  });
 
   useEffect(() => {
     let alive = true;
@@ -61,6 +68,17 @@ export default function CompanyPerformanceCard() {
       <section className={cardCls}>
         <div className="h-4 w-48 rounded bg-slate-100 motion-safe:animate-pulse" />
         <div className="mt-4 grid gap-3 md:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="h-44 rounded-inner bg-slate-100 motion-safe:animate-pulse" />)}</div>
+      </section>
+    );
+  }
+
+  if (hidden) {
+    return (
+      <section className={cardCls}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
+          <button type="button" onClick={toggleHidden} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[12px] font-semibold text-slate-600 hover:bg-slate-50">Tampilkan</button>
+        </div>
       </section>
     );
   }
@@ -83,7 +101,10 @@ export default function CompanyPerformanceCard() {
           <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{isCompany ? "Performa perusahaan" : "Performa saya"}</h2>
           <p className="mt-0.5 text-[11.5px] text-slate-500">{isCompany ? `Seluruh team, ${monthLabel}` : monthLabel}</p>
         </div>
-        {isCompany && <span className="text-[10.5px] text-slate-500">Rincian per sales hanya dapat dilihat manager</span>}
+        <div className="flex items-center gap-3">
+          {isCompany && <span className="text-[10.5px] text-slate-500">Rincian per sales hanya dapat dilihat manager</span>}
+          <button type="button" onClick={toggleHidden} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[12px] font-semibold text-slate-600 hover:bg-slate-50">Sembunyikan</button>
+        </div>
       </div>
 
       <div className={`mt-4 grid gap-px overflow-hidden rounded-inner border border-slate-100 bg-slate-100 ${isCompany ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
