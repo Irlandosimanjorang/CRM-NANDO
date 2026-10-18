@@ -491,7 +491,7 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAEu6vGXceQD1CTOl";
 // SENGAJA tetap nyimpen nominal early bird selamanya, jangan dihapus -
 // biar subscriber yang udah kadung subscribe di harga diskon pas
 // perpanjangan bulanan gak "nyangkut" jadi unknown amount).
-const EARLY_BIRD_DEADLINE = new Date("2026-10-15T23:59:59+07:00");
+const EARLY_BIRD_DEADLINE = new Date("2026-11-15T23:59:59+07:00");
 const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 
 // === HARGA NORMAL (revisi 22 Sep 2026 - lihat komentar lengkap di
@@ -3039,7 +3039,7 @@ export default function Auth() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
                   </span>
-                  {tr("Early Bird Registration — daftar sebelum 15 Oktober 2026", "Early Bird Registration — sign up before October 15, 2026")}
+                  {tr("Early Bird Registration — daftar sebelum 15 November 2026", "Early Bird Registration — sign up before November 15, 2026")}
                 </div>
               )}
             </div>
