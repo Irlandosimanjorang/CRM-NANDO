@@ -102,7 +102,7 @@ export default function CompanyPerformanceCard() {
     const ring = 2 * Math.PI * 24;
     const done = hp >= 100;
     return (
-      <section className="rounded-panel border border-white/10 bg-[#0f172a] p-4 text-white shadow-lg">
+      <section className="rounded-panel border border-white/10 bg-[#0b1220] p-4 text-white shadow-lg">
         <button
           type="button"
           onClick={toggleHidden}
@@ -131,7 +131,7 @@ export default function CompanyPerformanceCard() {
                   cy="28"
                   r="24"
                   fill="none"
-                  stroke={done ? "#34d399" : "#f97316"}
+                  stroke={done ? "#34d399" : "#f59e0b"}
                   strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray={ring}
