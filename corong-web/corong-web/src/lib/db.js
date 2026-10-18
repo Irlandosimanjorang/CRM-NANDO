@@ -71,6 +71,14 @@ export async function switchDemoIndustry(industryKey) {
 // UUID mentah ("Anggota 45dadf81") yang gak kebaca sama sekali.
 // Rekap aktivitas tim (tab "Tim", 30 Sep 2026) - khusus owner/manager
 // Enterprise, dicek ulang di RPC-nya. Balikin { members: [...], feed: [...] }.
+// Deal (lead menang dengan tanggal deal di rentang from..to, format YYYY-MM-DD) langsung dari server.
+// Sumber yang sama dengan Rekap aktivitas tim, supaya angka Report tidak bergantung pada daftar lead di aplikasi.
+export async function getDealsRange(from, to) {
+  const { data, error } = await supabase.rpc("get_deals_range", { p_from: from, p_to: to });
+  if (error) throw error;
+  return data || [];
+}
+
 export async function getTeamActivity(from, to) {
   const { data, error } = await supabase.rpc("get_team_activity", { p_from: from.toISOString(), p_to: to.toISOString() });
   if (error) throw error;

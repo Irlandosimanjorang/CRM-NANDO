@@ -153,9 +153,12 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     setYm(`${t.getFullYear()}-${pad(t.getMonth() + 1)}`);
   };
 
+  // Deal dari server, disaring lingkup marketing dan filter sumber/tahap seperti tabel lead.
+  const dealLeads = useMemo(() => dealsSrv.filter((l) => !l.deleted_at && (scopeId === "all" || (l.assigned_to || l.user_id) === scopeId) && passF(l)), [dealsSrv, scopeId, srcF, stF, srcSlot]);
+
   const r = useMemo(() => {
     const keyOf = (type) => new Set(stages.filter((s) => s.type === type).map((s) => s.key));
-    const wonKeys = keyOf("won"), lostKeys = keyOf("lost");
+    const lostKeys = keyOf("lost");
     const hasBsbFlow = stages.some((s) => s.key === "sph_terlayang") && stages.some((s) => s.key === "hot_progress");
     const val = (l) => num(l.deal_value);
     const live = leads.filter((l) => !l.deleted_at);
@@ -167,7 +170,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     const masuk = live.filter((l) => inR(l.created_at));
 
     // Satu aturan deal di semua tab: deal = lead yang sekarang di tahap menang, menurut tanggal deal lead.
-    const mkRows = (test) => live.filter((l) => wonKeys.has(l.stage_key) && test(l.deal_date)).map((l) => ({ date: l.deal_date, value: val(l), name: l.name, lead: l }));
+    const mkRows = (test) => dealLeads.filter((l) => test(l.deal_date)).map((l) => ({ date: l.deal_date, value: val(l), name: l.name, lead: l }));
     const dealRows = mkRows(inR);
     const dealRowsMonth = mkRows((d) => ymOf(d) === ym);
     const dealValue = dealRows.reduce((s, d) => s + d.value, 0);
@@ -185,17 +188,15 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
       lostCount: lost.length, lostValue, sphAll, running, runningValue: running.reduce((s, l) => s + val(l), 0),
       dealsByDay, masukByDay,
     };
-  }, [leads, stages, ym, range]);
+  }, [leads, stages, ym, range, dealLeads]);
 
   // Omzet bulan sebelumnya pada lingkup yang sama, untuk pembanding di kartu omzet.
   const prevDeal = useMemo(() => {
     if (!fullMonth) return 0;
     const t = new Date(year, month - 2, 1);
     const pym = `${t.getFullYear()}-${pad(t.getMonth() + 1)}`;
-    const wonKeys = new Set(stages.filter((x) => x.type === "won").map((x) => x.key));
-    const live = leads.filter((l) => !l.deleted_at);
-    return live.filter((l) => wonKeys.has(l.stage_key) && ymOf(l.deal_date) === pym).reduce((n, l) => n + num(l.deal_value), 0);
-  }, [leads, stages, year, month, fullMonth]);
+    return dealLeads.filter((l) => ymOf(l.deal_date) === pym).reduce((n, l) => n + num(l.deal_value), 0);
+  }, [dealLeads, year, month, fullMonth]);
 
   // Aktivitas tiap marketing pada periode yang sama (RPC tab Team; hanya owner/manager Enterprise, selain itu kolom disembunyikan).
   // Aktivitas = kunjungan + lead di-update + lead baru + pindah tahap. Deal tidak dihitung sebagai aktivitas.
@@ -207,6 +208,19 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     window.addEventListener("nexto-data-changed", onData);
     return () => window.removeEventListener("nexto-data-changed", onData);
   }, []);
+
+  // Deal dibaca dari server (rentang bulan lalu sampai akhir periode), sumber yang sama dengan tab Team dan Rekap aktivitas.
+  const dealFrom = useMemo(() => {
+    const t = new Date(year, month - 2, 1);
+    const pFrom = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-01`;
+    return range.from < pFrom ? range.from : pFrom;
+  }, [year, month, range.from]);
+  const [dealsSrv, setDealsSrv] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    db.getDealsRange(dealFrom, range.to).then((d) => { if (alive) setDealsSrv(d); }).catch(() => { if (alive) setDealsSrv([]); });
+    return () => { alive = false; };
+  }, [dealFrom, range.to, dataTick]);
 
   useEffect(() => {
     if (personal || view !== "penjualan") return undefined;
@@ -223,10 +237,9 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
 
   // Perbandingan antar marketing (selalu dari seluruh data, tidak ikut pilihan marketing di atas).
   const team = useMemo(() => {
-    const wonKeys = new Set(stages.filter((x) => x.type === "won").map((x) => x.key));
     return marketers.map((m) => {
       const ls = fLeads.filter((l) => !l.deleted_at && (l.assigned_to || l.user_id) === m.id);
-      const won = ls.filter((l) => wonKeys.has(l.stage_key) && inR(l.deal_date));
+      const won = dealsSrv.filter((l) => !l.deleted_at && (l.assigned_to || l.user_id) === m.id && inR(l.deal_date) && passF(l));
       const hot = ls.filter((l) => l.stage_key === "hot_progress");
       const sph = ls.filter((l) => l.stage_key === "sph_terlayang");
       const sumV = (arr, f) => arr.reduce((t, x) => t + num(f(x)), 0);
