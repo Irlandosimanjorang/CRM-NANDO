@@ -346,6 +346,40 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                 )}
               </div>
 
+              <div className="min-w-0 flex-1 basis-72">
+                <div className="flex items-center justify-between text-[11.5px] text-slate-400">
+                  <span>Omzet 6 bulan terakhir</span>
+                  <span className="hidden sm:inline">Klik batang untuk memilih bulan</span>
+                </div>
+                <div className="relative mt-2 h-32 -mx-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 4, right: 4, left: -22, bottom: 0 }}
+                      barCategoryGap="38%"
+                      onClick={(e) => { const ym = e?.activePayload?.[0]?.payload?.ym; if (ym) setBulanPilih(ym); }}
+                    >
+                      <CartesianGrid vertical={false} stroke="#1e293b" />
+                      <XAxis dataKey="label" tick={{ fontSize: 10.5, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10.5, fill: "#64748b" }} axisLine={false} tickLine={false} width={24} allowDecimals={false} hide={!rpRevealed} tickFormatter={(v) => (v >= 1e6 ? `${Math.round(v / 1e6)}jt` : v)} />
+                      <Tooltip
+                        cursor={{ fill: "rgba(148,163,184,0.08)" }}
+                        formatter={(v) => (rpRevealed ? fmtRp(v) : "••••••")}
+                        labelFormatter={(label, payload) => (payload?.[0]?.payload?.ym ? namaBulan(payload[0].payload.ym) : label)}
+                        contentStyle={{ borderRadius: 12, border: "1px solid #1e293b", background: "#0f172a", fontSize: 12 }}
+                        labelStyle={{ fontWeight: 700, color: "#ffffff" }}
+                        itemStyle={{ color: "#fdba74" }}
+                      />
+                      <Bar dataKey="omzet" name="Omzet" radius={[4, 4, 0, 0]} maxBarSize={20} cursor="pointer">
+                        {chartData.map((d) => (
+                          <Cell key={d.ym} fill={d.ym === bulanPilih ? "#f97316" : "#334155"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
               {units && (
                 <div className="min-w-[10rem]">
                   <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-400">
@@ -364,42 +398,6 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             </div>
 
           </section>
-          <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-[14px] font-bold tracking-[-0.01em] text-ink">Omzet 6 bulan terakhir</p>
-                <p className="mt-0.5 text-[11.5px] text-slate-500">Klik batang untuk memilih bulan</p>
-              </div>
-              <span className="flex items-center gap-1.5 text-[12px] text-slate-500"><span className="h-2 w-2 rounded-full bg-orange-500" />Bulan terpilih</span>
-            </div>
-            <div className="mt-4 h-56 -mx-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 4, right: 8, left: -18, bottom: 0 }}
-                  barCategoryGap="38%"
-                  onClick={(e) => { const ym = e?.activePayload?.[0]?.payload?.ym; if (ym) setBulanPilih(ym); }}
-                >
-                  <CartesianGrid vertical={false} stroke="#eef2f7" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10.5, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={24} allowDecimals={false} hide={!rpRevealed} tickFormatter={(v) => (v >= 1e6 ? `${Math.round(v / 1e6)}jt` : v)} />
-                  <Tooltip
-                    cursor={{ fill: "#f8fafc" }}
-                    formatter={(v) => (rpRevealed ? fmtRp(v) : "••••••")}
-                    labelFormatter={(label, payload) => (payload?.[0]?.payload?.ym ? namaBulan(payload[0].payload.ym) : label)}
-                    contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
-                    labelStyle={{ fontWeight: 700, color: "#0f172a" }}
-                  />
-                  <Bar dataKey="omzet" name="Omzet" radius={[6, 6, 0, 0]} maxBarSize={28} cursor="pointer">
-                    {chartData.map((d) => (
-                      <Cell key={d.ym} fill={d.ym === bulanPilih ? "#f97316" : "#e2e8f0"} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
           {monthGroups.filter((g) => bulanPilih === "all" || g.ym === bulanPilih).map(({ ym, items, total, max }) => (
             <section key={ym} className="mt-9">
               {bulanPilih === "all" && (
