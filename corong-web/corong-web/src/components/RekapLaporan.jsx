@@ -34,7 +34,7 @@ const COLS = [
   ["ALAMAT", ""], ["NO SPH / INVOICE", "whitespace-nowrap"], ["NILAI", "text-right whitespace-nowrap"], ["KETERANGAN", "min-w-[190px]"], ["SUMBER", ""],
 ];
 
-export default function RekapLaporan({ leads = [], stages = [], dealTransactions = [], ym, orgName = "", target = 0, personal = false, members = [] }) {
+export default function RekapLaporan({ leads = [], stages = [], ym, orgName = "", target = 0, personal = false, members = [] }) {
   const [year, month] = ym.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
   const from = `${ym}-01`, to = `${ym}-${pad(daysInMonth)}`;
@@ -74,12 +74,8 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
     const lostKeys = new Set(stages.filter((s) => s.type === "lost").map((s) => s.key));
     const startOfMonth = from;
 
-    // Deal bulan ini: transaksi di tab Deal bila ada, selain itu tanggal deal di lead.
-    const txIds = new Set(dealTransactions.map((t) => t.lead_id));
-    const dealMap = new Map();
-    for (const t of dealTransactions) if (ymOf(t.deal_date) === ym && byId.get(t.lead_id)) dealMap.set(t.lead_id, { lead: byId.get(t.lead_id), value: num(t.deal_value), date: t.deal_date });
-    for (const l of live) if (wonKeys.has(l.stage_key) && !txIds.has(l.id) && ymOf(l.deal_date) === ym) dealMap.set(l.id, { lead: l, value: num(l.deal_value), date: l.deal_date });
-    const deals = [...dealMap.values()];
+    // Deal bulan ini: satu aturan deal di semua tab, yaitu lead yang sekarang di tahap menang menurut tanggal deal.
+    const deals = live.filter((l) => wonKeys.has(l.stage_key) && ymOf(l.deal_date) === ym).map((l) => ({ lead: l, value: num(l.deal_value), date: l.deal_date }));
 
     // Timeline: tanggal -> tahap, per lead. Riwayat pindah tahap lebih diutamakan daripada perkiraan.
     const events = new Map();
@@ -129,7 +125,7 @@ export default function RekapLaporan({ leads = [], stages = [], dealTransactions
     const sum = (rows) => rows.reduce((t, r) => t + r.value, 0);
     const sphAll = sum(sections[0].rows);
     return { master, events, sections, prior, sphAll, hotAll: sum(sections[1].rows), dealAll: sum(deals), dealCount: deals.length, sphStageCount: sph.length, hotCount: hot.length, lostCount: lost.length, lostAll: sum(sections.find((x) => x.key === "nodeal").rows), pending: sph.reduce((t, l) => t + num(l.deal_value), 0), masukCount: live.filter((l) => ymOf(wibDate(l.created_at)) === ym).length };
-  }, [leads, stages, dealTransactions, changes, ym, from, firstKey, month]);
+  }, [leads, stages, changes, ym, from, firstKey, month]);
 
   const cells = (r, i) => [
     i + 1, fmtDay(r.date), r.lead.name, r.lead.company_type || "", r.lead.phone || "", r.lead.city || "", String(r.lead.custom_field_1 || "").trim(),
