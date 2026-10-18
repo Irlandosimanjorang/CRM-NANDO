@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import * as db from "../lib/db";
 
 // Kartu "Performa Perusahaan" di Dashboard - khusus sales_rep plan Enterprise
@@ -111,8 +112,8 @@ export default function CompanyPerformanceCard() {
         >
           <div className="flex items-center gap-3">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-300 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-300" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-40 [animation-duration:2s]" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-orange-400" />
             </span>
             <div>
               <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">{view.company ? "Performa perusahaan" : "Performa saya"}</h2>
@@ -123,24 +124,27 @@ export default function CompanyPerformanceCard() {
             <div className="text-right">
               <div className="text-[11px] tabular-nums text-slate-500">{ht > 0 ? "dari target" : "target belum ditetapkan"} · {hd} deal</div>
             </div>
-            <span className="relative grid h-14 w-14 place-items-center">
-              <svg width="56" height="56" viewBox="0 0 56 56" className="absolute inset-0" aria-hidden="true">
-                <circle cx="28" cy="28" r="24" fill="none" stroke="#e2e8f0" strokeWidth="4" />
+            <span className="relative grid h-11 w-11 place-items-center">
+              <svg width="44" height="44" viewBox="0 0 56 56" className="absolute inset-0" aria-hidden="true">
+                <circle cx="28" cy="28" r="24" fill="none" stroke="#ffedd5" strokeWidth="3" />
                 <circle
                   cx="28"
                   cy="28"
                   r="24"
                   fill="none"
-                  stroke={done ? "#fb923c" : "#fdba74"}
-                  strokeWidth="4"
+                  stroke="#fb923c"
+                  strokeWidth="3"
                   strokeLinecap="round"
                   strokeDasharray={ring}
                   strokeDashoffset={ring * (1 - hp / 100)}
                   transform="rotate(-90 28 28)"
-                  style={{ transition: "stroke-dashoffset 900ms ease", filter: done ? "drop-shadow(0 0 4px rgba(251,146,60,0.45))" : undefined }}
+                  style={{ transition: "stroke-dashoffset 900ms ease" }}
                 />
               </svg>
-              <span className="relative text-[12.5px] font-bold tabular-nums text-ink">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
+              <span className={`relative flex items-center gap-0.5 text-[11.5px] font-bold tabular-nums ${done ? "text-orange-600" : "text-ink"}`}>
+                {done && <Check size={11} strokeWidth={3} aria-hidden="true" />}
+                {ht > 0 ? `${Math.round(shownValue)}%` : "–"}
+              </span>
             </span>
           </div>
         </button>
