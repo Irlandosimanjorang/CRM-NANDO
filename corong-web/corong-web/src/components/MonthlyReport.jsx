@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Printer, Presentation, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Printer, Presentation, Info } from "lucide-react";
 import { downloadReportPpt } from "../lib/reportPpt";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
@@ -71,7 +71,7 @@ function InfoTip({ text }) {
   );
 }
 
-export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTxRaw = [], members = [], org, canEditTarget = false, canImport = false, canManage = false, onChanged, onOpenLead, projectDeal = false }) {
+export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTxRaw = [], members = [], org, canImport = false, canManage = false, onChanged, onOpenLead, projectDeal = false }) {
   // Omzet org project_deal (16 Okt 2026, keputusan Nando): nilai proyek lead di tahap menang, bukan transaksi deal.
   // Transaksi dikosongkan supaya perhitungan memakai fallback lead menang (deal_value & deal_date) yang sudah ada.
   const allTx = useMemo(() => (projectDeal ? [] : allTxRaw), [allTxRaw, projectDeal]);
@@ -94,9 +94,6 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const view = personal && viewRaw === "iklan" ? "penjualan" : viewRaw;
   const [selected, setSelected] = useState(todayIso);
   const [memberId, setMemberId] = useState("all");
-  const [editing, setEditing] = useState(false);
-  const [targetInput, setTargetInput] = useState("");
-  const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
   // Marketing = anggota selain owner (owner ikut bila punya lead). Owner dan manager bisa memilih satu marketing
@@ -265,28 +262,15 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   // Target dibaca dari sistem target tab Team (sales_targets per marketing per bulan) supaya satu sumber.
   // Target tim = jumlah target para marketing. Diubah per marketing (di sini saat satu marketing dipilih, atau di tab Team).
   const [targets, setTargets] = useState({});
-  const [tTick, setTTick] = useState(0);
   useEffect(() => {
     if (personal) { setTargets({}); return undefined; }
     let alive = true;
     db.getTeamTargets(`${ym}-01`).then((rows) => { if (alive) setTargets(Object.fromEntries((rows || []).map((x) => [x.user_id, num(x.target)]))); }).catch(() => { if (alive) setTargets({}); });
     return () => { alive = false; };
-  }, [ym, personal, tTick]);
+  }, [ym, personal]);
   const targetOf = (uid) => num(targets[uid]);
   const target = personal || !fullMonth ? 0 : scopeId === "all" ? marketers.reduce((s, m) => s + targetOf(m.id), 0) : targetOf(scopeId);
   const reached = target > 0 ? Math.min(100, (r.dealValue / target) * 100) : 0;
-  const saveTarget = async () => {
-    setSaving(true); setErr("");
-    try {
-      const amount = Number(String(targetInput).replace(/\D/g, "")) || 0;
-      if (scopeId === "all") throw new Error("Pilih satu marketing untuk mengubah targetnya.");
-      await db.setSalesTarget(scopeId, `${ym}-01`, amount);
-      setTTick((x) => x + 1);
-      setEditing(false);
-      onChanged?.();
-    } catch (e) { setErr(String(e?.message || e)); }
-    setSaving(false);
-  };
 
   // Sel kalender: minggu mulai Senin, selalu kelipatan 7.
   const cells = useMemo(() => {
@@ -473,21 +457,9 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               </div>
               {!personal && fullMonth && (
                 <div className="sm:text-right">
-                  {editing ? (
-                    <div className="flex items-center gap-2">
-                      <input inputMode="numeric" autoFocus value={targetInput} onChange={(e) => setTargetInput(e.target.value.replace(/[^\d]/g, ""))} placeholder="500000000" aria-label="Target omzet bulanan" className="w-40 rounded-inner border border-white/20 bg-white/10 px-3 py-1.5 text-[13px] tabular-nums text-white placeholder:text-slate-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" />
-                      <button type="button" disabled={saving} onClick={saveTarget} className={cn("inline-flex items-center gap-1 rounded-full bg-white px-3.5 py-1.5 text-[12px] font-semibold text-ink disabled:opacity-60", focus)}><Check size={13} /> Simpan target</button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-[12.5px] text-slate-400">{scopeId === "all" ? "Target tim" : `Target ${scopeName}`}</div>
-                      <div className="mt-0.5 font-display text-[20px] font-bold tabular-nums tracking-[-0.02em]">{target ? fmtRp(target) : "Belum diisi"}</div>
-                      {scopeId === "all" && marketers.length > 0 && <div className="mt-1 text-[11.5px] text-slate-500">Jumlah target {marketers.length} marketing, diatur per orang di tab Team</div>}
-                      {canEditTarget && scopeId !== "all" && (
-                        <button type="button" onClick={() => { setTargetInput(String(target || "")); setEditing(true); }} className={cn("mt-1 inline-flex items-center gap-1 rounded-full text-[12px] font-semibold text-orange-300 hover:text-orange-200", focus)}><Pencil size={12} /> {target ? "Ubah target" : "Isi target"}</button>
-                      )}
-                    </>
-                  )}
+                  <div className="text-[12.5px] text-slate-400">{scopeId === "all" ? "Target tim" : `Target ${scopeName}`}</div>
+                  <div className="mt-0.5 font-display text-[20px] font-bold tabular-nums tracking-[-0.02em]">{target ? fmtRp(target) : "Belum diisi"}</div>
+                  <div className="mt-1 text-[11.5px] text-slate-500">Target diatur per marketing di tab Team</div>
                   {err && <div className="mt-1 text-[11px] text-rose-300">{err}</div>}
                 </div>
               )}
