@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
 import * as db from "../lib/db";
 
 // Kartu "Performa Perusahaan" di Dashboard - khusus sales_rep plan Enterprise
@@ -126,25 +125,29 @@ export default function CompanyPerformanceCard() {
             </div>
             <span className="relative grid h-11 w-11 place-items-center">
               <svg width="44" height="44" viewBox="0 0 56 56" className="absolute inset-0" aria-hidden="true">
+                <defs>
+                  {/* Dari oranye muda (putih-ke-oranye) ke oranye gelap supaya ring tetap terlihat di latar putih */}
+                  <linearGradient id="perf-ring-grad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#fed7aa" />
+                    <stop offset="100%" stopColor="#ea580c" />
+                  </linearGradient>
+                </defs>
                 <circle cx="28" cy="28" r="24" fill="none" stroke="#ffedd5" strokeWidth="3" />
                 <circle
                   cx="28"
                   cy="28"
                   r="24"
                   fill="none"
-                  stroke="#fb923c"
+                  stroke="url(#perf-ring-grad)"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeDasharray={ring}
                   strokeDashoffset={ring * (1 - hp / 100)}
                   transform="rotate(-90 28 28)"
-                  style={{ transition: "stroke-dashoffset 900ms ease" }}
+                  style={{ transition: "stroke-dashoffset 900ms ease", filter: "drop-shadow(0 0 3px rgba(249,115,22,0.35))" }}
                 />
               </svg>
-              <span className={`relative flex items-center gap-0.5 text-[11.5px] font-bold tabular-nums ${done ? "text-orange-600" : "text-ink"}`}>
-                {done && <Check size={11} strokeWidth={3} aria-hidden="true" />}
-                {ht > 0 ? `${Math.round(shownValue)}%` : "–"}
-              </span>
+              <span className="relative text-[11.5px] font-bold tabular-nums text-ink">{ht > 0 ? `${Math.round(shownValue)}%` : "–"}</span>
             </span>
           </div>
         </button>
