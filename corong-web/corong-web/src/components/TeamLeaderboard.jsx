@@ -189,17 +189,16 @@ export default function TeamLeaderboard({ leads, stages, dealTransactions, onOpe
         uid: m.user_id,
         name: m.display_name || `Anggota ${m.user_id.slice(0, 8)}`,
         leadCount: mine.length,
-        dealCount: projectDeal ? won.length : myDeals.length,
+        // Jumlah deal = lead milik penanggung jawab yang sekarang di tahap menang, sama dengan Rekap aktivitas.
+        dealCount: won.length,
         visitCount: myCheckins.length,
         winRate,
         revenue,
         commissionRate,
         commissionAmount,
         leadItems: mine.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: l.category || l.city || "" })),
-        // Org project_deal: daftar deal = lead menang (sumber yang sama dengan omzet), dengan penjelasan singkat per deal.
-        dealItems: projectDeal
-          ? won.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: [fmtRp(l.deal_value), l.deal_date].filter(Boolean).join(" · "), detail: dealDetail(l, stages) }))
-          : myDeals.map((t) => ({ id: t.id, leadId: t.lead_id, primary: t.lead_name || "Deal", secondary: [fmtRp(t.deal_value), t.deal_date].filter(Boolean).join(" · ") })),
+        // Daftar deal = lead menang milik penanggung jawab (sumber yang sama dengan jumlah deal), dengan penjelasan singkat per deal.
+        dealItems: won.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: [fmtRp(l.deal_value), l.deal_date].filter(Boolean).join(" · "), detail: dealDetail(l, stages) })),
         visitItems: myCheckins.map((c) => ({ id: c.id, leadId: c.lead_id, primary: c.lead_name || "Kunjungan", secondary: c.checked_in_at ? new Date(c.checked_in_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "" })),
       };
     })
