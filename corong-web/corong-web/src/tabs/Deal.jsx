@@ -132,6 +132,9 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     return () => { alive = false; };
   }, [tick]);
 
+  // Jejak tahap hanya untuk pipeline BSB (ada tahap Proyek Berjalan). Pipeline lain, misalnya MAP, tidak menampilkannya.
+  const adaJejak = (stages || []).some((s) => s.key === "proyek_berjalan");
+
   // Langkah jejak tahap: tahap berurutan, tanpa pengulangan tahap yang sama berturut-turut.
   const jejakOf = (leadId) => {
     const steps = [];
@@ -169,7 +172,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const isOpen = expanded.has(g.leadId);
     const nilai = Number(lead?.deal_value) || 0;
     const tanggal = lead?.deal_date || latest?.deal_date;
-    const jejak = jejakOf(g.leadId);
+    const jejak = adaJejak ? jejakOf(g.leadId) : [];
     const punyaRincian = g.txs.length > 1;
     const bisaBuka = punyaRincian || jejak.length > 0;
     const durasi = jejak.length > 1 ? Math.round((Date.parse(jejak[jejak.length - 1].at) - Date.parse(jejak[0].at)) / 86400000) : null;
