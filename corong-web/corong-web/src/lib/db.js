@@ -538,13 +538,15 @@ async function getMyAddonTokens(feature) {
   return { tokens: Number(data?.tokens) || 0, nextExpiry: data?.next_expiry || null };
 }
 export async function getLeadGenCooldown() {
-  const [{ used, resetAt }, addon] = await Promise.all([getMyQuotaUsage("generate-leads"), getMyAddonTokens("generate-leads")]);
-  const quotaLeft = used < GEN_LEADS_QUOTA_MAX;
+  const [{ used, resetAt }, addon, maxRes] = await Promise.all([getMyQuotaUsage("generate-leads"), getMyAddonTokens("generate-leads"), supabase.rpc("my_generate_leads_quota_max")]);
+  // Batas efektif bisa lebih kecil dari 4 (mis. 2 pencarian untuk org tertentu sampai periode berakhir).
+  const quotaMax = typeof maxRes?.data === "number" ? maxRes.data : GEN_LEADS_QUOTA_MAX;
+  const quotaLeft = used < quotaMax;
   const canGenerate = quotaLeft || addon.tokens > 0;
   // Permintaan token yang masih menunggu admin (RLS: hanya milik sendiri).
   const { data: pend } = await supabase.from("addon_token_requests").select("tokens, created_at").eq("status", "pending").order("created_at", { ascending: false }).limit(1);
   return {
-    canGenerate, usedThisMonth: used, quotaMax: GEN_LEADS_QUOTA_MAX,
+    canGenerate, usedThisMonth: used, quotaMax,
     nextAvailableAt: canGenerate ? null : resetAt, resetAt,
     addonTokens: addon.tokens, addonExpiry: addon.nextExpiry,
     pendingTokenRequest: pend?.[0] || null,
