@@ -1736,15 +1736,11 @@ export function computeMergeFill(keepLead, mergeLead) {
   }
   return fill;
 }
+// Gabung duplikat lewat fungsi database: semua data anak pindah ke lead yang dipertahankan, lalu duplikat dihapus.
+// Kalau akun tidak diizinkan (mis. sales di Enterprise), server menolak dan tidak mengubah apa pun.
 export async function mergeLeads(keepId, mergeId, fillFields) {
-  if (fillFields && Object.keys(fillFields).length) {
-    const { error } = await supabase.from("leads").update(fillFields).eq("id", keepId);
-    if (error) throw error;
-  }
-  const { error: moveErr } = await supabase.from("progress_notes").update({ lead_id: keepId }).eq("lead_id", mergeId);
-  if (moveErr) throw moveErr;
-  const { error: delErr } = await supabase.from("leads").delete().eq("id", mergeId);
-  if (delErr) throw delErr;
+  const { error } = await supabase.rpc("merge_leads", { p_keep: keepId, p_drop: mergeId, p_fill: fillFields && Object.keys(fillFields).length ? fillFields : null });
+  if (error) throw error;
 }
 
 // ---- GOOGLE CALENDAR LINK ----
