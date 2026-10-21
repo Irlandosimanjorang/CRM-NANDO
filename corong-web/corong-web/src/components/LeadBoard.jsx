@@ -33,13 +33,13 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const press = useRef(null);
   const suppressClick = useRef(false);
   const boardRef = useRef(null);
-  const topBarRef = useRef(null);
-  const [boardWidth, setBoardWidth] = useState(0);
-  // Lebar papan (scrollWidth) untuk bilah scroll di atas. Dihitung ulang saat ukuran kolom atau data berubah.
+  // Bilah geser di atas papan: slider sendiri (selalu terlihat, tidak tergantung scrollbar browser).
+  const [overflowPx, setOverflowPx] = useState(0);
+  const [scrollPos, setScrollPos] = useState(0);
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return undefined;
-    const measure = () => setBoardWidth(board.scrollWidth);
+    const measure = () => setOverflowPx(Math.max(0, board.scrollWidth - board.clientWidth));
     measure();
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
     if (ro) { ro.observe(board); Array.from(board.children).forEach((c) => ro.observe(c)); }
@@ -256,15 +256,20 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const board = boardCols.map((s) => ({ stage: s, items: s.unknown ? orphans : leads.filter((l) => stageOf(l) === s.key) }));
   const accent = (s) => s.hex || "#94a3b8";
 
-  // Scroll horizontal di atas papan (sinkron dengan scroll di bawah), supaya papan mudah digeser.
-  const syncScroll = (from, to) => { if (from.current && to.current && to.current.scrollLeft !== from.current.scrollLeft) to.current.scrollLeft = from.current.scrollLeft; };
-
   return (
     <div className="mt-1">
-      <div ref={topBarRef} onScroll={() => syncScroll(topBarRef, boardRef)} className="overflow-x-auto overflow-y-hidden" style={{ height: 20 }} aria-label="Geser papan ke kiri atau kanan">
-        <div style={{ width: boardWidth, height: 1 }} />
-      </div>
-    <div ref={boardRef} onScroll={() => syncScroll(boardRef, topBarRef)} className="overflow-x-auto pb-4">
+      {overflowPx > 0 && (
+        <input
+          type="range"
+          min={0}
+          max={overflowPx}
+          value={Math.min(scrollPos, overflowPx)}
+          onChange={(e) => { const v = Number(e.target.value); setScrollPos(v); if (boardRef.current) boardRef.current.scrollLeft = v; }}
+          aria-label="Geser papan ke kiri atau kanan"
+          className="mb-2 w-full cursor-pointer accent-slate-700"
+        />
+      )}
+    <div ref={boardRef} onScroll={(e) => setScrollPos(e.currentTarget.scrollLeft)} className="overflow-x-auto pb-4">
       {closing &&<CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} />}
       {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} />}
       {fakturEdit && (
