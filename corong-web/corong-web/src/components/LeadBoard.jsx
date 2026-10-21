@@ -17,6 +17,16 @@ const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada
 const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
 const MAX_SPEED = 26; // piksel per frame saat kursor tepat di tepi
 
+// Gaya bilah geser papan Kanban: track gradien bercahaya dan thumb melingkar.
+const NX_RANGE_CSS = `
+.nx-kanban-range{-webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;cursor:pointer}
+.nx-kanban-range:focus{outline:none}
+.nx-kanban-range::-webkit-slider-runnable-track{height:4px;border-radius:999px;background:linear-gradient(90deg,#f97316,#6366f1,#22d3ee);box-shadow:0 0 10px rgba(99,102,241,.55)}
+.nx-kanban-range::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:#0f172a;border:2px solid #22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.25),0 0 14px rgba(34,211,238,.8)}
+.nx-kanban-range::-moz-range-track{height:4px;border-radius:999px;background:linear-gradient(90deg,#f97316,#6366f1,#22d3ee);box-shadow:0 0 10px rgba(99,102,241,.55)}
+.nx-kanban-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#0f172a;border:2px solid #22d3ee;box-shadow:0 0 14px rgba(34,211,238,.8)}
+`;
+
 export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, onEditFaktur }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
@@ -36,15 +46,10 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // Bilah geser di atas papan: slider sendiri (selalu terlihat, tidak tergantung scrollbar browser).
   const [overflowPx, setOverflowPx] = useState(0);
   const [scrollPos, setScrollPos] = useState(0);
-  const [viewRatio, setViewRatio] = useState(1); // lebar layar / lebar papan
-  const trackRef = useRef(null);
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return undefined;
-    const measure = () => {
-      setOverflowPx(Math.max(0, board.scrollWidth - board.clientWidth));
-      setViewRatio(board.scrollWidth ? board.clientWidth / board.scrollWidth : 1);
-    };
+    const measure = () => setOverflowPx(Math.max(0, board.scrollWidth - board.clientWidth));
     measure();
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
     if (ro) { ro.observe(board); Array.from(board.children).forEach((c) => ro.observe(c)); }
@@ -263,33 +268,20 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   return (
     <div className="mt-1">
-      {overflowPx > 0 && (() => {
-        // Bilah datar: track abu-abu, thumb menunjukkan bagian papan yang sedang terlihat.
-        const thumbPct = Math.max(8, viewRatio * 100);
-        const leftPct = overflowPx ? (Math.min(scrollPos, overflowPx) / overflowPx) * (100 - thumbPct) : 0;
-        const moveTo = (clientX) => {
-          const t = trackRef.current; const b = boardRef.current;
-          if (!t || !b) return;
-          const rect = t.getBoundingClientRect();
-          const f = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-          b.scrollLeft = f * overflowPx;
-        };
-        return (
-          <div
-            ref={trackRef}
-            role="slider"
+      {overflowPx > 0 && (
+        <>
+          <style>{NX_RANGE_CSS}</style>
+          <input
+            type="range"
+            className="nx-kanban-range mb-2"
+            min={0}
+            max={overflowPx}
+            value={Math.min(scrollPos, overflowPx)}
+            onChange={(e) => { const v = Number(e.target.value); setScrollPos(v); if (boardRef.current) boardRef.current.scrollLeft = v; }}
             aria-label="Geser papan ke kiri atau kanan"
-            aria-valuemin={0}
-            aria-valuemax={overflowPx}
-            aria-valuenow={Math.round(Math.min(scrollPos, overflowPx))}
-            onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); moveTo(e.clientX); }}
-            onPointerMove={(e) => { if (e.buttons === 1) moveTo(e.clientX); }}
-            className="relative mb-2 h-2 w-full cursor-pointer rounded-full bg-slate-200"
-          >
-            <div className="absolute top-0 h-2 rounded-full bg-slate-500" style={{ width: `${thumbPct}%`, left: `${leftPct}%` }} />
-          </div>
-        );
-      })()}
+          />
+        </>
+      )}
     <div ref={boardRef} onScroll={(e) => setScrollPos(e.currentTarget.scrollLeft)} className="overflow-x-auto pb-4">
       {closing &&<CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} />}
       {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} />}
