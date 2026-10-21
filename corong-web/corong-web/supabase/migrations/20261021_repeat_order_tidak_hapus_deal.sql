@@ -41,12 +41,9 @@ begin
 
   if exists (select 1 from public.deal_transactions t where t.lead_id = new.id and t.auto = false) then return new; end if;
 
-  -- Lead yang baru masuk Menang lagi (repeat order): catat sebagai transaksi baru kalau nilainya belum tercatat.
+  -- Lead yang masuk Menang lagi (repeat order) tanpa lewat dialog: transaksi lama dibiarkan apa adanya,
+  -- dan tidak ada transaksi baru. Transaksi baru hanya dibuat lewat dialog menang (transaksi manual).
   if not v_was_won and exists (select 1 from public.deal_transactions t where t.lead_id = new.id and t.auto = true) then
-    if not exists (select 1 from public.deal_transactions t where t.lead_id = new.id and t.auto = true and t.deal_value = new.deal_value and t.deal_date = coalesce(new.deal_date, (now() at time zone 'Asia/Jakarta')::date)) then
-      insert into public.deal_transactions (user_id, org_id, lead_id, lead_name, deal_date, deal_value, auto)
-      values (coalesce(new.assigned_to, new.user_id), new.org_id, new.id, new.name, coalesce(new.deal_date, (now() at time zone 'Asia/Jakarta')::date), new.deal_value, true);
-    end if;
     return new;
   end if;
 
