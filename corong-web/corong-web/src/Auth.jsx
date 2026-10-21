@@ -502,7 +502,7 @@ const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 const PRICING_NORMAL = {
   standard: { monthlyPrice: "Rp89rb", quarterlyTotal: "Rp267rb" },
   professional: { monthlyPrice: "Rp249rb", quarterlyTotal: "Rp747rb" },
-  enterprise: { monthlyPrice: "Rp1,116jt", quarterlyTotal: "Rp3,348jt", perPerson: "Rp279rb" },
+  enterprise: { quarterlyTotal: "Rp3.348rb", semesterTotal: "Rp5.580rb", perPerson: "Rp279rb" },
 };
 // === HARGA DIREVISI TOTAL (22 Sep 2026, permintaan Nando, versi FINAL -
 // gantiin revisi sebelumnya di hari yang sama yang batal dipake) ===
@@ -528,7 +528,7 @@ const PRICING_NORMAL = {
 const PRICING_EARLY_BIRD = {
   standard: { monthlyPrice: "Rp59rb", monthlySavings: "Rp30rb", quarterlyTotal: "Rp177rb", quarterlySavings: "Rp90rb" },
   professional: { monthlyPrice: "Rp229rb", monthlySavings: "Rp20rb", quarterlyTotal: "Rp687rb", quarterlySavings: "Rp60rb" },
-  enterprise: { monthlyPrice: "Rp996rb", monthlySavings: "Rp120rb", quarterlyTotal: "Rp2,988jt", quarterlySavings: "Rp360rb", perPerson: "Rp249rb" },
+  enterprise: { quarterlyTotal: "Rp2.988rb", semesterTotal: "Rp4.980rb", quarterlySavings: "Rp360rb", semesterSavings: "Rp600rb", perPerson: "Rp249rb" },
 };
 const PRICING = isEarlyBird ? PRICING_EARLY_BIRD : PRICING_NORMAL;
 
@@ -2502,7 +2502,7 @@ export default function Auth() {
   // ngubah kartu lain (9 Sep 2026, sebelumnya shared dan itu kerasa aneh).
   const [standardCycle, setStandardCycle] = useState("monthly");
   const [professionalCycle, setProfessionalCycle] = useState("monthly");
-  const [enterpriseCycle, setEnterpriseCycle] = useState("monthly");
+  const [enterpriseCycle, setEnterpriseCycle] = useState("quarterly");
 
   const chatbotVoice = useRobotVoice(ROBOT_CHATBOT_AUDIO);
   const engineLoopVoice = useRobotVoice(ROBOT_ENGINE_LOOP_AUDIO);
@@ -3184,13 +3184,13 @@ export default function Auth() {
                   <div className="mt-3 flex items-end gap-2">
                     {isEarlyBird && (
                       <span className="mb-1 text-xl font-semibold text-violet-200/40 line-through">
-                        {enterpriseCycle === "monthly" ? PRICING_NORMAL.enterprise.monthlyPrice : PRICING_NORMAL.enterprise.quarterlyTotal}
+                        {enterpriseCycle === "semester" ? PRICING_NORMAL.enterprise.semesterTotal : PRICING_NORMAL.enterprise.quarterlyTotal}
                       </span>
                     )}
                     <span className="text-[38px] font-bold tracking-[-0.05em] text-white">
-                      {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlyPrice : PRICING.enterprise.quarterlyTotal}
+                      {enterpriseCycle === "semester" ? PRICING.enterprise.semesterTotal : PRICING.enterprise.quarterlyTotal}
                     </span>
-                    <span className="mb-1.5 text-[10px] text-slate-500">{enterpriseCycle === "monthly" ? tr("/bulan", "/month") : tr("/3 bulan", "/3 months")}</span>
+                    <span className="mb-1.5 text-[10px] text-slate-500">{enterpriseCycle === "semester" ? tr("/6 bulan", "/6 months") : tr("/3 bulan", "/3 months")}</span>
                   </div>
 
                   <div className="mt-1 text-[10px] text-slate-400">
@@ -3216,10 +3216,10 @@ export default function Auth() {
                   </button>
 
                   <div className="mt-3">
-                    <MiniBillingToggle billingCycle={enterpriseCycle} setBillingCycle={setEnterpriseCycle} accent="violet" />
+                    <div className="mt-2 inline-flex items-center gap-0.5 rounded-full bg-white/[0.06] p-0.5">{[["quarterly", tr("3 bulan", "3 months")], ["semester", tr("6 bulan", "6 months")]].map(([k, label]) => (<button key={k} onClick={() => setEnterpriseCycle(k)} className={`min-h-[34px] rounded-full px-3 text-[10px] font-bold transition-colors ${enterpriseCycle === k ? "bg-violet-500 text-white" : "text-slate-400 hover:text-slate-200"}`}>{label}</button>))}</div>
                   </div>
                   {isEarlyBird && (
-                    <div className="mt-1.5 text-[9px] text-violet-300/80">{tr("Hemat", "Save")} {enterpriseCycle === "monthly" ? PRICING.enterprise.monthlySavings + tr("/bulan", "/month") : PRICING.enterprise.quarterlySavings} {tr("selama early bird", "during early bird")}</div>
+                    <div className="mt-1.5 text-[9px] text-violet-300/80">{tr("Hemat", "Save")} {enterpriseCycle === "semester" ? PRICING.enterprise.semesterSavings : PRICING.enterprise.quarterlySavings} {tr("selama early bird", "during early bird")}</div>
                   )}
 
                   <div className="my-7 h-px bg-white/10" />
