@@ -17,7 +17,7 @@ const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada
 const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
 const MAX_SPEED = 26; // piksel per frame saat kursor tepat di tepi
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
@@ -28,6 +28,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const [closing, setClosing] = useState(null);
   // Pop-up data proyek saat kartu digeser ke Proyek Deal (tanggal, nilai, No. SPH, total diskon wajib).
   const [proyek, setProyek] = useState(null);
+  const [dealStage, setDealStage] = useState(null); // pipeline faktur (MAP): pop-up tahap Deal
   const press = useRef(null);
   const suppressClick = useRef(false);
   const boardRef = useRef(null);
@@ -94,6 +95,12 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setClosing({ lead, key, result: target.type });
       return;
     }
+    // Pipeline faktur (MAP): pindah ke tahap Deal minta tanggal dan barang.
+    if (key === "proses_so" && invoicePipeline) {
+      setPending((p) => ({ ...p, [lead.id]: key }));
+      setDealStage({ lead, key });
+      return;
+    }
     // Pop-up data proyek muncul di pipeline yang punya tahap Proyek Berjalan (pipeline BSB), tidak hanya di org project_deal.
     if (key === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan")) {
       setPending((p) => ({ ...p, [lead.id]: key }));
@@ -115,6 +122,20 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const cancelProyek = () => {
     if (proyek) setPending((p) => { const n = { ...p }; delete n[proyek.lead.id]; return n; });
     setProyek(null);
+  };
+
+  const cancelDealStage = () => {
+    if (dealStage) setPending((p) => { const n = { ...p }; delete n[dealStage.lead.id]; return n; });
+    setDealStage(null);
+  };
+
+  const saveDealStage = (values) => {
+    const { lead, key } = dealStage;
+    setDealStage(null);
+    Promise.resolve(onMove(lead, key, { dealStage: values })).catch((e) => {
+      setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
+      alert("Gagal menyimpan: " + (e?.message || e));
+    });
   };
 
   const saveProyek = (values) => {
@@ -223,7 +244,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   return (
     <div ref={boardRef} className="mt-1 overflow-x-auto pb-4">
-      {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} />}
+      {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} />}
+      {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} />}
       {proyek && <ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} />}
 
       {/* Kartu yang diseret dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke wrapper yang punya transform. */}
@@ -425,12 +447,47 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
 // Pop-up kecil: alasan menang / kalah, plus nilai dan tanggal deal untuk menang, dan catatan opsional.
 // Org project_deal (BSB, 17 Okt 2026): nilai dan tanggal proyek sudah diisi di tahap Proyek Deal,
 // jadi di sini cukup alasan dan catatan. Record deal dibuat otomatis dari lead ini.
-function CloseDialog({ closing, onCancel, onSave, projectDeal = false }) {
+// Pop-up tahap Deal (pipeline faktur, MAP): tanggal dan barang.
+function DealStageDialog({ lead, onCancel, onSave }) {
+  const [date, setDate] = useState(lead.deal_stage_date || todayISO());
+  const [product, setProduct] = useState(lead.product || "");
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  const ready = !!date && !!product.trim();
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+        <h3 className="text-[15px] font-semibold text-slate-900">Tahap Deal</h3>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">Tanggal</span>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">Barang</span>
+            <input value={product} onChange={(e) => setProduct(e.target.value)} placeholder="Nama barang" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+          </label>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button type="button" disabled={!ready} onClick={() => onSave({ date, product: product.trim() })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePipeline = false }) {
   const [category, setCategory] = useState("");
   const [note, setNote] = useState("");
   const won = closing.result === "won";
   const [value, setValue] = useState(closing.lead.deal_value ? String(closing.lead.deal_value) : "");
   const [date, setDate] = useState(todayISO());
+  const [invoice, setInvoice] = useState(closing.lead.invoice_number || "");
   const dealValue = Number(value.replace(/\D/g, "")) || 0;
   const lockedProject = won && projectDeal;
   const ready = !!category && (!won || dealValue > 0);
@@ -482,8 +539,14 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false }) {
         )}
         {won && !projectDeal && (
           <div className="mt-4 grid grid-cols-2 gap-2">
+            {invoicePipeline && (
+              <label className="col-span-2 block">
+                <span className="text-[11px] font-medium text-slate-500">No. faktur</span>
+                <input value={invoice} onChange={(e) => setInvoice(e.target.value)} placeholder="Nomor faktur" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+              </label>
+            )}
             <label className="block">
-              <span className="text-[11px] font-medium text-slate-500">Nilai deal{dealValue ? " · " + fmtRp(dealValue) : ""}</span>
+              <span className="text-[11px] font-medium text-slate-500">{invoicePipeline ? "Nominal faktur" : "Nilai deal"}{dealValue ? " · " + fmtRp(dealValue) : ""}</span>
               <input
                 inputMode="numeric"
                 value={value}
@@ -493,7 +556,7 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false }) {
               />
             </label>
             <label className="block">
-              <span className="text-[11px] font-medium text-slate-500">Tanggal deal</span>
+              <span className="text-[11px] font-medium text-slate-500">{invoicePipeline ? "Tanggal faktur" : "Tanggal deal"}</span>
               <input
                 type="date"
                 value={date}
@@ -515,7 +578,7 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false }) {
           <button
             type="button"
             disabled={!ready}
-            onClick={() => onSave(category, note.trim(), won && !projectDeal ? { value: dealValue, date } : null, lockedProject ? date : null)}
+            onClick={() => onSave(category, note.trim(), won && !projectDeal ? { value: dealValue, date, ...(invoicePipeline ? { invoice_number: invoice.trim() } : {}) } : null, lockedProject ? date : null)}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan

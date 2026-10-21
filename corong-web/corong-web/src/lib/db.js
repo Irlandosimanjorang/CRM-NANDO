@@ -1002,6 +1002,9 @@ export async function upsertLead(lead) {
       ? { discount_pct: Number(lead.discount_pct), discount_total: Math.round((Number(lead.deal_value) || 0) * Number(lead.discount_pct) / 100) }
       : { discount_pct: null, discount_total: Number(lead.discount_total) || 0 }),
     last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
+    // Pipeline faktur (MAP): tanggal masuk tahap Deal dan nomor faktur.
+    ...(lead.deal_stage_date !== undefined ? { deal_stage_date: lead.deal_stage_date || null } : {}),
+    ...(lead.invoice_number !== undefined ? { invoice_number: (lead.invoice_number || "").trim() || null } : {}),
   };
   let saved;
   if (lead.id) {

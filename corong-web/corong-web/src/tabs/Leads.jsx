@@ -631,6 +631,7 @@ export default function Leads({
   canManage,
   isEnterprise,
   projectDeal = false, // saklar org "project_deal" (khusus BSB): tahap Proyek Deal minta data proyek
+  invoicePipeline = false, // saklar org "invoice_pipeline" (MAP): tahap Deal minta tanggal dan barang, Faktur minta no. faktur
   uppercaseNames = true, // nama lead tampil HURUF BESAR (perilaku umum)
 }) {
 
@@ -716,6 +717,12 @@ export default function Leads({
   const moveLeadStage = async (lead, key, extra) => {
     let tx = null;
     let leadPatch = { stage_key: key };
+    if (extra?.dealStage) {
+      // Pipeline faktur (MAP): tahap Deal mencatat tanggal dan barang. Belum ada transaksi.
+      await db.upsertLead({ ...lead, stage_key: key, deal_stage_date: extra.dealStage.date, product: extra.dealStage.product });
+      onChanged({ silent: true });
+      return;
+    }
     if (extra?.projectDeal) {
       // Proyek Deal (15 Okt 2026): tahap normal, bukan deal menang, jadi tidak ada transaksi atau outcome.
       const p = extra.projectDeal;
@@ -730,7 +737,7 @@ export default function Leads({
     if (extra?.deal) {
       // Transaksi dicatat dulu: dengan transaksi manual, pemicu otomatis tidak menulis ganda.
       tx = await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: extra.deal.date, deal_value: extra.deal.value, product_type: lead.product || null });
-      leadPatch = { ...leadPatch, deal_value: extra.deal.value, deal_date: extra.deal.date };
+      leadPatch = { ...leadPatch, deal_value: extra.deal.value, deal_date: extra.deal.date, ...(extra.deal.invoice_number !== undefined ? { invoice_number: extra.deal.invoice_number } : {}) };
       await db.upsertLead({ ...lead, ...leadPatch });
     } else {
       // Org project_deal (BSB): omzet dihitung dari tahap Proyek Deal (deal_date tetap tanggal proyek deal).
@@ -2177,6 +2184,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             onMove={moveLeadStage}
             onNewOpportunity={reopenLead}
             projectDeal={projectDeal}
+            invoicePipeline={invoicePipeline}
           />
         </div>
       )}
