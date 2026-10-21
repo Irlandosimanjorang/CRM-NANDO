@@ -21,7 +21,7 @@ let out = "// AUTO-GENERATED oleh scripts/demo/gen-demo-mockdb.cjs - jangan died
 for (const n of names) {
   if (SYNC[n]) { out += `export const ${n} = ${SYNC[n]};\n`; continue; }
   let v = SPECIAL[n];
-  if (!v) v = /^(get|list|fetch)/.test(n) ? (/(s|History|Ids|List)$/.test(n) ? "[]" : "null") : "null";
+  if (!v) v = /^(get|list|fetch)/.test(n) ? (/^list|(s|History|Ids|List)$/.test(n) ? "[]" : "null") : "null";
   out += `export async function ${n}(){ return ${v}; }\n`;
 }
 fs.writeFileSync(path.join(__dirname, "../../src/demo/mockdb.js"), out);

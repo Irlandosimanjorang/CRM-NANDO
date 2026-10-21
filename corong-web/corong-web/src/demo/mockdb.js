@@ -58,7 +58,7 @@ export async function getShareGrantTargets(){ return []; }
 export async function setShareGrant(){ return null; }
 export async function getIncomingShareGrants(){ return []; }
 export async function getSharedOrgSnapshot(){ return null; }
-export async function listRencana(){ return null; }
+export async function listRencana(){ return []; }
 export async function addRencana(){ return null; }
 export async function setRencanaDone(){ return null; }
 export async function deleteRencana(){ return null; }
