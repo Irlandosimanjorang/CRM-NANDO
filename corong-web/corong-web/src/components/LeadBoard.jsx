@@ -17,14 +17,14 @@ const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada
 const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
 const MAX_SPEED = 26; // piksel per frame saat kursor tepat di tepi
 
-// Gaya bilah geser papan Kanban: track gradien bercahaya dan thumb melingkar.
+// Gaya bilah geser papan Kanban: garis tipis, satu warna aksen, thumb putih dengan bayangan halus.
 const NX_RANGE_CSS = `
-.nx-kanban-range{-webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;cursor:pointer}
+.nx-kanban-range{-webkit-appearance:none;appearance:none;width:100%;height:14px;background:transparent;cursor:pointer}
 .nx-kanban-range:focus{outline:none}
-.nx-kanban-range::-webkit-slider-runnable-track{height:4px;border-radius:999px;background:linear-gradient(90deg,#f97316,#6366f1,#22d3ee);box-shadow:0 0 10px rgba(99,102,241,.55)}
-.nx-kanban-range::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:#0f172a;border:2px solid #22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.25),0 0 14px rgba(34,211,238,.8)}
-.nx-kanban-range::-moz-range-track{height:4px;border-radius:999px;background:linear-gradient(90deg,#f97316,#6366f1,#22d3ee);box-shadow:0 0 10px rgba(99,102,241,.55)}
-.nx-kanban-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#0f172a;border:2px solid #22d3ee;box-shadow:0 0 14px rgba(34,211,238,.8)}
+.nx-kanban-range::-webkit-slider-runnable-track{height:3px;border-radius:999px;background:linear-gradient(90deg,#c7d2fe,#818cf8)}
+.nx-kanban-range::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5.5px;border-radius:50%;background:#ffffff;border:2px solid #6366f1;box-shadow:0 1px 3px rgba(15,23,42,.18)}
+.nx-kanban-range::-moz-range-track{height:3px;border-radius:999px;background:linear-gradient(90deg,#c7d2fe,#818cf8)}
+.nx-kanban-range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#ffffff;border:2px solid #6366f1;box-shadow:0 1px 3px rgba(15,23,42,.18)}
 `;
 
 export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, onEditFaktur }) {
