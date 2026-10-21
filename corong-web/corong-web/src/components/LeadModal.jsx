@@ -11,6 +11,8 @@ import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCo
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
+// Sumber lead untuk organisasi yang tidak punya isian "Sumber lead" sendiri (kolom bawaan leads.source).
+const SOURCE_OPTIONS = ["Tokopedia", "Shopee", "Meta", "Instagram", "TikTok", "Google", "Lainnya"];
 const inpRow = "flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
 
@@ -721,6 +723,16 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 </Field>
               ))}
             </div>
+          )}
+          {!customSlots.some((s) => /sumber/i.test(s.label)) && (
+            <Field label="Sumber lead">
+              <select className={inp} value={f.source || ""} onChange={(e) => set("source", e.target.value)}>
+                <option value="">Pilih sumber</option>
+                {/* Nilai lama di luar pilihan tetap ditampilkan, biar gak hilang diam-diam. */}
+                {f.source && !SOURCE_OPTIONS.includes(f.source) && f.source !== "manual" && <option value={f.source}>{f.source}</option>}
+                {SOURCE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </Field>
           )}
           {!hidden("location") && isEnterprise && (
             <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50 space-y-2">

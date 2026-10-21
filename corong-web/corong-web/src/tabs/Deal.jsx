@@ -62,19 +62,35 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
       .sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
   }, [deals, wonIds, leadsById]);
 
-  // Dikelompokkan per bulan deal (terbaru di atas), dengan subtotal dan nilai terbesar tiap bulan.
-  const bulanKey = (g) => String(g.lead?.deal_date || g.txs[0]?.deal_date || "").slice(0, 7);
+  // Setiap transaksi dihitung di bulan tanggal transaksinya (repeat order ikut di bulannya sendiri).
+  // Lead tanpa transaksi (deal lama) dihitung sekali di bulan deal_date-nya dengan deal_value lead.
+  const entriesOf = (g) => {
+    const fallback = String(g.lead?.deal_date || "").slice(0, 7);
+    if (g.txs.length === 0) return [{ ym: fallback || "Tanpa tanggal", value: Number(g.lead?.deal_value) || 0, tx: null }];
+    return g.txs.map((t) => ({ ym: String(t.deal_date || g.lead?.deal_date || "").slice(0, 7) || "Tanpa tanggal", value: Number(t.deal_value) || 0, tx: t }));
+  };
+  // Dikelompokkan per bulan (terbaru di atas): tiap lead muncul di bulan yang punya transaksinya, dengan nilai bulan itu saja.
   const monthGroups = useMemo(() => {
     const map = new Map();
     for (const g of groups) {
-      const ym = bulanKey(g) || "Tanpa tanggal";
-      if (!map.has(ym)) map.set(ym, []);
-      map.get(ym).push(g);
+      const perBulan = new Map();
+      for (const e of entriesOf(g)) {
+        if (!perBulan.has(e.ym)) perBulan.set(e.ym, { nilai: 0, txs: [] });
+        const b = perBulan.get(e.ym);
+        b.nilai += e.value;
+        if (e.tx) b.txs.push(e.tx);
+      }
+      for (const [ym, b] of perBulan) {
+        if (!map.has(ym)) map.set(ym, []);
+        map.get(ym).push({ ...g, nilaiBulan: b.nilai, txs: b.txs.length ? b.txs : g.txs });
+      }
     }
-    return [...map.entries()].map(([ym, items]) => {
-      const nilai = items.map((g) => Number(g.lead?.deal_value) || 0);
-      return { ym, items, total: nilai.reduce((a, b) => a + b, 0), max: Math.max(0, ...nilai) };
-    });
+    return [...map.entries()]
+      .sort(([a], [b]) => (a === "Tanpa tanggal" ? 1 : b === "Tanpa tanggal" ? -1 : b.localeCompare(a)))
+      .map(([ym, items]) => {
+        const nilai = items.map((g) => g.nilaiBulan);
+        return { ym, items, total: nilai.reduce((a, b) => a + b, 0), max: Math.max(0, ...nilai) };
+      });
   }, [groups]);
 
   // Enam bulan terakhir (WIB) untuk grafik omzet di ringkasan.
@@ -85,10 +101,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   }, [bulanIni]);
   const omzetPerBulan = useMemo(() => {
     const map = Object.fromEntries(enamBulan.map((k) => [k, 0]));
-    for (const g of groups) {
-      const k = bulanKey(g);
-      if (k in map) map[k] += Number(g.lead?.deal_value) || 0;
-    }
+    for (const g of groups) for (const e of entriesOf(g)) if (e.ym in map) map[e.ym] += e.value;
     return enamBulan.map((k) => map[k]);
   }, [groups, enamBulan]);
 
@@ -167,7 +180,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const sm = lead ? stageMeta(stages, lead.stage_key) : null;
     const latest = g.txs[0];
     const isOpen = expanded.has(g.leadId);
-    const nilai = Number(lead?.deal_value) || 0;
+    const nilai = g.nilaiBulan ?? (Number(lead?.deal_value) || 0);
     const tanggal = lead?.deal_date || latest?.deal_date;
     const jejak = jejakOf(g.leadId);
     const punyaRincian = g.txs.length > 1;

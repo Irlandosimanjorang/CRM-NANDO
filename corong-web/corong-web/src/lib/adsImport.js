@@ -12,6 +12,8 @@ export function normalizePlatform(raw) {
   if (/instagram|(^|\W)ig(\W|$)/.test(l)) return "Instagram";
   if (/tiktok|tik tok/.test(l)) return "TikTok";
   if (/google|youtube|gads/.test(l)) return "Google";
+  if (/tokopedia/.test(l)) return "Tokopedia";
+  if (/shopee/.test(l)) return "Shopee";
   return s.length > 40 ? s.slice(0, 40) : s;
 }
 

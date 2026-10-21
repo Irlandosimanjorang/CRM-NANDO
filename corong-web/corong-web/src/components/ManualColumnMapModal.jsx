@@ -67,19 +67,16 @@ const BASE_FIELD_OPTIONS = [
 const NEW_CUSTOM_VALUE = "__new_custom__";
 
 const MAX_PREVIEW_ROWS = 12;
-// Peran per baris (mode "Tandai hirarki"): pusat > cabang. Baris tanpa tanda tidak masuk grup.
-const ROW_ROLES = [
-  { value: "", label: "—" },
-  { value: "perusahaan", label: "Pusat" },
-  { value: "anak", label: "Cabang" },
-];
 
 export default function ManualColumnMapModal({ request, onConfirm, onCancel, onPickSheet }) {
   const { rawRows, sheetName, initialMapping = {}, initialDataStartRow = 0, usedAiGuess, existingCustomSlots = [], initialReasons = {}, initialCustom = {}, noteCols = [], sheetNames = [] } = request;
 
   const fieldOptions = useMemo(() => {
     const existingOpts = existingCustomSlots.map((s) => ({ value: s.key, label: s.label }));
-    return [...BASE_FIELD_OPTIONS, ...existingOpts, { value: NEW_CUSTOM_VALUE, label: "+ Custom..." }];
+    // Kalau organisasi sudah punya isian "Sumber lead" sendiri, pakai itu saja (jangan dobel dengan kolom bawaan).
+    const hasSourceSlot = existingCustomSlots.some((s) => /sumber/i.test(s.label));
+    const base = hasSourceSlot ? BASE_FIELD_OPTIONS.filter((o) => o.value !== "source") : BASE_FIELD_OPTIONS;
+    return [...base, ...existingOpts, { value: NEW_CUSTOM_VALUE, label: "+ Custom..." }];
   }, [existingCustomSlots]);
 
   const numCols = useMemo(
@@ -90,8 +87,10 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
   const [assign, setAssign] = useState(() => {
     if (mapDraft?.assign && mapDraft.assign.length === numCols) return mapDraft.assign;
     const arr = Array(numCols).fill("");
+    const sourceSlotKey = existingCustomSlots.find((s) => /sumber/i.test(s.label))?.key;
     Object.entries(initialMapping).forEach(([field, idx]) => {
-      if (idx !== null && idx !== undefined && idx >= 0 && idx < numCols) arr[idx] = field;
+      const target = field === "source" && sourceSlotKey ? sourceSlotKey : field;
+      if (idx !== null && idx !== undefined && idx >= 0 && idx < numCols) arr[idx] = target;
     });
     Object.keys(initialCustom).forEach((idx) => { if (Number(idx) < numCols && !arr[Number(idx)]) arr[Number(idx)] = NEW_CUSTOM_VALUE; });
     return arr;
@@ -100,16 +99,13 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
   const [customLabels, setCustomLabels] = useState(() => mapDraft?.customLabels || { ...initialCustom });
   // Kolom sisa (tanpa padanan dan tanpa slot custom) dititipkan ke catatan lead supaya datanya tidak hilang.
   const [noteExtras, setNoteExtras] = useState(true); // colIdx -> label yang diketik user
-  // Mode tandai hirarki (8 Okt 2026): pilih peran tiap baris (Holding/Perusahaan/Anak) langsung di tabel.
-  const [hierMode, setHierMode] = useState(() => !!mapDraft?.hierMode);
-  const [rowRoles, setRowRoles] = useState(() => mapDraft?.rowRoles || {}); // indeks baris mentah -> peran
 
   // Auto-simpen koreksi manual tiap berubah - lihat komentar MANUAL_MAP_DRAFT_KEY.
   useEffect(() => {
     try {
-      localStorage.setItem(MANUAL_MAP_DRAFT_KEY, JSON.stringify({ sheetName, assign, dataStartRow, customLabels, hierMode, rowRoles, savedAt: Date.now() }));
+      localStorage.setItem(MANUAL_MAP_DRAFT_KEY, JSON.stringify({ sheetName, assign, dataStartRow, customLabels, savedAt: Date.now() }));
     } catch (_) {}
-  }, [sheetName, assign, dataStartRow, customLabels, hierMode, rowRoles]);
+  }, [sheetName, assign, dataStartRow, customLabels]);
 
   const autoGuessed = initialMapping && initialMapping.name !== undefined && initialMapping.name !== null;
 
@@ -134,14 +130,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
   };
 
   const hasName = assign.includes("name");
-  // Mode hirarki menampilkan SEMUA baris (bisa digulir) supaya setiap baris bisa ditandai.
-  const preview = hierMode ? rawRows.slice(0, 1000) : rawRows.slice(0, MAX_PREVIEW_ROWS);
-  const roleCount = (r) => Object.entries(rowRoles).filter(([i, v]) => v === r && Number(i) >= dataStartRow).length;
-  const setRole = (rowIdx, role) => setRowRoles((prev) => {
-    const next = { ...prev };
-    if (role) next[rowIdx] = role; else delete next[rowIdx];
-    return next;
-  });
+  const preview = rawRows.slice(0, MAX_PREVIEW_ROWS);
 
   const handleConfirm = () => {
     const mapping = {};
@@ -165,16 +154,8 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
     }
 
     clearManualMapDraft();
-    // Peran per baris -> indeks baris DATA (setelah baris judul dibuang).
-    const levels = {};
-    if (hierMode) {
-      for (const [i, role] of Object.entries(rowRoles)) {
-        const di = Number(i) - dataStartRow;
-        if (role && di >= 0) levels[di] = role;
-      }
-    }
     const extraNoteCols = noteExtras ? noteCols.filter((c) => !assign[c.index]) : [];
-    onConfirm(mapping, dataStartRow, customEntries, hierMode ? { levels, strict: true } : undefined, extraNoteCols);
+    onConfirm(mapping, dataStartRow, customEntries, undefined, extraNoteCols);
   };
 
   const handleCancel = () => { clearManualMapDraft(); onCancel(); };
@@ -209,26 +190,11 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
         )}
         <p className="text-xs text-amber-600 flex items-center gap-1 mb-3"><AlertTriangle size={12} /> Wajib memilih satu kolom sebagai "Nama Lead / Perusahaan". Kolom yang tidak memiliki padanan dapat dipilih "+ Custom..." dan diberi nama sendiri.</p>
 
-        <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-          <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-slate-700">
-            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-orange-600" checked={hierMode} onChange={(e) => setHierMode(e.target.checked)} />
-            <span>Tandai Pusat / Cabang per baris
-              <span className="block text-[11.5px] font-normal text-slate-500">Muncul pilihan di sisi kiri tiap baris. Tandai baris yang menjadi Pusat, lalu tandai Cabang di bawahnya. Baris tanpa tanda tidak masuk grup.</span>
-            </span>
-          </label>
-          {hierMode && (
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-600">
-              <span className="tabular-nums text-slate-500">Ditandai: {roleCount("perusahaan")} pusat, {roleCount("anak")} cabang</span>
-              {Object.keys(rowRoles).length > 0 && <button type="button" onClick={() => setRowRoles({})} className="font-semibold text-orange-700 hover:text-orange-800">Hapus semua tanda</button>}
-            </div>
-          )}
-        </div>
-
-        <div className={`overflow-x-auto max-w-full border border-slate-200 rounded-2xl ${hierMode ? "max-h-[55vh] overflow-y-auto" : ""}`}>
+        <div className="overflow-x-auto max-w-full border border-slate-200 rounded-2xl">
           <table className="text-xs w-full border-collapse">
-            <thead className={hierMode ? "sticky top-0 z-20" : ""}>
+            <thead>
               <tr>
-                <th className="sticky left-0 bg-slate-50 border-b border-slate-200 p-2 text-left w-10 z-10">{hierMode ? "Peran" : "#"}</th>
+                <th className="sticky left-0 bg-slate-50 border-b border-slate-200 p-2 text-left w-10 z-10">#</th>
                 {Array.from({ length: numCols }).map((_, colIdx) => (
                   <th key={colIdx} className="border-b border-l border-slate-200 p-1.5 min-w-[150px] bg-slate-50 align-top">
                     <select
@@ -271,17 +237,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
                   title="Klik untuk menandai: data asli dimulai dari baris ini"
                 >
                   <td className="sticky left-0 bg-white border-b border-slate-100 p-2 text-slate-400 font-mono">
-                    {hierMode && rowIdx >= dataStartRow ? (
-                      <select
-                        value={rowRoles[rowIdx] || ""}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => setRole(rowIdx, e.target.value)}
-                        aria-label={`Peran baris ${rowIdx}`}
-                        className={`w-[104px] rounded-lg border px-1 py-1 text-[11px] font-sans ${rowRoles[rowIdx] === "perusahaan" ? "border-orange-400 bg-orange-50 text-orange-800" : rowRoles[rowIdx] ? "border-slate-300 bg-slate-100 text-slate-700" : "border-slate-200 bg-white text-slate-400"}`}
-                      >
-                        {ROW_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                      </select>
-                    ) : (rowIdx === dataStartRow ? "→" : rowIdx)}
+                    {rowIdx === dataStartRow ? "→" : rowIdx}
                   </td>
                   {Array.from({ length: numCols }).map((_, colIdx) => (
                     <td key={colIdx} className="border-b border-l border-slate-100 p-1.5 text-slate-700 truncate max-w-[160px]">
@@ -295,7 +251,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
         </div>
         <p className="text-[11px] text-slate-400 mt-1.5">
           Klik salah satu baris di atas untuk menandai baris tersebut sebagai awal DATA ASLI (baris judul/header di atasnya akan dilewati).
-          {!hierMode && rawRows.length > MAX_PREVIEW_ROWS && ` Cuma ${MAX_PREVIEW_ROWS} baris pertama ditampilkan di sini, sisanya (${rawRows.length - MAX_PREVIEW_ROWS} baris lagi) tetap ikut diproses.`}
+          {rawRows.length > MAX_PREVIEW_ROWS &&` Cuma ${MAX_PREVIEW_ROWS} baris pertama ditampilkan di sini, sisanya (${rawRows.length - MAX_PREVIEW_ROWS} baris lagi) tetap ikut diproses.`}
         </p>
         {noteCols.some((c) => !assign[c.index]) && (
           <label className="mt-2 flex cursor-pointer items-start gap-2 text-[12px] text-slate-600">
