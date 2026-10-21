@@ -3195,8 +3195,8 @@ export default function Auth() {
 
                   <div className="mt-1 text-[10px] text-slate-400">
                     {tr(
-                      <>Untuk 4 orang (≈{PRICING.enterprise.perPerson}/orang) — team sales dengan visibilitas penuh</>,
-                      <>For 4 people (≈{PRICING.enterprise.perPerson}/person) — a sales team with full visibility</>
+                      <>Untuk 4 orang (≈{PRICING.enterprise.perPerson}/orang/bulan) — team sales dengan visibilitas penuh</>,
+                      <>For 4 people (≈{PRICING.enterprise.perPerson}/person/month) — a sales team with full visibility</>
                     )}
                   </div>
 
