@@ -77,7 +77,7 @@ export function SharedOrgPage({ org, onBack }) {
     const picOf = (l) => l.assigned_to || l.user_id;
     const won = leads.filter((l) => wonKeys.has(l.stage_key));
     // Per transaksi deal (sama dengan tab Team dan Dashboard).
-    const entries = dealEntriesFromData(leads, stages, snap.deal_transactions || []);
+    const entries = dealEntriesFromData(leads, stages, snap.deal_transactions || [], !!snap.org?.project_deal, snap.lead_stage_changes || []);
     const members = (snap.members || []).map((m) => ({ user_id: m.user_id, role: m.role, name: m.name }));
     const visits = snap.visit_checkins || [];
     const notes = snap.progress_notes || [];

@@ -819,7 +819,9 @@ export default function App() {
     if (n.key === "visitfollowup" && isEnterprise && canManage) out.push(TEAM_NAV_ITEM);
     return out;
   });
-  const monitorNav = monitorOwner ? baseNav.filter((n) => OWNER_MONITOR_TABS.includes(n.key)) : baseNav;
+  // Org project_deal (BSB): tab Deal menjadi Pencapaian (omzet dari proyek deal).
+  const baseNavLabeled = hasOrgFeature(org, "project_deal") ? baseNav.map((n) => (n.key === "deal" ? { ...n, label: "Pencapaian", short: "Pencapaian" } : n)) : baseNav;
+  const monitorNav = monitorOwner ? baseNavLabeled.filter((n) => OWNER_MONITOR_TABS.includes(n.key)) : baseNavLabeled;
   const navItems = settings?.is_platform_admin ? [...monitorNav, ADMIN_NAV_ITEM] : monitorNav;
 
   return (

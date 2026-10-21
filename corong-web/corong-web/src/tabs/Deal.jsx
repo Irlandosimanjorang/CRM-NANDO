@@ -5,6 +5,9 @@ import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
 import { getFieldLabel, getQuantityUnits } from "../lib/industryTemplates";
 
+// Tahap proyek BSB (org project_deal): omzet dihitung sejak Proyek Deal sampai Proyek Selesai.
+const PROJECT_KEYS = ["proyek_deal", "proyek_berjalan", "proyek_selesai"];
+
 // Label satuan dari daftar satuan industri; fallback ke kode mentah.
 const unitLabel = (units, v) => ((units || []).find((u) => u.v === v)?.label || v || "").toLowerCase();
 
@@ -34,18 +37,24 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const [qtyRevealed, setQtyRevealed] = useState(false);
   const [rpRevealed, setRpRevealed] = useState(false);
   const [expanded, setExpanded] = useState(new Set());
+  const [subTab, setSubTab] = useState("deal"); // khusus org project_deal: "deal" (Proyek Deal) atau "selesai" (Proyek Selesai)
   const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
   const labelTahap = useMemo(() => Object.fromEntries((stages || []).map((s) => [s.key, s.label])), [stages]);
 
   // Transaksi deal adalah catatan permanen: tetap tampil walau lead sudah dibuka lagi (repeat order).
   // Yang ditampilkan: lead yang sekarang menang, dan lead yang punya transaksi deal.
   // Total nilai = jumlah transaksi (ditambah deal_value lead menang yang belum punya transaksi).
-  const txLeadIds = useMemo(() => new Set((dealTransactions || []).map((t) => t.lead_id)), [dealTransactions]);
+  // Org project_deal (BSB): omzet dari tahap Proyek Deal. Setiap lead proyek jadi satu transaksi (tanggal proyek deal).
+  const txSource = useMemo(() => (projectDeal
+    ? (leads || []).filter((l) => !l.deleted_at && PROJECT_KEYS.includes(l.stage_key) && l.deal_date).map((l) => ({ id: l.id, lead_id: l.id, lead_name: l.name, deal_date: l.deal_date, deal_value: l.deal_value, tonnage: l.tonnage, tonnage_unit: l.tonnage_unit, product_type: l.product, auto: true }))
+    : (dealTransactions || [])), [projectDeal, leads, dealTransactions]);
+  const txLeadIds = useMemo(() => new Set(txSource.map((t) => t.lead_id)), [txSource]);
   const wonIds = useMemo(() => {
+    if (projectDeal) return new Set(txSource.map((t) => t.lead_id));
     const wonKeys = new Set((stages || []).filter((s) => s.type === "won").map((s) => s.key));
     return new Set((leads || []).filter((l) => !l.deleted_at && (wonKeys.has(l.stage_key) || txLeadIds.has(l.id))).map((l) => l.id));
-  }, [leads, stages, txLeadIds]);
-  const deals = useMemo(() => (dealTransactions || []).filter((t) => wonIds.has(t.lead_id)), [dealTransactions, wonIds]);
+  }, [projectDeal, txSource, leads, stages, txLeadIds]);
+  const deals = useMemo(() => txSource.filter((t) => wonIds.has(t.lead_id)), [txSource, wonIds]);
   const totalValue = useMemo(() => {
     const txSum = deals.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
     const tanpaTx = (leads || []).filter((l) => wonIds.has(l.id) && !txLeadIds.has(l.id)).reduce((a, l) => a + (Number(l.deal_value) || 0), 0);
@@ -297,6 +306,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     );
   };
 
+  const selesaiList = projectDeal
+    ? (leads || []).filter((l) => !l.deleted_at && l.stage_key === "proyek_selesai").sort((a, b) => String(b.deal_date || "").localeCompare(String(a.deal_date || "")))
+    : [];
+
   return (
     <div className="mx-auto max-w-5xl">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-6">
@@ -305,13 +318,39 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             <Trophy size={18} />
           </span>
           <div>
-            <h1 className="font-display text-[26px] font-bold leading-none tracking-[-0.03em] text-ink">Deal</h1>
-            <p className="mt-2 max-w-md text-[13px] leading-relaxed text-slate-500">Lead yang sudah menang. Deal muncul otomatis saat lead pindah ke tahap menang.</p>
+            <h1 className="font-display text-[26px] font-bold leading-none tracking-[-0.03em] text-ink">{projectDeal ? "Pencapaian" : "Deal"}</h1>
+            <p className="mt-2 max-w-md text-[13px] leading-relaxed text-slate-500">
+              {projectDeal
+                ? "Omzet dihitung dari tahap Proyek Deal. Proyek yang sudah berjalan atau selesai tetap dihitung di bulan proyek deal-nya."
+                : "Lead yang sudah menang. Deal muncul otomatis saat lead pindah ke tahap menang."}
+            </p>
           </div>
         </div>
+        {projectDeal && (
+          <div className="flex gap-1.5">
+            {[["deal", "Proyek Deal"], ["selesai", "Proyek Selesai"]].map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setSubTab(k)} aria-pressed={subTab === k} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold ${subTab === k ? "bg-slate-900 text-white" : "border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{label}</button>
+            ))}
+          </div>
+        )}
       </header>
 
-      {groups.length === 0 ? (
+      {projectDeal && subTab === "selesai" ? (
+        selesaiList.length === 0 ? (
+          <div className="mt-10 rounded-2xl border border-dashed border-slate-300 px-6 py-14 text-center">
+            <p className="font-display text-[17px] font-semibold text-ink">Belum ada proyek selesai</p>
+          </div>
+        ) : (
+          <ul className="mt-6 divide-y divide-slate-200 border-y border-slate-200">
+            {selesaiList.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <button type="button" onClick={() => onEdit(l)} className="text-left text-[15px] font-semibold text-ink hover:text-orange-700">{l.name}</button>
+                <span className="text-[12.5px] text-slate-500">Proyek deal {l.deal_date ? fmtDate(l.deal_date) : "-"} · <b className="font-semibold text-slate-700">{fmtRp(Number(l.deal_value) || 0)}</b></span>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : groups.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-slate-300 px-6 py-14 text-center">
           <p className="font-display text-[17px] font-semibold text-ink">Belum ada deal</p>
           <p className="mt-1.5 text-[13px] text-slate-500">Pindahkan lead ke tahap menang, maka deal-nya tercatat di sini.</p>

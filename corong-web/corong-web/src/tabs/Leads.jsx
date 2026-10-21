@@ -733,9 +733,9 @@ export default function Leads({
       leadPatch = { ...leadPatch, deal_value: extra.deal.value, deal_date: extra.deal.date };
       await db.upsertLead({ ...lead, ...leadPatch });
     } else {
-      // Org project_deal (BSB): tanggal deal mengikuti tanggal Proyek Selesai. Record deal dibuat otomatis dari lead ini.
-      await db.upsertLead({ ...lead, stage_key: key, ...(extra?.wonDate ? { deal_date: extra.wonDate } : {}) });
-      if (extra?.wonDate) leadPatch = { ...leadPatch, deal_date: extra.wonDate };
+      // Org project_deal (BSB): omzet dihitung dari tahap Proyek Deal (deal_date tetap tanggal proyek deal).
+      // Pindah ke Proyek Selesai tidak mengubah tanggal deal.
+      await db.upsertLead({ ...lead, stage_key: key });
     }
     if (extra) {
       // Alasan menang / kalah dicatat sebagai outcome lead, dan juga sebagai catatan progres supaya terlihat di riwayat.
