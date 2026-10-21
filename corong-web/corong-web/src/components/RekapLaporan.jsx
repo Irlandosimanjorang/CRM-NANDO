@@ -64,6 +64,14 @@ export default function RekapLaporan({ leads = [], stages = [], ym, orgName = ""
     return () => { alive = false; };
   }, [from, to, dataTick]);
 
+  // Transaksi deal dalam periode (per transaksi, sama dengan tab Team, Report, dan Dashboard).
+  const [entries, setEntries] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    db.getDealEntries(from, to).then((r) => { if (alive) setEntries(r); }).catch(() => { if (alive) setEntries([]); });
+    return () => { alive = false; };
+  }, [from, to, dataTick, leads]);
+
   const stageMeta = useMemo(() => Object.fromEntries(stages.map((s) => [s.key, s])), [stages]);
   const firstKey = stages[0]?.key;
 
@@ -74,8 +82,10 @@ export default function RekapLaporan({ leads = [], stages = [], ym, orgName = ""
     const lostKeys = new Set(stages.filter((s) => s.type === "lost").map((s) => s.key));
     const startOfMonth = from;
 
-    // Deal bulan ini: satu aturan deal di semua tab, yaitu lead yang sekarang di tahap menang menurut tanggal deal.
-    const deals = live.filter((l) => wonKeys.has(l.stage_key) && ymOf(l.deal_date) === ym).map((l) => ({ lead: l, value: num(l.deal_value), date: l.deal_date }));
+    // Deal bulan ini: per transaksi deal (tanggal transaksi), lead-nya harus masih di tahap menang.
+    const deals = entries
+      .filter((e) => ymOf(e.deal_date) === ym && byId.has(e.lead_id) && wonKeys.has(byId.get(e.lead_id).stage_key))
+      .map((e) => ({ lead: byId.get(e.lead_id), value: num(e.deal_value), date: e.deal_date }));
 
     // Timeline: tanggal -> tahap, per lead. Riwayat pindah tahap lebih diutamakan daripada perkiraan.
     const events = new Map();
@@ -125,7 +135,7 @@ export default function RekapLaporan({ leads = [], stages = [], ym, orgName = ""
     const sum = (rows) => rows.reduce((t, r) => t + r.value, 0);
     const sphAll = sum(sections[0].rows);
     return { master, events, sections, prior, sphAll, hotAll: sum(sections[1].rows), dealAll: sum(deals), dealCount: deals.length, sphStageCount: sph.length + hot.length, hotCount: hot.length, lostCount: lost.length, lostAll: sum(sections.find((x) => x.key === "nodeal").rows), pending: [...sph, ...hot].reduce((t, l) => t + num(l.deal_value), 0), masukCount: live.filter((l) => ymOf(wibDate(l.created_at)) === ym).length };
-  }, [leads, stages, changes, ym, from, firstKey, month]);
+  }, [leads, stages, changes, entries, ym, from, firstKey, month]);
 
   const cells = (r, i) => [
     i + 1, fmtDay(r.date), r.lead.name, r.lead.company_type || "", r.lead.phone || "", r.lead.city || "", String(r.lead.custom_field_1 || "").trim(),
