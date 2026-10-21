@@ -714,6 +714,14 @@ export default function Leads({
   useEffect(() => { try { localStorage.setItem("nexto_leads_view", viewMode); } catch (_) { /* abaikan */ } }, [viewMode]);
   // Simpan di belakang layar: papan sudah menampilkan tahap baru, jadi tidak perlu menunggu muat ulang.
   // Error dilempar lagi ke papan, yang mengembalikan kartu ke tempat semula.
+  // Edit faktur dari kartu tahap Faktur (pipeline MAP): nilai, tanggal, dan no. faktur.
+  const editFaktur = async (lead, values) => {
+    await db.updateFaktur(lead, values);
+    const patch = { deal_value: values.value, deal_date: values.date, invoice_number: values.invoice_number || null };
+    if (onLocalDeal) onLocalDeal(lead.id, patch, null);
+    onChanged({ silent: true });
+  };
+
   const moveLeadStage = async (lead, key, extra) => {
     let tx = null;
     let leadPatch = { stage_key: key };
@@ -2185,6 +2193,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             onNewOpportunity={reopenLead}
             projectDeal={projectDeal}
             invoicePipeline={invoicePipeline}
+            onEditFaktur={editFaktur}
           />
         </div>
       )}

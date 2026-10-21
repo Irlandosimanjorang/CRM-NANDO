@@ -17,7 +17,7 @@ const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada
 const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
 const MAX_SPEED = 26; // piksel per frame saat kursor tepat di tepi
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, onEditFaktur }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
@@ -29,6 +29,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // Pop-up data proyek saat kartu digeser ke Proyek Deal (tanggal, nilai, No. SPH, total diskon wajib).
   const [proyek, setProyek] = useState(null);
   const [dealStage, setDealStage] = useState(null); // pipeline faktur (MAP): pop-up tahap Deal
+  const [fakturEdit, setFakturEdit] = useState(null); // pipeline faktur (MAP): edit data faktur dari kartu
   const press = useRef(null);
   const suppressClick = useRef(false);
   const boardRef = useRef(null);
@@ -246,6 +247,13 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     <div ref={boardRef} className="mt-1 overflow-x-auto pb-4">
       {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} />}
       {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} />}
+      {fakturEdit && (
+        <FakturEditDialog
+          lead={fakturEdit}
+          onCancel={() => setFakturEdit(null)}
+          onSave={(values) => { const lead = fakturEdit; setFakturEdit(null); Promise.resolve(onEditFaktur?.(lead, values)).catch((e) => alert("Gagal menyimpan faktur: " + (e?.message || e))); }}
+        />
+      )}
       {proyek && <ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} />}
 
       {/* Kartu yang diseret dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke wrapper yang punya transform. */}
@@ -320,6 +328,22 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                           {days === null ? "belum dihubungi" : days === 0 ? "hari ini" : `${days} hari lalu`}
                         </span>
                       </div>
+
+                      {invoicePipeline && s.type === "won" && (
+                        <div className="mt-2.5 rounded-lg bg-slate-50 px-2.5 py-2 text-[11.5px] text-slate-600">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate">{l.invoice_number ? `Faktur ${l.invoice_number}` : "Belum ada no. faktur"}</span>
+                            <span className="shrink-0 font-semibold tabular-nums text-slate-800">{fmtRp(Number(l.deal_value) || 0)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { if (!suppressClick.current) setFakturEdit(l); }}
+                            className="mt-1.5 text-[11.5px] font-semibold text-orange-700 hover:text-orange-800"
+                          >
+                            Edit faktur
+                          </button>
+                        </div>
+                      )}
 
                       {s.type === "won" && firstNormal && (
                         <button
@@ -447,6 +471,46 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
 // Pop-up kecil: alasan menang / kalah, plus nilai dan tanggal deal untuk menang, dan catatan opsional.
 // Org project_deal (BSB, 17 Okt 2026): nilai dan tanggal proyek sudah diisi di tahap Proyek Deal,
 // jadi di sini cukup alasan dan catatan. Record deal dibuat otomatis dari lead ini.
+// Edit data faktur dari kartu (pipeline faktur, MAP): tanggal, no. faktur, dan nominal.
+function FakturEditDialog({ lead, onCancel, onSave }) {
+  const [date, setDate] = useState(lead.deal_date ? String(lead.deal_date).slice(0, 10) : todayISO());
+  const [invoice, setInvoice] = useState(lead.invoice_number || "");
+  const [value, setValue] = useState(lead.deal_value ? String(lead.deal_value) : "");
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  const nominal = Number(value.replace(/\D/g, "")) || 0;
+  const ready = !!date && nominal > 0;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+        <h3 className="text-[15px] font-semibold text-slate-900">Edit faktur</h3>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <label className="col-span-2 block">
+            <span className="text-[11px] font-medium text-slate-500">No. faktur</span>
+            <input value={invoice} onChange={(e) => setInvoice(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">Tanggal faktur</span>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">Nominal{nominal ? " · " + fmtRp(nominal) : ""}</span>
+            <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))} placeholder="0" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] tabular-nums focus:border-slate-400 focus:outline-none" />
+          </label>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button type="button" disabled={!ready} onClick={() => onSave({ date, invoice_number: invoice.trim(), value: nominal })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Pop-up tahap Deal (pipeline faktur, MAP): tanggal dan barang.
 function DealStageDialog({ lead, onCancel, onSave }) {
   const [date, setDate] = useState(lead.deal_stage_date || todayISO());

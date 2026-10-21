@@ -1574,6 +1574,23 @@ export async function getOutcomeEvents(fromISO = null, toISO = null) {
   return data || { won: 0, lost: 0, by_user: [] };
 }
 
+// Edit data faktur lead yang sudah menang (pipeline faktur MAP): nilai, tanggal, dan no. faktur.
+// Transaksi terakhir lead ikut diperbarui supaya omzet di Deal, Team, dan Report ikut berubah.
+export async function updateFaktur(lead, { value, date, invoice_number }) {
+  cekNilaiDeal(value);
+  const { data: last, error: e1 } = await supabase.from("deal_transactions").select("id")
+    .eq("lead_id", lead.id).order("deal_date", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (e1) throw e1;
+  if (last) {
+    const { error } = await supabase.from("deal_transactions").update({ deal_value: value, deal_date: date }).eq("id", last.id);
+    if (error) throw error;
+  } else {
+    await addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: date, deal_value: value, product_type: lead.product });
+  }
+  const { error } = await supabase.from("leads").update({ deal_value: value, deal_date: date, invoice_number: invoice_number || null }).eq("id", lead.id);
+  if (error) throw error;
+}
+
 export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type }) {
   cekNilaiDeal(deal_value);
   const uid = (await supabase.auth.getUser()).data.user.id;
