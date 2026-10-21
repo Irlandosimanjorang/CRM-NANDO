@@ -20,7 +20,7 @@ import RencanaBulanan from "./RencanaBulanan";
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const DAYS_LONG = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
-const SOURCES = ["Meta", "Instagram", "TikTok", "Google", "Tokopedia", "Shopee", "Customer datang", "Database", "Bu Tiara", "Migi", "Lainnya"];
+const SOURCES = ["Meta", "Instagram", "TikTok", "Google", "Tokopedia", "Shopee", "Customer datang", "Database", "Lainnya"];
 const cn = (...v) => v.filter(Boolean).join(" ");
 const pad = (n) => String(n).padStart(2, "0");
 const ymOf = (iso) => String(iso || "").slice(0, 7);

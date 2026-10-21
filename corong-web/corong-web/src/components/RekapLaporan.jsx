@@ -14,7 +14,7 @@ import { Panel, PanelHeader, EmptyState } from "../ui";
 //  5. Ringkasan bobot dan target omzet di paling bawah.
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const DAY_LETTER = ["M", "S", "S", "R", "K", "J", "S"]; // Minggu, Senin, Selasa, Rabu, Kamis, Jumat, Sabtu
-const SOURCES = ["Meta", "Instagram", "TikTok", "Google", "Tokopedia", "Shopee", "Customer datang", "Database", "Bu Tiara", "Migi", "Lainnya"];
+const SOURCES = ["Meta", "Instagram", "TikTok", "Google", "Tokopedia", "Shopee", "Customer datang", "Database", "Lainnya"];
 const pad = (n) => String(n).padStart(2, "0");
 const ymOf = (iso) => String(iso || "").slice(0, 7);
 const num = (v) => Number(v) || 0;
