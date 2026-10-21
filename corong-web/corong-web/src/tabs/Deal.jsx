@@ -37,14 +37,20 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
   const labelTahap = useMemo(() => Object.fromEntries((stages || []).map((s) => [s.key, s.label])), [stages]);
 
-  // Satu aturan deal di semua tab: hanya transaksi milik lead yang sekarang di tahap menang yang ditampilkan.
-  // Total nilai = jumlah deal_value lead menang (sama dengan Report dan Komisi).
+  // Transaksi deal adalah catatan permanen: tetap tampil walau lead sudah dibuka lagi (repeat order).
+  // Yang ditampilkan: lead yang sekarang menang, dan lead yang punya transaksi deal.
+  // Total nilai = jumlah transaksi (ditambah deal_value lead menang yang belum punya transaksi).
+  const txLeadIds = useMemo(() => new Set((dealTransactions || []).map((t) => t.lead_id)), [dealTransactions]);
   const wonIds = useMemo(() => {
     const wonKeys = new Set((stages || []).filter((s) => s.type === "won").map((s) => s.key));
-    return new Set((leads || []).filter((l) => !l.deleted_at && wonKeys.has(l.stage_key)).map((l) => l.id));
-  }, [leads, stages]);
+    return new Set((leads || []).filter((l) => !l.deleted_at && (wonKeys.has(l.stage_key) || txLeadIds.has(l.id))).map((l) => l.id));
+  }, [leads, stages, txLeadIds]);
   const deals = useMemo(() => (dealTransactions || []).filter((t) => wonIds.has(t.lead_id)), [dealTransactions, wonIds]);
-  const totalValue = useMemo(() => (leads || []).filter((l) => wonIds.has(l.id)).reduce((a, l) => a + (Number(l.deal_value) || 0), 0), [leads, wonIds]);
+  const totalValue = useMemo(() => {
+    const txSum = deals.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
+    const tanpaTx = (leads || []).filter((l) => wonIds.has(l.id) && !txLeadIds.has(l.id)).reduce((a, l) => a + (Number(l.deal_value) || 0), 0);
+    return txSum + tanpaTx;
+  }, [leads, deals, wonIds, txLeadIds]);
   const totals = qtyTotals(deals, units);
 
   // 1 baris per lead menang. Nilai baris = deal_value lead (satu aturan deal di semua tab).

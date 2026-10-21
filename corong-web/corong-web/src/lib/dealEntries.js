@@ -12,12 +12,13 @@ export function dealEntriesFromData(leads = [], stages = [], txs = []) {
   }
   const out = [];
   for (const l of leads) {
-    if (l.deleted_at || !wonKeys.has(l.stage_key)) continue;
+    if (l.deleted_at) continue;
     const pic = l.assigned_to || l.user_id;
     const mine = txByLead.get(l.id);
     if (mine && mine.length) {
+      // Transaksi tetap dihitung walau lead sudah dibuka lagi (repeat order).
       for (const t of mine) out.push({ tx_id: t.id, lead_id: l.id, pic, deal_date: t.deal_date, deal_value: Number(t.deal_value) || 0 });
-    } else {
+    } else if (wonKeys.has(l.stage_key)) {
       out.push({ tx_id: null, lead_id: l.id, pic, deal_date: l.deal_date, deal_value: Number(l.deal_value) || 0 });
     }
   }

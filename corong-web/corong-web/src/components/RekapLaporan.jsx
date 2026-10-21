@@ -84,7 +84,7 @@ export default function RekapLaporan({ leads = [], stages = [], ym, orgName = ""
 
     // Deal bulan ini: per transaksi deal (tanggal transaksi), lead-nya harus masih di tahap menang.
     const deals = entries
-      .filter((e) => ymOf(e.deal_date) === ym && byId.has(e.lead_id) && wonKeys.has(byId.get(e.lead_id).stage_key))
+      .filter((e) => ymOf(e.deal_date) === ym && byId.has(e.lead_id))
       .map((e) => ({ lead: byId.get(e.lead_id), value: num(e.deal_value), date: e.deal_date }));
 
     // Timeline: tanggal -> tahap, per lead. Riwayat pindah tahap lebih diutamakan daripada perkiraan.
