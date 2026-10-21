@@ -36,10 +36,15 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // Bilah geser di atas papan: slider sendiri (selalu terlihat, tidak tergantung scrollbar browser).
   const [overflowPx, setOverflowPx] = useState(0);
   const [scrollPos, setScrollPos] = useState(0);
+  const [viewRatio, setViewRatio] = useState(1); // lebar layar / lebar papan
+  const trackRef = useRef(null);
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return undefined;
-    const measure = () => setOverflowPx(Math.max(0, board.scrollWidth - board.clientWidth));
+    const measure = () => {
+      setOverflowPx(Math.max(0, board.scrollWidth - board.clientWidth));
+      setViewRatio(board.scrollWidth ? board.clientWidth / board.scrollWidth : 1);
+    };
     measure();
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
     if (ro) { ro.observe(board); Array.from(board.children).forEach((c) => ro.observe(c)); }
@@ -258,17 +263,33 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   return (
     <div className="mt-1">
-      {overflowPx > 0 && (
-        <input
-          type="range"
-          min={0}
-          max={overflowPx}
-          value={Math.min(scrollPos, overflowPx)}
-          onChange={(e) => { const v = Number(e.target.value); setScrollPos(v); if (boardRef.current) boardRef.current.scrollLeft = v; }}
-          aria-label="Geser papan ke kiri atau kanan"
-          className="mb-2 w-full cursor-pointer accent-slate-700"
-        />
-      )}
+      {overflowPx > 0 && (() => {
+        // Bilah datar: track abu-abu, thumb menunjukkan bagian papan yang sedang terlihat.
+        const thumbPct = Math.max(8, viewRatio * 100);
+        const leftPct = overflowPx ? (Math.min(scrollPos, overflowPx) / overflowPx) * (100 - thumbPct) : 0;
+        const moveTo = (clientX) => {
+          const t = trackRef.current; const b = boardRef.current;
+          if (!t || !b) return;
+          const rect = t.getBoundingClientRect();
+          const f = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+          b.scrollLeft = f * overflowPx;
+        };
+        return (
+          <div
+            ref={trackRef}
+            role="slider"
+            aria-label="Geser papan ke kiri atau kanan"
+            aria-valuemin={0}
+            aria-valuemax={overflowPx}
+            aria-valuenow={Math.round(Math.min(scrollPos, overflowPx))}
+            onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); moveTo(e.clientX); }}
+            onPointerMove={(e) => { if (e.buttons === 1) moveTo(e.clientX); }}
+            className="relative mb-2 h-2 w-full cursor-pointer rounded-full bg-slate-200"
+          >
+            <div className="absolute top-0 h-2 rounded-full bg-slate-500" style={{ width: `${thumbPct}%`, left: `${leftPct}%` }} />
+          </div>
+        );
+      })()}
     <div ref={boardRef} onScroll={(e) => setScrollPos(e.currentTarget.scrollLeft)} className="overflow-x-auto pb-4">
       {closing &&<CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} />}
       {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} />}
