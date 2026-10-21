@@ -164,6 +164,13 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   // Transaksi deal dibaca dari server (rentang bulan lalu sampai akhir periode), lihat efek di bawah.
   // Per transaksi: repeat order masuk ke bulan transaksinya sendiri.
   const [entriesSrv, setEntriesSrv] = useState([]);
+  // Omzet per produk dalam periode yang dipilih (per transaksi, sama dengan tab lain).
+  const [productRows, setProductRows] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    db.getProductBreakdown(range.from, range.to).then((r) => { if (alive) setProductRows(r); }).catch(() => { if (alive) setProductRows([]); });
+    return () => { alive = false; };
+  }, [range.from, range.to, allLeads]);
   const dealsSrv = useMemo(() => dealRowsFromEntries(entriesSrv, allLeads), [entriesSrv, allLeads]);
   // Deal dari server, disaring lingkup marketing dan filter sumber/tahap seperti tabel lead.
   const dealLeads = useMemo(() => dealsSrv.filter((l) => !l.deleted_at && (scopeId === "all" || (l.assigned_to || l.user_id) === scopeId) && passF(l)), [dealsSrv, scopeId, srcF, stF, srcSlot]);
@@ -662,6 +669,20 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               )}
             </Panel>
           </div>
+
+          {productRows.length > 0 && (
+            <Panel className="p-5">
+              <PanelHeader title="Omzet per produk" meta={`Total transaksi deal ${periodLabel}, dikelompokkan per nama barang.`} />
+              <ul className="mt-2 divide-y divide-slate-100">
+                {productRows.map((p) => (
+                  <li key={p.produk} className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
+                    <span className="min-w-0 truncate text-slate-800">{p.produk}</span>
+                    <span className="shrink-0 tabular-nums text-slate-500">{p.deals} deal · <b className="font-semibold text-slate-800">{fmtRp(Number(p.omzet) || 0)}</b></span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
 
           {!personal && scopeId === "all" && team.length > 0 && (
             <Panel className="p-5">
