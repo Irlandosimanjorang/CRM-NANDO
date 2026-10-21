@@ -39,6 +39,15 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // Pop-up data proyek saat kartu digeser ke Proyek Deal (tanggal, nilai, No. SPH, total diskon wajib).
   const [proyek, setProyek] = useState(null);
   const [dealStage, setDealStage] = useState(null); // pipeline faktur (MAP): pop-up tahap Deal
+  // Saran nama barang: produk yang sudah pernah dipakai di organisasi ini (tanpa duplikat beda huruf besar-kecil).
+  const productOptions = useMemo(() => {
+    const seen = new Map();
+    for (const l of leads || []) {
+      const p = String(l.product || "").trim();
+      if (p && !seen.has(p.toLowerCase())) seen.set(p.toLowerCase(), p);
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b, "id"));
+  }, [leads]);
   const [fakturEdit, setFakturEdit] = useState(null); // pipeline faktur (MAP): edit data faktur dari kartu
   const press = useRef(null);
   const suppressClick = useRef(false);
@@ -283,8 +292,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
         </>
       )}
     <div ref={boardRef} onScroll={(e) => setScrollPos(e.currentTarget.scrollLeft)} className="overflow-x-auto pb-4">
-      {closing &&<CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} />}
-      {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} />}
+      {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} productOptions={productOptions} />}
+      {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} productOptions={productOptions} />}
       {fakturEdit && (
         <FakturEditDialog
           lead={fakturEdit}
@@ -551,9 +560,10 @@ function FakturEditDialog({ lead, onCancel, onSave }) {
 }
 
 // Pop-up tahap Deal (pipeline faktur, MAP): tanggal dan barang.
-function DealStageDialog({ lead, onCancel, onSave }) {
+function DealStageDialog({ lead, onCancel, onSave, productOptions = [] }) {
   const [date, setDate] = useState(lead.deal_stage_date || todayISO());
   const [product, setProduct] = useState(lead.product || "");
+  const listId = "nx-product-options-deal";
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -572,7 +582,8 @@ function DealStageDialog({ lead, onCancel, onSave }) {
           </label>
           <label className="block">
             <span className="text-[11px] font-medium text-slate-500">Barang</span>
-            <input value={product} onChange={(e) => setProduct(e.target.value)} placeholder="Nama barang" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+            <input value={product} onChange={(e) => setProduct(e.target.value)} list={listId} placeholder="Pilih atau ketik barang" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+            <datalist id={listId}>{productOptions.map((p) => <option key={p} value={p} />)}</datalist>
           </label>
         </div>
         <div className="mt-4 flex justify-end gap-2">
@@ -584,13 +595,14 @@ function DealStageDialog({ lead, onCancel, onSave }) {
   );
 }
 
-function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePipeline = false }) {
+function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePipeline = false, productOptions = [] }) {
   const [category, setCategory] = useState("");
   const [note, setNote] = useState("");
   const won = closing.result === "won";
   const [value, setValue] = useState(closing.lead.deal_value ? String(closing.lead.deal_value) : "");
   const [date, setDate] = useState(todayISO());
   const [invoice, setInvoice] = useState(closing.lead.invoice_number || "");
+  const [product, setProduct] = useState(closing.lead.product || "");
   const dealValue = Number(value.replace(/\D/g, "")) || 0;
   const lockedProject = won && projectDeal;
   const ready = !!category && (!won || dealValue > 0);
@@ -643,10 +655,17 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
         {won && !projectDeal && (
           <div className="mt-4 grid grid-cols-2 gap-2">
             {invoicePipeline && (
-              <label className="col-span-2 block">
-                <span className="text-[11px] font-medium text-slate-500">No. faktur</span>
-                <input value={invoice} onChange={(e) => setInvoice(e.target.value)} placeholder="Nomor faktur" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
-              </label>
+              <>
+                <label className="block">
+                  <span className="text-[11px] font-medium text-slate-500">No. faktur</span>
+                  <input value={invoice} onChange={(e) => setInvoice(e.target.value)} placeholder="Nomor faktur" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-medium text-slate-500">Barang</span>
+                  <input value={product} onChange={(e) => setProduct(e.target.value)} list="nx-product-options-close" placeholder="Pilih atau ketik barang" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+                  <datalist id="nx-product-options-close">{productOptions.map((p) => <option key={p} value={p} />)}</datalist>
+                </label>
+              </>
             )}
             <label className="block">
               <span className="text-[11px] font-medium text-slate-500">{invoicePipeline ? "Nominal faktur" : "Nilai deal"}{dealValue ? " · " + fmtRp(dealValue) : ""}</span>
@@ -681,7 +700,7 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
           <button
             type="button"
             disabled={!ready}
-            onClick={() => onSave(category, note.trim(), won && !projectDeal ? { value: dealValue, date, ...(invoicePipeline ? { invoice_number: invoice.trim() } : {}) } : null, lockedProject ? date : null)}
+            onClick={() => onSave(category, note.trim(), won && !projectDeal ? { value: dealValue, date, ...(invoicePipeline ? { invoice_number: invoice.trim(), product: product.trim() } : {}) } : null, lockedProject ? date : null)}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan
