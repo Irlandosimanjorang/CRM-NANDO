@@ -261,7 +261,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   return (
     <div className="mt-1">
-      <div ref={topBarRef} onScroll={() => syncScroll(topBarRef, boardRef)} className="overflow-x-auto overflow-y-hidden" style={{ height: 14 }} aria-label="Geser papan ke kiri atau kanan">
+      <div ref={topBarRef} onScroll={() => syncScroll(topBarRef, boardRef)} className="overflow-x-auto overflow-y-hidden" style={{ height: 20 }} aria-label="Geser papan ke kiri atau kanan">
         <div style={{ width: boardWidth, height: 1 }} />
       </div>
     <div ref={boardRef} onScroll={() => syncScroll(boardRef, topBarRef)} className="overflow-x-auto pb-4">
