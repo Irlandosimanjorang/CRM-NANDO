@@ -48,12 +48,12 @@ Deno.serve(async (req) => {
       const lastNote = new Map<string, string>();
       for (const n of notes || []) if (!lastNote.has(n.lead_id)) lastNote.set(n.lead_id, n.created_at);
       const achieved = new Map<string, number>();
-      // Satu aturan deal di semua tab: capaian = nilai lead menang dengan tanggal deal bulan ini, per penanggung jawab.
-      const wonKeys = new Set((stages || []).filter((s) => s.type === "won").map((s) => s.key));
-      for (const l of leads || []) {
-        const pic = l.assigned_to || l.user_id;
-        if (!pic || !wonKeys.has(l.stage_key) || String(l.deal_date || "").slice(0, 10) < monthStart) continue;
-        achieved.set(pic, (achieved.get(pic) || 0) + (Number(l.deal_value) || 0));
+      // Satu aturan deal di semua tab: capaian = jumlah transaksi deal bulan ini per penanggung jawab
+      // (sama dengan tab Team dan Dashboard). Lead menang tanpa transaksi dihitung sekali dengan nilai lead.
+      const { data: entries } = await admin.rpc("org_deal_entries", { p_org: org.id });
+      for (const e of (entries || []) as { pic: string | null; deal_date: string | null; deal_value: number | null }[]) {
+        if (!e.pic || String(e.deal_date || "").slice(0, 10) < monthStart) continue;
+        achieved.set(e.pic, (achieved.get(e.pic) || 0) + (Number(e.deal_value) || 0));
       }
 
       const alerts = buildAlerts({

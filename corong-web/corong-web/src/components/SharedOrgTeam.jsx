@@ -3,6 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import * as db from "../lib/db";
 import TeamLeaderboard from "./TeamLeaderboard";
+import { dealEntriesFromData } from "../lib/dealEntries";
 
 // Tombol "Tim <nama org>" di tab Team untuk org yang diberi izin berbagi data (sister company).
 // Klik tombol membuka halaman sendiri (SharedOrgPage) di dalam tab Team, bukan pop-up.
@@ -75,6 +76,8 @@ export function SharedOrgPage({ org, onBack }) {
     const leads = (snap.leads || []).filter((l) => !l.deleted_at);
     const picOf = (l) => l.assigned_to || l.user_id;
     const won = leads.filter((l) => wonKeys.has(l.stage_key));
+    // Per transaksi deal (sama dengan tab Team dan Dashboard).
+    const entries = dealEntriesFromData(leads, stages, snap.deal_transactions || []);
     const members = (snap.members || []).map((m) => ({ user_id: m.user_id, role: m.role, name: m.name }));
     const visits = snap.visit_checkins || [];
     const notes = snap.progress_notes || [];
@@ -97,8 +100,8 @@ export function SharedOrgPage({ org, onBack }) {
 
     const rekap = members.map((m) => {
       const { v, n, s, lb } = act(m.user_id);
-      const bulanIniWon = won.filter((l) => picOf(l) === m.user_id && String(l.deal_date || "").startsWith(bulan));
-      const omzet = bulanIniWon.reduce((t, l) => t + (Number(l.deal_value) || 0), 0);
+      const bulanIniWon = entries.filter((e) => e.pic === m.user_id && String(e.deal_date || "").startsWith(bulan));
+      const omzet = bulanIniWon.reduce((t, e) => t + (Number(e.deal_value) || 0), 0);
       const target = Number(targets.find((t) => t.user_id === m.user_id && String(t.month || "").startsWith(bulan))?.amount) || 0;
       return {
         ...m,
@@ -114,7 +117,7 @@ export function SharedOrgPage({ org, onBack }) {
     });
 
     // Denyut: deal bulan ini, anggota aktif 7 hari, grafik aktivitas 7 hari.
-    const dealBulanIni = won.filter((l) => String(l.deal_date || "").startsWith(bulan)).reduce((t, l) => t + (Number(l.deal_value) || 0), 0);
+    const dealBulanIni = entries.filter((e) => String(e.deal_date || "").startsWith(bulan)).reduce((t, e) => t + (Number(e.deal_value) || 0), 0);
     const aktif7 = rekap.filter((r) => r.last && daysSince(r.last) < 7).length;
     const hari = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(Date.now() - (6 - i) * 86400000);
@@ -126,7 +129,7 @@ export function SharedOrgPage({ org, onBack }) {
 
     const targetTotal = rekap.reduce((t, r) => t + r.target, 0);
     const omzetTotal = rekap.reduce((t, r) => t + r.omzet, 0);
-    return { stages, leads, won, members, rekap, dealBulanIni, aktif7, grafik, perhatian, targetTotal, omzetTotal, bulan, checkins: visits };
+    return { stages, leads, won, entries, members, rekap, dealBulanIni, aktif7, grafik, perhatian, targetTotal, omzetTotal, bulan, checkins: visits };
   }, [snap]);
 
   return (
@@ -282,6 +285,7 @@ export function SharedOrgPage({ org, onBack }) {
             canManage={false}
             externalMembers={view.members}
             externalCheckins={view.checkins}
+            dealEntries={view.entries}
           />
         </>
       )}

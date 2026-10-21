@@ -49,13 +49,20 @@ export default function Dashboard({
     db.getOutcomeEvents().then(setEvents).catch(() => setEvents(null));
   }, [leads]);
 
+  // Transaksi deal (per transaksi, sama dengan tab Team dan Report). Dimuat ulang saat data deal berubah.
+  const [dealEntries, setDealEntries] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    db.getDealEntries("2000-01-01", "2100-12-31").then((d) => { if (alive) setDealEntries(d); }).catch(() => { if (alive) setDealEntries([]); });
+    return () => { alive = false; };
+  }, [leads, dealTransactions]);
+
   const bulanIniWib = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }).slice(0, 7);
   const stats = useMemo(() => {
     const wonKeys = stages.filter(s => s.type === "won").map(s => s.key);
     const lostKeys = stages.filter(s => s.type === "lost").map(s => s.key);
-    const won = leads.filter(l => wonKeys.includes(l.stage_key));
     const lost = leads.filter(l => lostKeys.includes(l.stage_key));
-    const wonN = events ? events.won : won.length;
+    const wonN = events ? events.won : leads.filter(l => wonKeys.includes(l.stage_key)).length;
     const lostN = events ? events.lost : lost.length;
     const followups = leads.filter(l => l.next_action && String(l.next_action).trim());
     const visits = leads.filter(l => sameDay(l.visit_date));
@@ -65,12 +72,12 @@ export default function Dashboard({
       lost: lostN,
       followups: followups.length,
       visits: visits.length,
-      // Satu aturan deal di semua tab: deal = lead yang sekarang di tahap menang, menurut tanggal deal (bulan berjalan WIB).
-      deals: won.filter(l => String(l.deal_date || "").slice(0, 7) === bulanIniWib).length,
+      // Satu aturan deal di semua tab: deal = transaksi deal yang tanggalnya di bulan berjalan (WIB).
+      deals: dealEntries.filter(e => String(e.deal_date || "").slice(0, 7) === bulanIniWib).length,
       winRate: wonN + lostN ? Math.round((wonN / (wonN + lostN)) * 100) : 0,
       wonKeys,
     };
-  }, [leads, stages, events]);
+  }, [leads, stages, events, dealEntries, bulanIniWib]);
 
   const pipeline = useMemo(() => {
     const usable = stages.filter(s => s.type !== "lost").slice(0, 4);
@@ -129,17 +136,15 @@ export default function Dashboard({
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (key in idxByKey) months[idxByKey[key]].leads += 1;
     });
-    // Satu aturan deal di semua tab: deal = lead yang sekarang di tahap menang.
-    const dealRows = leads.filter((l) => stages.some((s) => s.type === "won" && s.key === l.stage_key)).map((l) => ({ deal_date: l.deal_date, created_at: l.created_at }));
-    dealRows.forEach((dt) => {
-      const raw = dt.deal_date || dt.created_at;
-      if (!raw) return;
-      const d = new Date(raw);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+    // Satu aturan deal di semua tab: deal = transaksi deal, dihitung di bulan tanggal transaksinya.
+    dealEntries.forEach((e) => {
+      if (!e.deal_date) return;
+      const [y, m] = String(e.deal_date).slice(0, 7).split("-").map(Number);
+      const key = `${y}-${m - 1}`;
       if (key in idxByKey) months[idxByKey[key]].deals += 1;
     });
     return months;
-  }, [leads, stages]);
+  }, [leads, dealEntries]);
 
   // BUG FIX (16 Sep 2026, ketauan pas audit): db.getTodayAdvisorRun() itu
   // fungsi yang MEMANG dibikin buat kartu "Next best action" ini (lihat
