@@ -114,7 +114,7 @@ function StatPreviewModal({ title, items, onOpenItem, onClose }) {
 
 // externalMembers / externalCheckins: dipakai tampilan tim org lain (read-only, lewat izin berbagi).
 // Kalau diisi, komponen tidak mengambil data sendiri dari org yang sedang login.
-export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, externalMembers = null, externalCheckins = null }) {
+export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, externalMembers = null, externalCheckins = null, dealEntries = null }) {
   const [members, setMembers] = useState(externalMembers);
   const [checkins, setCheckins] = useState(externalCheckins || []);
   const [preview, setPreview] = useState(null); // { title, items }
@@ -174,6 +174,11 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
     const tgl = new Date(Date.UTC(y, mo - 1 - i, 1));
     return { key: tgl.toISOString().slice(0, 7), label: tgl.toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }) };
   });
+  // Per transaksi (dealEntries dari server): omzet, jumlah deal, dan komisi dihitung dari transaksi.
+  // Tanpa dealEntries (mis. halaman tim org lain), tetap memakai lead menang.
+  const leadById = new Map((leads || []).map((l) => [l.id, l]));
+  const entriesByPic = {};
+  for (const e of dealEntries || []) (entriesByPic[e.pic] ||= []).push(e);
   const rows = members
     .map((m) => {
       const mine = (leads || []).filter((l) => (l.assigned_to || l.user_id) === m.user_id && !l.deleted_at);
@@ -182,9 +187,14 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
       const closed = won.length + lost.length;
       const winRate = closed > 0 ? Math.round((won.length / closed) * 100) : null;
 
-      const revenue = won.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
-      // Komisi dihitung per bulan yang dipilih (WIB), berdasarkan tanggal deal.
-      const commissionRevenue = won.filter((l) => inBulanKomisi(l.deal_date)).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+      const myEntries = dealEntries ? (entriesByPic[m.user_id] || []) : null;
+      const revenue = myEntries
+        ? myEntries.reduce((sum, e) => sum + (Number(e.deal_value) || 0), 0)
+        : won.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+      // Komisi dihitung per bulan yang dipilih (WIB), berdasarkan tanggal transaksi deal.
+      const commissionRevenue = myEntries
+        ? myEntries.filter((e) => inBulanKomisi(e.deal_date)).reduce((sum, e) => sum + (Number(e.deal_value) || 0), 0)
+        : won.filter((l) => inBulanKomisi(l.deal_date)).reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
       const myCheckins = checkins.filter((c) => c.user_id === m.user_id);
       const commissionRate = commissions[m.user_id] ?? 0;
       const commissionAmount = commissionRevenue * (commissionRate / 100);
@@ -195,7 +205,7 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
         name: m.display_name || `Anggota ${m.user_id.slice(0, 8)}`,
         leadCount: mine.length,
         // Jumlah deal = lead milik penanggung jawab yang sekarang di tahap menang, sama dengan Rekap aktivitas.
-        dealCount: won.length,
+        dealCount: myEntries ? myEntries.length : won.length,
         visitCount: myCheckins.length,
         winRate,
         revenue,
@@ -204,7 +214,12 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
         commissionAmount,
         leadItems: mine.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: l.category || l.city || "" })),
         // Daftar deal = lead menang milik penanggung jawab (sumber yang sama dengan jumlah deal), dengan penjelasan singkat per deal.
-        dealItems: won.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: [fmtRp(l.deal_value), l.deal_date].filter(Boolean).join(" · "), detail: dealDetail(l, stages) })),
+        dealItems: myEntries
+          ? myEntries.map((e) => {
+              const l = leadById.get(e.lead_id);
+              return { id: e.tx_id || e.lead_id, leadId: e.lead_id, primary: l?.name || "Lead", secondary: [fmtRp(e.deal_value), e.deal_date].filter(Boolean).join(" · "), detail: l ? dealDetail(l, stages) : "" };
+            })
+          : won.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: [fmtRp(l.deal_value), l.deal_date].filter(Boolean).join(" · "), detail: dealDetail(l, stages) })),
         visitItems: myCheckins.map((c) => ({ id: c.id, leadId: c.lead_id, primary: c.lead_name || "Kunjungan", secondary: c.checked_in_at ? new Date(c.checked_in_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "" })),
       };
     })

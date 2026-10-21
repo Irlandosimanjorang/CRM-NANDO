@@ -98,6 +98,14 @@ export async function getDealsRange(from, to) {
   return data || [];
 }
 
+// Transaksi deal per rentang tanggal (YYYY-MM-DD), per transaksi: { tx_id, lead_id, pic, deal_date, deal_value }.
+// Lead menang tanpa transaksi muncul sekali dengan deal_value dan deal_date lead.
+export async function getDealEntries(from, to) {
+  const { data, error } = await supabase.rpc("get_deal_entries", { p_from: from, p_to: to });
+  if (error) throw error;
+  return data || [];
+}
+
 export async function getTeamActivity(from, to) {
   const { data, error } = await supabase.rpc("get_team_activity", { p_from: from.toISOString(), p_to: to.toISOString() });
   if (error) throw error;

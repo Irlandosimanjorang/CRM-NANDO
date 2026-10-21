@@ -264,6 +264,13 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
   const api = db;
   // Tim organisasi lain yang sedang dibuka (halaman read-only), null = tampilan Team biasa.
   const [sharedOrg, setSharedOrg] = useState(null);
+  // Transaksi deal semua waktu (per transaksi), dipakai papan peringkat tim. Dimuat ulang saat data deal berubah.
+  const [dealEntries, setDealEntries] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    api.getDealEntries("2000-01-01", "2100-12-31").then((d) => { if (alive) setDealEntries(d); }).catch(() => { if (alive) setDealEntries(null); });
+    return () => { alive = false; };
+  }, [leads, dealTransactions]);
   const [range, setRange] = useState("week");
   const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
   const [activityFor, setActivityFor] = useState(null); // { member, kind: "stage_moves" | "deals" }
@@ -473,7 +480,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
 
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
-      <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} onOpenLead={onOpenLead} canManage={canManage} projectDeal={projectDeal} />
+      <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} dealEntries={dealEntries} onOpenLead={onOpenLead} canManage={canManage} projectDeal={projectDeal} />
 
       {isOwner && <ShareGrantCard />}
 

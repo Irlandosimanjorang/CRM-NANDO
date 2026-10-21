@@ -22,6 +22,14 @@ const DAYS_LONG = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu
 const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 const SOURCES = ["Meta", "Instagram", "TikTok", "Google", "Tokopedia", "Shopee", "Customer datang", "Database", "Lainnya"];
 const cn = (...v) => v.filter(Boolean).join(" ");
+// Transaksi deal dari server -> baris deal berbentuk lead (nilai & tanggal = transaksi itu).
+const dealRowsFromEntries = (entries, leads) => {
+  const byId = new Map(leads.map((l) => [l.id, l]));
+  return entries.map((e) => {
+    const lead = byId.get(e.lead_id);
+    return lead ? { ...lead, id: e.lead_id, deal_value: e.deal_value, deal_date: e.deal_date, assigned_to: e.pic } : null;
+  }).filter(Boolean);
+};
 const pad = (n) => String(n).padStart(2, "0");
 const ymOf = (iso) => String(iso || "").slice(0, 7);
 const num = (v) => Number(v) || 0;
@@ -153,8 +161,10 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     setYm(`${t.getFullYear()}-${pad(t.getMonth() + 1)}`);
   };
 
-  // Deal dibaca dari server (rentang bulan lalu sampai akhir periode), lihat efek di bawah.
-  const [dealsSrv, setDealsSrv] = useState([]);
+  // Transaksi deal dibaca dari server (rentang bulan lalu sampai akhir periode), lihat efek di bawah.
+  // Per transaksi: repeat order masuk ke bulan transaksinya sendiri.
+  const [entriesSrv, setEntriesSrv] = useState([]);
+  const dealsSrv = useMemo(() => dealRowsFromEntries(entriesSrv, allLeads), [entriesSrv, allLeads]);
   // Deal dari server, disaring lingkup marketing dan filter sumber/tahap seperti tabel lead.
   const dealLeads = useMemo(() => dealsSrv.filter((l) => !l.deleted_at && (scopeId === "all" || (l.assigned_to || l.user_id) === scopeId) && passF(l)), [dealsSrv, scopeId, srcF, stF, srcSlot]);
 
@@ -219,7 +229,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   }, [year, month, range.from]);
   useEffect(() => {
     let alive = true;
-    db.getDealsRange(dealFrom, range.to).then((d) => { if (alive) setDealsSrv(d); }).catch(() => { if (alive) setDealsSrv([]); });
+    db.getDealEntries(dealFrom, range.to).then((d) => { if (alive) setEntriesSrv(d); }).catch(() => { if (alive) setEntriesSrv([]); });
     return () => { alive = false; };
   }, [dealFrom, range.to, dataTick]);
 
