@@ -2904,7 +2904,6 @@ export default function Auth() {
           </div>
           <ClientRow clients={CLIENTS} />
         </section>
-        </section>
 
         {/* =========================================================
             KEAMANAN - "spotlight cycle" ala Hostinger (dicocokin ulang ke
