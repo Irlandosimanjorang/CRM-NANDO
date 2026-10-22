@@ -2867,14 +2867,18 @@ export default function Auth() {
             Logo ada di public/clients. Tambah klien baru cukup dengan
             menambah satu baris di CLIENTS.
         ========================================================== */}
-        <section id="klien" className="bg-slate-50 px-5 py-20 sm:px-7 sm:py-24 lg:px-10">
-          <div className="mx-auto max-w-5xl text-center">
-            <h2 className="text-2xl font-bold tracking-[-0.02em] text-slate-900 sm:text-3xl">CLIENT</h2>
-            <div className="mt-12 grid grid-cols-1 items-center gap-10 sm:grid-cols-3">
+        <section id="klien" className="border-y border-slate-200 bg-white px-5 py-14 sm:px-7 lg:px-10">
+          <div className="mx-auto max-w-4xl text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Client</p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-14 gap-y-10">
               {CLIENTS.map((c) => (
-                <div key={c.name} className="flex items-center justify-center">
-                  <img src={c.logo} alt={c.name} loading="lazy" className="h-16 w-auto max-w-full object-contain" />
-                </div>
+                <img
+                  key={c.name}
+                  src={c.logo}
+                  alt={c.name}
+                  loading="lazy"
+                  className="h-14 w-auto max-w-[180px] object-contain grayscale opacity-70 transition duration-300 hover:grayscale-0 hover:opacity-100"
+                />
               ))}
             </div>
           </div>
