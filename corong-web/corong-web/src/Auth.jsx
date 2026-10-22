@@ -1890,34 +1890,22 @@ const CLIENTS = [
   { name: "Maju Abadi Perkasa", logo: "/clients/map.png", scale: 2.6 },
   { name: "INDO UPVC", logo: "/clients/indo-upvc.png", scale: 1 },
 ];
-
-// Baris logo klien yang bisa digeser: lewat scroll, sentuhan, atau tarik dengan mouse.
+// Baris logo klien: marquee yang bergerak terus, logo dibuat putih agar terbaca di latar gelap.
+// Tepi memudar, dan berhenti sebentar saat disentuh kursor. Logo ditampilkan dua kali agar sambungannya mulus.
 function ClientRow({ clients }) {
-  const boxRef = useRef(null);
-  const drag = useRef({ on: false, x: 0, left: 0 });
-  const onDown = (e) => {
-    drag.current = { on: true, x: e.clientX, left: boxRef.current.scrollLeft };
-    boxRef.current.setPointerCapture(e.pointerId);
-  };
-  const onMove = (e) => {
-    if (!drag.current.on) return;
-    boxRef.current.scrollLeft = drag.current.left - (e.clientX - drag.current.x);
-  };
-  const onUp = () => { drag.current.on = false; };
+  const track = [...clients, ...clients];
   return (
-    <div
-      ref={boxRef}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-      className="mt-8 cursor-grab overflow-x-auto overflow-y-hidden select-none active:cursor-grabbing [scrollbar-width:thin]"
-    >
-      {/* Setiap logo satu slide lebar tetap, jadi baris selalu lebih lebar dari layar dan bisa digeser meski hanya tiga klien. */}
-      <div className="flex w-max items-stretch">
-        {clients.map((c) => (
-          <div key={c.name} className="flex h-32 w-[70vw] max-w-[380px] shrink-0 items-center justify-center px-6 sm:w-[380px]">
-            <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-14 w-auto max-w-full object-contain" style={{ transform: `scale(${c.scale ?? 1})` }} />
+    <div className="mt-10 overflow-hidden" style={{ maskImage: "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)" }}>
+      <style>{`
+        @keyframes nexto-client-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .nexto-client-track { animation: nexto-client-marquee 28s linear infinite; }
+        .nexto-client-track:hover { animation-play-state: paused; }
+        @media (prefers-reduced-motion: reduce) { .nexto-client-track { animation: none; } }
+      `}</style>
+      <div className="nexto-client-track flex w-max items-center">
+        {track.map((c, i) => (
+          <div key={`${c.name}-${i}`} className="flex shrink-0 items-center justify-center px-14">
+            <img src={c.logo} alt={i < clients.length ? c.name : ""} aria-hidden={i >= clients.length} draggable={false} loading="lazy" className="h-12 w-auto max-w-[200px] object-contain opacity-90" style={{ filter: "brightness(0) invert(1)", transform: `scale(${c.scale ?? 1})` }} />
           </div>
         ))}
       </div>
@@ -2902,7 +2890,7 @@ export default function Auth() {
             Logo ada di public/clients. Tambah klien baru cukup dengan
             menambah satu baris di CLIENTS.
         ========================================================== */}
-        <section id="klien" className="border-y border-slate-200 bg-white py-14">
+        <section id="klien" className="bg-[#070b14] py-16">
           <div className="mx-auto max-w-5xl px-5 text-center sm:px-7 lg:px-10">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Client</p>
           </div>
