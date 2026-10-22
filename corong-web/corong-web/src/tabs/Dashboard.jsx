@@ -4,6 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { NextoRobotHead } from "../Auth";
 import * as db from "../lib/db";
 import CompanyPerformanceCard from "../components/CompanyPerformanceCard";
+import AiContextPanel from "../components/AiContextPanel";
 import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../ui";
 
 import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
@@ -162,8 +163,10 @@ export default function Dashboard({
   // permintaan Nando: mesin AI sendiri, cron sendiri, gak nebeng jadwal AI
   // Advisor - lihat edge function memory-health-check).
   const [memoryHealth, setMemoryHealth] = useState(null);
+  const [aiCtx, setAiCtx] = useState(null);
   useEffect(() => {
     db.getMemoryHealth().then(setMemoryHealth).catch(() => setMemoryHealth(null));
+    db.getMyAiContext().then(setAiCtx).catch(() => setAiCtx(null));
   }, []);
 
   // 5 rekomendasi hari ini (nama perusahaan + aksi) dari advisor_runs -
@@ -397,6 +400,8 @@ export default function Dashboard({
                 <Pill>Belum dinilai</Pill>
               )}
             </div>
+
+            {aiCtx && <AiContextPanel data={aiCtx} />}
           </DashPanel>
         </div>
 

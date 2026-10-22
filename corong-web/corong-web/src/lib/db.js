@@ -1743,6 +1743,14 @@ export async function getTodayAdvisorRun() {
 // nebeng jadwal AI Advisor). Dihitung org-wide oleh edge function
 // memory-health-check (cron sendiri, lihat jobname nexto-memory-health-check),
 // disimpen 1 baris per org di org_memory_health.
+// Komposisi konteks AI untuk user yang login (panel "Konteks AI" di dashboard).
+export async function getMyAiContext() {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.rpc("get_my_ai_context", { p_org: orgId });
+  if (error) throw error;
+  return data;
+}
+
 export async function getMemoryHealth() {
   const orgId = await getMyOrgId();
   const uid = (await supabase.auth.getUser()).data.user.id;
