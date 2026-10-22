@@ -7,6 +7,7 @@ import * as db from "../lib/db";
 import { typeBadge, prioMeta, chipStyle, fmtDate, todayISO } from "../lib/helpers";
 import MeetingRecorderModal from "../components/MeetingRecorderModal";
 import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
+import CheckinPhoto from "../components/CheckinPhoto";
 
 // Rumus Haversine - itung jarak lurus antara 2 titik GPS (dalam meter)
 function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -570,7 +571,7 @@ function CheckinPhotoLightbox({ ci, onClose }) {
           </div>
           <button onClick={onClose} className="shrink-0 text-white/70 hover:text-white p-1"><X size={22} /></button>
         </div>
-        <img src={ci.photo_url} alt="" className="w-full rounded-2xl object-contain max-h-[75vh] bg-black" />
+        <CheckinPhoto value={ci.photo_url} alt="" className="w-full rounded-2xl object-contain max-h-[75vh] bg-black" />
         <a href={`https://maps.google.com/?q=${ci.latitude},${ci.longitude}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm text-orange-400 hover:underline"><MapPin size={13} /> Lihat lokasi di Maps</a>
       </div>
     </div>,
@@ -605,7 +606,7 @@ function CheckinHistory({ isEnterprise }) {
             <div key={ci.id} className="bg-white border border-slate-100 rounded-panel p-3 flex items-center gap-3">
               {ci.photo_url ? (
                 <button onClick={() => setLightbox(ci)} className="shrink-0">
-                  <img src={ci.photo_url} alt="" className="w-11 h-11 rounded-2xl object-cover border border-slate-200 hover:opacity-80 transition-opacity" />
+                  <CheckinPhoto value={ci.photo_url} alt="" className="w-11 h-11 rounded-2xl object-cover border border-slate-200 hover:opacity-80 transition-opacity" />
                 </button>
               ) : (
                 <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-300"><Camera size={16} /></div>

@@ -175,7 +175,10 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
 
     // Batesin photo_url cuma boleh dari storage Supabase project ini sendiri -
     // jangan sampe function ini jadi proxy fetch alamat sembarang (SSRF-adjacent).
-    if (!photo_url.startsWith(`${SUPABASE_URL}/storage/`)) {
+    // Yang diterima: path di bucket checkin-photos (format baru), atau URL storage project ini (format lama).
+    const storagePrefix = `${SUPABASE_URL}/storage/`;
+    const isUrl = /^https?:\/\//.test(photo_url);
+    if (isUrl && !photo_url.startsWith(storagePrefix)) {
       return new Response(JSON.stringify({ error: "Foto harus diunggah melalui Nexto." }), { status: 400, headers: cors });
     }
 
@@ -192,13 +195,27 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       return new Response(JSON.stringify({ error: `Kuota verifikasi foto (15x per bulan) sudah terpakai. ${await quotaRefillText(admin, userId, "verify-selfie-photo")}` }), { status: 429, headers: cors });
     }
 
-    const imgResp = await fetch(photo_url);
-    if (!imgResp.ok) {
-      await releaseQuota();
-      return new Response(JSON.stringify({ error: "Gagal mengambil foto dari penyimpanan." }), { status: 502, headers: cors });
+    // Bucket checkin-photos privat: foto diambil lewat service role (bukan URL publik).
+    const storagePath = photo_url.includes("/checkin-photos/") ? photo_url.split("/checkin-photos/")[1].split("?")[0] : (isUrl ? null : photo_url);
+    let contentType = "image/jpeg";
+    let buf;
+    if (storagePath) {
+      const { data: blob, error: dlErr } = await admin.storage.from("checkin-photos").download(storagePath);
+      if (dlErr || !blob) {
+        await releaseQuota();
+        return new Response(JSON.stringify({ error: "Gagal mengambil foto dari penyimpanan." }), { status: 502, headers: cors });
+      }
+      contentType = blob.type || "image/jpeg";
+      buf = new Uint8Array(await blob.arrayBuffer());
+    } else {
+      const imgResp = await fetch(photo_url);
+      if (!imgResp.ok) {
+        await releaseQuota();
+        return new Response(JSON.stringify({ error: "Gagal mengambil foto dari penyimpanan." }), { status: 502, headers: cors });
+      }
+      contentType = imgResp.headers.get("content-type") || "image/jpeg";
+      buf = new Uint8Array(await imgResp.arrayBuffer());
     }
-    const contentType = imgResp.headers.get("content-type") || "image/jpeg";
-    const buf = new Uint8Array(await imgResp.arrayBuffer());
 
     // Foto >8MB gak dikirim ke AI (kemungkinan bukan foto HP biasa) - dilewati.
     if (buf.length > 8 * 1024 * 1024) {

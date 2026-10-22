@@ -1191,8 +1191,26 @@ export async function uploadCheckinPhoto(file) {
   const path = `${uid}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("checkin-photos").upload(path, file);
   if (error) throw error;
-  const { data } = supabase.storage.from("checkin-photos").getPublicUrl(path);
-  return data.publicUrl;
+  // Bucket privat: yang disimpan adalah path. Tampilan memakai getCheckinPhotoUrl (link sementara).
+  return path;
+}
+
+// Foto check-in disimpan di bucket privat. Yang tersimpan di database bisa URL lama (publik) atau path baru;
+// helper ini mengubahnya jadi link sementara (1 jam) supaya foto tetap bisa ditampilkan.
+export function checkinPhotoPath(value) {
+  if (!value) return null;
+  const marker = "/checkin-photos/";
+  const i = String(value).indexOf(marker);
+  if (i === -1) return String(value).replace(/^\/+/, "");
+  return String(value).slice(i + marker.length).split("?")[0];
+}
+
+export async function getCheckinPhotoUrl(value) {
+  const path = checkinPhotoPath(value);
+  if (!path) return null;
+  const { data, error } = await supabase.storage.from("checkin-photos").createSignedUrl(path, 3600);
+  if (error) return null;
+  return data?.signedUrl || null;
 }
 
 // AI ngecek foto check-in beneran ada orangnya (selfie), bukan foto struk/

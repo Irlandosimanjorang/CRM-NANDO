@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
+import CheckinPhoto from "./components/CheckinPhoto";
 import * as db from "./lib/db";
 import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPos, saveActiveTab, getActiveTab } from "./lib/uiPersist";
 import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
@@ -1600,7 +1601,7 @@ function NotificationBell({ onNavigate }) {
           ) : (
             items.map((n) => (
               <button key={n.id} onClick={() => openItem(n)} className={`w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 flex gap-3 ${!n.read_at ? "bg-orange-50/60" : ""}`}>
-                {n.photo_url && <img src={n.photo_url} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0 border border-slate-200" />}
+                {n.photo_url && <CheckinPhoto value={n.photo_url} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0 border border-slate-200" />}
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-semibold text-slate-800 line-clamp-2">{n.title}</div>
                   {n.body && <div className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{n.body}</div>}

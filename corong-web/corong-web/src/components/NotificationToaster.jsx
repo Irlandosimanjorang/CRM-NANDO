@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, X } from "lucide-react";
 import * as db from "../lib/db";
+import CheckinPhoto from "./CheckinPhoto";
 
 // Pop up notifikasi (9 Okt 2026, permintaan Nando): saat ada notifikasi baru, muncul kartu di pojok layar yang hilang sendiri
 // dalam 15 detik (diubah dari 5 detik atas permintaan Nando), selain angka di lonceng dan bunyi pendek. Notifikasi lama yang sudah ada saat aplikasi dibuka tidak ikut muncul.
@@ -117,7 +118,7 @@ export default function NotificationToaster({ onNavigate }) {
                 {t.body && <span className="mt-1 block text-[12.5px] leading-snug text-slate-500 line-clamp-2">{t.body}</span>}
                 {t.link_tab && <span className="mt-2 inline-block text-[12px] font-semibold text-orange-600">Lihat sekarang</span>}
               </span>
-              {t.photo_url && <img src={t.photo_url} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover" />}
+              {t.photo_url && <CheckinPhoto value={t.photo_url} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover" />}
             </button>
             <span className="absolute inset-x-0 bottom-0 h-1 bg-slate-100"><span className="nexto-toast block h-full bg-orange-400" style={{ animation: `nexto-toast-bar ${SHOW_MS}ms linear forwards` }} /></span>
           </div>
