@@ -1907,9 +1907,7 @@ function ClientRow({ clients }) {
       <div className="nexto-client-track flex w-max items-center">
         {track.map((c, i) => (
           <div key={`${c.name}-${i}`} className="flex shrink-0 items-center justify-center px-8">
-            <div className="flex h-24 w-[220px] items-center justify-center overflow-hidden rounded-2xl bg-white px-5">
-              <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-12 w-auto max-w-full object-contain" style={{ transform: `scale(${c.scale ?? 1})` }} />
-            </div>
+            <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-12 w-auto max-w-[200px] object-contain opacity-90" style={{ filter: "brightness(0) invert(1)", transform: `scale(${c.scale ?? 1})` }} />
           </div>
         ))}
       </div>
