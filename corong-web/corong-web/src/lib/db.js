@@ -1745,7 +1745,8 @@ export async function getTodayAdvisorRun() {
 // disimpen 1 baris per org di org_memory_health.
 export async function getMemoryHealth() {
   const orgId = await getMyOrgId();
-  const { data, error } = await supabase.from("org_memory_health").select("*").eq("org_id", orgId).maybeSingle();
+  const uid = (await supabase.auth.getUser()).data.user.id;
+  const { data, error } = await supabase.from("member_memory_health").select("*").eq("org_id", orgId).eq("user_id", uid).maybeSingle();
   if (error) throw error;
   return data || null;
 }
