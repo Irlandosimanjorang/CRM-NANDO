@@ -551,6 +551,8 @@ async function getAllUsers(admin) {
 // setelah libur langsung masuk hitungan di run berikutnya; sementara itu
 // Dashboard memakai kartu cadangan (tanpa rekomendasi AI).
 const ACTIVE_WINDOW_DAYS = 7;
+// Pengguna diproses paralel (beberapa sekaligus) supaya satu panggilan muat dalam batas waktu Edge Function.
+const CONCURRENCY = 5;
 async function isRecentlyActive(admin, u) {
   const sinceMs = Date.now() - ACTIVE_WINDOW_DAYS * 86400000;
   if (u.last_sign_in_at && Date.parse(u.last_sign_in_at) >= sinceMs) return true;
@@ -599,7 +601,12 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     } else {
       allUsers = await getAllUsers(admin);
     }
-    console.log("[digest] users found:", allUsers.length);
+    // Batch: ?offset=&limit= memilih sebagian pengguna (urut berdasarkan id, stabil antar panggilan).
+    allUsers.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const batchOffset = Math.max(0, Number(reqUrl.searchParams.get("offset")) || 0);
+    const batchLimit = Math.max(0, Number(reqUrl.searchParams.get("limit")) || 0);
+    if (batchOffset || batchLimit) allUsers = allUsers.slice(batchOffset, batchLimit ? batchOffset + batchLimit : undefined);
+    console.log("[digest] users found:", allUsers.length, "offset:", batchOffset, "limit:", batchLimit);
 
     const results = [];
     const todayISO = new Date().toISOString().slice(0, 10);
@@ -607,18 +614,18 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
 
     const orgWideCache = new Map();
 
-    for (const u of allUsers) {
+    const processUser = async (u) => {
       // Akun dummy (email @example.com) dilewati: tanpa AI, suara, maupun email (9 Okt 2026).
       if (!forceRun && !onlyUserId && /@example.com$/i.test(u.email || "")) {
         console.log("[digest] skip, akun dummy:", u.id);
         results.push({ user: u.email, skipped: "akun_dummy" });
-        continue;
+        return;
       }
       console.log("[digest] processing user", u.id, u.email);
       aiSetUser(u.id);
       try {
         const { data: memberRow } = await admin.from("organization_members").select("org_id, role").eq("user_id", u.id).limit(1).maybeSingle();
-        if (!memberRow) { console.log("[digest] skip, no org for", u.id); continue; }
+        if (!memberRow) { console.log("[digest] skip, no org for", u.id); return; }
 
         const [{ data: settingsRow }, { data: orgPlanRow }] = await Promise.all([
           admin.from("settings").select("plan, community_display_name").eq("user_id", u.id).maybeSingle(),
@@ -627,19 +634,19 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
         // Saklar owner_monitor (8 Okt 2026): owner yang hanya memantau tidak menerima digest.
         if (orgPlanRow?.features?.owner_monitor === true && orgPlanRow.owner_user_id === u.id) {
           console.log("[digest] skip, owner pemantau (owner_monitor):", u.id);
-          continue;
+          return;
         }
         const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
         const myPlanLevel = orgPlanRow?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settingsRow?.plan] ?? 0);
         // Digest AI khusus Professional ke atas (17 Okt 2026, keputusan Nando). Standard dan Free tidak mendapatkannya.
         if (myPlanLevel < 2) {
           console.log("[digest] skip, plan di bawah Professional:", u.id);
-          continue;
+          return;
         }
         if (!forceRun && !onlyUserId && !(await isRecentlyActive(admin, u))) {
           console.log("[digest] skip, tidak aktif", ACTIVE_WINDOW_DAYS, "hari terakhir:", u.id);
           results.push({ user: u.email, skipped: "tidak_aktif" });
-          continue;
+          return;
         }
 
         let recs, stats;
@@ -680,7 +687,16 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
         console.log("[digest] EXCEPTION for user", u.id, String(userErr));
         results.push({ user: u.email, error: String(userErr) });
       }
-    }
+    };
+    // Pool: CONCURRENCY pengguna berjalan sekaligus. Tiap pengguna punya konteks AI sendiri (catatan pemakaian AI tidak tercampur).
+    const queue = [...allUsers];
+    const workers = Array.from({ length: CONCURRENCY }, async () => {
+      while (queue.length) {
+        const u = queue.shift();
+        await AI_CTX.run({ req }, () => processUser(u));
+      }
+    });
+    await Promise.all(workers);
     console.log("[digest] done", JSON.stringify(results));
     return new Response(JSON.stringify({ ok: true, results }), { headers: { "Content-Type": "application/json" } });
   } catch (e) {
