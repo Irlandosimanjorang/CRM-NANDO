@@ -1913,9 +1913,12 @@ function ClientRow({ clients }) {
       onPointerCancel={onUp}
       className="mt-8 cursor-grab overflow-x-auto overflow-y-hidden select-none active:cursor-grabbing [scrollbar-width:thin]"
     >
-      <div className="mx-auto flex w-max items-center gap-16 px-8">
+      {/* Setiap logo satu slide lebar tetap, jadi baris selalu lebih lebar dari layar dan bisa digeser meski hanya tiga klien. */}
+      <div className="flex w-max items-stretch">
         {clients.map((c) => (
-          <img key={c.name} src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-14 w-auto max-w-[200px] shrink-0 object-contain" style={{ transform: `scale(${c.scale ?? 1})` }} />
+          <div key={c.name} className="flex h-32 w-[70vw] max-w-[380px] shrink-0 items-center justify-center px-6 sm:w-[380px]">
+            <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-14 w-auto max-w-full object-contain" style={{ transform: `scale(${c.scale ?? 1})` }} />
+          </div>
         ))}
       </div>
     </div>
