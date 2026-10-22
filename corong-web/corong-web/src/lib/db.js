@@ -1450,6 +1450,16 @@ export async function getQuickVoiceQuota() {
 }
 
 // Riwayat perpindahan tahap lead pada rentang tanggal (WIB); hanya owner dan manager yang boleh membaca.
+// Daftar kunjungan (check-in) dalam periode WIB, untuk rincian angka Kunjungan di tab Team.
+export async function listVisitCheckins(fromISO, toISO) {
+  const orgId = await getMyOrgId();
+  const { data, error } = await supabase.from("visit_checkins").select("user_id, lead_id, lead_name, checked_in_at")
+    .eq("org_id", orgId).gte("checked_in_at", `${fromISO}T00:00:00+07:00`).lte("checked_in_at", `${toISO}T23:59:59+07:00`)
+    .order("checked_in_at", { ascending: false }).limit(20000);
+  if (error) throw error;
+  return data || [];
+}
+
 export async function listStageChanges(fromISO, toISO) {
   const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("lead_stage_changes").select("lead_id, from_stage, to_stage, changed_by, changed_at")

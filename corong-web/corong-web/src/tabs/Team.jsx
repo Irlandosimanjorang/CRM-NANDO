@@ -73,7 +73,7 @@ const EMPTY_EXAMPLES = [
 
 const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales" };
 const COLS = [
-  { key: "visits", label: "Kunjungan" },
+  { key: "visits", label: "Kunjungan", clickable: true },
   // Jumlah LEAD berbeda yang diberi catatan progress (2 Okt 2026) - lebih
   // jujur dari jumlah catatan (5 catatan di 1 lead = tetap 1 lead).
   // Klik angkanya untuk melihat daftar lead & isi catatannya (MemberNotesModal).
@@ -751,14 +751,21 @@ function MemberActivityModal({ api, member, kind, range, rangeLabel, stages, lea
   const [err, setErr] = useState("");
   const isDeal = kind === "deals";
   const isLost = kind === "lost";
+  const isVisit = kind === "visits";
   const fromKey = ymdLocal(range.from);
   const toKey = ymdLocal(range.to);
 
   useEffect(() => {
+    if (isVisit) {
+      api.listVisitCheckins(fromKey, toKey)
+        .then((all) => setRows(all.filter((r) => r.user_id === member.user_id).map((r) => ({ lead_id: r.lead_id, changed_at: r.checked_in_at, lead_name: r.lead_name }))))
+        .catch((e) => setErr(e.message || "Gagal memuat daftar"));
+      return;
+    }
     api.listStageChanges(fromKey, toKey)
       .then((all) => setRows(all.filter((r) => r.changed_by === member.user_id)))
       .catch((e) => setErr(e.message || "Gagal memuat daftar"));
-  }, [api, member.user_id, fromKey, toKey]);
+  }, [api, member.user_id, fromKey, toKey, isVisit]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
@@ -772,7 +779,7 @@ function MemberActivityModal({ api, member, kind, range, rangeLabel, stages, lea
 
   // Deal = perpindahan ke tahap Menang, Kalah = perpindahan ke tahap Lost (sama dengan angka di tabel). Pindah tahap = semua perpindahan.
   const list = (rows || [])
-    .filter((r) => (isDeal ? typeOf(r.to_stage) === "won" : isLost ? typeOf(r.to_stage) === "lost" && typeOf(r.from_stage) !== "lost" : true))
+    .filter((r) => (isVisit ? true : isDeal ? typeOf(r.to_stage) === "won" : isLost ? typeOf(r.to_stage) === "lost" && typeOf(r.from_stage) !== "lost" : true))
     .slice()
     .reverse();
   const dealValueFor = (r) => {
@@ -787,8 +794,8 @@ function MemberActivityModal({ api, member, kind, range, rangeLabel, stages, lea
       <div className="my-8 w-full max-w-lg rounded-panel bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-[16px] font-bold text-ink">{isDeal ? "Deal" : isLost ? "Kalah" : "Pindah tahap"} · {member.name}</h2>
-            <p className="text-[11.5px] text-slate-500">{rangeLabel} · {list.length} {isDeal ? "deal" : isLost ? "kalah" : "perpindahan"}</p>
+            <h2 className="text-[16px] font-bold text-ink">{isVisit ? "Kunjungan" : isDeal ? "Deal" : isLost ? "Kalah" : "Pindah tahap"} · {member.name}</h2>
+            <p className="text-[11.5px] text-slate-500">{rangeLabel} · {list.length} {isVisit ? "kunjungan" : isDeal ? "deal" : isLost ? "kalah" : "perpindahan"}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Tutup">✕</button>
         </div>
@@ -806,7 +813,7 @@ function MemberActivityModal({ api, member, kind, range, rangeLabel, stages, lea
                 <button type="button" onClick={() => onOpenLead(r.lead_id)} className="min-w-0 text-left">
                   <div className="truncate text-[13px] font-semibold text-ink hover:underline">{l?.name || "Lead terhapus"}</div>
                   <div className="truncate text-[11.5px] text-slate-500">
-                    {isDeal ? "Menang" : `${labelOf(r.from_stage)} → ${labelOf(r.to_stage)}`}
+                    {isVisit ? "Kunjungan" : isDeal ? "Menang" : `${labelOf(r.from_stage)} → ${labelOf(r.to_stage)}`}
                   </div>
                 </button>
                 <div className="shrink-0 text-right">
