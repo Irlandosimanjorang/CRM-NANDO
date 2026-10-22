@@ -1884,10 +1884,11 @@ function EngineActionCard({ active = false, compact = false }) {
 // satu/shared dari parent, jadi klik toggle di kartu mana pun ngubah
 // ketiga kartu sekaligus - cuma kontrolnya yang ditaro di tiap kartu.
 // Logo klien di landing page (file ada di public/clients). Tambah klien baru cukup dengan menambah satu baris di sini.
+// scale: penyeimbang ukuran visual. File MAP punya margin putih lebar, jadi logonya diperbesar supaya setara dengan yang lain.
 const CLIENTS = [
-  { name: "EPDM (Era Pro D-Monomer)", logo: "/clients/epdm.webp" },
-  { name: "Maju Abadi Perkasa", logo: "/clients/map.png" },
-  { name: "INDO UPVC", logo: "/clients/indo-upvc.png" },
+  { name: "EPDM (Era Pro D-Monomer)", logo: "/clients/epdm.webp", scale: 1 },
+  { name: "Maju Abadi Perkasa", logo: "/clients/map.png", scale: 2.6 },
+  { name: "INDO UPVC", logo: "/clients/indo-upvc.png", scale: 1 },
 ];
 
 // Baris logo klien yang bisa digeser: lewat scroll, sentuhan, atau tarik dengan mouse.
@@ -1914,7 +1915,7 @@ function ClientRow({ clients }) {
     >
       <div className="mx-auto flex w-max items-center gap-16 px-8">
         {clients.map((c) => (
-          <img key={c.name} src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-14 w-auto max-w-[200px] shrink-0 object-contain" />
+          <img key={c.name} src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-14 w-auto max-w-[200px] shrink-0 object-contain" style={{ transform: `scale(${c.scale ?? 1})` }} />
         ))}
       </div>
     </div>
