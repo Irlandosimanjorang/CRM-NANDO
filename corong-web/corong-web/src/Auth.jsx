@@ -1883,12 +1883,43 @@ function EngineActionCard({ active = false, compact = false }) {
 // dipindah ke sini per-card, 9 Sep 2026). State billingCycle-nya tetep
 // satu/shared dari parent, jadi klik toggle di kartu mana pun ngubah
 // ketiga kartu sekaligus - cuma kontrolnya yang ditaro di tiap kartu.
-// Logo klien di landing page (file ada di public/clients).
+// Logo klien di landing page (file ada di public/clients). Tambah klien baru cukup dengan menambah satu baris di sini.
 const CLIENTS = [
-  { name: "EPDM (Era Pro D-Monomer)", desc: "Distributor frame uPVC", logo: "/clients/epdm.webp" },
-  { name: "Maju Abadi Perkasa", desc: "Distributor uPVC", logo: "/clients/map.png" },
-  { name: "INDO UPVC", desc: "Produsen dan distributor uPVC", logo: "/clients/indo-upvc.png" },
+  { name: "EPDM (Era Pro D-Monomer)", logo: "/clients/epdm.webp" },
+  { name: "Maju Abadi Perkasa", logo: "/clients/map.png" },
+  { name: "INDO UPVC", logo: "/clients/indo-upvc.png" },
 ];
+
+// Baris logo klien yang bisa digeser: lewat scroll, sentuhan, atau tarik dengan mouse.
+function ClientRow({ clients }) {
+  const boxRef = useRef(null);
+  const drag = useRef({ on: false, x: 0, left: 0 });
+  const onDown = (e) => {
+    drag.current = { on: true, x: e.clientX, left: boxRef.current.scrollLeft };
+    boxRef.current.setPointerCapture(e.pointerId);
+  };
+  const onMove = (e) => {
+    if (!drag.current.on) return;
+    boxRef.current.scrollLeft = drag.current.left - (e.clientX - drag.current.x);
+  };
+  const onUp = () => { drag.current.on = false; };
+  return (
+    <div
+      ref={boxRef}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      className="mt-8 cursor-grab overflow-x-auto overflow-y-hidden select-none active:cursor-grabbing [scrollbar-width:thin]"
+    >
+      <div className="mx-auto flex w-max items-center gap-16 px-8">
+        {clients.map((c) => (
+          <img key={c.name} src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-14 w-auto max-w-[200px] shrink-0 object-contain" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
   const tr = useTr();
@@ -2867,21 +2898,12 @@ export default function Auth() {
             Logo ada di public/clients. Tambah klien baru cukup dengan
             menambah satu baris di CLIENTS.
         ========================================================== */}
-        <section id="klien" className="border-y border-slate-200 bg-white px-5 py-14 sm:px-7 lg:px-10">
-          <div className="mx-auto max-w-4xl text-center">
+        <section id="klien" className="border-y border-slate-200 bg-white py-14">
+          <div className="mx-auto max-w-5xl px-5 text-center sm:px-7 lg:px-10">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Client</p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-14 gap-y-10">
-              {CLIENTS.map((c) => (
-                <img
-                  key={c.name}
-                  src={c.logo}
-                  alt={c.name}
-                  loading="lazy"
-                  className="h-14 w-auto max-w-[180px] object-contain grayscale opacity-70 transition duration-300 hover:grayscale-0 hover:opacity-100"
-                />
-              ))}
-            </div>
           </div>
+          <ClientRow clients={CLIENTS} />
+        </section>
         </section>
 
         {/* =========================================================
