@@ -1883,6 +1883,13 @@ function EngineActionCard({ active = false, compact = false }) {
 // dipindah ke sini per-card, 9 Sep 2026). State billingCycle-nya tetep
 // satu/shared dari parent, jadi klik toggle di kartu mana pun ngubah
 // ketiga kartu sekaligus - cuma kontrolnya yang ditaro di tiap kartu.
+// Logo klien di landing page (file ada di public/clients).
+const CLIENTS = [
+  { name: "EPDM (Era Pro D-Monomer)", desc: "Distributor frame uPVC", logo: "/clients/epdm.webp" },
+  { name: "Maju Abadi Perkasa", desc: "Distributor uPVC", logo: "/clients/map.png" },
+  { name: "INDO UPVC", desc: "Produsen dan distributor uPVC", logo: "/clients/indo-upvc.png" },
+];
+
 function MiniBillingToggle({ billingCycle, setBillingCycle, accent }) {
   const tr = useTr();
   const activeBg = { slate: "bg-white text-slate-950", orange: "bg-orange-500 text-white", violet: "bg-violet-500 text-white" }[accent];
@@ -2854,6 +2861,28 @@ export default function Auth() {
             beneran jalan (Context -> Decision -> Action -> Memory -> loop).
         ========================================================== */}
         <AiEngineLoopSection robotVoice={engineLoopVoice} />
+
+        {/* =========================================================
+            KLIEN - logo klien yang sudah memakai Nexto (22 Okt 2026).
+            Logo ada di public/clients. Tambah klien baru cukup dengan
+            menambah satu baris di CLIENTS.
+        ========================================================== */}
+        <section id="klien" className="bg-slate-50 px-5 py-20 sm:px-7 sm:py-24 lg:px-10">
+          <div className="mx-auto max-w-5xl text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-600">Klien kami</p>
+            <h2 className="mt-3 text-2xl font-bold tracking-[-0.02em] text-slate-900 sm:text-3xl">Sudah dipakai tim sales distributor</h2>
+            <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed text-slate-500">Dari distributor frame, uPVC, dan aluminium yang mengelola pipeline, deal, dan tim sales mereka di Nexto.</p>
+            <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3">
+              {CLIENTS.map((c) => (
+                <div key={c.name} className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-10">
+                  <img src={c.logo} alt={c.name} loading="lazy" className="h-16 w-auto max-w-full object-contain" />
+                  <p className="mt-6 text-[13px] font-semibold text-slate-700">{c.name}</p>
+                  <p className="mt-1 text-[12px] text-slate-500">{c.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* =========================================================
             KEAMANAN - "spotlight cycle" ala Hostinger (dicocokin ulang ke
