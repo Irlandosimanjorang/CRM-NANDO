@@ -2869,15 +2869,11 @@ export default function Auth() {
         ========================================================== */}
         <section id="klien" className="bg-slate-50 px-5 py-20 sm:px-7 sm:py-24 lg:px-10">
           <div className="mx-auto max-w-5xl text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-600">Klien kami</p>
-            <h2 className="mt-3 text-2xl font-bold tracking-[-0.02em] text-slate-900 sm:text-3xl">Sudah dipakai tim sales distributor</h2>
-            <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed text-slate-500">Dari distributor frame, uPVC, dan aluminium yang mengelola pipeline, deal, dan tim sales mereka di Nexto.</p>
-            <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <h2 className="text-2xl font-bold tracking-[-0.02em] text-slate-900 sm:text-3xl">CLIENT</h2>
+            <div className="mt-12 grid grid-cols-1 items-center gap-10 sm:grid-cols-3">
               {CLIENTS.map((c) => (
-                <div key={c.name} className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-10">
+                <div key={c.name} className="flex items-center justify-center">
                   <img src={c.logo} alt={c.name} loading="lazy" className="h-16 w-auto max-w-full object-contain" />
-                  <p className="mt-6 text-[13px] font-semibold text-slate-700">{c.name}</p>
-                  <p className="mt-1 text-[12px] text-slate-500">{c.desc}</p>
                 </div>
               ))}
             </div>
