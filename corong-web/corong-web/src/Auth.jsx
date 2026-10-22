@@ -1893,19 +1893,21 @@ const CLIENTS = [
 // Baris logo klien: marquee yang bergerak terus, logo dibuat putih agar terbaca di latar gelap.
 // Tepi memudar, dan berhenti sebentar saat disentuh kursor. Logo ditampilkan dua kali agar sambungannya mulus.
 function ClientRow({ clients }) {
-  const track = [...clients, ...clients];
+  // Satu bagian berisi logo diulang 3 kali supaya lebarnya cukup menutupi layar lebar; bagian kedua identik agar sambungannya mulus.
+  const half = [0, 1, 2].flatMap(() => clients);
+  const track = [...half, ...half];
   return (
     <div className="mt-10 overflow-hidden" style={{ maskImage: "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)" }}>
       <style>{`
         @keyframes nexto-client-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .nexto-client-track { animation: nexto-client-marquee 28s linear infinite; }
+        .nexto-client-track { animation: nexto-client-marquee 16s linear infinite; }
         .nexto-client-track:hover { animation-play-state: paused; }
         @media (prefers-reduced-motion: reduce) { .nexto-client-track { animation: none; } }
       `}</style>
       <div className="nexto-client-track flex w-max items-center">
         {track.map((c, i) => (
-          <div key={`${c.name}-${i}`} className="flex shrink-0 items-center justify-center px-14">
-            <img src={c.logo} alt={i < clients.length ? c.name : ""} aria-hidden={i >= clients.length} draggable={false} loading="lazy" className="h-12 w-auto max-w-[200px] object-contain opacity-90" style={{ filter: "brightness(0) invert(1)", transform: `scale(${c.scale ?? 1})` }} />
+          <div key={`${c.name}-${i}`} className="flex shrink-0 items-center justify-center px-8">
+            <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-12 w-auto max-w-[200px] object-contain opacity-90" style={{ filter: "brightness(0) invert(1)", transform: `scale(${c.scale ?? 1})` }} />
           </div>
         ))}
       </div>
