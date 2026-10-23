@@ -383,6 +383,8 @@ export default function App() {
       setOrg(myOrg);
       let [st, se, ls, comp, dt, role] = await Promise.all([db.getStages(), db.getSettings(), db.getLeads(), db.getCompetitors(), db.getDealTransactions(), db.getMyRole()]);
       setMyRole(role);
+      // Admin proyek hanya punya tab Leads (papan proyek) dan Pengaturan; langsung mulai di Leads.
+      if (role === "admin_proyek") setTab("leads");
       // Akun baru (belum pernah setup pipeline sama sekali) - otomatis kasih
       // pipeline default biar gak kosong melompong abis daftar sendiri.
       // TAPI kalau org-nya belum pernah milih industri (industry masih null),
@@ -823,7 +825,9 @@ export default function App() {
   // Org project_deal (BSB): tab Deal menjadi Pencapaian (omzet dari proyek deal).
   const baseNavLabeled = hasOrgFeature(org, "project_deal") ? baseNav.map((n) => (n.key === "deal" ? { ...n, label: "Pencapaian", short: "Pencapaian" } : n)) : baseNav;
   const monitorNav = monitorOwner ? baseNavLabeled.filter((n) => OWNER_MONITOR_TABS.includes(n.key)) : baseNavLabeled;
-  const navItems = settings?.is_platform_admin ? [...monitorNav, ADMIN_NAV_ITEM] : monitorNav;
+  const roleNav = settings?.is_platform_admin ? [...monitorNav, ADMIN_NAV_ITEM] : monitorNav;
+  // Admin proyek: menu dibatasi ke Leads (papan proyek) dan Pengaturan.
+  const navItems = myRole === "admin_proyek" ? roleNav.filter((n) => n.key === "leads" || n.key === "settings") : roleNav;
 
   return (
     <AiOffContext.Provider value={monitorOwner}>
