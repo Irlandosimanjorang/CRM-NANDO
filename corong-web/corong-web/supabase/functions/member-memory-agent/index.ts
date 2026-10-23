@@ -47,7 +47,8 @@ async function askClaude(facts) {
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 600,
+        max_tokens: 1200,
+        thinking: { type: "disabled" }, // tanpa thinking, token habis di blok itu dan JSON terpotong
         system: SYSTEM,
         messages: [{ role: "user", content: "FAKTA PIPELINE SALES:\n" + JSON.stringify(facts) }],
       }),
@@ -127,9 +128,20 @@ Deno.serve(async (req) => {
         await logUsage(admin, m.org_id, m.user_id, usage);
         result.diproses++;
       } catch (e) {
-        console.log("[member-memory-agent] gagal untuk", m.user_id, String(e));
+        const msg = String(e?.message || e).slice(0, 300);
+        console.log("[member-memory-agent] gagal untuk", m.user_id, msg);
         result.gagal++;
-        if (result.contoh_error.length < 3) result.contoh_error.push(String(e?.message || e).slice(0, 300));
+        if (result.contoh_error.length < 3) result.contoh_error.push(msg);
+        // Catat penyebab gagal ke ai_reason supaya bisa dibaca dari database.
+        // updated_at sengaja tidak diubah, supaya "perubahan sejak update" tetap benar.
+        const note = "GAGAL " + new Date().toISOString() + ": " + msg;
+        const { data: upd } = await admin.from("member_agent_context").update({ ai_reason: note })
+          .eq("org_id", m.org_id).eq("user_id", m.user_id).select("user_id");
+        if (!upd?.length) {
+          await admin.from("member_agent_context").insert({
+            org_id: m.org_id, user_id: m.user_id, ai_reason: note, updated_at: "1970-01-01T00:00:00Z",
+          });
+        }
       }
     }
     return new Response(JSON.stringify({ ok: true, ...result }), { headers: { "content-type": "application/json" } });
