@@ -267,6 +267,14 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   };
 
   const [roleBusyId, setRoleBusyId] = useState(null);
+  const setMemberRoleTo = async (m, newRole) => {
+    setRoleBusyId(m.id);
+    try {
+      await db.updateMemberRole(m.id, newRole);
+      setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, role: newRole } : x)));
+    } catch (e) { alert("Gagal ubah role: " + e.message); }
+    finally { setRoleBusyId(null); }
+  };
   const toggleMemberRole = async (m) => {
     const newRole = m.role === "manager" ? "sales_rep" : "manager";
     setRoleBusyId(m.id);
@@ -302,7 +310,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     }
   };
 
-  const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales Rep" };
+  const ROLE_LABEL = { owner: "Owner", manager: "Manager", sales_rep: "Sales Rep", admin_proyek: "Admin Proyek" };
 
   const connectGcal = async () => {
     setGcalBusy(true);
@@ -605,6 +613,15 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                           {m.role === "manager" ? "Jadikan Sales Rep" : "Jadikan Manager"}
                         </button>
                       )}
+                      {m.role !== "owner" && (
+                        <button
+                          onClick={() => setMemberRoleTo(m, m.role === "admin_proyek" ? "sales_rep" : "admin_proyek")}
+                          disabled={roleBusyId === m.id}
+                          className="ml-3 text-[11px] text-violet-600 hover:underline disabled:opacity-50"
+                        >
+                          {m.role === "admin_proyek" ? "Lepas Admin Proyek" : "Jadikan Admin Proyek"}
+                        </button>
+                      )}
                       {/* BUG FIX (audit 16 Sep 2026): sebelumnya ngirim
                           ROLE_LABEL[m.role] ("Sales Rep"/"Manager") ke
                           argumen `name` - dialog konfirmasi nampilin jabatan,
@@ -651,6 +668,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
                       <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="text-sm border border-slate-300 rounded-xl px-2 py-2 bg-white">
                         <option value="sales_rep">Sales Rep</option>
                         <option value="manager">Manager</option>
+                        <option value="admin_proyek">Admin Proyek</option>
                       </select>
                       <button onClick={generateInvite} disabled={inviteBusy} className="text-sm bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl px-3 py-2 font-medium flex items-center gap-1.5">
                         {inviteBusy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Undang Anggota

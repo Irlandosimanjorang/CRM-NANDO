@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { MapPin, NotebookPen, ArrowRightLeft, UserPlus, AlertTriangle, RefreshCw, Trash2, RotateCcw, PencilLine, CalendarPlus, CalendarX, Trophy, Sparkles, Mail, CheckCircle2, X, ChevronDown } from "lucide-react";
 import * as db from "../lib/db";
 import TeamLeaderboard from "../components/TeamLeaderboard";
+import ProyekDashboard from "../components/ProyekDashboard";
 import ShareGrantCard from "../components/ShareGrantCard";
 import SharedOrgTeam, { SharedOrgPage } from "../components/SharedOrgTeam";
 import ChatSlaCard from "../components/ChatSlaCard";
@@ -480,6 +481,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
 
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
+      {canManage && <ProyekDashboard leads={leads} stages={stages} />}
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} dealEntries={dealEntries} onOpenLead={onOpenLead} canManage={canManage} projectDeal={projectDeal} />
 
       {isOwner && <ShareGrantCard />}
