@@ -37,6 +37,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const [qtyRevealed, setQtyRevealed] = useState(false);
   const [rpRevealed, setRpRevealed] = useState(false);
   const [expanded, setExpanded] = useState(new Set());
+  // Filter daftar deal: nama lead dan rentang tanggal transaksi (berlaku untuk semua bulan).
+  const [fNama, setFNama] = useState("");
+  const [fDari, setFDari] = useState("");
+  const [fSampai, setFSampai] = useState("");
   const [subTab, setSubTab] = useState("deal"); // khusus org project_deal: "deal" (Proyek Deal) atau "selesai" (Proyek Selesai)
   const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
   const labelTahap = useMemo(() => Object.fromEntries((stages || []).map((s) => [s.key, s.label])), [stages]);
@@ -54,7 +58,16 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const wonKeys = new Set((stages || []).filter((s) => s.type === "won").map((s) => s.key));
     return new Set((leads || []).filter((l) => !l.deleted_at && (wonKeys.has(l.stage_key) || txLeadIds.has(l.id))).map((l) => l.id));
   }, [projectDeal, txSource, leads, stages, txLeadIds]);
-  const deals = useMemo(() => txSource.filter((t) => wonIds.has(t.lead_id)), [txSource, wonIds]);
+  const deals = useMemo(() => {
+    const namaCari = fNama.trim().toLowerCase();
+    return txSource.filter((t) => {
+      if (!wonIds.has(t.lead_id)) return false;
+      if (namaCari && !String(leadsById[t.lead_id]?.name || t.lead_name || "").toLowerCase().includes(namaCari)) return false;
+      if (fDari && String(t.deal_date || "") < fDari) return false;
+      if (fSampai && String(t.deal_date || "") > fSampai) return false;
+      return true;
+    });
+  }, [txSource, wonIds, leadsById, fNama, fDari, fSampai]);
   const totalValue = useMemo(() => {
     const txSum = deals.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
     const tanpaTx = (leads || []).filter((l) => wonIds.has(l.id) && !txLeadIds.has(l.id)).reduce((a, l) => a + (Number(l.deal_value) || 0), 0);
@@ -194,7 +207,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const lead = g.lead;
     const sm = lead ? stageMeta(stages, lead.stage_key) : null;
     const latest = g.txs[0];
-    const isOpen = expanded.has(g.leadId);
+    // Lead dengan lebih dari satu transaksi selalu menampilkan semua rincian tanggalnya.
+    const isOpen = g.txs.length > 1 || expanded.has(g.leadId);
     const nilai = g.nilaiBulan ?? (Number(lead?.deal_value) || 0);
     const tanggal = lead?.deal_date || latest?.deal_date;
     const jejak = jejakOf(g.leadId);
@@ -466,6 +480,23 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                   </p>
                 </div>
               )}
+              <div className="mt-4 flex flex-wrap items-end gap-3 text-[12px]">
+                <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-slate-500">
+                  Nama lead
+                  <input value={fNama} onChange={(e) => setFNama(e.target.value)} placeholder="Cari nama lead" className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500" />
+                </label>
+                <label className="flex flex-col gap-1 text-slate-500">
+                  Dari tanggal
+                  <input type="date" value={fDari} onChange={(e) => setFDari(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
+                </label>
+                <label className="flex flex-col gap-1 text-slate-500">
+                  Sampai tanggal
+                  <input type="date" value={fSampai} onChange={(e) => setFSampai(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
+                </label>
+                {(fNama || fDari || fSampai) && (
+                  <button type="button" onClick={() => { setFNama(""); setFDari(""); setFSampai(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
+                )}
+              </div>
               <ul className={`${bulanPilih === "all" ? "mt-3" : "mt-6"} divide-y divide-slate-200 border-y border-slate-200`}>
                 {items.map((g) => renderRow(g, max))}
               </ul>
