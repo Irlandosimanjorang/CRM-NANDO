@@ -65,6 +65,9 @@ import {
 // Disesuaikan per industri & pipeline org (lib/industryDemo.js) - gak pernah
 // disimpen ke database, murni buat ditampilin.
 
+// Tab yang boleh dibuka admin proyek: papan lead proyek, deal miliknya sendiri, dan pengaturan.
+const ADMIN_PROYEK_TABS = ["leads", "deal", "settings"];
+
 const NAV = [
   { key: "dashboard", label: "Dashboard", short: "Beranda", icon: LayoutDashboard },
   { key: "leads", label: "Leads", short: "Leads", icon: Users },
@@ -808,7 +811,7 @@ export default function App() {
 
 
   // Admin proyek hanya boleh membuka Leads dan Pengaturan, walau tab lain dipicu dari notifikasi atau link.
-  const effectiveTab = myRole === "admin_proyek" && tab !== "leads" && tab !== "settings" ? "leads" : tab;
+  const effectiveTab = myRole === "admin_proyek" && !ADMIN_PROYEK_TABS.includes(tab) ? "leads" : tab;
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
   // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
   // Customer biasa (99.9% user) gak akan pernah liat item ini nongol sama sekali.
@@ -828,7 +831,7 @@ export default function App() {
   const monitorNav = monitorOwner ? baseNavLabeled.filter((n) => OWNER_MONITOR_TABS.includes(n.key)) : baseNavLabeled;
   const roleNav = settings?.is_platform_admin ? [...monitorNav, ADMIN_NAV_ITEM] : monitorNav;
   // Admin proyek: menu dibatasi ke Leads (papan proyek) dan Pengaturan.
-  const navItems = myRole === "admin_proyek" ? roleNav.filter((n) => n.key === "leads" || n.key === "settings") : roleNav;
+  const navItems = myRole === "admin_proyek" ? roleNav.filter((n) => ADMIN_PROYEK_TABS.includes(n.key)) : roleNav;
 
   return (
     <AiOffContext.Provider value={monitorOwner}>
