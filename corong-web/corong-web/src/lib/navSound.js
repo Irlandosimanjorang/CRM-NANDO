@@ -1,27 +1,57 @@
-// Bunyi klik ringan saat pindah tab (25 Okt 2026). Dibuat dengan Web Audio, tanpa file audio.
-// Browser hanya mengizinkan suara setelah ada klik user, jadi dipanggil dari onClick tab.
-// Bisa dimatikan lewat localStorage "nexto-nav-sound" = "off".
+// Bunyi klik ringan (25 Okt 2026). Dibuat dengan Web Audio, tanpa file audio.
+// Browser hanya mengizinkan suara setelah ada klik user, jadi dipanggil dari handler klik.
+// Dimatikan lewat localStorage "nexto-nav-sound" = "off". Gagal memutar suara tidak boleh mengganggu aplikasi.
 let ctx = null;
 
+function getCtx() {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!ctx) ctx = new AudioCtx();
+  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+
+function enabled() {
+  try { return localStorage.getItem("nexto-nav-sound") !== "off"; } catch (_) { return true; }
+}
+
+// Pop: nada turun cepat (dipakai untuk pindah tab di sidebar).
 export function playNavClick() {
   try {
-    if (localStorage.getItem("nexto-nav-sound") === "off") return;
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    if (!ctx) ctx = new AudioCtx();
-    if (ctx.state === "suspended") ctx.resume();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    if (!enabled()) return;
+    const c = getCtx();
+    if (!c) return;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.06);
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
-    osc.connect(gain).connect(ctx.destination);
+    osc.frequency.setValueAtTime(400, c.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, c.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.2, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.12);
+    osc.connect(gain).connect(c.destination);
     osc.start();
-    osc.stop(ctx.currentTime + 0.09);
+    osc.stop(c.currentTime + 0.13);
   } catch (_) {
-    // Gagal memutar suara tidak boleh mengganggu pindah tab.
+    // diabaikan
+  }
+}
+
+// Tik: nada tinggi yang sangat singkat (dipakai untuk pindah tahap pipeline).
+export function playPipelineMove() {
+  try {
+    if (!enabled()) return;
+    const c = getCtx();
+    if (!c) return;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1800, c.currentTime);
+    gain.gain.setValueAtTime(0.15, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.04);
+    osc.connect(gain).connect(c.destination);
+    osc.start();
+    osc.stop(c.currentTime + 0.05);
+  } catch (_) {
+    // diabaikan
   }
 }

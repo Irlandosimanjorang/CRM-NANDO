@@ -44,6 +44,7 @@ import {
 
 import LeadModal from "../components/LeadModal";
 import LeadBoard from "../components/LeadBoard";
+import { playPipelineMove } from "../lib/navSound";
 import DuplicateModal from "../components/DuplicateModal";
 import DeleteAllLeadsModal from "../components/DeleteAllLeadsModal";
 import GroupAssignDialog from "../components/GroupAssignDialog";
@@ -723,6 +724,7 @@ export default function Leads({
   };
 
   const moveLeadStage = async (lead, key, extra) => {
+    playPipelineMove();
     let tx = null;
     let leadPatch = { stage_key: key };
     if (extra?.dealStage) {
