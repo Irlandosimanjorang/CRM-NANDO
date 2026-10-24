@@ -385,7 +385,17 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                             <span className="truncate">{l.invoice_number ? `Faktur ${l.invoice_number}` : "Belum ada no. faktur"}</span>
                             <div className="shrink-0 text-right">
                               <div className="font-semibold tabular-nums text-slate-800">{fmtRp(Number(l.deal_value) || 0)}</div>
-                              <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-medium ${l.payment_type ? "bg-slate-200 text-slate-700" : "bg-amber-50 text-amber-700"}`}>{l.payment_type || "Tipe payment belum diisi"}</span>
+                              {l.payment_type ? (
+                                <span className="mt-1 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10.5px] font-medium text-slate-700">{l.payment_type}</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => { if (!suppressClick.current) setFakturEdit(l); }}
+                                  className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10.5px] font-medium text-amber-700 hover:bg-amber-100"
+                                >
+                                  + Tipe payment
+                                </button>
+                              )}
                             </div>
                           </div>
                           <button
