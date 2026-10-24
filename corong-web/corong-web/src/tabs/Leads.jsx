@@ -717,7 +717,7 @@ export default function Leads({
   // Edit faktur dari kartu tahap Faktur (pipeline MAP): nilai, tanggal, dan no. faktur.
   const editFaktur = async (lead, values) => {
     await db.updateFaktur(lead, values);
-    const patch = { deal_value: values.value, deal_date: values.date, invoice_number: values.invoice_number || null };
+    const patch = { deal_value: values.value, deal_date: values.date, invoice_number: values.invoice_number || null, payment_type: values.payment_type || null };
     if (onLocalDeal) onLocalDeal(lead.id, patch, null);
     onChanged({ silent: true });
   };

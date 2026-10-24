@@ -383,6 +383,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                         <div className="mt-2.5 rounded-lg bg-slate-50 px-2.5 py-2 text-[11.5px] text-slate-600">
                           <div className="flex items-center justify-between gap-2">
                             <span className="truncate">{l.invoice_number ? `Faktur ${l.invoice_number}` : "Belum ada no. faktur"}</span>
+                            <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-medium ${l.payment_type ? "bg-slate-200 text-slate-700" : "bg-amber-50 text-amber-700"}`}>{l.payment_type || "Tipe payment belum diisi"}</span>
                             <span className="shrink-0 font-semibold tabular-nums text-slate-800">{fmtRp(Number(l.deal_value) || 0)}</span>
                           </div>
                           <button
@@ -523,10 +524,14 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
 // Org project_deal (BSB, 17 Okt 2026): nilai dan tanggal proyek sudah diisi di tahap Proyek Deal,
 // jadi di sini cukup alasan dan catatan. Record deal dibuat otomatis dari lead ini.
 // Edit data faktur dari kartu (pipeline faktur, MAP): tanggal, no. faktur, dan nominal.
+// Pilihan tipe payment untuk pipeline faktur (dipakai di dialog faktur dan kartu).
+const PAYMENT_TYPES = ["Transfer", "Tunai", "Termin", "Giro", "Kartu kredit", "Lainnya"];
+
 function FakturEditDialog({ lead, onCancel, onSave }) {
   const [date, setDate] = useState(lead.deal_date ? String(lead.deal_date).slice(0, 10) : todayISO());
   const [invoice, setInvoice] = useState(lead.invoice_number || "");
   const [value, setValue] = useState(lead.deal_value ? String(lead.deal_value) : "");
+  const [paymentType, setPaymentType] = useState(lead.payment_type || "");
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -552,10 +557,17 @@ function FakturEditDialog({ lead, onCancel, onSave }) {
             <span className="text-[11px] font-medium text-slate-500">Nominal{nominal ? " · " + fmtRp(nominal) : ""}</span>
             <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))} placeholder="0" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] tabular-nums focus:border-slate-400 focus:outline-none" />
           </label>
+          <label className="block">
+            <span className="text-[11px] font-medium text-slate-500">Tipe payment</span>
+            <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none">
+              <option value="">Belum dipilih</option>
+              {PAYMENT_TYPES.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </label>
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
-          <button type="button" disabled={!ready} onClick={() => onSave({ date, invoice_number: invoice.trim(), value: nominal })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
+          <button type="button" disabled={!ready} onClick={() => onSave({ date, invoice_number: invoice.trim(), value: nominal, payment_type: paymentType })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
         </div>
       </div>
     </div>
