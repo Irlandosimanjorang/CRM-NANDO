@@ -383,8 +383,10 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                         <div className="mt-2.5 rounded-lg bg-slate-50 px-2.5 py-2 text-[11.5px] text-slate-600">
                           <div className="flex items-center justify-between gap-2">
                             <span className="truncate">{l.invoice_number ? `Faktur ${l.invoice_number}` : "Belum ada no. faktur"}</span>
-                            <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-medium ${l.payment_type ? "bg-slate-200 text-slate-700" : "bg-amber-50 text-amber-700"}`}>{l.payment_type || "Tipe payment belum diisi"}</span>
-                            <span className="shrink-0 font-semibold tabular-nums text-slate-800">{fmtRp(Number(l.deal_value) || 0)}</span>
+                            <div className="shrink-0 text-right">
+                              <div className="font-semibold tabular-nums text-slate-800">{fmtRp(Number(l.deal_value) || 0)}</div>
+                              <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-medium ${l.payment_type ? "bg-slate-200 text-slate-700" : "bg-amber-50 text-amber-700"}`}>{l.payment_type || "Tipe payment belum diisi"}</span>
+                            </div>
                           </div>
                           <button
                             type="button"
