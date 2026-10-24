@@ -366,6 +366,33 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         )}
       </header>
 
+      {!(projectDeal && subTab === "selesai") && (
+        <div className="mt-5 flex flex-wrap items-end gap-3 text-[12px]">
+          <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-slate-500">
+            Nama lead
+            <input value={fNama} onChange={(e) => setFNama(e.target.value)} placeholder="Cari nama lead" className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500" />
+          </label>
+          <label className="flex flex-col gap-1 text-slate-500">
+            Dari tanggal
+            <input type="date" value={fDari} onChange={(e) => setFDari(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
+          </label>
+          <label className="flex flex-col gap-1 text-slate-500">
+            Sampai tanggal
+            <input type="date" value={fSampai} onChange={(e) => setFSampai(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
+          </label>
+          <label className="flex flex-col gap-1 text-slate-500">
+            Tipe payment
+            <select value={fTipe} onChange={(e) => setFTipe(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-800">
+              <option value="">Semua</option>
+              {["Transfer", "Tunai", "Termin", "Giro", "Kartu kredit", "Lainnya"].map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </label>
+          {(fNama || fDari || fSampai || fTipe) && (
+            <button type="button" onClick={() => { setFNama(""); setFDari(""); setFSampai(""); setFTipe(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
+          )}
+        </div>
+      )}
+
       {projectDeal && subTab === "selesai" ? (
         selesaiList.length === 0 ? (
           <div className="mt-10 rounded-2xl border border-dashed border-slate-300 px-6 py-14 text-center">
@@ -497,30 +524,6 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                   </p>
                 </div>
               )}
-              <div className="mt-4 flex flex-wrap items-end gap-3 text-[12px]">
-                <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-slate-500">
-                  Nama lead
-                  <input value={fNama} onChange={(e) => setFNama(e.target.value)} placeholder="Cari nama lead" className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500" />
-                </label>
-                <label className="flex flex-col gap-1 text-slate-500">
-                  Dari tanggal
-                  <input type="date" value={fDari} onChange={(e) => setFDari(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
-                </label>
-                <label className="flex flex-col gap-1 text-slate-500">
-                  Sampai tanggal
-                  <input type="date" value={fSampai} onChange={(e) => setFSampai(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
-                </label>
-                <label className="flex flex-col gap-1 text-slate-500">
-                  Tipe payment
-                  <select value={fTipe} onChange={(e) => setFTipe(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-800">
-                    <option value="">Semua</option>
-                    {["Transfer", "Tunai", "Termin", "Giro", "Kartu kredit", "Lainnya"].map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </label>
-                {(fNama || fDari || fSampai || fTipe) && (
-                  <button type="button" onClick={() => { setFNama(""); setFDari(""); setFSampai(""); setFTipe(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
-                )}
-              </div>
               <ul className={`${bulanPilih === "all" ? "mt-3" : "mt-6"} divide-y divide-slate-200 border-y border-slate-200`}>
                 {items.map((g) => renderRow(g, max))}
               </ul>
