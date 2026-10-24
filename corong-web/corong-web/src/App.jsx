@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import CheckinPhoto from "./components/CheckinPhoto";
 import * as db from "./lib/db";
-import { playNavClick } from "./lib/navSound";
 import { saveOpenModal, clearOpenModal, getOpenModal, saveScrollPos, getScrollPos, saveActiveTab, getActiveTab } from "./lib/uiPersist";
 import { MAYAR_PAYMENT_LINK, TIER_LABEL, PLAN_LEVEL } from "./lib/plans";
 import { getIndustryDemo } from "./lib/industryDemo";
@@ -981,7 +980,6 @@ export default function App() {
                   if (n.key === "adminops" && document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(() => {});
                   }
-                  playNavClick();
                   setTab(n.key);
                 }}
                 className={`nexto-nav-item relative w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[12.5px] ${cls}`}
@@ -1242,7 +1240,6 @@ export default function App() {
                     if (n.key === "adminops" && document.documentElement.requestFullscreen) {
                       document.documentElement.requestFullscreen().catch(() => {});
                     }
-                    playNavClick();
                     setTab(n.key);
                   }}
                   className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition-colors ${cls}`}
