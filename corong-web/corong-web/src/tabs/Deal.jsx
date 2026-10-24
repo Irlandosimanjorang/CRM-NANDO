@@ -221,8 +221,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const latest = g.txs[0];
     // Lead dengan lebih dari satu transaksi selalu menampilkan semua rincian tanggalnya.
     const isOpen = g.txs.length > 1 || expanded.has(g.leadId);
-    const nilai = g.nilaiBulan ?? (Number(lead?.deal_value) || 0);
-    const tanggal = lead?.deal_date || latest?.deal_date;
+    // Saat filter tanggal aktif, kartu hanya menghitung dan menampilkan transaksi di rentang itu.
+    const dateFilterAktif = !!(fDari || fSampai);
+    const nilai = dateFilterAktif ? g.txs.reduce((a, t) => a + (Number(t.deal_value) || 0), 0) : (g.nilaiBulan ?? (Number(lead?.deal_value) || 0));
+    const tanggal = dateFilterAktif && latest ? latest.deal_date : (lead?.deal_date || latest?.deal_date);
     const jejak = jejakOf(g.leadId);
     const punyaRincian = g.txs.length > 1;
     const bisaBuka = punyaRincian || jejak.length > 0;
