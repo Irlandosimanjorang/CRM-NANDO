@@ -807,7 +807,8 @@ export default function App() {
 
 
 
-  const effectiveTab = tab;
+  // Admin proyek hanya boleh membuka Leads dan Pengaturan, walau tab lain dipicu dari notifikasi atau link.
+  const effectiveTab = myRole === "admin_proyek" && tab !== "leads" && tab !== "settings" ? "leads" : tab;
   const isLocked = (key) => !loading && myLevel < (TAB_MIN_LEVEL[key] ?? 0);
   // Menu admin cuma nempel di daftar nav kalau akun ini beneran admin platform.
   // Customer biasa (99.9% user) gak akan pernah liat item ini nongol sama sekali.
