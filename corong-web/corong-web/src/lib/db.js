@@ -1597,7 +1597,8 @@ export async function setAdBudget({ userId, period, amount }) {
 
 // ---- DEAL TRANSAKSI (1 perusahaan bisa banyak transaksi/repeat order) ----
 export async function getDealTransactions() {
-  const { data, error } = await supabase.from("deal_transactions").select("*").order("deal_date", { ascending: false });
+  // Transaksi dari lead yang sudah dihapus (soft delete) tidak ikut dimuat, supaya tidak tampil di Report.
+  const { data, error } = await supabase.from("deal_transactions").select("*, leads!inner(id)").is("leads.deleted_at", null).order("deal_date", { ascending: false });
   if (error) throw error;
   return data || [];
 }
