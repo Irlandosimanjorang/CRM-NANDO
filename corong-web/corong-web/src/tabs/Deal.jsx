@@ -40,6 +40,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   // Filter daftar deal: nama lead dan rentang tanggal transaksi (berlaku untuk semua bulan).
   const [fNama, setFNama] = useState("");
   const [fDari, setFDari] = useState("");
+  const [fTipe, setFTipe] = useState("");
   const [fSampai, setFSampai] = useState("");
   const [subTab, setSubTab] = useState("deal"); // khusus org project_deal: "deal" (Proyek Deal) atau "selesai" (Proyek Selesai)
   const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
@@ -62,12 +63,13 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const namaCari = fNama.trim().toLowerCase();
     return txSource.filter((t) => {
       if (!wonIds.has(t.lead_id)) return false;
+      if (fTipe && (leadsById[t.lead_id]?.payment_type || "") !== fTipe) return false;
       if (namaCari && !String(leadsById[t.lead_id]?.name || t.lead_name || "").toLowerCase().includes(namaCari)) return false;
       if (fDari && String(t.deal_date || "") < fDari) return false;
       if (fSampai && String(t.deal_date || "") > fSampai) return false;
       return true;
     });
-  }, [txSource, wonIds, leadsById, fNama, fDari, fSampai]);
+  }, [txSource, wonIds, leadsById, fNama, fDari, fSampai, fTipe]);
   const totalValue = useMemo(() => {
     const txSum = deals.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
     // Lead tanpa transaksi ikut dihitung hanya kalau filter tanggal tidak aktif dan namanya cocok dengan filter.
@@ -254,6 +256,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             {(latest?.product_type || latest?.chemical) && (
               <span className="truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-[11.5px] font-medium text-slate-700">{latest.product_type || latest.chemical}</span>
             )}
+            {lead?.payment_type && <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11.5px] font-medium text-amber-800">{lead.payment_type}</span>}
             {typeBadge(lead?.company_type) && <span className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{typeBadge(lead.company_type)}</span>}
           </div>
 
@@ -507,8 +510,15 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                   Sampai tanggal
                   <input type="date" value={fSampai} onChange={(e) => setFSampai(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
                 </label>
-                {(fNama || fDari || fSampai) && (
-                  <button type="button" onClick={() => { setFNama(""); setFDari(""); setFSampai(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
+                <label className="flex flex-col gap-1 text-slate-500">
+                  Tipe payment
+                  <select value={fTipe} onChange={(e) => setFTipe(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-800">
+                    <option value="">Semua</option>
+                    {["Transfer", "Tunai", "Termin", "Giro", "Kartu kredit", "Lainnya"].map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </label>
+                {(fNama || fDari || fSampai || fTipe) && (
+                  <button type="button" onClick={() => { setFNama(""); setFDari(""); setFSampai(""); setFTipe(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
                 )}
               </div>
               <ul className={`${bulanPilih === "all" ? "mt-3" : "mt-6"} divide-y divide-slate-200 border-y border-slate-200`}>

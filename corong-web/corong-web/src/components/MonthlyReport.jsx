@@ -31,6 +31,31 @@ const dealRowsFromEntries = (entries, leads) => {
     return lead ? { ...lead, id: e.lead_id, deal_value: e.deal_value, deal_date: e.deal_date, assigned_to: e.pic } : null;
   }).filter(Boolean);
 };
+// Omzet per tipe payment (24 Okt 2026): dihitung dari deal yang sudah difilter sesuai lingkup laporan.
+const paymentRowsOf = (deals) => {
+  const map = new Map();
+  for (const d of deals) {
+    const key = d.payment_type || "Belum diisi";
+    const cur = map.get(key) || { tipe: key, deals: 0, omzet: 0 };
+    cur.deals += 1;
+    cur.omzet += Number(d.deal_value) || 0;
+    map.set(key, cur);
+  }
+  return [...map.values()].sort((a, b) => b.omzet - a.omzet);
+};
+const PaymentBreakdownCard = ({ rows, periodLabel }) => (
+  <Panel className="p-5">
+    <PanelHeader title="Omzet per tipe payment" meta={`Deal ${periodLabel}, dikelompokkan per tipe payment.`} />
+    <ul className="mt-2 divide-y divide-slate-100">
+      {rows.map((p) => (
+        <li key={p.tipe} className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
+          <span className="min-w-0 truncate text-slate-800">{p.tipe}</span>
+          <span className="shrink-0 tabular-nums text-slate-500">{p.deals} deal · <b className="font-semibold text-slate-800">{fmtRp(Number(p.omzet) || 0)}</b></span>
+        </li>
+      ))}
+    </ul>
+  </Panel>
+);
 const pad = (n) => String(n).padStart(2, "0");
 const ymOf = (iso) => String(iso || "").slice(0, 7);
 const num = (v) => Number(v) || 0;
@@ -671,6 +696,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             </Panel>
           </div>
 
+          {dealLeads.length > 0 && <div className="mb-5"><PaymentBreakdownCard rows={paymentRowsOf(dealLeads)} periodLabel={periodLabel} /></div>}
           {productRows.length > 0 && (
             <Panel className="p-5">
               <PanelHeader title="Omzet per produk" meta={`Total transaksi deal ${periodLabel}, dikelompokkan per nama barang.`} />
