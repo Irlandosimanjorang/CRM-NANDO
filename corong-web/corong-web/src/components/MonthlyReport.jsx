@@ -391,7 +391,6 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
     w.focus(); setTimeout(() => w.print(), 300);
   };
 
-  const [sheetsSoon, setSheetsSoon] = useState(false);
   // Unduh PowerPoint (17 Okt 2026, permintaan Nando): tombol untuk akun tim marketing (tampilan pribadi), bukan manager.
   const downloadPpt = async () => {
     try {
@@ -435,26 +434,20 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
           ))}
         </div>
-        {/* Sinkron ke Google Sheets (17 Okt 2026): belum aktif, klik hanya menampilkan pemberitahuan. */}
-        <div className="relative">
+        {/* Ekspor ke Google Sheet (25 Okt 2026): aktif untuk sales rep di paket Enterprise. */}
+        {!canManage && org?.plan === "enterprise" && (
           <button
             type="button"
             role="switch"
-            aria-checked={false}
-            onClick={() => setSheetsSoon(true)}
-            className={cn("inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50", focus)}
+            aria-checked={sheetBusy}
+            onClick={exportSheet}
+            disabled={sheetBusy}
+            className={cn("inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60", focus)}
           >
-            <span className="relative inline-flex h-4 w-7 items-center rounded-full bg-slate-300"><span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" /></span>
-            Sinkron Google Sheets
+            <span className={cn("relative inline-flex h-4 w-7 items-center rounded-full", sheetBusy ? "bg-orange-500" : "bg-slate-300")}><span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" /></span>
+            {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
           </button>
-          {sheetsSoon && (
-            <div role="dialog" aria-label="Sinkron Google Sheets" className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 text-[12px] text-slate-700 shadow-lg">
-              <p className="font-semibold text-ink">Sedang dipersiapkan</p>
-              <p className="mt-1 text-slate-500">Sinkron otomatis ke Google Sheets akan tersedia setelah persiapan selesai. Untuk sekarang, gunakan tombol Unduh Excel.</p>
-              <button type="button" onClick={() => setSheetsSoon(false)} className="mt-2 rounded-lg bg-slate-900 px-3 py-1.5 text-[11.5px] font-semibold text-white">Mengerti</button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
