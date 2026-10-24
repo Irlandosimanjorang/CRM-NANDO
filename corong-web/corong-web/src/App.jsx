@@ -66,7 +66,7 @@ import {
 // disimpen ke database, murni buat ditampilin.
 
 // Tab yang boleh dibuka admin proyek: papan lead proyek, deal miliknya sendiri, dan pengaturan.
-const ADMIN_PROYEK_TABS = ["leads", "deal", "settings"];
+const ADMIN_PROYEK_TABS = ["dashboard", "leads", "deal", "settings"];
 
 const NAV = [
   { key: "dashboard", label: "Dashboard", short: "Beranda", icon: LayoutDashboard },
