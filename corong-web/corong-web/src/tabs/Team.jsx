@@ -481,8 +481,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
 
       <ActivityTimeline api={api} nameOf={nameOf} days={days} daysLoaded={daysRaw !== null} reloadKey={reloadKey} />
 
-      {canManage && <ProyekDashboard leads={leads} stages={stages} />}
       <TeamLeaderboard leads={leads} stages={stages} dealTransactions={dealTransactions} dealEntries={dealEntries} onOpenLead={onOpenLead} canManage={canManage} projectDeal={projectDeal} />
+      {canManage && <div className="mt-5"><ProyekDashboard leads={leads} stages={stages} /></div>}
 
       {isOwner && <ShareGrantCard />}
 

@@ -484,7 +484,6 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
         <AdsAnalysis leads={allLeads} stages={stages} dealTransactions={allTx} members={members} canManage={canManage} org={org} ym={ym} from={range.from} to={range.to} periodLabel={periodLabel} canImport={canImport} onChanged={onChanged} />
       ) : (
         <>
-        {canManage && <div className="mb-5"><ProyekDashboard leads={allLeads} stages={stages} /></div>}
           <section className="overflow-hidden rounded-panel bg-ink p-6 text-white">
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
               <div className="min-w-0">
@@ -729,6 +728,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               </ul>
             </Panel>
           )}
+          {canManage && <div className="mt-5"><ProyekDashboard leads={allLeads} stages={stages} /></div>}
         </>
       )}
       </div>
