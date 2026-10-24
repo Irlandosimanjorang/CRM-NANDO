@@ -1744,6 +1744,20 @@ export async function getTodayAdvisorRun() {
 // nebeng jadwal AI Advisor). Dihitung org-wide oleh edge function
 // memory-health-check (cron sendiri, lihat jobname nexto-memory-health-check),
 // disimpen 1 baris per org di org_memory_health.
+// Google Sheet (25 Okt 2026): ekspor lead sales ke Sheet baru. Khusus Enterprise dan sales rep.
+async function callGoogleSheets(action) {
+  const { data, error } = await supabase.functions.invoke("google-sheets", { body: { action } });
+  if (error) {
+    let specificMsg = null;
+    try { specificMsg = (await error.context.json())?.error; } catch (_) {}
+    throw new Error(specificMsg || error.message || "Gagal memproses Google Sheet");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+export const exportLeadsToSheet = () => callGoogleSheets("export");
+export const connectGoogleSheets = () => callGoogleSheets("connect");
+
 // Komposisi konteks AI untuk user yang login (panel "Konteks AI" di dashboard).
 export async function getMyAiContext() {
   const orgId = await getMyOrgId();

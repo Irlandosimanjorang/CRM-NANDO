@@ -123,6 +123,24 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const [srcF, setSrcF] = useState("all");
   const [stF, setStF] = useState("all");
   const [viewRaw, setView] = useState("penjualan");
+  // Ekspor lead ke Google Sheet (25 Okt 2026): hanya sales rep di paket Enterprise.
+  const [sheetBusy, setSheetBusy] = useState(false);
+  const exportSheet = async () => {
+    setSheetBusy(true);
+    try {
+      const r = await db.exportLeadsToSheet();
+      if (r.needs_connect) {
+        const c = await db.connectGoogleSheets();
+        window.location.href = c.url;
+        return;
+      }
+      window.open(r.url, "_blank", "noopener");
+    } catch (e) {
+      alert("Gagal ekspor: " + (e?.message || e));
+    } finally {
+      setSheetBusy(false);
+    }
+  };
   // Anggota biasa: laporan lead miliknya saja, tanpa tab Iklan dan target tim.
   const personal = !canManage;
   const view = personal && viewRaw === "iklan" ? "penjualan" : viewRaw;
@@ -752,6 +770,19 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                   );
                 })}
               </ul>
+            </Panel>
+          )}
+          {!canManage && org?.plan === "enterprise" && (
+            <Panel className="mt-5 p-5">
+              <PanelHeader title="Ekspor ke Google Sheet" meta="Lead yang ditugaskan ke kamu, jadi Sheet baru di Google Drive kamu." />
+              <button
+                type="button"
+                onClick={exportSheet}
+                disabled={sheetBusy}
+                className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
+              </button>
             </Panel>
           )}
           {canManage && <div className="mt-5"><ProyekDashboard leads={allLeads} stages={stages} /></div>}
