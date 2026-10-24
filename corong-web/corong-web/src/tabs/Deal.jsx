@@ -70,9 +70,13 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   }, [txSource, wonIds, leadsById, fNama, fDari, fSampai]);
   const totalValue = useMemo(() => {
     const txSum = deals.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
-    const tanpaTx = (leads || []).filter((l) => wonIds.has(l.id) && !txLeadIds.has(l.id)).reduce((a, l) => a + (Number(l.deal_value) || 0), 0);
+    // Lead tanpa transaksi ikut dihitung hanya kalau filter tanggal tidak aktif dan namanya cocok dengan filter.
+    const namaCari = fNama.trim().toLowerCase();
+    const tanpaTx = fDari || fSampai ? 0 : (leads || [])
+      .filter((l) => wonIds.has(l.id) && !txLeadIds.has(l.id) && (!namaCari || String(l.name || "").toLowerCase().includes(namaCari)))
+      .reduce((a, l) => a + (Number(l.deal_value) || 0), 0);
     return txSum + tanpaTx;
-  }, [leads, deals, wonIds, txLeadIds]);
+  }, [leads, deals, wonIds, txLeadIds, fNama, fDari, fSampai]);
   const totals = qtyTotals(deals, units);
 
   // 1 baris per lead menang. Nilai baris = deal_value lead (satu aturan deal di semua tab).
@@ -81,14 +85,22 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const txByLead = {};
     for (const t of deals) (txByLead[t.lead_id] ||= []).push(t);
     const dateOf = (g) => String(g.lead?.deal_date || g.txs[0]?.deal_date || "");
+    const namaCari = fNama.trim().toLowerCase();
+    const dateActive = !!(fDari || fSampai);
     return [...wonIds]
+      .filter((leadId) => {
+        if (namaCari && !String(leadsById[leadId]?.name || "").toLowerCase().includes(namaCari)) return false;
+        // Filter tanggal: lead tanpa transaksi di rentang itu tidak ditampilkan.
+        if (dateActive && !txByLead[leadId]?.length) return false;
+        return true;
+      })
       .map((leadId) => ({
         leadId,
         lead: leadsById[leadId],
         txs: (txByLead[leadId] || []).slice().sort((a, b) => String(b.deal_date || "").localeCompare(String(a.deal_date || ""))),
       }))
       .sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
-  }, [deals, wonIds, leadsById]);
+  }, [deals, wonIds, leadsById, fNama, fDari, fSampai]);
 
   // Setiap transaksi dihitung di bulan tanggal transaksinya (repeat order ikut di bulannya sendiri).
   // Lead tanpa transaksi (deal lama) dihitung sekali di bulan deal_date-nya dengan deal_value lead.
