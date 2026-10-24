@@ -626,6 +626,12 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       try {
         const { data: memberRow } = await admin.from("organization_members").select("org_id, role").eq("user_id", u.id).limit(1).maybeSingle();
         if (!memberRow) { console.log("[digest] skip, no org for", u.id); return; }
+        // Admin proyek tidak menerima digest (24 Okt 2026, keputusan Nando): perannya hanya input data proyek.
+        if (memberRow.role === "admin_proyek") {
+          console.log("[digest] skip, admin proyek:", u.id);
+          results.push({ user: u.email, skipped: "admin_proyek" });
+          return;
+        }
 
         const [{ data: settingsRow }, { data: orgPlanRow }] = await Promise.all([
           admin.from("settings").select("plan, community_display_name").eq("user_id", u.id).maybeSingle(),
