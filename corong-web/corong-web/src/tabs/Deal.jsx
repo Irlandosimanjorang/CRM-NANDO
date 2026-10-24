@@ -379,7 +379,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
       ) : groups.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-slate-300 px-6 py-14 text-center">
           <p className="font-display text-[17px] font-semibold text-ink">Belum ada deal</p>
-          <p className="mt-1.5 text-[13px] text-slate-500">Pindahkan lead ke tahap menang, maka deal-nya tercatat di sini.</p>
+          <p className="mt-1.5 text-[13px] text-slate-500">Deal muncul saat lead pindah ke tahap menang. Lead yang kamu input sendiri juga tercatat di sini.</p>
         </div>
       ) : (
         <>
