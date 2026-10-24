@@ -75,7 +75,6 @@ const NAV = [
   { key: "deal", label: "Deal", short: "Deal", icon: Trophy },
   { key: "visitfollowup", label: "Visit & Follow-up", short: "Visit", icon: CalendarCheck },
   { key: "kompetitor", label: "Kompetitor", short: "Rival", icon: Swords },
-  { key: "komunitas", label: "Nex", short: "Nex", icon: Users2, special: true },
   { key: "settings", label: "Pengaturan", short: "Lainnya", icon: SettingsIcon },
 ];
 // Menu ini DIPISAH dari NAV biasa - cuma ditambahin ke daftar tab kalau
