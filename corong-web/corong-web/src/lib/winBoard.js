@@ -44,3 +44,19 @@ export function collectRecentWins(leads, stages, members = [], now = Date.now())
   }
   return out.sort((a, b) => b.when - a.when);
 }
+
+/**
+ * Kemenangan dikelompokkan per sales: total nilai, jumlah deal, dan deal terbaru.
+ * Diurutkan dari total nilai terbesar (lalu jumlah deal, lalu yang paling baru).
+ */
+export function groupWinsBySales(wins) {
+  const map = new Map();
+  for (const w of wins || []) {
+    const g = map.get(w.sales) || { sales: w.sales, count: 0, total: 0, latest: w };
+    g.count += 1;
+    g.total += w.value;
+    if (w.when > g.latest.when) g.latest = w;
+    map.set(w.sales, g);
+  }
+  return [...map.values()].sort((a, b) => b.total - a.total || b.count - a.count || b.latest.when - a.latest.when);
+}

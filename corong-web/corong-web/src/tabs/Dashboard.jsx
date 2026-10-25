@@ -10,7 +10,7 @@ import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../u
 import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
 import { NEW_LEAD_MINUTES, collectUntouchedNewLeads, formatAge } from "../lib/newLeadsIdle";
 import { todayISO, fmtRp } from "../lib/helpers";
-import { WIN_WINDOW_DAYS, collectRecentWins, initialsOf } from "../lib/winBoard";
+import { WIN_WINDOW_DAYS, collectRecentWins, groupWinsBySales, initialsOf } from "../lib/winBoard";
 
 // Kartu dashboard: sudut lebih membulat, bayangan lembut, dan jarak dalam lebih lega (gaya kartu Nexto yang baru).
 const DASH_CARD = "!rounded-[28px] border-slate-200/60 shadow-[0_2px_6px_rgba(15,23,42,0.05),0_18px_40px_-18px_rgba(15,23,42,0.22)]";
@@ -56,8 +56,7 @@ export default function Dashboard({
 
   // Papan kemenangan tim (25 Okt 2026) - lihat lib/winBoard.js. Sembunyi per browser, disimpan di localStorage.
   const wins = useMemo(() => collectRecentWins(leads, stages, members), [leads, stages, members]);
-  const winTop = wins[0];
-  const winRest = wins.slice(1, 3);
+  const winBySales = useMemo(() => groupWinsBySales(wins), [wins]);
   const [winHidden, setWinHidden] = useState(() => {
     try { return localStorage.getItem("nexto-win-board-hidden") === "1"; } catch (_) { return false; }
   });
@@ -336,43 +335,34 @@ export default function Dashboard({
 
       {/* Angka utama - satu panel dengan garis pemisah, bukan 4 kartu. */}
       {showWinBoard && wins.length > 0 && !winHidden && (
-        <section className="relative overflow-hidden rounded-2xl bg-ink p-5 md:p-6 text-white">
-          <style>{"@keyframes nxWinIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}.nx-win-in{animation:nxWinIn .5s cubic-bezier(.2,.7,.2,1) both}@media (prefers-reduced-motion:reduce){.nx-win-in{animation:none}}"}</style>
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
-
-          <div className="relative flex items-center justify-between gap-3">
-            <p className="text-[13px] text-slate-400">{wins.length} deal menang dalam {WIN_WINDOW_DAYS} hari terakhir</p>
-            <button type="button" aria-label="Sembunyikan papan kemenangan" onClick={hideWinBoard} className="grid h-7 w-7 place-items-center rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-white">
+        <Panel className="p-5">
+          <div className="flex items-center justify-between gap-3">
+            <PanelHeader title="Kemenangan tim" meta={`${wins.length} deal menang dalam ${WIN_WINDOW_DAYS} hari terakhir`} />
+            <button type="button" aria-label="Sembunyikan papan kemenangan" onClick={hideWinBoard} className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-ink">
               <X size={14} />
             </button>
           </div>
 
-          <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === winTop.id))} className="nx-win-in relative mt-3 flex w-full items-end justify-between gap-4 rounded-xl text-left">
-            <div className="min-w-0">
-              <p className="text-[13px] text-slate-300"><span className="font-semibold text-emerald-300">{winTop.sales}</span> menutup</p>
-              <p className="mt-1 truncate text-[22px] md:text-[26px] font-bold leading-tight tracking-[-0.03em]">{winTop.name}</p>
-              <p className="mt-1 text-[12px] text-slate-500">{winTop.ago}</p>
-            </div>
-            <div className="shrink-0 text-right">
-              {winTop.value > 0
-                ? <p className="text-[24px] md:text-[28px] font-bold tabular-nums text-emerald-300">{fmtRp(winTop.value)}</p>
-                : <p className="text-[13px] font-medium text-amber-300">Nilai belum diisi</p>}
-            </div>
-          </button>
-
-          {winRest.length > 0 && (
-            <ul className="relative mt-5 grid gap-1 border-t border-white/10 pt-4 sm:grid-cols-2">
-              {winRest.map((w) => (
-                <li key={w.id}>
-                  <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === w.id))} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5">
-                    <span className="min-w-0 truncate text-[13px] text-slate-200">{w.sales} - {w.name}</span>
-                    <span className={"shrink-0 text-[12px] tabular-nums " + (w.value > 0 ? "text-slate-300" : "text-amber-300")}>{w.value > 0 ? fmtRp(w.value) : "Nilai belum diisi"}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {winBySales.map((g) => (
+              <li key={g.sales}>
+                <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === g.latest.id))} className="flex w-full items-center gap-3.5 rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[13px] font-semibold text-slate-600 ring-1 ring-slate-200">{initialsOf(g.sales)}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[17px] font-semibold tracking-[-0.02em] text-ink">{g.sales}</p>
+                    <p className="mt-0.5 truncate text-[12px] text-slate-500">{g.count} deal · {g.latest.name}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {g.total > 0
+                      ? <p className="text-[15px] font-semibold tabular-nums text-orange-700">{fmtRp(g.total)}</p>
+                      : <p className="text-[12px] text-slate-400">Nilai belum diisi</p>}
+                    <p className="mt-0.5 text-[11px] text-slate-400">{g.latest.ago}</p>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       )}
 
       <StatRow>
