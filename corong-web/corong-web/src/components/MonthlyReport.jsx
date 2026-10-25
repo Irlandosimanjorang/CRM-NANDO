@@ -106,13 +106,14 @@ function InfoTip({ text }) {
   );
 }
 
-// Logo Google Sheets: dokumen hijau dengan sudut terlipat dan kisi tabel putih.
+// Ikon simpan (disket) dengan kisi spreadsheet di label, warna hijau Google Sheets.
 const SheetsIcon = ({ size = 22, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={className}>
-    <path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#0F9D58" />
-    <path d="M14 2v6h6z" fill="#87CEAC" />
-    <rect x="7.5" y="11" width="9" height="7" fill="#fff" />
-    <path d="M7.5 14.5h9M11.5 11v7" stroke="#0F9D58" strokeWidth="1" />
+    <path d="M3 3h14l4 4v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" fill="#0F9D58" />
+    <rect x="8" y="3" width="7" height="5" fill="#87CEAC" />
+    <rect x="12.5" y="4.25" width="2" height="2.5" fill="#0F9D58" />
+    <rect x="6.5" y="12" width="11" height="8" rx="1" fill="#fff" />
+    <path d="M6.5 15.3h11M6.5 18.2h11M10.5 12v8" stroke="#0F9D58" strokeWidth="0.9" />
   </svg>
 );
 
