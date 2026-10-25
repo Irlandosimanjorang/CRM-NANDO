@@ -10,6 +10,7 @@ import AdsAnalysis from "./AdsAnalysis";
 import RekapLaporan from "./RekapLaporan";
 import ProyekDashboard from "./ProyekDashboard";
 import RencanaBulanan from "./RencanaBulanan";
+import SheetsAnnouncement from "./SheetsAnnouncement";
 
 // Tab Laporan (9 Okt 2026, saklar monthly_report; untuk owner dan manager). Dua tampilan:
 //  - Penjualan: target omzet, kalender bulanan ala Google Calendar (deal dan data masuk per tanggal),
@@ -490,6 +491,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
 
   return (
     <div className="space-y-4">
+      <SheetsAnnouncement enterprise={org?.plan === "enterprise"} />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">{personal ? "Report saya" : "Report"}</h1>
         <div className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold" role="tablist" aria-label="Jenis laporan">
