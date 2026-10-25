@@ -60,7 +60,7 @@ function dealFields(d) {
 }
 
 // Popup data deal saat lead dipindah ke tahap menang lewat NEX Pro: nilai, tanggal, no. SPH, dll.
-function WonDealForm({ initial, onCancel, onConfirm }) {
+function WonDealForm({ initial, onCancel, onSkip, onConfirm }) {
   const [value, setValue] = useState(initial.value);
   const [date, setDate] = useState(todayISO());
   const [sph, setSph] = useState(initial.sph);
@@ -72,8 +72,8 @@ function WonDealForm({ initial, onCancel, onConfirm }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
       <div className="w-full max-w-sm rounded-panel border border-white/10 bg-[#0b0f1c] p-5 shadow-float" onClick={(e) => e.stopPropagation()}>
-        <p className="text-sm font-semibold text-white">Deal menang: {initial.leadName}</p>
-        <p className="mt-1 text-xs text-slate-400">Isi data deal dulu, lalu lead dipindah ke tahap menang.</p>
+        <p className="text-sm font-semibold text-white">{initial.won ? "Deal menang" : "Data deal (opsional)"}: {initial.leadName}</p>
+        <p className="mt-1 text-xs text-slate-400">{initial.won ? "Isi data deal dulu, lalu lead dipindah ke tahap menang." : "Isi bila perlu, lalu lead dipindah ke tahap ini."}</p>
         <div className="mt-4 grid gap-3">
           <label className={label}>Nilai deal (Rp)
             <input className={field} inputMode="numeric" placeholder="0" value={value} onChange={(e) => setValue(e.target.value)} />
@@ -93,9 +93,10 @@ function WonDealForm({ initial, onCancel, onConfirm }) {
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-slate-300 hover:bg-white/5">Batal</button>
-          <button type="button" disabled={nominal <= 0 || !date}
+          {!initial.won && <button type="button" onClick={onSkip} className="rounded-xl px-4 py-2 text-sm text-slate-300 hover:bg-white/5">Lewati</button>}
+          <button type="button" disabled={initial.won && (nominal <= 0 || !date)}
             onClick={() => onConfirm({ value: nominal, date, sph: sph.trim(), invoice: invoice.trim(), product: product.trim() })}
-            className="rounded-xl bg-brand-strong px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-40">Simpan deal</button>
+            className="rounded-xl bg-brand-strong px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-40">{initial.won ? "Simpan deal" : "Simpan"}</button>
         </div>
       </div>
     </div>
@@ -306,15 +307,20 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
 
   const setUpdateField = (key, value) => setUpdates((p) => ({ ...p, [key]: value }));
 
-  // Pindah ke tahap menang (ubah tahap, atau tutup sebagai menang) minta data deal dulu lewat popup.
-  const wonTarget = action === "update_lead" && !!updates.stage_key
-    && (stages || []).find((s) => s.key === updates.stage_key)?.type === "won"
-    && (leads || []).find((l) => l.id === lead?.id)?.stage_key !== updates.stage_key;
-  const isWonMove = wonTarget || (action === "close_lead" && closeResult === "won");
+  // Perpindahan tahap lewat NEX Pro menawarkan popup data deal. Tahap menang wajib nilai; tahap lain boleh dilewati.
+  const stageMoveKey = action === "update_lead" && updates.stage_key
+    && (stages || []).some((s) => s.key === updates.stage_key)
+    && (leads || []).find((l) => l.id === lead?.id)?.stage_key !== updates.stage_key
+    ? updates.stage_key : null;
+  const wonTarget = !!stageMoveKey && (stages || []).find((s) => s.key === stageMoveKey)?.type === "won";
+  const needsDeal = !!stageMoveKey || (action === "close_lead" && closeResult === "won");
+  const isWonDeal = wonTarget || (action === "close_lead" && closeResult === "won");
+  // deal = null: belum ditanya (buka popup); false: dilewati; object: data deal dari popup.
   const save = async (deal = null) => {
-    if (isWonMove && !deal && lead) {
+    if (needsDeal && deal === null && lead) {
       const existing = (leads || []).find((l) => l.id === lead.id) || {};
       setWonForm({
+        won: isWonDeal,
         leadName: lead.name,
         value: existing.deal_value ? String(existing.deal_value) : "",
         product: existing.product || "",
@@ -344,9 +350,17 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
           if (k === "stage_key" && !(stages || []).some((s) => s.key === v)) continue;
           merged[k] = v;
         }
-        if (deal) {
+        if (deal && wonTarget) {
           Object.assign(merged, dealFields(deal));
           await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: deal.date, deal_value: deal.value, product_type: deal.product || merged.product || null });
+        } else if (deal) {
+          // Tahap selain menang: data deal disimpan sebagai info lead, tidak dicatat sebagai transaksi (bukan omzet).
+          Object.assign(merged, {
+            deal_value: deal.value || merged.deal_value,
+            sph_number: deal.sph || merged.sph_number,
+            invoice_number: deal.invoice || merged.invoice_number || null,
+            ...(deal.product ? { product: deal.product } : {}),
+          });
         }
         if (cancelVisit) { merged.visit_date = null; merged.visit_agenda = ""; merged.visit_meet = ""; }
         await db.upsertLead(merged);
@@ -394,7 +408,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
 
   return createPortal(
     <div className="fixed inset-0 bg-[#050810]/80 backdrop-blur-sm flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto">
-      {wonForm && <WonDealForm initial={wonForm} onCancel={() => setWonForm(null)} onConfirm={(d) => { setWonForm(null); save(d); }} />}
+      {wonForm && <WonDealForm initial={wonForm} onCancel={() => setWonForm(null)} onSkip={() => { setWonForm(null); save(false); }} onConfirm={(d) => { setWonForm(null); save(d); }} />}
       <div
         className="relative w-full max-w-[420px] my-8 rounded-panel overflow-hidden border border-white/10 shadow-float"
         style={{ background: "#0b0f1c" }}
