@@ -131,7 +131,11 @@ Deno.serve(async (req) => {
         const raw = await createResp.text();
         // Google biasanya membalas JSON berisi error.message. Jika bukan JSON (mis. halaman HTML), kirim status HTTP saja.
         let reason = `HTTP ${createResp.status}`;
-        try { reason += `: ${JSON.parse(raw).error?.message ?? raw}`; } catch { if (!raw.startsWith("<")) reason += `: ${raw.slice(0, 200)}`; }
+        try { reason += `: ${JSON.parse(raw).error?.message ?? raw}`; } catch {
+          // Halaman HTML: ambil judul dan teks saja supaya penyebabnya tetap terbaca.
+          const text = raw.startsWith("<") ? raw.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : raw;
+          reason += `: ${text.slice(0, 200)}`;
+        }
         console.log("[google-sheets] create failed", reason);
         return json({ error: `Gagal membuat Google Sheet (${reason.slice(0, 300)})` }, 502);
       }
