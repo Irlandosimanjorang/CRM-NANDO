@@ -58,6 +58,25 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [pwOld, setPwOld] = useState("");
   const [pwResetBusy, setPwResetBusy] = useState(false);
   const [resetCaptcha, setResetCaptcha] = useState("");
+  const [resetCodeSent, setResetCodeSent] = useState(false);
+  const [resetCode, setResetCode] = useState("");
+  // Kode dari email reset (bukan link): verifikasi kode lalu simpan password baru dari kolom di atas.
+  const verifyResetCode = async () => {
+    if (!resetCode.trim()) { setPwMsgOk(false); setPwMsg("Masukkan kode dari email."); return; }
+    if (pwNew.length < 8) { setPwMsgOk(false); setPwMsg("Password baru minimal 8 karakter."); return; }
+    if (pwNew !== pwConfirm) { setPwMsgOk(false); setPwMsg("Konfirmasi password tidak cocok."); return; }
+    setPwResetBusy(true); setPwMsg(""); setPwMsgOk(false);
+    try {
+      const { error: vErr } = await supabase.auth.verifyOtp({ email: userEmail, token: resetCode.trim(), type: "recovery" });
+      if (vErr) throw vErr;
+      const { error: uErr } = await supabase.auth.updateUser({ password: pwNew });
+      if (uErr) throw uErr;
+      setPwOld(""); setPwNew(""); setPwConfirm(""); setResetCode(""); setResetCodeSent(false);
+      setPwMsgOk(true); setPwMsg("✅ Password berhasil diganti.");
+    } catch (e) {
+      setPwMsg("Gagal ganti password: " + e.message);
+    } finally { setPwResetBusy(false); }
+  };
   const resetTurnstileRef = useRef(null);
   const resetTurnstileId = useRef(null);
   // Widget Turnstile yang sama dengan halaman login; Supabase mewajibkan captcha untuk kirim link reset.
@@ -84,9 +103,10 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(userEmail, { redirectTo: `${window.location.origin}/`, captchaToken: resetCaptcha });
       if (error) throw error;
-      setPwMsgOk(true); setPwMsg(`Link reset password sudah dikirim ke ${userEmail}. Buka link itu untuk membuat password baru.`);
+      setResetCodeSent(true);
+      setPwMsgOk(true); setPwMsg(`Kode reset sudah dikirim ke ${userEmail}. Masukkan kodenya di bawah, isi password baru, lalu simpan.`);
     } catch (e) {
-      setPwMsg("Gagal kirim link reset: " + e.message);
+      setPwMsg("Gagal kirim kode reset: " + e.message);
     } finally {
       setPwResetBusy(false);
       // Token captcha hanya bisa dipakai sekali; widget direset untuk percobaan berikutnya.
@@ -1121,6 +1141,14 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
             {pwResetBusy ? "Mengirim link…" : "Lupa password lama? Kirim link reset ke email"}
           </button>
           <div ref={resetTurnstileRef} className="pt-1" />
+          {resetCodeSent && (
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <input className={inp} placeholder="Kode dari email (6 digit)" inputMode="numeric" value={resetCode} onChange={(e) => setResetCode(e.target.value)} />
+              <button type="button" onClick={verifyResetCode} disabled={pwResetBusy} className="bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5">
+                {pwResetBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Simpan password baru dengan kode
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
