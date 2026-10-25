@@ -352,7 +352,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         }
         if (deal && wonTarget) {
           Object.assign(merged, dealFields(deal));
-          await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: deal.date, deal_value: deal.value, product_type: deal.product || merged.product || null });
+          await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: deal.date, deal_value: deal.value, product_type: deal.product || merged.product || null, sph_number: deal.sph, invoice_number: deal.invoice });
         } else if (deal) {
           // Tahap selain menang: data deal disimpan sebagai info lead, tidak dicatat sebagai transaksi (bukan omzet).
           Object.assign(merged, {
@@ -369,7 +369,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         if (!lead) throw new Error("Pilih lead terlebih dahulu.");
         const existing = (leads || []).find((l) => l.id === lead.id) || {};
         const wonLostStage = (stages || []).find((s) => s.type === closeResult);
-        if (deal) await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: deal.date, deal_value: deal.value, product_type: deal.product || existing.product || null });
+        if (deal) await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: deal.date, deal_value: deal.value, product_type: deal.product || existing.product || null, sph_number: deal.sph, invoice_number: deal.invoice });
         await db.upsertLead({ ...existing, id: lead.id, stage_key: wonLostStage?.key || existing.stage_key, ...(deal ? dealFields(deal) : {}) });
         await db.saveOutcome(lead.id, { result: closeResult, reason_category: "", reason: progressNote.trim(), ai_generated: true });
       } else if (action === "create_lead") {

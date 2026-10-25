@@ -1627,7 +1627,7 @@ export async function updateFaktur(lead, { value, date, invoice_number, payment_
   if (error) throw error;
 }
 
-export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type }) {
+export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type, sph_number, invoice_number }) {
   cekNilaiDeal(deal_value);
   const uid = (await supabase.auth.getUser()).data.user.id;
   const orgId = await getMyOrgId();
@@ -1636,6 +1636,7 @@ export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_v
     deal_value: Number(deal_value) || 0, tonnage: Number(tonnage) || 0,
     tonnage_unit: tonnage_unit || "ton", chemical: chemical || "",
     product_type: product_type?.trim() || null,
+    sph_number: sph_number?.trim() || null, invoice_number: invoice_number?.trim() || null,
   }).select().single();
   if (error) throw error;
   // Transaksi deal berarti lead sudah menang: tahapnya ikut pindah ke tahap menang kalau belum.

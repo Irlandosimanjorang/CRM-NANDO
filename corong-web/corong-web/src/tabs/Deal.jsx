@@ -312,6 +312,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
                         <span className="tabular-nums">{t.deal_date ? fmtDate(t.deal_date) : "—"}</span>
                         {t.product_type && <span>{t.product_type}</span>}
+                        {t.sph_number && <span>SPH {t.sph_number}</span>}
+                        {t.invoice_number && <span>Faktur {t.invoice_number}</span>}
                         {units && t.tonnage && <span className="font-mono">{qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : mask}</span>}
                       </div>
                       <div className="flex shrink-0 items-center gap-3 font-semibold tabular-nums text-slate-800">
