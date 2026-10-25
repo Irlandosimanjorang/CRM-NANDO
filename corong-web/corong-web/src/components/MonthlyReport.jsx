@@ -435,7 +435,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
           ))}
         </div>
         {/* Ekspor ke Google Sheet (25 Okt 2026): aktif untuk sales rep di paket Enterprise. */}
-        {!canManage && org?.plan === "enterprise" && (
+        {org?.plan === "enterprise" && (
           <button
             type="button"
             role="switch"
@@ -765,7 +765,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               </ul>
             </Panel>
           )}
-          {!canManage && org?.plan === "enterprise" && (
+          {org?.plan === "enterprise" && (
             <Panel className="mt-5 p-5">
               <PanelHeader title="Ekspor ke Google Sheet" meta="Lead yang ditugaskan ke kamu, jadi Sheet baru di Google Drive kamu." />
               <button

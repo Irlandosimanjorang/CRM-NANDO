@@ -30,7 +30,8 @@ async function requireSalesEnterprise(admin: any, authHeader: string) {
   if (!m) return { error: json({ error: "Organisasi tidak ditemukan." }, 403) };
   const { data: org } = await admin.from("organizations").select("plan").eq("id", m.org_id).maybeSingle();
   if (org?.plan !== "enterprise") return { error: json({ error: "Ekspor Google Sheet khusus paket Enterprise." }, 403) };
-  if (m.role !== "sales_rep") return { error: json({ error: "Ekspor Google Sheet hanya untuk sales." }, 403) };
+  // Owner juga boleh (untuk uji coba). Hanya lead yang di-assign ke user ini yang diekspor.
+  if (m.role !== "sales_rep" && m.role !== "owner") return { error: json({ error: "Ekspor Google Sheet hanya untuk sales." }, 403) };
   return { userId: u.user.id, orgId: m.org_id };
 }
 
