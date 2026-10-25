@@ -77,6 +77,13 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   const [sound, setSound] = useState(() => readLS(KEY.sound, "0") === "1");
   const audioRef = useRef(null);
 
+  // Judul tab browser untuk halaman TV (login maupun layar).
+  useEffect(() => {
+    const prev = document.title;
+    document.title = "Layar TV Nexto";
+    return () => { document.title = prev; };
+  }, []);
+
   useEffect(() => {
     if (!session) { setMfaNeeded(null); return; }
     let alive = true;
