@@ -138,6 +138,15 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const [viewRaw, setView] = useState("penjualan");
   // Ekspor laporan ke Google Sheet (25 Okt 2026): paket Enterprise, semua peran.
   const [sheetBusy, setSheetBusy] = useState(false);
+  const [sheetMenu, setSheetMenu] = useState(false);
+  const sheetRef = useRef(null);
+  useEffect(() => {
+    if (!sheetMenu) return undefined;
+    const off = (e) => { if (sheetRef.current && !sheetRef.current.contains(e.target)) setSheetMenu(false); };
+    const esc = (e) => { if (e.key === "Escape") setSheetMenu(false); };
+    document.addEventListener("mousedown", off); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", off); document.removeEventListener("keydown", esc); };
+  }, [sheetMenu]);
   // Anggota biasa: laporan lead miliknya saja, tanpa tab Iklan dan target tim.
   const personal = !canManage;
   const view = personal && viewRaw === "iklan" ? "penjualan" : viewRaw;
@@ -450,6 +459,25 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
 
     return [p, rc, rk];
   };
+  // Buka laporan sebagai Google Sheet baru (perlu koneksi Google sekali).
+  const openInSheets = async () => {
+    setSheetBusy(true);
+    try {
+      const tabs = await buildSheetTabs();
+      const res = await db.exportLeadsToSheet(tabs);
+      if (res.needs_connect) {
+        const c = await db.connectGoogleSheets();
+        window.location.href = c.url;
+        return;
+      }
+      window.open(res.url, "_blank", "noopener");
+    } catch (e) {
+      alert("Gagal membuka Google Sheet: " + (e?.message || e));
+    } finally {
+      setSheetBusy(false);
+    }
+  };
+
   // Unduh langsung sebagai file Excel (tanpa tab baru atau koneksi Google).
   const downloadReport = async () => {
     setSheetBusy(true);
@@ -532,17 +560,28 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
         </div>
         {/* Ekspor ke Google Sheet (25 Okt 2026): paket Enterprise, semua peran. */}
         {org?.plan === "enterprise" && (
-          <button
-            type="button"
-            onClick={downloadReport}
-            disabled={sheetBusy}
-            title={sheetBusy ? "Menyiapkan file…" : "Unduh laporan (Excel)"}
-            aria-label={sheetBusy ? "Menyiapkan file laporan" : "Unduh laporan (Excel)"}
-            aria-busy={sheetBusy}
-            className={cn("inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-emerald-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70", focus)}
-          >
-            {sheetBusy ? <Loader2 size={20} className="animate-spin" /> : <SheetsIcon size={22} />}
-          </button>
+          <div ref={sheetRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setSheetMenu((o) => !o)}
+              disabled={sheetBusy}
+              aria-haspopup="menu"
+              aria-expanded={sheetMenu}
+              aria-busy={sheetBusy}
+              title={sheetBusy ? "Menyiapkan file…" : "Ekspor laporan"}
+              aria-label={sheetBusy ? "Menyiapkan file laporan" : "Ekspor laporan"}
+              className={cn("inline-flex h-8 w-8 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white text-emerald-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow active:translate-y-0 active:scale-95 disabled:cursor-wait disabled:opacity-70 motion-reduce:transform-none motion-reduce:transition-none xl:w-auto xl:px-3", focus)}
+            >
+              {sheetBusy ? <Loader2 size={18} className="animate-spin" /> : <SheetsIcon size={18} />}
+              <span className="hidden text-[12.5px] font-semibold text-ink xl:inline">Ekspor</span>
+            </button>
+            {sheetMenu && (
+              <div role="menu" className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-float">
+                <button type="button" role="menuitem" onClick={() => { setSheetMenu(false); downloadReport(); }} className="flex w-full items-center rounded-lg px-3 py-2 text-left text-[12.5px] font-semibold text-ink hover:bg-slate-50">Unduh Excel (.xlsx)</button>
+                <button type="button" role="menuitem" onClick={() => { setSheetMenu(false); openInSheets(); }} className="flex w-full items-center rounded-lg px-3 py-2 text-left text-[12.5px] font-semibold text-ink hover:bg-slate-50">Buka di Google Sheet</button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
