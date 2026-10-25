@@ -127,7 +127,14 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ properties: { title: `Nexto - Lead ${new Date().toISOString().slice(0, 10)}` } }),
       });
-      if (!createResp.ok) return json({ error: "Gagal membuat Google Sheet: " + (await createResp.text()).slice(0, 200) }, 502);
+      if (!createResp.ok) {
+        const raw = await createResp.text();
+        // Google biasanya membalas JSON berisi error.message. Jika bukan JSON (mis. halaman HTML), kirim status HTTP saja.
+        let reason = `HTTP ${createResp.status}`;
+        try { reason += `: ${JSON.parse(raw).error?.message ?? raw}`; } catch { if (!raw.startsWith("<")) reason += `: ${raw.slice(0, 200)}`; }
+        console.log("[google-sheets] create failed", reason);
+        return json({ error: `Gagal membuat Google Sheet (${reason.slice(0, 300)})` }, 502);
+      }
       const sheet = await createResp.json();
 
       const valuesResp = await fetch(
