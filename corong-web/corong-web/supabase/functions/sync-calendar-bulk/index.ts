@@ -33,6 +33,12 @@
 // di kalender user. Pengingat popup 600 menit sebelumnya = 14:00 sehari
 // sebelum tanggal visit. Event yang sudah ada ikut diperbarui waktu sync
 // berikutnya (PATCH), jadi pengingatnya ikut berubah tanpa perlu dibuat ulang.
+//
+// === FOLLOW-UP (26 Okt 2026) ===
+// Dulu follow-up tidak pernah dibuat sebagai acara Google Calendar, padahal
+// kolom gcal_followup_event_id sudah ada. Sekarang lead yang punya tanggal
+// "Tunggu sampai" (wait_until) dibuatkan acara seharian "Follow-up: <nama>"
+// dengan isi langkah berikutnya (next_action).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -135,10 +141,10 @@ Deno.serve(async (req) => {
 
     const { data: leads } = await admin
       .from("leads")
-      .select("id, name, visit_date, visit_agenda, next_action, gcal_visit_event_id, gcal_followup_event_id")
+      .select("id, name, visit_date, visit_agenda, next_action, wait_until, gcal_visit_event_id, gcal_followup_event_id")
       .eq("assigned_to", userId)
       .is("deleted_at", null)
-      .or("visit_date.not.is.null,next_action.not.is.null");
+      .or("visit_date.not.is.null,wait_until.not.is.null");
 
     let visitSynced = 0;
     let followupSynced = 0;
@@ -152,6 +158,17 @@ Deno.serve(async (req) => {
         if (eventId) {
           await admin.from("leads").update({ gcal_visit_event_id: eventId }).eq("id", lead.id);
           visitSynced++;
+        }
+      }
+      // Follow-up: acara seharian di tanggal "Tunggu sampai", isinya langkah berikutnya.
+      if (lead.wait_until) {
+        const eventId = await upsertCalendarEvent(
+          accessToken, lead.gcal_followup_event_id,
+          `Follow-up: ${lead.name}`, lead.next_action || "Follow-up - Nexto", lead.wait_until
+        );
+        if (eventId) {
+          await admin.from("leads").update({ gcal_followup_event_id: eventId }).eq("id", lead.id);
+          followupSynced++;
         }
       }
     }

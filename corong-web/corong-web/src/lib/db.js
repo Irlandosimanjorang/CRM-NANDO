@@ -1030,7 +1030,7 @@ export async function upsertLead(lead) {
   // visit_date/next_action - gagal (belum connect Calendar, bukan Professional+,
   // dst) DIABAIKAN diem-diem, fail-open, gak boleh bikin simpen lead-nya gagal
   // cuma gara-gara sync Calendar-nya bermasalah.
-  if (row.visit_date || row.next_action) {
+  if (row.visit_date || row.next_action || row.wait_until) {
     bulkSyncCalendar().catch(() => {});
   }
 
