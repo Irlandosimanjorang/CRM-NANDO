@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 
@@ -17,14 +18,14 @@ const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada
 const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
 const MAX_SPEED = 26; // piksel per frame saat kursor tepat di tepi
 
-// Gaya bilah geser papan Kanban: track abu-abu muda (slate-200) dan thumb oranye Nexto (orange-600).
+// Gaya bilah geser papan Kanban: track abu-abu (slate-300, lebih jelas) 6px dan thumb oranye Nexto (orange-600) 18px.
 const NX_RANGE_CSS = `
-.nx-kanban-range{-webkit-appearance:none;appearance:none;width:100%;height:14px;background:transparent;cursor:pointer}
-.nx-kanban-range:focus{outline:none}
-.nx-kanban-range::-webkit-slider-runnable-track{height:3px;border-radius:999px;background:#e2e8f0}
-.nx-kanban-range::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5.5px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 3px rgba(15,23,42,.18)}
-.nx-kanban-range::-moz-range-track{height:3px;border-radius:999px;background:#e2e8f0}
-.nx-kanban-range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 3px rgba(15,23,42,.18)}
+.nx-kanban-range{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:transparent;cursor:pointer}
+.nx-kanban-range:focus-visible{outline:2px solid #ea580c;outline-offset:2px;border-radius:999px}
+.nx-kanban-range::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:#cbd5e1}
+.nx-kanban-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-6px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
+.nx-kanban-range::-moz-range-track{height:6px;border-radius:999px;background:#cbd5e1}
+.nx-kanban-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
 `;
 
 export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, onEditFaktur }) {
@@ -277,20 +278,35 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   return (
     <div className="mt-1">
-      {overflowPx > 0 && (
-        <>
-          <style>{NX_RANGE_CSS}</style>
-          <input
-            type="range"
-            className="nx-kanban-range mb-2"
-            min={0}
-            max={overflowPx}
-            value={Math.min(scrollPos, overflowPx)}
-            onChange={(e) => { const v = Number(e.target.value); setScrollPos(v); if (boardRef.current) boardRef.current.scrollLeft = v; }}
-            aria-label="Geser papan ke kiri atau kanan"
-          />
-        </>
-      )}
+      {overflowPx > 0 && (() => {
+        // Rentang tahap yang sedang terlihat (perkiraan dari lebar tiap kolom).
+        const total = (stages || []).length || 1;
+        const viewW = boardRef.current?.clientWidth || 0;
+        const colW = (overflowPx + viewW) / total;
+        const first = Math.min(total, Math.floor(scrollPos / colW) + 1);
+        const last = Math.min(total, Math.ceil((scrollPos + viewW) / colW));
+        const step = (dir) => boardRef.current?.scrollBy({ left: dir * viewW * 0.6, behavior: "smooth" });
+        const navBtn = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 disabled:cursor-default disabled:opacity-40";
+        return (
+          <>
+            <style>{NX_RANGE_CSS}</style>
+            <div className="mb-2 flex items-center gap-2">
+              <button type="button" onClick={() => step(-1)} disabled={scrollPos <= 0} className={navBtn} aria-label="Geser ke kiri"><ChevronLeft size={14} /></button>
+              <input
+                type="range"
+                className="nx-kanban-range min-w-0 flex-1"
+                min={0}
+                max={overflowPx}
+                value={Math.min(scrollPos, overflowPx)}
+                onChange={(e) => { const v = Number(e.target.value); setScrollPos(v); if (boardRef.current) boardRef.current.scrollLeft = v; }}
+                aria-label="Geser papan ke kiri atau kanan"
+              />
+              <button type="button" onClick={() => step(1)} disabled={scrollPos >= overflowPx - 1} className={navBtn} aria-label="Geser ke kanan"><ChevronRight size={14} /></button>
+              <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold tabular-nums text-slate-500">Tahap {first}–{last} dari {total}</span>
+            </div>
+          </>
+        );
+      })()}
     <div ref={boardRef} onScroll={(e) => setScrollPos(e.currentTarget.scrollLeft)} className="overflow-x-auto pb-4">
       {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} productOptions={productOptions} />}
       {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} productOptions={productOptions} />}
