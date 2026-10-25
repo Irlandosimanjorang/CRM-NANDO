@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
         Number(l.deal_value) || 0, l.deal_date || "", l.visit_date || "", l.last_contact || "", l.next_action || "",
       ]);
 
-      const createResp = await fetch("https://sheets.googleapis.com/v1/spreadsheets", {
+      const createResp = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ properties: { title: `Nexto - Lead ${new Date().toISOString().slice(0, 10)}` } }),
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
       const sheet = await createResp.json();
 
       const valuesResp = await fetch(
-        `https://sheets.googleapis.com/v1/spreadsheets/${sheet.spreadsheetId}/values/A1?valueInputOption=USER_ENTERED`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheet.spreadsheetId}/values/A1?valueInputOption=USER_ENTERED`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
