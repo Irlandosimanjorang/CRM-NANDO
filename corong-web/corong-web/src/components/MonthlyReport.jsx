@@ -664,7 +664,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               <button type="button" onClick={() => { setSrcF("all"); setStF("all"); }} tabIndex={filtered ? 0 : -1} aria-hidden={!filtered} className={cn("h-8 rounded-full px-2 text-[12px] font-semibold text-brand-strong hover:underline", focus, !filtered && "invisible")}>Reset</button>
             </>
           )}
-          {view === "penjualan" && <button type="button" onClick={printReport} title="Cetak / simpan PDF" aria-label="Cetak atau simpan PDF" className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50", focus)}><Printer size={14} /></button>}
+          {view === "penjualan" && <button type="button" onClick={printReport} title="Cetak / simpan PDF" aria-label="Cetak atau simpan PDF" className={cn("inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200", focus)}><Printer size={16} /></button>}
         </div>
       </div>
 
