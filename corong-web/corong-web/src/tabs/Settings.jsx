@@ -56,6 +56,19 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [showCleanup, setShowCleanup] = useState(() => !!getOpenModal("datacleanup"));
   const [showRecycleBin, setShowRecycleBin] = useState(() => !!getOpenModal("recyclebin"));
   const [pwOld, setPwOld] = useState("");
+  const [pwResetBusy, setPwResetBusy] = useState(false);
+  // Lupa password lama: kirim link reset ke email akun ini. Link membuka form password baru (App.jsx).
+  const sendPasswordReset = async () => {
+    if (!userEmail) { setPwMsgOk(false); setPwMsg("Email akun tidak ditemukan."); return; }
+    setPwResetBusy(true); setPwMsg(""); setPwMsgOk(false);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, { redirectTo: `${window.location.origin}/` });
+      if (error) throw error;
+      setPwMsgOk(true); setPwMsg(`Link reset password sudah dikirim ke ${userEmail}. Buka link itu untuk membuat password baru.`);
+    } catch (e) {
+      setPwMsg("Gagal kirim link reset: " + e.message);
+    } finally { setPwResetBusy(false); }
+  };
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
@@ -1078,6 +1091,9 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           {pwMsg && <div className={`text-xs rounded-lg p-2 ${pwMsgOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{pwMsg}</div>}
           <button onClick={changePassword} disabled={pwBusy} className="bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5">
             {pwBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Ganti Password
+          </button>
+          <button type="button" onClick={sendPasswordReset} disabled={pwResetBusy} className="text-xs text-slate-500 hover:text-slate-800 underline disabled:opacity-60 text-left">
+            {pwResetBusy ? "Mengirim link…" : "Lupa password lama? Kirim link reset ke email"}
           </button>
         </div>
       </div>
