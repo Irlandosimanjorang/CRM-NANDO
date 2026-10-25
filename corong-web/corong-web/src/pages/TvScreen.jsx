@@ -1,5 +1,5 @@
 // Layar TV Nexto (25 Okt 2026) - halaman /tv untuk ditampilkan di layar kantor.
-// Isi berputar tiap SCENE_MS: kunjungan hari ini, deal menang bulan ini, target tim.
+// Satu layar penuh, tanpa berganti-ganti: kunjungan hari ini, deal menang bulan ini, target tim.
 // Tetap pakai login akun di browser TV (tidak ada token khusus). Data ikut berubah realtime.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Maximize2, Minimize2, LogOut } from "lucide-react";
@@ -9,14 +9,10 @@ import TvLogin from "./TvLogin";
 import { fmtRp } from "../lib/helpers";
 import { periodStart, collectWins, groupWinsBySales, initialsOf } from "../lib/winBoard";
 
-const SCENE_MS = 12000;
 const RELOAD_MS = 60000;
 const DEBOUNCE_MS = 1500;
-const SCENES = [
-  { key: "visits", label: "Kunjungan hari ini", accent: "text-sky-300", bar: "bg-sky-300" },
-  { key: "wins", label: "Deal menang bulan ini", accent: "text-emerald-300", bar: "bg-emerald-300" },
-  { key: "target", label: "Target tim bulan ini", accent: "text-amber-300", bar: "bg-amber-300" },
-];
+const VISIT_ROWS = 7;
+const WIN_ROWS = 6;
 const EMPTY = { loaded: false, orgId: null, org: null, stages: [], leads: [], members: [], targets: {}, visits: [] };
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -36,7 +32,6 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   // undefined = belum dicek, null = belum login.
   const [session, setSession] = useState(undefined);
   const [data, setData] = useState(EMPTY);
-  const [sceneIdx, setSceneIdx] = useState(0);
   const [now, setNow] = useState(() => new Date());
   const [fullscreen, setFullscreen] = useState(false);
   // null = belum dicek, true = akun wajib 2FA dan belum diverifikasi di browser ini.
@@ -114,11 +109,6 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   }, [session, data.orgId, load]);
 
   useEffect(() => {
-    const t = setInterval(() => setSceneIdx((i) => (i + 1) % SCENES.length), SCENE_MS);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
@@ -131,6 +121,14 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   const groups = useMemo(() => groupWinsBySales(wins), [wins]);
   const monthTotal = wins.reduce((s, w) => s + w.value, 0);
   const targetTotal = Object.values(data.targets).reduce((s, v) => s + v, 0);
+  const targetRows = data.members
+    .filter((m) => (data.targets[m.user_id] || 0) > 0)
+    .map((m) => {
+      const target = data.targets[m.user_id];
+      const value = groups.find((g) => g.uid === m.user_id)?.total || 0;
+      return { uid: m.user_id, name: m.display_name || "Tim", target, value, pct: Math.min(100, Math.round((value / target) * 100)) };
+    })
+    .sort((a, b) => b.pct - a.pct);
 
   if (session === undefined) return <div className="min-h-screen bg-[#0b1020]" />;
   if (!session) return <TvLogin />;
@@ -145,17 +143,17 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
     );
   }
 
-  const scene = SCENES[sceneIdx];
-  const todayVisits = data.visits.length;
-
   return (
-    <div className="flex min-h-screen flex-col bg-[#0b1020] text-slate-100 select-none">
-      <style>{"@keyframes nxTvBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes nxTvIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}.nx-tv-in{animation:nxTvIn .6s cubic-bezier(.2,.7,.2,1) both}@media (prefers-reduced-motion:reduce){.nx-tv-in{animation:none}.nx-tv-bar{animation:none!important}}"}</style>
+    <div className="flex h-screen flex-col overflow-hidden bg-[#0b1020] text-slate-100 select-none">
+      <style>{"@keyframes nxTvIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}.nx-tv-in{animation:nxTvIn .7s cubic-bezier(.2,.7,.2,1) both}@media (prefers-reduced-motion:reduce){.nx-tv-in{animation:none}}"}</style>
 
-      <header className="flex items-center justify-between gap-6 px-10 pt-8">
-        <p className="truncate text-[22px] font-semibold tracking-[-0.01em] text-slate-300">{data.org?.name || "Nexto"}</p>
-        <div className="flex items-center gap-4">
-          <p className="text-[22px] font-medium tabular-nums text-slate-400">{wibClock(now)}</p>
+      <header className="flex shrink-0 items-center justify-between gap-6 px-12 pt-8">
+        <div className="min-w-0">
+          <p className="truncate text-[15px] text-slate-500">{wibDate(now).split("-").reverse().join("/")}</p>
+          <p className="truncate text-[30px] font-semibold tracking-[-0.02em] text-slate-100">{data.org?.name || "Nexto"}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="mr-3 text-[30px] font-medium tabular-nums text-slate-400">{wibClock(now)}</p>
           <button type="button" onClick={() => supabase.auth.signOut()} aria-label="Keluar dari akun"
             className="grid h-10 w-10 place-items-center rounded-full text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200">
             <LogOut size={18} />
@@ -167,88 +165,73 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
         </div>
       </header>
 
-      <div className="relative mx-10 mt-6 h-1 overflow-hidden rounded-full bg-white/10">
-        <div key={sceneIdx} className="nx-tv-bar h-full origin-left bg-white/70" style={{ animation: `nxTvBar ${SCENE_MS}ms linear forwards` }} />
-      </div>
-
       {!data.loaded ? (
         <main className="flex flex-1 items-center justify-center text-[24px] text-slate-500">Memuat data...</main>
       ) : (
-        <main key={scene.key} className="nx-tv-in flex flex-1 flex-col px-10 pb-10 pt-10">
-          <p className={"text-[20px] font-semibold " + scene.accent}>{scene.label}</p>
+        <main className="nx-tv-in grid min-h-0 flex-1 grid-cols-3 gap-0 px-12 pb-12 pt-10">
+          {/* Kolom 1: kunjungan hari ini */}
+          <section className="flex min-h-0 flex-col pr-10">
+            <p className="text-[18px] font-semibold text-sky-300">Kunjungan hari ini</p>
+            <p className="mt-3 text-[104px] font-bold leading-none tracking-[-0.04em] tabular-nums">{data.visits.length}</p>
+            <p className="mt-2 text-[20px] text-slate-400">kunjungan tercatat</p>
+            <ul className="mt-10 min-h-0 flex-1 overflow-hidden">
+              {data.visits.slice(0, VISIT_ROWS).map((v, i) => (
+                <li key={`${v.lead_id}-${v.checked_in_at}-${i}`} className="flex items-baseline gap-4 border-t border-white/10 py-4">
+                  <span className="w-16 shrink-0 text-[18px] tabular-nums text-sky-300">{wibTime(v.checked_in_at)}</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-[24px] font-semibold tracking-[-0.01em]">{v.lead_name || "Tanpa nama"}</p>
+                    <p className="truncate text-[16px] text-slate-400">{nameOf(v.user_id)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {data.visits.length === 0 && <p className="mt-10 text-[22px] text-slate-500">Belum ada kunjungan hari ini.</p>}
+          </section>
 
-          {scene.key === "visits" && (
-            <>
-              <p className="mt-2 text-[72px] font-bold leading-none tracking-[-0.03em] tabular-nums">{todayVisits}<span className="ml-4 text-[28px] font-medium text-slate-400">kunjungan</span></p>
-              <ul className="mt-10 grid gap-x-12 gap-y-6 md:grid-cols-2">
-                {data.visits.slice(0, 8).map((v, i) => (
-                  <li key={`${v.lead_id}-${v.checked_in_at}-${i}`} className="flex items-baseline gap-5 border-b border-white/10 pb-4">
-                    <span className="w-20 shrink-0 text-[22px] tabular-nums text-sky-300">{wibTime(v.checked_in_at)}</span>
-                    <div className="min-w-0">
-                      <p className="truncate text-[30px] font-semibold tracking-[-0.02em]">{v.lead_name || "Tanpa nama"}</p>
-                      <p className="text-[18px] text-slate-400">{nameOf(v.user_id)}</p>
+          {/* Kolom 2: deal menang bulan ini */}
+          <section className="flex min-h-0 flex-col border-l border-white/10 px-10">
+            <p className="text-[18px] font-semibold text-emerald-300">Deal menang bulan ini</p>
+            <p className="mt-3 truncate text-[56px] font-bold leading-none tracking-[-0.04em] tabular-nums">{monthTotal > 0 ? fmtRp(monthTotal) : "Belum diisi"}</p>
+            <p className="mt-2 text-[20px] text-slate-400">{wins.length} deal menang</p>
+            <ul className="mt-10 min-h-0 flex-1 overflow-hidden">
+              {wins.slice(0, WIN_ROWS).map((w) => (
+                <li key={w.id} className="flex items-center justify-between gap-5 border-t border-white/10 py-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-[24px] font-semibold tracking-[-0.01em]">{w.name}</p>
+                    <p className="truncate text-[16px] text-slate-400">{w.sales} · {w.ago}</p>
+                  </div>
+                  <p className="shrink-0 text-[22px] font-semibold tabular-nums text-emerald-300">{w.value > 0 ? fmtRp(w.value) : "Belum diisi"}</p>
+                </li>
+              ))}
+            </ul>
+            {wins.length === 0 && <p className="mt-10 text-[22px] text-slate-500">Belum ada deal menang bulan ini.</p>}
+          </section>
+
+          {/* Kolom 3: target tim */}
+          <section className="flex min-h-0 flex-col border-l border-white/10 pl-10">
+            <p className="text-[18px] font-semibold text-amber-300">Target tim bulan ini</p>
+            <p className="mt-3 truncate text-[56px] font-bold leading-none tracking-[-0.04em] tabular-nums">{fmtRp(monthTotal)}</p>
+            <p className="mt-2 text-[20px] text-slate-400">{targetTotal > 0 ? `dari ${fmtRp(targetTotal)}` : "target belum diisi di tab Team"}</p>
+            <ul className="mt-10 min-h-0 flex-1 overflow-hidden">
+              {targetRows.map((r) => (
+                <li key={r.uid} className="flex items-center gap-5 border-t border-white/10 py-4">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/5 text-[16px] font-semibold text-slate-300 ring-1 ring-white/10">{initialsOf(r.name)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <p className="truncate text-[22px] font-semibold">{r.name}</p>
+                      <p className="shrink-0 text-[18px] font-semibold tabular-nums text-amber-300">{r.pct}%</p>
                     </div>
-                  </li>
-                ))}
-              </ul>
-              {todayVisits === 0 && <p className="mt-10 text-[26px] text-slate-500">Belum ada kunjungan hari ini.</p>}
-            </>
-          )}
-
-          {scene.key === "wins" && (
-            <>
-              <p className="mt-2 text-[72px] font-bold leading-none tracking-[-0.03em] tabular-nums">{monthTotal > 0 ? fmtRp(monthTotal) : "Belum diisi"}</p>
-              <p className="mt-3 text-[22px] text-slate-400">{wins.length} deal menang</p>
-              <ul className="mt-10 grid gap-x-12 gap-y-6 md:grid-cols-2">
-                {wins.slice(0, 6).map((w) => (
-                  <li key={w.id} className="flex items-center justify-between gap-6 border-b border-white/10 pb-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-[30px] font-semibold tracking-[-0.02em]">{w.name}</p>
-                      <p className="text-[18px] text-slate-400">{w.sales} · {w.ago}</p>
+                    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-amber-300 transition-[width] duration-700" style={{ width: `${r.pct}%` }} />
                     </div>
-                    <p className="shrink-0 text-[26px] font-semibold tabular-nums text-emerald-300">{w.value > 0 ? fmtRp(w.value) : "Nilai belum diisi"}</p>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          {scene.key === "target" && (
-            <>
-              <p className="mt-2 text-[72px] font-bold leading-none tracking-[-0.03em] tabular-nums">{monthTotal > 0 ? fmtRp(monthTotal) : "Rp 0"}<span className="ml-4 text-[28px] font-medium text-slate-400">{targetTotal > 0 ? `dari ${fmtRp(targetTotal)}` : "belum ada target"}</span></p>
-              <ul className="mt-10 grid gap-6">
-                {data.members.filter((m) => (data.targets[m.user_id] || 0) > 0).map((m) => {
-                  const target = data.targets[m.user_id];
-                  const value = groups.find((g) => g.uid === m.user_id)?.total || 0;
-                  const pct = Math.min(100, Math.round((value / target) * 100));
-                  return (
-                    <li key={m.user_id} className="flex items-center gap-6">
-                      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white/5 text-[18px] font-semibold text-slate-300 ring-1 ring-white/10">{initialsOf(m.display_name)}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-4">
-                          <p className="truncate text-[26px] font-semibold">{m.display_name || "Tim"}</p>
-                          <p className="shrink-0 text-[20px] tabular-nums text-slate-300">{pct}%</p>
-                        </div>
-                        <div className="mt-2 h-3 overflow-hidden rounded-full bg-white/10">
-                          <div className={"h-full rounded-full transition-[width] duration-700 " + scene.bar} style={{ width: `${pct}%` }} />
-                        </div>
-                        <p className="mt-1.5 text-[16px] tabular-nums text-slate-500">{fmtRp(value)} dari {fmtRp(target)}</p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              {targetTotal === 0 && <p className="mt-10 text-[26px] text-slate-500">Target belum diisi di tab Team.</p>}
-            </>
-          )}
+                    <p className="mt-1.5 text-[14px] tabular-nums text-slate-500">{fmtRp(r.value)} dari {fmtRp(r.target)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         </main>
       )}
-
-      <footer className="flex items-center justify-center gap-3 pb-8">
-        {SCENES.map((s, i) => (
-          <span key={s.key} className={"h-2 rounded-full transition-all " + (i === sceneIdx ? `w-8 ${s.bar}` : "w-2 bg-white/20")} />
-        ))}
-      </footer>
     </div>
   );
 }
