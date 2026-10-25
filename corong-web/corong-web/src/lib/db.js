@@ -1638,6 +1638,15 @@ export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_v
     product_type: product_type?.trim() || null,
   }).select().single();
   if (error) throw error;
+  // Transaksi deal berarti lead sudah menang: tahapnya ikut pindah ke tahap menang kalau belum.
+  // Transaksi sudah tercatat di atas, jadi pemicu otomatis tidak menulis transaksi ganda.
+  const stages = await getStages();
+  const wonKey = stages.find((s) => s.type === "won")?.key;
+  const { data: lead } = await supabase.from("leads").select("stage_key").eq("id", lead_id).maybeSingle();
+  if (wonKey && lead && !stages.some((s) => s.key === lead.stage_key && s.type === "won")) {
+    const { error: e2 } = await supabase.from("leads").update({ stage_key: wonKey }).eq("id", lead_id);
+    if (e2) throw e2;
+  }
   return data;
 }
 

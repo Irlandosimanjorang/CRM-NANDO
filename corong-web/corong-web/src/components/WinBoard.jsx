@@ -5,7 +5,7 @@ import { X, Volume2, VolumeX, Trophy, Eye } from "lucide-react";
 import * as db from "../lib/db";
 import { Panel, PanelHeader } from "../ui";
 import { fmtRp } from "../lib/helpers";
-import { WIN_WINDOW_DAYS, WIN_PERIODS, periodStart, collectWins, groupWinsBySales, initialsOf } from "../lib/winBoard";
+import { WIN_WINDOW_DAYS, WIN_PERIODS, periodStart, collectDealWins, groupWinsBySales, initialsOf } from "../lib/winBoard";
 
 const KEY = { hidden: "nexto-win-board-hidden", period: "nexto-win-period", sound: "nexto-win-sound", seen: "nexto-win-seen" };
 const SEEN_LIMIT = 300;
@@ -37,7 +37,7 @@ function playChime(audioRef) {
   } catch (_) {}
 }
 
-export default function WinBoard({ leads, stages, members, onOpenLead }) {
+export default function WinBoard({ leads, deals, members, onOpenLead }) {
   const [hidden, setHidden] = useState(() => readLS(KEY.hidden, "0") === "1");
   const [period, setPeriod] = useState(() => readLS(KEY.period, "7"));
   const [sound, setSound] = useState(() => readLS(KEY.sound, "0") === "1");
@@ -46,11 +46,11 @@ export default function WinBoard({ leads, stages, members, onOpenLead }) {
   const audioRef = useRef(null);
 
   // Kemenangan periode terpilih, dan kemenangan bulan ini (untuk progres target).
-  const wins = useMemo(() => collectWins(leads, stages, members, periodStart(period)), [leads, stages, members, period]);
+  const wins = useMemo(() => collectDealWins(deals, members, periodStart(period)), [deals, members, period]);
   const groups = useMemo(() => groupWinsBySales(wins), [wins]);
   const monthBySales = useMemo(
-    () => new Map(groupWinsBySales(collectWins(leads, stages, members, periodStart("month"))).map((g) => [g.uid, g])),
-    [leads, stages, members]
+    () => new Map(groupWinsBySales(collectDealWins(deals, members, periodStart("month"))).map((g) => [g.uid, g])),
+    [deals, members]
   );
 
   // Target sales bulan ini. Kosong kalau belum diisi atau akun tidak punya akses.
@@ -65,7 +65,7 @@ export default function WinBoard({ leads, stages, members, onOpenLead }) {
   }, []);
 
   // Deal baru yang menang: toast + suara, sekali per deal. Saat pertama kali dibuka hanya dicatat, tidak ada toast.
-  const recent = useMemo(() => collectWins(leads, stages, members, periodStart(String(WIN_WINDOW_DAYS))), [leads, stages, members]);
+  const recent = useMemo(() => collectDealWins(deals, members, periodStart(String(WIN_WINDOW_DAYS))), [deals, members]);
   useEffect(() => {
     const raw = readLS(KEY.seen, null);
     const ids = recent.map((w) => w.id);
@@ -169,7 +169,7 @@ export default function WinBoard({ leads, stages, members, onOpenLead }) {
                 const firstThisMonth = monthly?.count === 1;
                 return (
                   <li key={g.uid || g.sales}>
-                    <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === g.latest.id))} className="flex w-full flex-col gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white">
+                    <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === g.latest.leadId))} className="flex w-full flex-col gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white">
                       <div className="flex items-center gap-3">
                         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[13px] font-semibold text-slate-600 ring-1 ring-slate-200">{initialsOf(g.sales)}</span>
                         <div className="min-w-0 flex-1">

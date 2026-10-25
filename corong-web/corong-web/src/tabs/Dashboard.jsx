@@ -327,7 +327,7 @@ export default function Dashboard({
       </section>}
 
       {/* Angka utama - satu panel dengan garis pemisah, bukan 4 kartu. */}
-      {showWinBoard && <WinBoard leads={leads} stages={stages} members={members} onOpenLead={onOpenLead} />}
+      {showWinBoard && <WinBoard leads={leads} deals={dealTransactions} members={members} onOpenLead={onOpenLead} />}
 
       <StatRow>
         <Stat value={stats.total} label="Total lead" hint={`${stats.won} menang, ${stats.lost} kalah`} />

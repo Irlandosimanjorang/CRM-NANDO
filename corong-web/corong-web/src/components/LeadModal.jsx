@@ -207,7 +207,12 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const aiOff = useAiOff();
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
-  const [f, setF] = useState({ ...lead, ...(draft?.f || {}) });
+  // Tahap dari draft hanya dipakai kalau tahap lead di server belum berubah sejak draft dibuat
+  // (misalnya sudah dipindah lewat NEX Pro). Kalau tidak, tahap lama dari draft menimpa pindah tahap yang baru.
+  const [f, setF] = useState(() => {
+    const keepDraftStage = draft && draft.baseStageKey === lead.stage_key;
+    return { ...lead, ...(draft?.f || {}), stage_key: keepDraftStage ? draft.f?.stage_key ?? lead.stage_key : lead.stage_key };
+  });
   const [log, setLog] = useState(lead.progressLog || []);
   const [newProg, setNewProg] = useState("");
   const [editingId, setEditingId] = useState(null);
@@ -327,7 +332,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     if (isUnchanged) return;
     try {
       localStorage.setItem(LEAD_DRAFT_KEY, JSON.stringify({
-        leadId: leadDraftId, f, showOutcome, outcomeResult, outcomeCategory, outcomeReason,
+        leadId: leadDraftId, baseStageKey: lead.stage_key, f, showOutcome, outcomeResult, outcomeCategory, outcomeReason,
         showEmail, emailTpl, emailSubject, emailBody, savedAt: Date.now(),
       }));
     } catch (_) {}

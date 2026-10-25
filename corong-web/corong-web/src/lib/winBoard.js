@@ -1,5 +1,5 @@
-// Papan kemenangan tim (25 Okt 2026) - kemenangan (deal masuk tahap menang) dalam
-// periode yang dipilih, dipakai komponen components/WinBoard.jsx.
+// Papan kemenangan tim (25 Okt 2026) - kemenangan dihitung dari catatan transaksi deal
+// (deal_transactions), sama dengan tab Deal dan omzet di layar TV.
 //
 // Deal dengan nilai Rp 0 tetap tampil sebagai kemenangan, tapi ditandai
 // "Nilai belum diisi" (value = 0), supaya tidak terbaca sebagai deal gagal.
@@ -34,25 +34,28 @@ export function initialsOf(name) {
   return (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
 }
 
+// Waktu deal dalam ms: tanggal deal (WIB, tanpa jam) kalau ada, kalau tidak waktu input.
+function dealWhen(d) {
+  return d.deal_date ? new Date(`${d.deal_date}T00:00:00+07:00`).getTime() : new Date(d.created_at).getTime();
+}
+
 /**
- * Kemenangan sejak fromMs, terbaru di atas.
- * Tiap item: id, name, value, uid (sales), sales (nama, atau "Tim"), when (ms), ago (teks).
+ * Kemenangan (catatan deal) sejak fromMs, terbaru di atas.
+ * Tiap item: id, leadId, name, value, uid (sales), sales (nama, atau "Tim"), when (ms), ago (teks).
  */
-export function collectWins(leads, stages, members = [], fromMs = periodStart("7"), now = Date.now()) {
-  const wonKeys = new Set((stages || []).filter((s) => s.type === "won").map((s) => s.key));
+export function collectDealWins(deals, members = [], fromMs = periodStart("7"), now = Date.now()) {
   const nameOf = (uid) => (members || []).find((m) => m.user_id === uid)?.display_name || "";
   const out = [];
-  for (const l of leads || []) {
-    if (l.deleted_at || !wonKeys.has(l.stage_key)) continue;
-    const when = l.deal_date ? new Date(l.deal_date).getTime() : new Date(l.updated_at).getTime();
+  for (const d of deals || []) {
+    const when = dealWhen(d);
     if (isNaN(when) || when < fromMs) continue;
-    const uid = l.assigned_to || l.user_id || null;
     out.push({
-      id: l.id,
-      name: l.name,
-      value: Number(l.deal_value) || 0,
-      uid,
-      sales: nameOf(uid) || "Tim",
+      id: d.id,
+      leadId: d.lead_id,
+      name: d.lead_name || "Tanpa nama",
+      value: Number(d.deal_value) || 0,
+      uid: d.user_id,
+      sales: nameOf(d.user_id) || "Tim",
       when,
       ago: formatAgo(now - when),
     });
