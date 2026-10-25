@@ -1143,7 +1143,7 @@ export default function App() {
                   rekam meeting, dst) yang lagi jalan di tab manapun GAK KEPUTUS
                   cuma gara-gara user pindah tab pas nungguin. ---- */}
               <div style={{ display: effectiveTab === "dashboard" ? "block" : "none" }}>
-                <Dashboard leads={leads} stages={stageList} members={orgMembers} showWinBoard={session?.user?.email === "simanjorangirlando@gmail.com"} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} hideAiRecs={monitorOwner} myUid={session?.user?.id} projectDeal={hasOrgFeature(org, "project_deal")} />
+                <Dashboard leads={leads} stages={stageList} members={orgMembers} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} hideAiRecs={monitorOwner} myUid={session?.user?.id} projectDeal={hasOrgFeature(org, "project_deal")} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
                 <Leads onLocalDeal={applyLocalDeal} leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} projectDeal={hasOrgFeature(org, "project_deal")} invoicePipeline={hasOrgFeature(org, "invoice_pipeline")} />

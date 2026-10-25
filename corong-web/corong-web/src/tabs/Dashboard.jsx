@@ -10,7 +10,6 @@ import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../u
 import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
 import { NEW_LEAD_MINUTES, collectUntouchedNewLeads, formatAge } from "../lib/newLeadsIdle";
 import { todayISO, fmtRp } from "../lib/helpers";
-import WinBoard from "../components/WinBoard";
 
 // Kartu dashboard: sudut lebih membulat, bayangan lembut, dan jarak dalam lebih lega (gaya kartu Nexto yang baru).
 const DASH_CARD = "!rounded-[28px] border-slate-200/60 shadow-[0_2px_6px_rgba(15,23,42,0.05),0_18px_40px_-18px_rgba(15,23,42,0.22)]";
@@ -40,7 +39,6 @@ export default function Dashboard({
   myUid = null,
   projectDeal = false,
   members = [],
-  showWinBoard = false,
 }) {
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
   const myIdle = useMemo(
@@ -327,7 +325,6 @@ export default function Dashboard({
       </section>}
 
       {/* Angka utama - satu panel dengan garis pemisah, bukan 4 kartu. */}
-      {showWinBoard && <WinBoard leads={leads} deals={dealTransactions} members={members} onOpenLead={onOpenLead} />}
 
       <StatRow>
         <Stat value={stats.total} label="Total lead" hint={`${stats.won} menang, ${stats.lost} kalah`} />
