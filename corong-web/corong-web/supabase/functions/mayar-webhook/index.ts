@@ -71,6 +71,8 @@ const AMOUNT_TO_TIER = {
   4050000: "enterprise", // Enterprise, 3 bulan (draft 15 Sep 2026, gak jadi dipakai)
   3588000: "enterprise", // Enterprise, 3 bulan (early bird, 16 Sep 2026 - legacy sejak 22 Sep)
   2988000: "enterprise", // Enterprise, 3 bulan (early bird FINAL, 22 Sep 2026 - 996rb x 3, v1 & v2 sama)
+  2990000: "enterprise", // Enterprise, 3 bulan (early bird BARU, 25 Okt 2026 - total 2.99jt, per orang 249rb)
+  5390000: "enterprise", // Enterprise, 6 bulan (early bird BARU, 25 Okt 2026 - total 5.39jt, per orang 225rb)
   3315000: "enterprise", // Enterprise, 3 bulan (diskon 15%, harga LAMA - legacy)
 };
 
@@ -120,6 +122,8 @@ const AMOUNT_TO_MONTHS = {
   4050000: 3,
   3588000: 3,
   2988000: 3,
+  2990000: 3,
+  5390000: 6,
   3315000: 3,
 };
 
