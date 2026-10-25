@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Save, Plus, X, Trash2, Download, Loader2, Zap, Mic, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot, Smartphone, Share, MoreVertical, Eye, EyeOff } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
@@ -57,17 +57,42 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [showRecycleBin, setShowRecycleBin] = useState(() => !!getOpenModal("recyclebin"));
   const [pwOld, setPwOld] = useState("");
   const [pwResetBusy, setPwResetBusy] = useState(false);
+  const [resetCaptcha, setResetCaptcha] = useState("");
+  const resetTurnstileRef = useRef(null);
+  const resetTurnstileId = useRef(null);
+  // Widget Turnstile yang sama dengan halaman login; Supabase mewajibkan captcha untuk kirim link reset.
+  useEffect(() => {
+    let cancelled = false;
+    const tryRender = () => {
+      if (cancelled || !resetTurnstileRef.current || resetTurnstileId.current) return;
+      if (!window.turnstile) { setTimeout(tryRender, 200); return; }
+      resetTurnstileId.current = window.turnstile.render(resetTurnstileRef.current, {
+        sitekey: "0x4AAAAAAEu6vGXceQD1CTOl",
+        callback: (token) => setResetCaptcha(token),
+        "expired-callback": () => setResetCaptcha(""),
+        "error-callback": () => setResetCaptcha(""),
+      });
+    };
+    tryRender();
+    return () => { cancelled = true; };
+  }, []);
   // Lupa password lama: kirim link reset ke email akun ini. Link membuka form password baru (App.jsx).
   const sendPasswordReset = async () => {
     if (!userEmail) { setPwMsgOk(false); setPwMsg("Email akun tidak ditemukan."); return; }
+    if (!resetCaptcha) { setPwMsgOk(false); setPwMsg("Selesaikan verifikasi captcha dulu, lalu klik lagi."); return; }
     setPwResetBusy(true); setPwMsg(""); setPwMsgOk(false);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, { redirectTo: `${window.location.origin}/` });
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, { redirectTo: `${window.location.origin}/`, captchaToken: resetCaptcha });
       if (error) throw error;
       setPwMsgOk(true); setPwMsg(`Link reset password sudah dikirim ke ${userEmail}. Buka link itu untuk membuat password baru.`);
     } catch (e) {
       setPwMsg("Gagal kirim link reset: " + e.message);
-    } finally { setPwResetBusy(false); }
+    } finally {
+      setPwResetBusy(false);
+      // Token captcha hanya bisa dipakai sekali; widget direset untuk percobaan berikutnya.
+      setResetCaptcha("");
+      if (window.turnstile && resetTurnstileId.current) window.turnstile.reset(resetTurnstileId.current);
+    }
   };
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
@@ -1095,6 +1120,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
           <button type="button" onClick={sendPasswordReset} disabled={pwResetBusy} className="text-xs text-slate-500 hover:text-slate-800 underline disabled:opacity-60 text-left">
             {pwResetBusy ? "Mengirim link…" : "Lupa password lama? Kirim link reset ke email"}
           </button>
+          <div ref={resetTurnstileRef} className="pt-1" />
         </div>
       </div>
 
