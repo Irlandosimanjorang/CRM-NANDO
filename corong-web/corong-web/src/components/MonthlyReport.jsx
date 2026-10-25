@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Printer, Presentation, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Printer, Presentation, Info, FileSpreadsheet } from "lucide-react";
 import { downloadReportPpt } from "../lib/reportPpt";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
@@ -505,8 +505,9 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             type="button"
             onClick={exportSheet}
             disabled={sheetBusy}
-            className={cn("inline-flex items-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
+            className={cn("inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
           >
+            <FileSpreadsheet size={14} className="text-emerald-700" />
             {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
           </button>
         )}
@@ -834,8 +835,9 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                 type="button"
                 onClick={exportSheet}
                 disabled={sheetBusy}
-                className={cn("mt-3 inline-flex items-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
+                className={cn("mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
               >
+                <FileSpreadsheet size={14} className="text-emerald-700" />
                 {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
               </button>
             </Panel>
