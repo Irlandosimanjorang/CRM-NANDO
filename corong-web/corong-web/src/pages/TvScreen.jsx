@@ -7,13 +7,13 @@ import * as db from "../lib/db";
 import { supabase } from "../lib/supabaseClient";
 import TvLogin from "./TvLogin";
 import { fmtRp } from "../lib/helpers";
-import { periodStart, collectWins, groupWinsBySales, initialsOf } from "../lib/winBoard";
+import { formatAgo, initialsOf } from "../lib/winBoard";
 
 const RELOAD_MS = 60000;
 const DEBOUNCE_MS = 1500;
 const VISIT_ROWS = 7;
 const WIN_ROWS = 6;
-const EMPTY = { loaded: false, orgId: null, org: null, stages: [], leads: [], members: [], targets: {}, visits: [] };
+const EMPTY = { loaded: false, orgId: null, org: null, stages: [], leads: [], members: [], targets: {}, visits: [], deals: [] };
 
 const pad = (n) => String(n).padStart(2, "0");
 // Tanggal hari ini dalam WIB, format YYYY-MM-DD.
@@ -69,13 +69,14 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
 
   const load = useCallback(async () => {
     const today = wibDate();
-    const [org, stages, leads, members, targetRows, visits] = await Promise.all([
+    const [org, stages, leads, members, targetRows, visits, deals] = await Promise.all([
       db.getMyOrg().catch(() => null),
       db.getStages().catch(() => []),
       db.getLeads().catch(() => []),
       db.getOrgMembers().catch(() => []),
       db.getTeamTargets(`${today.slice(0, 7)}-01`).catch(() => []),
       fetchVisits(today, today).catch(() => []),
+      db.getDealTransactions().catch(() => []),
     ]);
     setData({
       loaded: true,
@@ -86,6 +87,7 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
       members: members || [],
       targets: Object.fromEntries((targetRows || []).map((r) => [r.user_id, Number(r.target) || 0])),
       visits: visits || [],
+      deals: deals || [],
     });
   }, [fetchVisits]);
 
@@ -114,11 +116,31 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   }, []);
 
   const nameOf = useCallback((uid) => data.members.find((m) => m.user_id === uid)?.display_name || "Tim", [data.members]);
-  const wins = useMemo(
-    () => collectWins(data.leads, data.stages, data.members, periodStart("month")),
-    [data.leads, data.stages, data.members]
-  );
-  const groups = useMemo(() => groupWinsBySales(wins), [wins]);
+  // Angka omzet mengikuti tab Deal: catatan transaksi deal (deal_transactions), bukan tahap lead.
+  const wins = useMemo(() => {
+    const ym = wibDate().slice(0, 7);
+    return data.deals
+      .filter((d) => (d.deal_date || "").slice(0, 7) === ym)
+      .map((d) => ({
+        id: d.id,
+        name: d.lead_name || "Tanpa nama",
+        value: Number(d.deal_value) || 0,
+        uid: d.user_id,
+        sales: nameOf(d.user_id),
+        when: new Date(d.created_at).getTime(),
+      }))
+      .sort((a, b) => b.when - a.when)
+      .map((w) => ({ ...w, ago: formatAgo(Date.now() - w.when) }));
+  }, [data.deals, nameOf]);
+  const groups = useMemo(() => {
+    const m = new Map();
+    for (const w of wins) {
+      const g = m.get(w.uid) || { uid: w.uid, total: 0 };
+      g.total += w.value;
+      m.set(w.uid, g);
+    }
+    return [...m.values()];
+  }, [wins]);
   const monthTotal = wins.reduce((s, w) => s + w.value, 0);
   const targetTotal = Object.values(data.targets).reduce((s, v) => s + v, 0);
   const targetRows = data.members
