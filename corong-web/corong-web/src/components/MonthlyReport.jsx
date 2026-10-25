@@ -106,13 +106,13 @@ function InfoTip({ text }) {
   );
 }
 
-// Ikon Google Sheet: dokumen dengan kisi tabel, garis tipis, warna hijau yang tenang.
+// Logo Google Sheets: dokumen hijau dengan sudut terlipat dan kisi tabel putih.
 const SheetsIcon = ({ size = 22, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
-    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" fill="#16a34a" fillOpacity=".1" stroke="#15803d" strokeWidth="1.5" strokeLinejoin="round" />
-    <path d="M14 3v5h5" stroke="#15803d" strokeWidth="1.5" strokeLinejoin="round" />
-    <rect x="8" y="11" width="8" height="6" rx="0.8" stroke="#15803d" strokeWidth="1.2" />
-    <path d="M8 14h8M12 11v6" stroke="#15803d" strokeWidth="1.2" />
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={className}>
+    <path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#0F9D58" />
+    <path d="M14 2v6h6z" fill="#87CEAC" />
+    <rect x="7.5" y="11" width="9" height="7" fill="#fff" />
+    <path d="M7.5 14.5h9M11.5 11v7" stroke="#0F9D58" strokeWidth="1" />
   </svg>
 );
 
