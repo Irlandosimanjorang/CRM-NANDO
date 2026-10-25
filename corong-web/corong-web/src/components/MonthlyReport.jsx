@@ -569,6 +569,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
           ))}
         </div>
+        <div className="flex items-center gap-2">
         {/* Ekspor ke Google Sheet (25 Okt 2026): paket Enterprise, semua peran. */}
         {org?.plan === "enterprise" && (
           <div ref={sheetRef} className="relative">
@@ -604,6 +605,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             <PowerPointIcon size={18} />
           </button>
         )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
