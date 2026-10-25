@@ -505,10 +505,11 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             type="button"
             onClick={exportSheet}
             disabled={sheetBusy}
-            className={cn("inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
+            title={sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
+            aria-label={sheetBusy ? "Memproses ekspor Google Sheet" : "Ekspor ke Google Sheet"}
+            className={cn("inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-emerald-700 hover:bg-slate-50 disabled:opacity-60", focus)}
           >
-            <FileSpreadsheet size={14} className="text-emerald-700" />
-            {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
+            <FileSpreadsheet size={22} />
           </button>
         )}
       </div>
