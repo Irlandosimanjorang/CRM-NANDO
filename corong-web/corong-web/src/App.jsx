@@ -141,7 +141,8 @@ function Toast({ toast, onDismiss }) {
 export default function App() {
   const [session, setSession] = useState(null);
   // Link lupa password membuat sesi sementara; penanda ini menahan user di form password baru sampai selesai.
-  const [recovering, setRecovering] = useState(false);
+  // Juga dicek langsung dari URL saat halaman dibuka (type=recovery), supaya tidak bergantung pada urutan event Supabase.
+  const [recovering, setRecovering] = useState(() => typeof window !== "undefined" && /type=recovery/.test(window.location.hash));
   const [authReady, setAuthReady] = useState(false);
   // BUG FIX (6 Sep 2026): SEMUA modal/popup di app (draft AI, progress, cek
   // duplikat, tambah Deal/Visit, rekam meeting, kompetitor, recycle bin,
