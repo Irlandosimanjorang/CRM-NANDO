@@ -582,7 +582,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               aria-busy={sheetBusy}
               title={sheetBusy ? "Menyiapkan file…" : "Ekspor laporan"}
               aria-label={sheetBusy ? "Menyiapkan file laporan" : "Ekspor laporan"}
-              className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-emerald-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow active:translate-y-0 active:scale-95 disabled:cursor-wait disabled:opacity-70 motion-reduce:transform-none motion-reduce:transition-none", focus)}
+              className={cn("inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-emerald-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow active:translate-y-0 active:scale-95 disabled:cursor-wait disabled:opacity-70 motion-reduce:transform-none motion-reduce:transition-none", focus)}
             >
               {sheetBusy ? <Loader2 size={18} className="animate-spin" /> : <SheetsIcon size={18} />}
             </button>
@@ -600,7 +600,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             onClick={downloadPpt}
             title="Unduh PPT"
             aria-label="Unduh PPT"
-            className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow active:translate-y-0 active:scale-95 motion-reduce:transform-none motion-reduce:transition-none", focus)}
+            className={cn("inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow active:translate-y-0 active:scale-95 motion-reduce:transform-none motion-reduce:transition-none", focus)}
           >
             <PowerPointIcon size={18} />
           </button>
