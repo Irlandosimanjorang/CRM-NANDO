@@ -1641,12 +1641,17 @@ export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_v
   if (error) throw error;
   // Transaksi deal berarti lead sudah menang: tahapnya ikut pindah ke tahap menang kalau belum.
   // Transaksi sudah tercatat di atas, jadi pemicu otomatis tidak menulis transaksi ganda.
-  const stages = await getStages();
-  const wonKey = stages.find((s) => s.type === "won")?.key;
-  const { data: lead } = await supabase.from("leads").select("stage_key").eq("id", lead_id).maybeSingle();
-  if (wonKey && lead && !stages.some((s) => s.key === lead.stage_key && s.type === "won")) {
-    const { error: e2 } = await supabase.from("leads").update({ stage_key: wonKey }).eq("id", lead_id);
-    if (e2) throw e2;
+  // Gagal pindah tahap tidak boleh membatalkan transaksi yang sudah tercatat (nanti disimpan ulang jadi dobel).
+  try {
+    const stages = await getStages();
+    const wonKey = stages.find((s) => s.type === "won")?.key;
+    const { data: lead } = await supabase.from("leads").select("stage_key").eq("id", lead_id).maybeSingle();
+    if (wonKey && lead && !stages.some((s) => s.key === lead.stage_key && s.type === "won")) {
+      const { error: e2 } = await supabase.from("leads").update({ stage_key: wonKey }).eq("id", lead_id);
+      if (e2) console.warn("Pindah tahap ke menang gagal:", e2.message);
+    }
+  } catch (e) {
+    console.warn("Pindah tahap ke menang gagal:", e?.message || e);
   }
   return data;
 }
