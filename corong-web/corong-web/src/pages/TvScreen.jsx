@@ -2,7 +2,7 @@
 // Isi berputar tiap SCENE_MS: kunjungan hari ini, deal menang bulan ini, target tim.
 // Tetap pakai login akun di browser TV (tidak ada token khusus). Data ikut berubah realtime.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Maximize2 } from "lucide-react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import * as db from "../lib/db";
 import { supabase } from "../lib/supabaseClient";
 import Auth from "../Auth";
@@ -38,6 +38,19 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   const [data, setData] = useState(EMPTY);
   const [sceneIdx, setSceneIdx] = useState(0);
   const [now, setNow] = useState(() => new Date());
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  // Tombol layar penuh bisa dipakai bolak-balik: masuk saat biasa, keluar saat sudah penuh.
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.();
+  };
 
   useEffect(() => {
     let alive = true;
@@ -120,9 +133,9 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
         <p className="truncate text-[22px] font-semibold tracking-[-0.01em] text-slate-300">{data.org?.name || "Nexto"}</p>
         <div className="flex items-center gap-4">
           <p className="text-[22px] font-medium tabular-nums text-slate-400">{wibClock(now)}</p>
-          <button type="button" onClick={() => document.documentElement.requestFullscreen?.()} aria-label="Layar penuh"
+          <button type="button" onClick={toggleFullscreen} aria-label={fullscreen ? "Keluar dari layar penuh" : "Layar penuh"}
             className="grid h-10 w-10 place-items-center rounded-full text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200">
-            <Maximize2 size={18} />
+            {fullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
         </div>
       </header>
