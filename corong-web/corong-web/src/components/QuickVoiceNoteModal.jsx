@@ -23,6 +23,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Mic, Keyboard, Square, X, Save, Loader2, Search, Zap, CheckCircle2, AlertTriangle, Trash2, Mail, UserPlus, Trophy, XCircle, RefreshCw } from "lucide-react";
 import * as db from "../lib/db";
+import { todayISO } from "../lib/helpers";
 
 function fmtTimer(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -53,6 +54,54 @@ const FIELD_LABELS = {
 const darkInput = "w-full px-3 py-2.5 text-sm bg-white/[0.04] border border-white/10 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-orange-400/50 focus:bg-white/[0.06] transition-colors";
 const darkLabel = "text-[10px] font-semibold uppercase tracking-wider text-slate-500";
 
+// Field deal yang ikut disimpan ke lead saat pindah ke menang.
+function dealFields(d) {
+  return { deal_value: d.value, deal_date: d.date, sph_number: d.sph, invoice_number: d.invoice || null, ...(d.product ? { product: d.product } : {}) };
+}
+
+// Popup data deal saat lead dipindah ke tahap menang lewat NEX Pro: nilai, tanggal, no. SPH, dll.
+function WonDealForm({ initial, onCancel, onConfirm }) {
+  const [value, setValue] = useState(initial.value);
+  const [date, setDate] = useState(todayISO());
+  const [sph, setSph] = useState(initial.sph);
+  const [invoice, setInvoice] = useState(initial.invoice);
+  const [product, setProduct] = useState(initial.product);
+  const nominal = Number(String(value).replace(/\D/g, "")) || 0;
+  const field = "mt-1 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-400/60";
+  const label = "block text-xs text-slate-400";
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="w-full max-w-sm rounded-panel border border-white/10 bg-[#0b0f1c] p-5 shadow-float" onClick={(e) => e.stopPropagation()}>
+        <p className="text-sm font-semibold text-white">Deal menang: {initial.leadName}</p>
+        <p className="mt-1 text-xs text-slate-400">Isi data deal dulu, lalu lead dipindah ke tahap menang.</p>
+        <div className="mt-4 grid gap-3">
+          <label className={label}>Nilai deal (Rp)
+            <input className={field} inputMode="numeric" placeholder="0" value={value} onChange={(e) => setValue(e.target.value)} />
+          </label>
+          <label className={label}>Tanggal deal
+            <input type="date" className={field} value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+          <label className={label}>No. SPH (opsional)
+            <input className={field} value={sph} onChange={(e) => setSph(e.target.value)} />
+          </label>
+          <label className={label}>No. faktur (opsional)
+            <input className={field} value={invoice} onChange={(e) => setInvoice(e.target.value)} />
+          </label>
+          <label className={label}>Produk (opsional)
+            <input className={field} value={product} onChange={(e) => setProduct(e.target.value)} />
+          </label>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-slate-300 hover:bg-white/5">Batal</button>
+          <button type="button" disabled={nominal <= 0 || !date}
+            onClick={() => onConfirm({ value: nominal, date, sph: sph.trim(), invoice: invoice.trim(), product: product.trim() })}
+            className="rounded-xl bg-brand-strong px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-40">Simpan deal</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, onSaved, isEnterprise = false, canManage = false }) {
   const [stage, setStage] = useState("idle"); // idle | recording | processing | review | error
   const [seconds, setSeconds] = useState(0);
@@ -75,6 +124,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
   const [showTranscript, setShowTranscript] = useState(false);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  const [wonForm, setWonForm] = useState(null); // data popup deal saat pindah ke menang
   const [errMsg, setErrMsg] = useState("");
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -256,7 +306,23 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
 
   const setUpdateField = (key, value) => setUpdates((p) => ({ ...p, [key]: value }));
 
-  const save = async () => {
+  // Pindah ke tahap menang (ubah tahap, atau tutup sebagai menang) minta data deal dulu lewat popup.
+  const wonTarget = action === "update_lead" && !!updates.stage_key
+    && (stages || []).find((s) => s.key === updates.stage_key)?.type === "won"
+    && (leads || []).find((l) => l.id === lead?.id)?.stage_key !== updates.stage_key;
+  const isWonMove = wonTarget || (action === "close_lead" && closeResult === "won");
+  const save = async (deal = null) => {
+    if (isWonMove && !deal && lead) {
+      const existing = (leads || []).find((l) => l.id === lead.id) || {};
+      setWonForm({
+        leadName: lead.name,
+        value: existing.deal_value ? String(existing.deal_value) : "",
+        product: existing.product || "",
+        sph: existing.sph_number || "",
+        invoice: existing.invoice_number || "",
+      });
+      return;
+    }
     setBusy(true);
     try {
       if (action === "update_lead") {
@@ -278,6 +344,10 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
           if (k === "stage_key" && !(stages || []).some((s) => s.key === v)) continue;
           merged[k] = v;
         }
+        if (deal) {
+          Object.assign(merged, dealFields(deal));
+          await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: deal.date, deal_value: deal.value, product_type: deal.product || merged.product || null });
+        }
         if (cancelVisit) { merged.visit_date = null; merged.visit_agenda = ""; merged.visit_meet = ""; }
         await db.upsertLead(merged);
         if (progressNote.trim()) await db.addProgress(lead.id, progressNote.trim());
@@ -285,7 +355,8 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         if (!lead) throw new Error("Pilih lead terlebih dahulu.");
         const existing = (leads || []).find((l) => l.id === lead.id) || {};
         const wonLostStage = (stages || []).find((s) => s.type === closeResult);
-        await db.upsertLead({ ...existing, id: lead.id, stage_key: wonLostStage?.key || existing.stage_key });
+        if (deal) await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: deal.date, deal_value: deal.value, product_type: deal.product || existing.product || null });
+        await db.upsertLead({ ...existing, id: lead.id, stage_key: wonLostStage?.key || existing.stage_key, ...(deal ? dealFields(deal) : {}) });
         await db.saveOutcome(lead.id, { result: closeResult, reason_category: "", reason: progressNote.trim(), ai_generated: true });
       } else if (action === "create_lead") {
         if (!newLead?.name?.trim()) throw new Error("Nama lead baru wajib diisi.");
@@ -323,6 +394,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
 
   return createPortal(
     <div className="fixed inset-0 bg-[#050810]/80 backdrop-blur-sm flex items-start justify-center p-4 pb-28 md:pb-4 z-50 overflow-y-auto">
+      {wonForm && <WonDealForm initial={wonForm} onCancel={() => setWonForm(null)} onConfirm={(d) => { setWonForm(null); save(d); }} />}
       <div
         className="relative w-full max-w-[420px] my-8 rounded-panel overflow-hidden border border-white/10 shadow-float"
         style={{ background: "#0b0f1c" }}
@@ -549,7 +621,7 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
               {showTranscript && <div className="mt-2 text-xs text-slate-400 bg-white/[0.03] border border-white/10 rounded-xl p-3 max-h-40 overflow-y-auto whitespace-pre-wrap">{transcript}</div>}
 
               <button
-                onClick={save}
+                onClick={() => save()}
                 disabled={busy || !canSave || (action === "send_email" && (emailLoading || !emailDraft))}
                 className={`w-full mt-4 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm px-4 py-2.5 rounded-xl font-medium flex items-center justify-center gap-1.5 transition-colors ${action === "delete_lead" ? "bg-rose-600 hover:bg-rose-500" : "bg-brand-strong hover:bg-orange-600"}`}
               >
