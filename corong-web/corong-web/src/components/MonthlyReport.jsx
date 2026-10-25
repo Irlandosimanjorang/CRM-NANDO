@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Printer, Presentation, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Printer, Presentation, Info, Loader2 } from "lucide-react";
 import { downloadReportPpt } from "../lib/reportPpt";
+import { downloadReportXlsx } from "../lib/reportXlsx";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
@@ -445,19 +446,14 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
 
     return [p, rc, rk];
   };
-  const exportSheet = async () => {
+  // Unduh langsung sebagai file Excel (tanpa tab baru atau koneksi Google).
+  const downloadReport = async () => {
     setSheetBusy(true);
     try {
       const tabs = await buildSheetTabs();
-      const res = await db.exportLeadsToSheet(tabs);
-      if (res.needs_connect) {
-        const c = await db.connectGoogleSheets();
-        window.location.href = c.url;
-        return;
-      }
-      window.open(res.url, "_blank", "noopener");
+      await downloadReportXlsx({ tabs, fileName: `Report-${(org?.name || "nexto").replace(/[^A-Za-z0-9]+/g, "-")}-${ym}.xlsx` });
     } catch (e) {
-      alert("Gagal ekspor: " + (e?.message || e));
+      alert("Gagal mengunduh: " + (e?.message || e));
     } finally {
       setSheetBusy(false);
     }
@@ -534,13 +530,14 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
         {org?.plan === "enterprise" && (
           <button
             type="button"
-            onClick={exportSheet}
+            onClick={downloadReport}
             disabled={sheetBusy}
-            title={sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
-            aria-label={sheetBusy ? "Memproses ekspor Google Sheet" : "Ekspor ke Google Sheet"}
-            className={cn("inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-emerald-700 hover:bg-slate-50 disabled:opacity-60", focus)}
+            title={sheetBusy ? "Menyiapkan file…" : "Unduh laporan (Excel)"}
+            aria-label={sheetBusy ? "Menyiapkan file laporan" : "Unduh laporan (Excel)"}
+            aria-busy={sheetBusy}
+            className={cn("inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-emerald-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70", focus)}
           >
-            <SheetsIcon size={22} />
+            {sheetBusy ? <Loader2 size={20} className="animate-spin" /> : <SheetsIcon size={22} />}
           </button>
         )}
       </div>
@@ -862,15 +859,16 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
           )}
           {org?.plan === "enterprise" && (
             <Panel className="mt-5 p-5">
-              <PanelHeader title="Ekspor ke Google Sheet" meta="Lead yang ditugaskan ke kamu, jadi Sheet baru di Google Drive kamu." />
+              <PanelHeader title="Unduh laporan" meta="File Excel berisi tab Penjualan, Rencana, dan Rekap, sesuai layar ini." />
               <button
                 type="button"
-                onClick={exportSheet}
+                onClick={downloadReport}
                 disabled={sheetBusy}
-                className={cn("mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
+                aria-busy={sheetBusy}
+                className={cn("mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70", focus)}
               >
-                <SheetsIcon size={16} />
-                {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
+                {sheetBusy ? <Loader2 size={14} className="animate-spin" /> : <SheetsIcon size={16} />}
+                {sheetBusy ? "Menyiapkan file…" : "Unduh laporan (Excel)"}
               </button>
             </Panel>
           )}

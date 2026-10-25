@@ -47,17 +47,17 @@ export default function SheetsAnnouncement({ enterprise = false }) {
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-emerald-700"><FileSpreadsheet size={18} /></span>
-            <div id="sheets-announce-title" className="font-display text-[17px] font-bold tracking-[-0.02em] text-ink">Ekspor laporan ke Google Sheet</div>
+            <div id="sheets-announce-title" className="font-display text-[17px] font-bold tracking-[-0.02em] text-ink">Unduh laporan ke Excel</div>
           </div>
           <button type="button" onClick={close} aria-label="Tutup" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-ink"><X size={16} /></button>
         </div>
 
         <div className="space-y-3 px-5 py-4 text-[13px] leading-relaxed text-slate-700">
-          <p>Laporan di tab Report sekarang bisa diekspor ke Google Sheet. Sheet baru dibuat di Google Drive Anda dengan tiga tab: <b className="font-semibold text-ink">Penjualan</b>, <b className="font-semibold text-ink">Rencana</b>, dan <b className="font-semibold text-ink">Rekap</b>.</p>
+          <p>Laporan di tab Report sekarang bisa diunduh sebagai file Excel. File langsung tersimpan di perangkat Anda dengan tiga tab: <b className="font-semibold text-ink">Penjualan</b>, <b className="font-semibold text-ink">Rencana</b>, dan <b className="font-semibold text-ink">Rekap</b>.</p>
           <p>Isinya sama dengan layar yang sedang Anda lihat, mengikuti periode, filter, dan anggota yang dipilih.</p>
           <p className="rounded-lg bg-slate-50 px-3 py-2 text-[12.5px] text-slate-600">
             {enterprise
-              ? "Tombol Ekspor ke Google Sheet ada di bagian atas tab Report. Saat pertama kali dipakai, Google akan meminta izin untuk membuat file di Drive Anda."
+              ? "Tombol unduh ada di bagian atas tab Report. Klik sekali, file langsung diunduh tanpa membuka tab baru."
               : "Fitur ini khusus paket Enterprise. Hubungi owner Nexto jika ingin mengaktifkannya."}
           </p>
         </div>
