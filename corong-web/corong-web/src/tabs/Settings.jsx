@@ -58,21 +58,24 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [pwOld, setPwOld] = useState("");
   const [pwResetBusy, setPwResetBusy] = useState(false);
   const [resetCaptcha, setResetCaptcha] = useState("");
-  const [resetCodeSent, setResetCodeSent] = useState(false);
+  const [resetModal, setResetModal] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const [resetCode, setResetCode] = useState("");
-  // Kode dari email reset (bukan link): verifikasi kode lalu simpan password baru dari kolom di atas.
+  const [rNew, setRNew] = useState("");
+  const [rConfirm, setRConfirm] = useState("");
+  // Pop-up "Ganti password": kode dari email + password baru. Password lama tidak diperlukan.
   const verifyResetCode = async () => {
-    if (!resetCode.trim()) { setPwMsgOk(false); setPwMsg("Masukkan kode dari email."); return; }
-    if (pwNew.length < 8) { setPwMsgOk(false); setPwMsg("Password baru minimal 8 karakter."); return; }
-    if (pwNew !== pwConfirm) { setPwMsgOk(false); setPwMsg("Konfirmasi password tidak cocok."); return; }
+    if (!resetCode.trim()) { setPwMsgOk(false); setPwMsg("Masukkan kode 6 digit dari email."); return; }
+    if (rNew.length < 8) { setPwMsgOk(false); setPwMsg("Password baru minimal 8 karakter."); return; }
+    if (rNew !== rConfirm) { setPwMsgOk(false); setPwMsg("Konfirmasi password tidak cocok."); return; }
     setPwResetBusy(true); setPwMsg(""); setPwMsgOk(false);
     try {
       const { error: vErr } = await supabase.auth.verifyOtp({ email: userEmail, token: resetCode.trim(), type: "recovery" });
       if (vErr) throw vErr;
-      const { error: uErr } = await supabase.auth.updateUser({ password: pwNew });
+      const { error: uErr } = await supabase.auth.updateUser({ password: rNew });
       if (uErr) throw uErr;
-      setPwOld(""); setPwNew(""); setPwConfirm(""); setResetCode(""); setResetCodeSent(false);
-      setPwMsgOk(true); setPwMsg("✅ Password berhasil diganti.");
+      setResetModal(false); setResetCode(""); setRNew(""); setRConfirm(""); setPwMsg("");
+      setResetSuccess(true);
     } catch (e) {
       setPwMsg("Gagal ganti password: " + e.message);
     } finally { setPwResetBusy(false); }
@@ -103,8 +106,7 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(userEmail, { redirectTo: `${window.location.origin}/`, captchaToken: resetCaptcha });
       if (error) throw error;
-      setResetCodeSent(true);
-      setPwMsgOk(true); setPwMsg(`Kode reset sudah dikirim ke ${userEmail}. Masukkan kodenya di bawah, isi password baru, lalu simpan.`);
+      setPwMsg(""); setResetModal(true);
     } catch (e) {
       setPwMsg("Gagal kirim kode reset: " + e.message);
     } finally {
@@ -1138,15 +1140,42 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
             {pwBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Ganti Password
           </button>
           <button type="button" onClick={sendPasswordReset} disabled={pwResetBusy} className="text-xs text-slate-500 hover:text-slate-800 underline disabled:opacity-60 text-left">
-            {pwResetBusy ? "Mengirim link…" : "Lupa password lama? Kirim link reset ke email"}
+            {pwResetBusy ? "Mengirim kode…" : "Lupa password? Kirim kode ke email saya"}
           </button>
           <div ref={resetTurnstileRef} className="pt-1" />
-          {resetCodeSent && (
-            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <input className={inp} placeholder="Kode dari email (6 digit)" inputMode="numeric" value={resetCode} onChange={(e) => setResetCode(e.target.value)} />
-              <button type="button" onClick={verifyResetCode} disabled={pwResetBusy} className="bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5">
-                {pwResetBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Simpan password baru dengan kode
-              </button>
+          {resetModal && (
+            <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setResetModal(false); }}>
+              <div role="dialog" aria-modal="true" aria-label="Ganti password" className="w-full max-w-sm space-y-3 rounded-2xl bg-white p-5 shadow-2xl">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-slate-900">Ganti password</div>
+                    <p className="text-xs text-slate-500">Kode sudah dikirim ke <b>{userEmail}</b>. Password lama tidak perlu diisi.</p>
+                  </div>
+                  <button type="button" onClick={() => setResetModal(false)} aria-label="Tutup" className="p-1 text-slate-500 hover:text-slate-800"><X size={16} /></button>
+                </div>
+                <ol className="list-decimal space-y-0.5 pl-5 text-xs text-slate-600">
+                  <li>Buka email dari Nexto dan salin kode 6 digit.</li>
+                  <li>Masukkan kode di bawah.</li>
+                  <li>Isi password baru dua kali, lalu klik Simpan.</li>
+                </ol>
+                <input className={inp} placeholder="Kode 6 digit" inputMode="numeric" maxLength={6} value={resetCode} onChange={(e) => setResetCode(e.target.value)} />
+                <PwInput placeholder="Password baru" value={rNew} onChange={setRNew} />
+                <PwInput placeholder="Ulangi password baru" value={rConfirm} onChange={setRConfirm} onEnter={verifyResetCode} />
+                {pwMsg && <div className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{pwMsg}</div>}
+                <button type="button" onClick={verifyResetCode} disabled={pwResetBusy} className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-60">
+                  {pwResetBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Simpan password baru
+                </button>
+              </div>
+            </div>
+          )}
+          {resetSuccess && (
+            <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4">
+              <div role="dialog" aria-modal="true" aria-label="Password berhasil diganti" className="w-full max-w-xs space-y-3 rounded-2xl bg-white p-6 text-center shadow-2xl">
+                <CheckCircle2 size={44} className="mx-auto text-emerald-600" />
+                <div className="font-semibold text-slate-900">Password berhasil diganti</div>
+                <p className="text-xs text-slate-500">Mulai sekarang, login memakai password baru.</p>
+                <button type="button" onClick={() => setResetSuccess(false)} className="w-full rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-900">OK</button>
+              </div>
             </div>
           )}
         </div>
