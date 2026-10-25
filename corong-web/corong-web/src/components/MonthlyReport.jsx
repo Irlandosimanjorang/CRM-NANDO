@@ -123,24 +123,8 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const [srcF, setSrcF] = useState("all");
   const [stF, setStF] = useState("all");
   const [viewRaw, setView] = useState("penjualan");
-  // Ekspor lead ke Google Sheet (25 Okt 2026): hanya sales rep di paket Enterprise.
+  // Ekspor laporan ke Google Sheet (25 Okt 2026): paket Enterprise, semua peran.
   const [sheetBusy, setSheetBusy] = useState(false);
-  const exportSheet = async () => {
-    setSheetBusy(true);
-    try {
-      const r = await db.exportLeadsToSheet();
-      if (r.needs_connect) {
-        const c = await db.connectGoogleSheets();
-        window.location.href = c.url;
-        return;
-      }
-      window.open(r.url, "_blank", "noopener");
-    } catch (e) {
-      alert("Gagal ekspor: " + (e?.message || e));
-    } finally {
-      setSheetBusy(false);
-    }
-  };
   // Anggota biasa: laporan lead miliknya saja, tanpa tab Iklan dan target tim.
   const personal = !canManage;
   const view = personal && viewRaw === "iklan" ? "penjualan" : viewRaw;
@@ -368,6 +352,85 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const sourceOf = (l) => Object.entries(l).find(([k, v]) => /^custom_field_\d+$/.test(k) && SOURCES.includes(v))?.[1] || "";
   const pick = (c) => { setSelected(c.iso); if (!c.inMonth) { setMode("month"); setYm(c.iso.slice(0, 7)); } };
 
+  // Ekspor ke Google Sheet: satu worksheet per tab laporan (Penjualan, Rencana, Rekap), isinya sama dengan layar ini.
+  const buildSheetTabs = async () => {
+    const who = personal ? "Report saya" : scopeId === "all" ? "Semua tim" : scopeName;
+    const stageLabel = Object.fromEntries(stages.map((s) => [s.key, s.label]));
+    const deals = [...r.dealRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const penjualan = [
+      ["Report penjualan", who],
+      [org?.name || "", periodLabel],
+      [],
+      ["Ringkasan"],
+      ["Omzet", r.dealValue],
+      ...(target > 0 ? [["Target", target], ["Capaian target", `${Math.round((r.dealValue / target) * 100)}%`]] : []),
+      ["Data masuk", r.masuk.length],
+      ["SPH belum diproses", r.sphCount, r.sphValue],
+      ["Hot progress", r.hotCount, r.hotValue],
+      ["Deal", deals.length],
+      [],
+      [`Deal ${periodWord}`],
+      ["Tanggal", "Nama", "Nilai"],
+      ...deals.map((d) => [String(d.date).slice(0, 10), d.name, num(d.value)]),
+      [],
+      ["Lead masuk"],
+      ["Tanggal masuk", "Nama", "Tahap", "Nilai"],
+      ...r.masuk.map((l) => [String(l.created_at).slice(0, 10), l.name, stageLabel[l.stage_key] || l.stage_key || "", num(l.deal_value)]),
+    ];
+    if (!personal && scopeId === "all" && team.length) {
+      penjualan.push([], ["Hasil per marketing"], ["Marketing", ...(act ? ["Aktivitas"] : []), "Lead masuk", "SPH", "Hot", "Deal", "Omzet", "Target"]);
+      for (const m of team) penjualan.push([m.name, ...(act ? [m.aktivitas ?? ""] : []), m.masuk, m.sph, m.hot, m.deals, m.omzet, targetOf(m.id)]);
+    }
+
+    // Rencana bulan yang sama, sesuai pilihan anggota di layar (RLS membatasi yang boleh dibaca).
+    const plans = (await db.listRencana(`${ym}-01`, `${ym}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`))
+      .filter((x) => scopeId === "all" || x.user_id === scopeId);
+    const nameOf = (uid) => members.find((m) => m.user_id === uid)?.display_name || "";
+    const rencana = [
+      [`Rencana ${periodLabel}`, who],
+      [],
+      ["Tanggal", "Kegiatan", "Jenis", "Target", "Status", ...(personal ? [] : ["Anggota"])],
+      ...plans.map((x) => [x.plan_date, x.title, x.kind, num(x.target_value), x.done ? "Selesai" : "Belum", ...(personal ? [] : [nameOf(x.user_id)])]),
+    ];
+
+    // Rekap: jumlah dan nilai per tahap, lalu daftar lead yang sedang tampil.
+    const live = leads.filter((l) => !l.deleted_at);
+    const rekap = [
+      [`Rekap ${periodLabel}`, who],
+      [],
+      ["Tahap", "Jumlah lead", "Nilai"],
+      ...stages.map((s) => {
+        const ls = live.filter((l) => l.stage_key === s.key);
+        return [s.label, ls.length, ls.reduce((t, l) => t + num(l.deal_value), 0)];
+      }),
+      [],
+      ["Nama", "Tahap", "Nilai", "Tanggal masuk", "Kontak terakhir", "Kota", "Produk", "Next action"],
+      ...live.map((l) => [
+        l.name || "", stageLabel[l.stage_key] || "", num(l.deal_value), String(l.created_at).slice(0, 10),
+        l.last_contact ? String(l.last_contact).slice(0, 10) : "", l.city || "", l.product || "", l.next_action || "",
+      ]),
+    ];
+
+    return [{ title: "Penjualan", rows: penjualan }, { title: "Rencana", rows: rencana }, { title: "Rekap", rows: rekap }];
+  };
+  const exportSheet = async () => {
+    setSheetBusy(true);
+    try {
+      const tabs = await buildSheetTabs();
+      const res = await db.exportLeadsToSheet(tabs);
+      if (res.needs_connect) {
+        const c = await db.connectGoogleSheets();
+        window.location.href = c.url;
+        return;
+      }
+      window.open(res.url, "_blank", "noopener");
+    } catch (e) {
+      alert("Gagal ekspor: " + (e?.message || e));
+    } finally {
+      setSheetBusy(false);
+    }
+  };
+
   // Cetak ke PDF lewat dialog cetak peramban: ringkasan omzet, pipeline, deal bulan ini, dan perbandingan marketing.
   const printReport = () => {
     const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -434,17 +497,14 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
           ))}
         </div>
-        {/* Ekspor ke Google Sheet (25 Okt 2026): aktif untuk sales rep di paket Enterprise. */}
+        {/* Ekspor ke Google Sheet (25 Okt 2026): paket Enterprise, semua peran. */}
         {org?.plan === "enterprise" && (
           <button
             type="button"
-            role="switch"
-            aria-checked={sheetBusy}
             onClick={exportSheet}
             disabled={sheetBusy}
-            className={cn("inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60", focus)}
+            className={cn("inline-flex items-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
           >
-            <span className={cn("relative inline-flex h-4 w-7 items-center rounded-full", sheetBusy ? "bg-orange-500" : "bg-slate-300")}><span className="inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow" /></span>
             {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
           </button>
         )}
@@ -772,7 +832,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                 type="button"
                 onClick={exportSheet}
                 disabled={sheetBusy}
-                className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                className={cn("mt-3 inline-flex items-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
               >
                 {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
               </button>

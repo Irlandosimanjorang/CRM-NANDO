@@ -1,6 +1,6 @@
 // Supabase Edge Function: google-sheets (25 Okt 2026)
-// Ekspor lead ke Google Sheet baru. Khusus paket Enterprise, semua peran.
-// Owner dan manager mengekspor semua lead org; sales hanya lead yang di-assign ke dirinya.
+// Ekspor laporan ke Google Sheet baru, satu worksheet per tab laporan. Khusus paket Enterprise, semua peran.
+// Data tab dikirim dari layar laporan (sudah dibatasi RLS: sales hanya lead miliknya).
 // Scope: drive.file (aplikasi hanya bisa mengakses file yang dibuatnya sendiri).
 // Alur: POST action=connect -> URL consent -> GET callback (tukar code, simpan refresh token) -> POST action=export.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -13,6 +13,9 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
 const FN_URL = `${SUPABASE_URL}/functions/v1/google-sheets`;
 const APP_URL = "https://nexto.site";
 const SHEETS_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const MAX_TABS = 5;
+const MAX_ROWS = 5000;
+const MAX_COLS = 30;
 
 const CORS = {
   "Access-Control-Allow-Origin": APP_URL,
@@ -22,7 +25,7 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "content-type": "application/json" } });
 
-// Cek login dan paket Enterprise. Mengembalikan user, org, dan apakah boleh melihat semua lead org.
+// Cek login dan paket Enterprise. Mengembalikan user dan org.
 async function requireEnterpriseUser(admin: any, authHeader: string) {
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const { data: u } = await createClient(SUPABASE_URL!, ANON_KEY!).auth.getUser(token);
@@ -31,8 +34,7 @@ async function requireEnterpriseUser(admin: any, authHeader: string) {
   if (!m) return { error: json({ error: "Organisasi tidak ditemukan." }, 403) };
   const { data: org } = await admin.from("organizations").select("plan").eq("id", m.org_id).maybeSingle();
   if (org?.plan !== "enterprise") return { error: json({ error: "Ekspor Google Sheet khusus paket Enterprise." }, 403) };
-  const allOrg = m.role === "owner" || m.role === "manager";
-  return { userId: u.user.id, orgId: m.org_id, allOrg };
+  return { userId: u.user.id, orgId: m.org_id };
 }
 
 async function accessTokenFor(admin: any, userId: string): Promise<string | null> {
@@ -49,6 +51,19 @@ async function accessTokenFor(admin: any, userId: string): Promise<string | null
   if (!resp.ok) return null;
   const tok = await resp.json();
   return tok.access_token || null;
+}
+
+// Rapikan tab dari klien: judul dibatasi, baris dan kolom dipotong, nilai selain angka dan teks dibuang.
+function cleanTabs(input: unknown) {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, MAX_TABS).map((t: any, i: number) => ({
+    title: String(t?.title || `Tab ${i + 1}`).slice(0, 100),
+    rows: (Array.isArray(t?.rows) ? t.rows.slice(0, MAX_ROWS) : []).map((row: unknown) =>
+      (Array.isArray(row) ? row.slice(0, MAX_COLS) : []).map((v) =>
+        typeof v === "number" ? (Number.isFinite(v) ? v : "") : String(v ?? "").slice(0, 5000)
+      )
+    ),
+  }));
 }
 
 Deno.serve(async (req) => {
@@ -102,30 +117,21 @@ Deno.serve(async (req) => {
       return json({ url: consent.toString() });
     }
 
-    // Ekspor: buat Google Sheet baru.
+    // Ekspor: buat Google Sheet baru dengan satu worksheet per tab laporan.
     if (body.action === "export") {
       const accessToken = await accessTokenFor(admin, auth.userId);
       if (!accessToken) return json({ needs_connect: true });
 
-      const { data: stages } = await admin.from("stages").select("key, label").eq("org_id", auth.orgId);
-      const labelOf = Object.fromEntries((stages || []).map((s: any) => [s.key, s.label]));
-      let leadQuery = admin
-        .from("leads")
-        .select("name, city, product, stage_key, deal_value, deal_date, visit_date, last_contact, next_action")
-        .eq("org_id", auth.orgId).is("deleted_at", null);
-      if (!auth.allOrg) leadQuery = leadQuery.eq("assigned_to", auth.userId);
-      const { data: leads } = await leadQuery.order("last_contact", { ascending: false, nullsFirst: false });
-
-      const header = ["Nama", "Kota", "Produk", "Tahap", "Nilai deal", "Tanggal deal", "Tanggal visit", "Kontak terakhir", "Next action"];
-      const rows = (leads || []).map((l: any) => [
-        l.name || "", l.city || "", l.product || "", labelOf[l.stage_key] || l.stage_key || "",
-        Number(l.deal_value) || 0, l.deal_date || "", l.visit_date || "", l.last_contact || "", l.next_action || "",
-      ]);
+      const tabs = cleanTabs(body.tabs);
+      if (tabs.length === 0) return json({ error: "Tidak ada data untuk diekspor." }, 400);
 
       const createResp = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ properties: { title: `Nexto - Lead ${new Date().toISOString().slice(0, 10)}` } }),
+        body: JSON.stringify({
+          properties: { title: `Nexto - Laporan ${new Date().toISOString().slice(0, 10)}` },
+          sheets: tabs.map((t, i) => ({ properties: { title: t.title, index: i } })),
+        }),
       });
       if (!createResp.ok) {
         const raw = await createResp.text();
@@ -141,17 +147,18 @@ Deno.serve(async (req) => {
       }
       const sheet = await createResp.json();
 
-      const valuesResp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${sheet.spreadsheetId}/values/A1?valueInputOption=USER_ENTERED`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ values: [header, ...rows] }),
-        },
-      );
+      // RAW: teks dari data lead ditulis apa adanya, tidak dibaca sebagai formula (mis. "=...").
+      const valuesResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheet.spreadsheetId}/values:batchUpdate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          valueInputOption: "RAW",
+          data: tabs.map((t) => ({ range: `'${t.title.replace(/'/g, "''")}'!A1`, values: t.rows })),
+        }),
+      });
       if (!valuesResp.ok) return json({ error: "Gagal mengisi Google Sheet." }, 502);
 
-      return json({ url: sheet.spreadsheetUrl, rows: rows.length });
+      return json({ url: sheet.spreadsheetUrl, tabs: tabs.length });
     }
 
     return json({ error: "Aksi tidak dikenal" }, 400);
