@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Zap, Mic, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot, Smartphone, Share, MoreVertical } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Zap, Mic, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot, Smartphone, Share, MoreVertical, Eye, EyeOff } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -13,6 +13,33 @@ import { saveOpenModal, clearOpenModal, getOpenModal } from "../lib/uiPersist";
 import { PLAN_LEVEL, TIER_LABEL, MAYAR_PAYMENT_LINK } from "../lib/plans";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
+
+// Input password dengan tombol mata untuk menampilkan/menyembunyikan isi.
+function PwInput({ placeholder, value, onChange, onEnter }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        className={`${inp} pr-10`}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => onEnter && e.key === "Enter" && onEnter()}
+        autoComplete="off"
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        aria-label={show ? "Sembunyikan password" : "Tampilkan password"}
+        title={show ? "Sembunyikan password" : "Tampilkan password"}
+        className="absolute right-2 top-1/2 -translate-y-1/2 mt-0.5 p-1 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+      >
+        {show ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+  );
+}
 
 export default function Settings({ settings, stages, leads, onChanged, userEmail, locked, chatInbound = false }) {
   const [st, setSt] = useState(stages.map((s) => ({ ...s })));
@@ -1045,9 +1072,9 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><KeyRound size={15} className="text-slate-500" /> Ganti Password</h3>
         <p className="text-xs text-slate-500 mb-3">Ganti password akun Anda kapan saja. Minimal 8 karakter.</p>
         <div className="space-y-2 max-w-sm">
-          <input type="password" className={inp} placeholder="Password lama" value={pwOld} onChange={(e) => setPwOld(e.target.value)} />
-          <input type="password" className={inp} placeholder="Password baru" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
-          <input type="password" className={inp} placeholder="Ulangi password baru" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} onKeyDown={(e) => e.key === "Enter" && changePassword()} />
+          <PwInput placeholder="Password lama" value={pwOld} onChange={setPwOld} />
+          <PwInput placeholder="Password baru" value={pwNew} onChange={setPwNew} />
+          <PwInput placeholder="Ulangi password baru" value={pwConfirm} onChange={setPwConfirm} onEnter={changePassword} />
           {pwMsg && <div className={`text-xs rounded-lg p-2 ${pwMsgOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{pwMsg}</div>}
           <button onClick={changePassword} disabled={pwBusy} className="bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white text-sm px-4 py-2 rounded-xl font-medium flex items-center gap-1.5">
             {pwBusy ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />} Ganti Password
