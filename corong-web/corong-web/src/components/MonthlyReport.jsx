@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Printer, Presentation, Info, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Printer, Info, Loader2 } from "lucide-react";
 import { downloadReportPpt } from "../lib/reportPpt";
 import { downloadReportXlsx } from "../lib/reportXlsx";
 import * as db from "../lib/db";
@@ -106,6 +106,17 @@ function InfoTip({ text }) {
     </span>
   );
 }
+
+// Ikon PowerPoint: kotak oranye dengan slide putih dan batang grafik kecil.
+const PowerPointIcon = ({ size = 18, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={className}>
+    <rect x="2" y="3" width="20" height="18" rx="3" fill="#D24726" />
+    <rect x="6" y="7" width="12" height="9" rx="1" fill="#fff" />
+    <rect x="8.5" y="11" width="1.8" height="3.5" fill="#D24726" />
+    <rect x="11.1" y="9" width="1.8" height="5.5" fill="#D24726" />
+    <rect x="13.7" y="10" width="1.8" height="4.5" fill="#D24726" />
+  </svg>
+);
 
 // Ikon simpan (disket) dengan kisi spreadsheet di label, warna hijau Google Sheets.
 const SheetsIcon = ({ size = 22, className = "" }) => (
@@ -570,10 +581,9 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               aria-busy={sheetBusy}
               title={sheetBusy ? "Menyiapkan file…" : "Ekspor laporan"}
               aria-label={sheetBusy ? "Menyiapkan file laporan" : "Ekspor laporan"}
-              className={cn("inline-flex h-8 w-8 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white text-emerald-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow active:translate-y-0 active:scale-95 disabled:cursor-wait disabled:opacity-70 motion-reduce:transform-none motion-reduce:transition-none xl:w-auto xl:px-3", focus)}
+              className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-emerald-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow active:translate-y-0 active:scale-95 disabled:cursor-wait disabled:opacity-70 motion-reduce:transform-none motion-reduce:transition-none", focus)}
             >
               {sheetBusy ? <Loader2 size={18} className="animate-spin" /> : <SheetsIcon size={18} />}
-              <span className="hidden text-[12.5px] font-semibold text-ink xl:inline">Ekspor</span>
             </button>
             {sheetMenu && (
               <div role="menu" className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-float">
@@ -582,6 +592,17 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               </div>
             )}
           </div>
+        )}
+        {view === "penjualan" && (
+          <button
+            type="button"
+            onClick={downloadPpt}
+            title="Unduh PPT"
+            aria-label="Unduh PPT"
+            className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow active:translate-y-0 active:scale-95 motion-reduce:transform-none motion-reduce:transition-none", focus)}
+          >
+            <PowerPointIcon size={18} />
+          </button>
         )}
       </div>
 
@@ -642,7 +663,6 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             </>
           )}
           {view === "penjualan" && <button type="button" onClick={printReport} title="Cetak / simpan PDF" aria-label="Cetak atau simpan PDF" className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50", focus)}><Printer size={14} /></button>}
-          {view === "penjualan" && <button type="button" onClick={downloadPpt} className={cn("inline-flex h-8 items-center gap-1.5 rounded-full bg-ink px-3 text-[12px] font-semibold text-white hover:bg-slate-800", focus)}><Presentation size={14} /> Unduh PPT</button>}
         </div>
       </div>
 
