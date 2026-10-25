@@ -1,5 +1,6 @@
 // Supabase Edge Function: google-sheets (25 Okt 2026)
-// Ekspor lead milik sales ke Google Sheet baru. Khusus paket Enterprise dan peran sales_rep.
+// Ekspor lead ke Google Sheet baru. Khusus paket Enterprise, semua peran.
+// Owner dan manager mengekspor semua lead org; sales hanya lead yang di-assign ke dirinya.
 // Scope: drive.file (aplikasi hanya bisa mengakses file yang dibuatnya sendiri).
 // Alur: POST action=connect -> URL consent -> GET callback (tukar code, simpan refresh token) -> POST action=export.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -21,8 +22,8 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "content-type": "application/json" } });
 
-// Cek login, paket Enterprise, dan peran sales_rep. Mengembalikan user dan org.
-async function requireSalesEnterprise(admin: any, authHeader: string) {
+// Cek login dan paket Enterprise. Mengembalikan user, org, dan apakah boleh melihat semua lead org.
+async function requireEnterpriseUser(admin: any, authHeader: string) {
   const token = authHeader.replace(/^Bearer\s+/i, "");
   const { data: u } = await createClient(SUPABASE_URL!, ANON_KEY!).auth.getUser(token);
   if (!u?.user) return { error: json({ error: "Unauthorized" }, 401) };
@@ -30,9 +31,8 @@ async function requireSalesEnterprise(admin: any, authHeader: string) {
   if (!m) return { error: json({ error: "Organisasi tidak ditemukan." }, 403) };
   const { data: org } = await admin.from("organizations").select("plan").eq("id", m.org_id).maybeSingle();
   if (org?.plan !== "enterprise") return { error: json({ error: "Ekspor Google Sheet khusus paket Enterprise." }, 403) };
-  // Owner juga boleh (untuk uji coba). Hanya lead yang di-assign ke user ini yang diekspor.
-  if (m.role !== "sales_rep" && m.role !== "owner") return { error: json({ error: "Ekspor Google Sheet hanya untuk sales." }, 403) };
-  return { userId: u.user.id, orgId: m.org_id };
+  const allOrg = m.role === "owner" || m.role === "manager";
+  return { userId: u.user.id, orgId: m.org_id, allOrg };
 }
 
 async function accessTokenFor(admin: any, userId: string): Promise<string | null> {
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     if (req.method !== "POST") return json({ error: "Method tidak didukung" }, 405);
     const body = await req.json().catch(() => ({}));
     const authHeader = req.headers.get("Authorization") || "";
-    const auth = await requireSalesEnterprise(admin, authHeader);
+    const auth = await requireEnterpriseUser(admin, authHeader);
     if ("error" in auth) return auth.error;
 
     // Mulai koneksi: kembalikan URL consent Google untuk scope drive.file.
@@ -102,18 +102,19 @@ Deno.serve(async (req) => {
       return json({ url: consent.toString() });
     }
 
-    // Ekspor: buat Google Sheet baru berisi lead milik user ini.
+    // Ekspor: buat Google Sheet baru.
     if (body.action === "export") {
       const accessToken = await accessTokenFor(admin, auth.userId);
       if (!accessToken) return json({ needs_connect: true });
 
       const { data: stages } = await admin.from("stages").select("key, label").eq("org_id", auth.orgId);
       const labelOf = Object.fromEntries((stages || []).map((s: any) => [s.key, s.label]));
-      const { data: leads } = await admin
+      let leadQuery = admin
         .from("leads")
         .select("name, city, product, stage_key, deal_value, deal_date, visit_date, last_contact, next_action")
-        .eq("org_id", auth.orgId).eq("assigned_to", auth.userId).is("deleted_at", null)
-        .order("last_contact", { ascending: false, nullsFirst: false });
+        .eq("org_id", auth.orgId).is("deleted_at", null);
+      if (!auth.allOrg) leadQuery = leadQuery.eq("assigned_to", auth.userId);
+      const { data: leads } = await leadQuery.order("last_contact", { ascending: false, nullsFirst: false });
 
       const header = ["Nama", "Kota", "Produk", "Tahap", "Nilai deal", "Tanggal deal", "Tanggal visit", "Kontak terakhir", "Next action"];
       const rows = (leads || []).map((l: any) => [
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
       const createResp = await fetch("https://sheets.googleapis.com/v1/spreadsheets", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ properties: { title: `Nexto - Lead saya ${new Date().toISOString().slice(0, 10)}` } }),
+        body: JSON.stringify({ properties: { title: `Nexto - Lead ${new Date().toISOString().slice(0, 10)}` } }),
       });
       if (!createResp.ok) return json({ error: "Gagal membuat Google Sheet: " + (await createResp.text()).slice(0, 200) }, 502);
       const sheet = await createResp.json();
