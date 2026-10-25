@@ -2,7 +2,7 @@
 // Isi berputar tiap SCENE_MS: kunjungan hari ini, deal menang bulan ini, target tim.
 // Tetap pakai login akun di browser TV (tidak ada token khusus). Data ikut berubah realtime.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, LogOut } from "lucide-react";
 import * as db from "../lib/db";
 import { supabase } from "../lib/supabaseClient";
 import TvLogin from "./TvLogin";
@@ -156,6 +156,10 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
         <p className="truncate text-[22px] font-semibold tracking-[-0.01em] text-slate-300">{data.org?.name || "Nexto"}</p>
         <div className="flex items-center gap-4">
           <p className="text-[22px] font-medium tabular-nums text-slate-400">{wibClock(now)}</p>
+          <button type="button" onClick={() => supabase.auth.signOut()} aria-label="Keluar dari akun"
+            className="grid h-10 w-10 place-items-center rounded-full text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200">
+            <LogOut size={18} />
+          </button>
           <button type="button" onClick={toggleFullscreen} aria-label={fullscreen ? "Keluar dari layar penuh" : "Layar penuh"}
             className="grid h-10 w-10 place-items-center rounded-full text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200">
             {fullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
