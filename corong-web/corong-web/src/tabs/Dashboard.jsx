@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from "react";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { X, ArrowRight, ChevronDown } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { NextoRobotHead } from "../Auth";
 import * as db from "../lib/db";
@@ -56,9 +56,12 @@ export default function Dashboard({
 
   // Papan kemenangan tim (25 Okt 2026) - lihat lib/winBoard.js. Sembunyi per browser, disimpan di localStorage.
   const wins = useMemo(() => collectRecentWins(leads, stages, members), [leads, stages, members]);
+  const winTop = wins[0];
+  const winRest = wins.slice(1, 3);
   const [winHidden, setWinHidden] = useState(() => {
     try { return localStorage.getItem("nexto-win-board-hidden") === "1"; } catch (_) { return false; }
   });
+  const hideWinBoard = () => { setWinHidden(true); try { localStorage.setItem("nexto-win-board-hidden", "1"); } catch (_) {} };
 
   // Menang / kalah dihitung per kejadian perpindahan tahap (repeat order tetap terhitung tiap kali menang).
   const [events, setEvents] = useState(null);
@@ -333,28 +336,43 @@ export default function Dashboard({
 
       {/* Angka utama - satu panel dengan garis pemisah, bukan 4 kartu. */}
       {showWinBoard && wins.length > 0 && !winHidden && (
-        <Panel className="p-5">
-          <div className="flex items-start justify-between gap-3">
-            <PanelHeader title="Kemenangan terbaru" meta={`${wins.length} deal menang dalam ${WIN_WINDOW_DAYS} hari terakhir`} />
-            <button type="button" onClick={() => { setWinHidden(true); try { localStorage.setItem("nexto-win-board-hidden", "1"); } catch (_) {} }} className="shrink-0 text-[12px] font-semibold text-slate-500 hover:text-ink">Sembunyikan</button>
+        <section className="relative overflow-hidden rounded-2xl bg-ink p-5 md:p-6 text-white">
+          <style>{"@keyframes nxWinIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}.nx-win-in{animation:nxWinIn .5s cubic-bezier(.2,.7,.2,1) both}@media (prefers-reduced-motion:reduce){.nx-win-in{animation:none}}"}</style>
+          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
+
+          <div className="relative flex items-center justify-between gap-3">
+            <p className="text-[13px] text-slate-400">{wins.length} deal menang dalam {WIN_WINDOW_DAYS} hari terakhir</p>
+            <button type="button" aria-label="Sembunyikan papan kemenangan" onClick={hideWinBoard} className="grid h-7 w-7 place-items-center rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-white">
+              <X size={14} />
+            </button>
           </div>
-          <ul className="mt-3 divide-y divide-slate-100">
-            {wins.slice(0, 3).map((w) => (
-              <li key={w.id}>
-                <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === w.id))} className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-slate-50">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-50 text-[12px] font-bold text-emerald-700">{initialsOf(w.sales)}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-semibold text-ink">{w.sales} menutup {w.name}</div>
-                    <div className="text-[11.5px] text-slate-500">{w.ago}</div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    {w.value > 0 ? <div className="text-[13px] font-semibold tabular-nums text-ink">{fmtRp(w.value)}</div> : <div className="text-[12px] text-slate-400">Nilai belum diisi</div>}
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Panel>
+
+          <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === winTop.id))} className="nx-win-in relative mt-3 flex w-full items-end justify-between gap-4 rounded-xl text-left">
+            <div className="min-w-0">
+              <p className="text-[13px] text-slate-300"><span className="font-semibold text-emerald-300">{winTop.sales}</span> menutup</p>
+              <p className="mt-1 truncate text-[22px] md:text-[26px] font-bold leading-tight tracking-[-0.03em]">{winTop.name}</p>
+              <p className="mt-1 text-[12px] text-slate-500">{winTop.ago}</p>
+            </div>
+            <div className="shrink-0 text-right">
+              {winTop.value > 0
+                ? <p className="text-[24px] md:text-[28px] font-bold tabular-nums text-emerald-300">{fmtRp(winTop.value)}</p>
+                : <p className="text-[13px] font-medium text-amber-300">Nilai belum diisi</p>}
+            </div>
+          </button>
+
+          {winRest.length > 0 && (
+            <ul className="relative mt-5 grid gap-1 border-t border-white/10 pt-4 sm:grid-cols-2">
+              {winRest.map((w) => (
+                <li key={w.id}>
+                  <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === w.id))} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/5">
+                    <span className="min-w-0 truncate text-[13px] text-slate-200">{w.sales} - {w.name}</span>
+                    <span className={"shrink-0 text-[12px] tabular-nums " + (w.value > 0 ? "text-slate-300" : "text-amber-300")}>{w.value > 0 ? fmtRp(w.value) : "Nilai belum diisi"}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       <StatRow>
