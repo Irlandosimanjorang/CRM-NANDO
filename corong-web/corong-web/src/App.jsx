@@ -140,6 +140,8 @@ function Toast({ toast, onDismiss }) {
 
 export default function App() {
   const [session, setSession] = useState(null);
+  // Link lupa password membuat sesi sementara; penanda ini menahan user di form password baru sampai selesai.
+  const [recovering, setRecovering] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   // BUG FIX (6 Sep 2026): SEMUA modal/popup di app (draft AI, progress, cek
   // duplikat, tambah Deal/Visit, rekam meeting, kompetitor, recycle bin,
@@ -337,7 +339,7 @@ export default function App() {
   useEffect(() => {
     if (!isConfigured) { setAuthReady(true); return; }
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { db.clearOrgCache(); setSession(s); });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => { db.clearOrgCache(); if (event === "PASSWORD_RECOVERY") setRecovering(true); setSession(s); });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -694,7 +696,7 @@ export default function App() {
 
   if (!isConfigured) return <ConfigScreen />;
   if (!authReady) return <Splash />;
-  if (!session) return <Auth />;
+  if (!session || recovering) return <Auth recovering={recovering} onRecovered={() => setRecovering(false)} />;
 
   // Sesi udah valid (password bener), TAPI kalau user ini punya 2FA aktif
   // dan belum verifikasi kode-nya di sesi ini, app-nya DIBLOKIR total -

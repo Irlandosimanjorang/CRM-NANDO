@@ -2406,8 +2406,10 @@ function DemoScene({ sceneKey }) {
   );
 }
 
-export default function Auth() {
-  const [mode, setMode] = useState("signin");
+export default function Auth({ recovering = false, onRecovered } = {}) {
+  const [mode, setMode] = useState(recovering ? "reset" : "signin");
+  // Dibuka dari link lupa password (App.jsx mendeteksi PASSWORD_RECOVERY): langsung ke form password baru.
+  useEffect(() => { if (recovering) setMode("reset"); }, [recovering]);
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [fullName, setFullName] = useState("");
@@ -2541,6 +2543,42 @@ export default function Auth() {
 
   const submit = async () => {
     setMsg("");
+
+    // Lupa password: kirim link reset ke email.
+    if (mode === "forgot") {
+      setLoading(true);
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` });
+        if (error) throw error;
+        setMsg(tr("Link reset password sudah dikirim ke email Anda. Buka link itu untuk membuat password baru.", "A reset link has been sent to your email. Open it to create a new password."));
+      } catch (e) {
+        setMsg(e.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Dari link reset: simpan password baru.
+    if (mode === "reset") {
+      if (!Object.values(pwChecks(pw)).every(Boolean)) {
+        setMsg(tr("Password belum memenuhi semua syarat di bawah.", "Password doesn't meet all the requirements below."));
+        return;
+      }
+      setLoading(true);
+      try {
+        const { error } = await supabase.auth.updateUser({ password: pw });
+        if (error) throw error;
+        setPw("");
+        onRecovered?.();
+        setMode("signin");
+      } catch (e) {
+        setMsg(e.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     if (mode === "signup") {
       if (!fullName.trim() || !companyName.trim()) {
@@ -3446,7 +3484,7 @@ export default function Auth() {
                       </>
                     )}
 
-                    <div>
+                    {mode !== "reset" && <div>
                       <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
                         EMAIL {mode === "signup" && <span className="text-orange-400">*</span>}
                       </label>
@@ -3457,11 +3495,11 @@ export default function Auth() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                       />
-                    </div>
+                    </div>}
 
-                    <div>
+                    {mode !== "forgot" && <div>
                       <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
-                        PASSWORD {mode === "signup" && <span className="text-orange-400">*</span>}
+                        {mode === "reset" ? "PASSWORD BARU" : "PASSWORD"} {mode === "signup" && <span className="text-orange-400">*</span>}
                       </label>
                       <input
                         type="password"
@@ -3473,7 +3511,7 @@ export default function Auth() {
                           e.key === "Enter" && submit()
                         }
                       />
-                      {mode === "signup" && (() => {
+                      {(mode === "signup" || mode === "reset") && (() => {
                         const checks = pwChecks(pw);
                         const items = [
                           [checks.length, tr("Minimal 8 karakter", "At least 8 characters")],
@@ -3493,7 +3531,16 @@ export default function Auth() {
                           </div>
                         );
                       })()}
-                    </div>
+                      {mode === "signin" && (
+                        <button
+                          type="button"
+                          onClick={() => { setMode("forgot"); setMsg(""); setPw(""); }}
+                          className="mt-2 text-[9px] font-medium text-slate-500 transition hover:text-white"
+                        >
+                          {tr("Lupa password?", "Forgot password?")}
+                        </button>
+                      )}
+                    </div>}
 
                     {msg && (
                       <div className="flex gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-[9px] leading-5 text-rose-300">
@@ -3532,7 +3579,11 @@ export default function Auth() {
                       )}
                       {mode === "signin"
                         ? tr("Masuk ke Nexto", "Sign in to Nexto")
-                        : tr("Buat Akun Gratis", "Create Free Account")}
+                        : mode === "signup"
+                          ? tr("Buat Akun Gratis", "Create Free Account")
+                          : mode === "forgot"
+                            ? tr("Kirim link reset", "Send reset link")
+                            : tr("Simpan password baru", "Save new password")}
                       {!loading && <ArrowRight size={13} />}
                     </button>
 
@@ -3565,7 +3616,9 @@ export default function Auth() {
                     >
                       {mode === "signin"
                         ? tr("Belum punya akun? Daftar gratis", "Don't have an account? Sign up free")
-                        : tr("Sudah punya akun? Masuk", "Already have an account? Sign in")}
+                        : mode === "signup"
+                          ? tr("Sudah punya akun? Masuk", "Already have an account? Sign in")
+                          : tr("Kembali ke masuk", "Back to sign in")}
                     </button>
                   </div>
 
