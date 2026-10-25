@@ -10,7 +10,7 @@ import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../u
 import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
 import { NEW_LEAD_MINUTES, collectUntouchedNewLeads, formatAge } from "../lib/newLeadsIdle";
 import { todayISO, fmtRp } from "../lib/helpers";
-import { WIN_WINDOW_DAYS, collectRecentWins, groupWinsBySales, initialsOf } from "../lib/winBoard";
+import WinBoard from "../components/WinBoard";
 
 // Kartu dashboard: sudut lebih membulat, bayangan lembut, dan jarak dalam lebih lega (gaya kartu Nexto yang baru).
 const DASH_CARD = "!rounded-[28px] border-slate-200/60 shadow-[0_2px_6px_rgba(15,23,42,0.05),0_18px_40px_-18px_rgba(15,23,42,0.22)]";
@@ -54,13 +54,6 @@ export default function Dashboard({
     [leads, stages, myUid]
   );
 
-  // Papan kemenangan tim (25 Okt 2026) - lihat lib/winBoard.js. Sembunyi per browser, disimpan di localStorage.
-  const wins = useMemo(() => collectRecentWins(leads, stages, members), [leads, stages, members]);
-  const winBySales = useMemo(() => groupWinsBySales(wins), [wins]);
-  const [winHidden, setWinHidden] = useState(() => {
-    try { return localStorage.getItem("nexto-win-board-hidden") === "1"; } catch (_) { return false; }
-  });
-  const hideWinBoard = () => { setWinHidden(true); try { localStorage.setItem("nexto-win-board-hidden", "1"); } catch (_) {} };
 
   // Menang / kalah dihitung per kejadian perpindahan tahap (repeat order tetap terhitung tiap kali menang).
   const [events, setEvents] = useState(null);
@@ -334,36 +327,7 @@ export default function Dashboard({
       </section>}
 
       {/* Angka utama - satu panel dengan garis pemisah, bukan 4 kartu. */}
-      {showWinBoard && wins.length > 0 && !winHidden && (
-        <Panel className="p-5">
-          <div className="flex items-center justify-between gap-3">
-            <PanelHeader title="Kemenangan tim" meta={`${wins.length} deal menang dalam ${WIN_WINDOW_DAYS} hari terakhir`} />
-            <button type="button" aria-label="Sembunyikan papan kemenangan" onClick={hideWinBoard} className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-ink">
-              <X size={14} />
-            </button>
-          </div>
-
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {winBySales.map((g) => (
-              <li key={g.sales}>
-                <button type="button" onClick={() => onOpenLead?.(leads.find((x) => x.id === g.latest.id))} className="flex w-full items-center gap-3.5 rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[13px] font-semibold text-slate-600 ring-1 ring-slate-200">{initialsOf(g.sales)}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[17px] font-semibold tracking-[-0.02em] text-ink">{g.sales}</p>
-                    <p className="mt-0.5 truncate text-[12px] text-slate-500">{g.count} deal · {g.latest.name}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    {g.total > 0
-                      ? <p className="text-[15px] font-semibold tabular-nums text-orange-700">{fmtRp(g.total)}</p>
-                      : <p className="text-[12px] text-slate-400">Nilai belum diisi</p>}
-                    <p className="mt-0.5 text-[11px] text-slate-400">{g.latest.ago}</p>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
+      {showWinBoard && <WinBoard leads={leads} stages={stages} members={members} onOpenLead={onOpenLead} />}
 
       <StatRow>
         <Stat value={stats.total} label="Total lead" hint={`${stats.won} menang, ${stats.lost} kalah`} />
