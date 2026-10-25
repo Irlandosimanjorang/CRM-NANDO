@@ -8,6 +8,7 @@ import AiContextPanel from "../components/AiContextPanel";
 import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../ui";
 
 import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
+import { NEW_LEAD_MINUTES, collectUntouchedNewLeads, formatAge } from "../lib/newLeadsIdle";
 import { todayISO } from "../lib/helpers";
 
 // Kartu dashboard: sudut lebih membulat, bayangan lembut, dan jarak dalam lebih lega (gaya kartu Nexto yang baru).
@@ -41,6 +42,12 @@ export default function Dashboard({
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
   const myIdle = useMemo(
     () => collectIdleLeads(myUid ? leads.filter((l) => (l.assigned_to || l.user_id) === myUid) : leads, stages),
+    [leads, stages, myUid]
+  );
+
+  // Lead baru yang belum disentuh (25 Okt 2026) - lihat lib/newLeadsIdle.js.
+  const myNew = useMemo(
+    () => collectUntouchedNewLeads(myUid ? leads.filter((l) => (l.assigned_to || l.user_id) === myUid) : leads, stages),
     [leads, stages, myUid]
   );
 
@@ -427,6 +434,26 @@ export default function Dashboard({
               <div className="mt-3"><EmptyState action="Buka Visit & Follow-up" onAction={() => onGo?.("visitfollowup")}>Belum ada tugas. Isi langkah berikutnya atau jadwal kunjungan di lead agar muncul di sini.</EmptyState></div>
             )}
           </DashPanel>
+
+          {myNew.length > 0 && (
+            <DashPanel className="p-5">
+              <PanelHeader title="Lead baru belum disentuh" meta={`${myNew.length} lead baru lebih dari ${NEW_LEAD_MINUTES} menit belum dihubungi`} />
+              <ul className="mt-3 -mx-2 divide-y divide-slate-100">
+                {myNew.slice(0, 5).map((l) => (
+                  <li key={l.id}>
+                    <button onClick={() => onOpenLead?.(l)} className="w-full rounded-inner px-2 py-2.5 text-left hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 truncate text-[12.5px] font-semibold text-slate-800">{l.name}</div>
+                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-amber-800">{formatAge(l._minutes)}</span>
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] text-slate-500">Dibuat {formatAge(l._minutes)} lalu, belum ada kontak</div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {myNew.length > 5 && <p className="mt-2 text-[11.5px] text-slate-500">dan {myNew.length - 5} lead lainnya.</p>}
+            </DashPanel>
+          )}
 
           {/* Lead milik user ini yang terbengkalai (2 Okt 2026) - biar sales
               membereskannya sendiri sebelum terlihat owner di tab Team.
