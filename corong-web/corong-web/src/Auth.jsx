@@ -2548,13 +2548,16 @@ export default function Auth({ recovering = false, onRecovered } = {}) {
     if (mode === "forgot") {
       setLoading(true);
       try {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` });
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/`, captchaToken });
         if (error) throw error;
         setMsg(tr("Link reset password sudah dikirim ke email Anda. Buka link itu untuk membuat password baru.", "A reset link has been sent to your email. Open it to create a new password."));
       } catch (e) {
         setMsg(e.message);
       } finally {
         setLoading(false);
+        // Token captcha hanya sekali pakai: reset widget supaya percobaan berikutnya dapat token baru.
+        setCaptchaToken("");
+        if (window.turnstile && turnstileWidgetId.current) window.turnstile.reset(turnstileWidgetId.current);
       }
       return;
     }
