@@ -219,14 +219,19 @@ function parseObj(t) {
   return null;
 }
 
-async function classifyVoiceCommand(transcript, leads, dateLabel, industryKey) {
+async function classifyVoiceCommand(transcript, leads, dateLabel, industryKey, stages = []) {
   // Hemat token (6 Okt 2026): lead dikirim dengan nomor urut pendek, bukan UUID
   // 36 karakter; nomor dipetakan balik ke id asli setelah AI menjawab.
   const leadList = leads.map((l, i) => `${i + 1}|${l.name}|${l.key_person || ""}`).join("\n");
+  // Tahap pipeline org ini (25 Okt 2026): dipakai buat pindah tahap lewat suara.
+  const stageList = stages.map((s) => `${s.key}|${s.label}|${s.type}`).join("\n");
   const prompt = `Ini transkrip voice note singkat dari sales lapangan di bisnis ${industryContext(industryKey)}, di Indonesia. Tanggal SEKARANG: ${dateLabel.dateStr} (${dateLabel.isoDate}), pakai ini buat mikirin tanggal relatif ("besok", "minggu depan", dst).
 
 Daftar lead org ini (format: nomor|nama|kontak utama):
 ${leadList}
+
+Daftar tahap pipeline org ini (format: key|label|tipe):
+${stageList}
 
 Tentuin SATU aksi yang paling sesuai maksud user dari pilihan ini:
 - "update_lead": update info lead yang SUDAH ADA di daftar (jadwal visit, next action, progress, kontak, dll) - INI DEFAULT kalau user cuma cerita update/progress biasa tanpa maksud lain yang eksplisit.
@@ -241,7 +246,7 @@ Balas HANYA JSON, tanpa markdown, PERSIS struktur ini (isi cuma field yang relev
   "lead_id": "<NOMOR dari daftar di atas, atau null kalau gak ada yang cukup yakin cocok / action create_lead>",
   "confidence": "high",
   "progress_note": "<ringkasan info baru dari transkrip INI SAJA, bahasa Indonesia baku yang rapi, pakai istilah bisnis di atas, buang basa-basi/pengulangan - kosongkan kalau gak ada info baru buat dicatet>",
-  "updates": { "visit_date": null, "visit_agenda": null, "visit_meet": null, "next_action": null, "phone": null, "email": null, "website": null, "key_person": null, "key_person_title": null, "product": null, "city": null, "priority": null },
+  "updates": { "visit_date": null, "visit_agenda": null, "visit_meet": null, "next_action": null, "phone": null, "email": null, "website": null, "key_person": null, "key_person_title": null, "product": null, "city": null, "priority": null, "stage_key": null },
   "cancel_visit": false,
   "result": null,
   "new_lead": { "name": null, "category": null, "phone": null, "email": null, "website": null, "key_person": null, "key_person_title": null, "product": null, "city": null }
@@ -250,6 +255,7 @@ Balas HANYA JSON, tanpa markdown, PERSIS struktur ini (isi cuma field yang relev
 ATURAN:
 - updates.visit_date format YYYY-MM-DD (hitung dari tanggal sekarang di atas kalau user nyebut relatif), atau null kalau gak disebut.
 - updates.priority cuma salah satu dari "high"/"medium"/"low", atau null.
+- updates.stage_key diisi dengan KEY dari daftar tahap (kolom pertama) HANYA kalau user EKSPLISIT minta pindah/ubah tahap lead (misal "pindahin ke negosiasi", "naikin ke proposal"). Kalau tujuannya tahap tipe won/lost, pakai action close_lead, bukan stage_key. null kalau gak ada permintaan pindah tahap.
 - cancel_visit true CUMA kalau user eksplisit minta BATALIN jadwal (bukan pindah tanggal - itu masuk updates.visit_date biasa).
 - result cuma diisi "won" atau "lost" kalau action close_lead.
 - new_lead cuma diisi kalau action create_lead, name WAJIB ada.
@@ -372,10 +378,11 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
 
     // RLS otomatis nge-filter ke lead org sendiri doang.
     const { data: leads } = await supabase.from("leads").select("id, name, key_person").order("last_contact", { ascending: false }).limit(200);
+    const { data: stageRows } = await supabase.from("stages").select("key, label, type").order("position");
 
     const dateLabel = wibNowLabel();
     const [classified] = await Promise.all([
-      classifyVoiceCommand(transcript, leads || [], dateLabel, industryKey),
+      classifyVoiceCommand(transcript, leads || [], dateLabel, industryKey, stageRows || []),
       storagePath ? removeAudio(admin, storagePath) : null,
     ]);
 

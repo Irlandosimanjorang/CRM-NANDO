@@ -42,7 +42,7 @@ const ACTION_META = {
 };
 
 const FIELD_LABELS = {
-  visit_date: "Tanggal visit", visit_agenda: "Agenda visit", visit_meet: "Bertemu siapa",
+  stage_key: "Tahap pipeline", visit_date: "Tanggal visit", visit_agenda: "Agenda visit", visit_meet: "Bertemu siapa",
   next_action: "Next action", phone: "Telepon", email: "Email", website: "Website",
   key_person: "Key person", key_person_title: "Jabatan key person", product: "Produk",
   city: "Kota", priority: "Prioritas",
@@ -272,7 +272,12 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
         if (cancelVisit) await db.cancelVisit(lead.id);
         const existing = (leads || []).find((l) => l.id === lead.id) || {};
         const merged = { ...existing, id: lead.id };
-        for (const [k, v] of Object.entries(updates)) if (v !== "" && v != null) merged[k] = v;
+        for (const [k, v] of Object.entries(updates)) {
+          if (v === "" || v == null) continue;
+          // Pindah tahap cuma valid kalau key-nya ada di pipeline org ini.
+          if (k === "stage_key" && !(stages || []).some((s) => s.key === v)) continue;
+          merged[k] = v;
+        }
         if (cancelVisit) { merged.visit_date = null; merged.visit_agenda = ""; merged.visit_meet = ""; }
         await db.upsertLead(merged);
         if (progressNote.trim()) await db.addProgress(lead.id, progressNote.trim());
@@ -488,7 +493,11 @@ export default function QuickVoiceNoteModal({ leads, stages, settings, onClose, 
                   {Object.entries(updates).map(([k, v]) => (
                     <div key={k} className="flex items-center gap-2">
                       <span className="text-[11px] text-slate-500 w-32 shrink-0">{FIELD_LABELS[k] || k}</span>
-                      {k === "priority" ? (
+                      {k === "stage_key" ? (
+                        <select className={`${darkInput} flex-1 py-1.5`} value={v} onChange={(e) => setUpdateField(k, e.target.value)}>
+                          {(stages || []).map((st) => <option key={st.key} value={st.key} className="bg-[#0f1424]">{st.label}</option>)}
+                        </select>
+                      ) : k === "priority" ? (
                         <select className={`${darkInput} flex-1 py-1.5`} value={v} onChange={(e) => setUpdateField(k, e.target.value)}>
                           <option value="high" className="bg-[#0f1424]">Tinggi</option>
                           <option value="medium" className="bg-[#0f1424]">Sedang</option>
