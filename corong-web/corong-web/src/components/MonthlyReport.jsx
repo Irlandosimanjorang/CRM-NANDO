@@ -372,10 +372,11 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     const wibDate = (ts) => new Date(new Date(ts).getTime() + 7 * 3600000).toISOString().slice(0, 10);
     // Satu tab: baris, baris judul bagian, baris header, dan kolom angka (diberi format ribuan di Sheet).
     const sheet = (title, moneyCols = []) => {
-      const s = { title, rows: [], headerRows: [], sectionRows: [], moneyCols };
+      const s = { title, rows: [], headerRows: [], sectionRows: [], totalRows: [], moneyCols, freezeRow: 0 };
       s.push = (row) => s.rows.push(row);
       s.head = (row) => { s.headerRows.push(s.rows.length); s.rows.push(row); };
       s.section = (row) => { s.sectionRows.push(s.rows.length); s.rows.push(row); };
+      s.total = (row) => { s.totalRows.push(s.rows.length); s.rows.push(row); };
       return s;
     };
     const deals = [...r.dealRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
@@ -418,6 +419,9 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     rc.section([`Rencana ${periodLabel} (${plans.length})`]);
     rc.head(["Tanggal", "Kegiatan", "Jenis", "Target", "Status", ...(personal ? [] : ["Anggota"])]);
     for (const x of plans) rc.push([x.plan_date, x.title, x.kind, num(x.target_value), x.done ? "Selesai" : "Belum", ...(personal ? [] : [nameOf(x.user_id)])]);
+    // Header tabel Rencana dikunci saat digulir dan diberi filter otomatis.
+    rc.freezeRow = rc.headerRows[0];
+    rc.filterRow = rc.headerRows[0];
 
     // Rekap: ringkasan per tahap, lalu daftar lead per tahap dengan kolom seperti laporan Excel.
     const live = leads.filter((l) => !l.deleted_at);
@@ -430,7 +434,7 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
       const ls = live.filter((l) => l.stage_key === s.key);
       rk.push([s.label, ls.length, ls.reduce((t, l) => t + num(l.deal_value), 0)]);
     }
-    rk.push(["Total", live.length, live.reduce((t, l) => t + num(l.deal_value), 0)]);
+    rk.total(["Total", live.length, live.reduce((t, l) => t + num(l.deal_value), 0)]);
     for (const s of stages) {
       const ls = live.filter((l) => l.stage_key === s.key).sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
       rk.push([]);
