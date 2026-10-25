@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import * as db from "../lib/db";
 import { supabase } from "../lib/supabaseClient";
-import Auth from "../Auth";
+import TvLogin from "./TvLogin";
 import { fmtRp } from "../lib/helpers";
 import { periodStart, collectWins, groupWinsBySales, initialsOf } from "../lib/winBoard";
 
@@ -39,6 +39,19 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   const [sceneIdx, setSceneIdx] = useState(0);
   const [now, setNow] = useState(() => new Date());
   const [fullscreen, setFullscreen] = useState(false);
+  // null = belum dicek, true = akun wajib 2FA dan belum diverifikasi di browser ini.
+  const [mfaNeeded, setMfaNeeded] = useState(null);
+
+  useEffect(() => {
+    if (!session) { setMfaNeeded(null); return; }
+    let alive = true;
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data: d, error }) => {
+      if (!alive) return;
+      if (error) { setMfaNeeded(null); return; }
+      setMfaNeeded(d.nextLevel === "aal2" && d.currentLevel !== "aal2");
+    });
+    return () => { alive = false; };
+  }, [session]);
 
   useEffect(() => {
     const onChange = () => setFullscreen(Boolean(document.fullscreenElement));
@@ -82,11 +95,11 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   }, [fetchVisits]);
 
   useEffect(() => {
-    if (!session) return undefined;
+    if (!session || mfaNeeded !== false) return undefined;
     load();
     const t = setInterval(load, RELOAD_MS);
     return () => clearInterval(t);
-  }, [session, load]);
+  }, [session, mfaNeeded, load]);
 
   // Realtime: begitu ada lead atau kunjungan baru, muat ulang (dibatasi sekali per DEBOUNCE_MS).
   useEffect(() => {
@@ -120,7 +133,17 @@ export default function TvScreen({ fetchVisits = db.listVisitCheckins } = {}) {
   const targetTotal = Object.values(data.targets).reduce((s, v) => s + v, 0);
 
   if (session === undefined) return <div className="min-h-screen bg-[#0b1020]" />;
-  if (!session) return <Auth />;
+  if (!session) return <TvLogin />;
+  if (mfaNeeded === null) return <div className="min-h-screen bg-[#0b1020]" />;
+  if (mfaNeeded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0b1020] px-5 text-slate-100">
+        <p className="max-w-md text-center text-[18px] leading-relaxed text-slate-300">
+          Akun ini memakai verifikasi dua langkah. Selesaikan dulu di nexto.site/app pada browser ini, lalu buka lagi nexto.site/tv.
+        </p>
+      </div>
+    );
+  }
 
   const scene = SCENES[sceneIdx];
   const todayVisits = data.visits.length;
