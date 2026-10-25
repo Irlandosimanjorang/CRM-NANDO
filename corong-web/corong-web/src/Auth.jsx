@@ -502,7 +502,7 @@ const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 const PRICING_NORMAL = {
   standard: { monthlyPrice: "Rp89rb", quarterlyTotal: "Rp267rb" },
   professional: { monthlyPrice: "Rp249rb", quarterlyTotal: "Rp747rb" },
-  enterprise: { quarterlyTotal: "Rp4.99jt", semesterTotal: "Rp5.39jt", perPerson: "Rp416rb", perPersonSemester: "Rp225rb" },
+  enterprise: { quarterlyTotal: "Rp2.99jt", semesterTotal: "Rp5.39jt", perPerson: "Rp249rb", perPersonSemester: "Rp225rb" },
 };
 // === HARGA DIREVISI TOTAL (22 Sep 2026, permintaan Nando, versi FINAL -
 // gantiin revisi sebelumnya di hari yang sama yang batal dipake) ===
