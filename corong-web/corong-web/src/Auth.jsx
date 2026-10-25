@@ -502,7 +502,7 @@ const isEarlyBird = new Date() < EARLY_BIRD_DEADLINE;
 const PRICING_NORMAL = {
   standard: { monthlyPrice: "Rp89rb", quarterlyTotal: "Rp267rb" },
   professional: { monthlyPrice: "Rp249rb", quarterlyTotal: "Rp747rb" },
-  enterprise: { quarterlyTotal: "Rp2.99jt", semesterTotal: "Rp5.39jt", perPerson: "Rp249rb", perPersonSemester: "Rp225rb" },
+  enterprise: { quarterlyTotal: "Rp3.348rb", semesterTotal: "Rp6.026rb", perPerson: "Rp279rb", perPersonSemester: "Rp251rb" },
 };
 // === HARGA DIREVISI TOTAL (22 Sep 2026, permintaan Nando, versi FINAL -
 // gantiin revisi sebelumnya di hari yang sama yang batal dipake) ===
@@ -528,7 +528,7 @@ const PRICING_NORMAL = {
 const PRICING_EARLY_BIRD = {
   standard: { monthlyPrice: "Rp59rb", monthlySavings: "Rp30rb", quarterlyTotal: "Rp177rb", quarterlySavings: "Rp90rb" },
   professional: { monthlyPrice: "Rp229rb", monthlySavings: "Rp20rb", quarterlyTotal: "Rp687rb", quarterlySavings: "Rp60rb" },
-  enterprise: { quarterlyTotal: "Rp2.988rb", semesterTotal: "Rp5.378rb", quarterlySavings: "Rp360rb", semesterSavings: "Rp648rb", perPerson: "Rp249rb", perPersonSemester: "Rp224rb" },
+  enterprise: { quarterlyTotal: "Rp2.99jt", semesterTotal: "Rp5.39jt", quarterlySavings: "Rp358rb", semesterSavings: "Rp636rb", perPerson: "Rp249rb", perPersonSemester: "Rp225rb" },
 };
 const PRICING = isEarlyBird ? PRICING_EARLY_BIRD : PRICING_NORMAL;
 
