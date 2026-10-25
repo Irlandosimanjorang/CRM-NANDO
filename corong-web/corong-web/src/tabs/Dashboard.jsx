@@ -40,6 +40,7 @@ export default function Dashboard({
   myUid = null,
   projectDeal = false,
   members = [],
+  showWinBoard = false,
 }) {
   const displayName = settings?.community_display_name || settings?.name || settings?.full_name || "Nando";
   const myIdle = useMemo(
@@ -331,7 +332,7 @@ export default function Dashboard({
       </section>}
 
       {/* Angka utama - satu panel dengan garis pemisah, bukan 4 kartu. */}
-      {wins.length > 0 && !winHidden && (
+      {showWinBoard && wins.length > 0 && !winHidden && (
         <Panel className="p-5">
           <div className="flex items-start justify-between gap-3">
             <PanelHeader title="Kemenangan terbaru" meta={`${wins.length} deal menang dalam ${WIN_WINDOW_DAYS} hari terakhir`} />
