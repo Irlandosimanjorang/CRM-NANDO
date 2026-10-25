@@ -531,6 +531,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
       const deals = [...r.dealRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
       await downloadReportPpt({
         orgId: org?.id || null,
+        userId: await db.getCurrentUserId(),
         orgName: org?.name || "",
         who: personal ? "Laporan pribadi" : scopeId === "all" ? "Semua tim" : scopeName,
         periodLabel,

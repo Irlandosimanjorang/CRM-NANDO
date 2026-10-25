@@ -21,6 +21,11 @@ const ORG_LOGOS = {
   "b6c256bb-681d-4833-af10-ebb665c6d2d0": "/logos/map.png", // MAP
 };
 
+// Logo khusus per akun (menimpa logo org untuk akun itu saja, anggota lain tetap pakai logo org).
+const USER_LOGOS = {
+  "2d4433c7-a62d-44ef-a6e9-fb43d609ea48": "/clients/epdm.webp", // Vivi EPDM (epdmofficial@gmail.com, sales rep BSB)
+};
+
 // Logo diubah jadi data URL supaya bisa ditanam langsung di file .pptx. Gagal memuat = tanpa logo.
 async function loadLogo(url) {
   try {
@@ -36,13 +41,14 @@ async function loadLogo(url) {
   }
 }
 
-export async function downloadReportPpt({ orgId = null, orgName = "", who = "", periodLabel = "", fmtRp, pct, filtered = false, target = 0, summary, deals = [], team = [], showTeam = false, extra = {} }) {
+export async function downloadReportPpt({ orgId = null, userId = null, orgName = "", who = "", periodLabel = "", fmtRp, pct, filtered = false, target = 0, summary, deals = [], team = [], showTeam = false, extra = {} }) {
   const { default: PptxGenJS } = await import("pptxgenjs");
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE"; // 13.33 x 7.5 inci
   pptx.title = `Report ${who} ${periodLabel}`;
   pptx.company = "Nexto";
-  const logo = ORG_LOGOS[orgId] ? await loadLogo(ORG_LOGOS[orgId]) : null;
+  const logoUrl = (userId && USER_LOGOS[userId]) || ORG_LOGOS[orgId];
+  const logo = logoUrl ? await loadLogo(logoUrl) : null;
   const nextoLogo = await loadLogo("/nexto-logo.png");
 
   const W = 13.333;
