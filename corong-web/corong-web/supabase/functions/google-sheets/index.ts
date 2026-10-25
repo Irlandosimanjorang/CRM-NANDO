@@ -53,17 +53,68 @@ async function accessTokenFor(admin: any, userId: string): Promise<string | null
   return tok.access_token || null;
 }
 
+// Indeks baris atau kolom dari klien: hanya bilangan bulat dalam batas yang wajar.
+const indexList = (input: unknown, max: number) =>
+  Array.isArray(input) ? [...new Set(input.filter((n) => Number.isInteger(n) && n >= 0 && n < max))] : [];
+
 // Rapikan tab dari klien: judul dibatasi, baris dan kolom dipotong, nilai selain angka dan teks dibuang.
 function cleanTabs(input: unknown) {
   if (!Array.isArray(input)) return [];
-  return input.slice(0, MAX_TABS).map((t: any, i: number) => ({
-    title: String(t?.title || `Tab ${i + 1}`).slice(0, 100),
-    rows: (Array.isArray(t?.rows) ? t.rows.slice(0, MAX_ROWS) : []).map((row: unknown) =>
+  return input.slice(0, MAX_TABS).map((t: any, i: number) => {
+    const rows = (Array.isArray(t?.rows) ? t.rows.slice(0, MAX_ROWS) : []).map((row: unknown) =>
       (Array.isArray(row) ? row.slice(0, MAX_COLS) : []).map((v) =>
         typeof v === "number" ? (Number.isFinite(v) ? v : "") : String(v ?? "").slice(0, 5000)
       )
-    ),
-  }));
+    );
+    return {
+      title: String(t?.title || `Tab ${i + 1}`).slice(0, 100),
+      rows,
+      headerRows: indexList(t?.headerRows, rows.length),
+      sectionRows: indexList(t?.sectionRows, rows.length),
+      moneyCols: indexList(t?.moneyCols, MAX_COLS),
+    };
+  });
+}
+
+// Format tampilan: baris header abu dan tebal, judul bagian tebal, kolom angka pakai pemisah ribuan, lebar kolom menyesuaikan isi.
+function formatRequests(tabs: any[], sheetIds: number[]) {
+  const requests: any[] = [];
+  tabs.forEach((t, i) => {
+    const sheetId = sheetIds[i];
+    if (sheetId === undefined) return;
+    const colCount = Math.max(1, ...t.rows.map((row: unknown[]) => row.length));
+    const rowCount = Math.max(1, t.rows.length);
+    for (const row of t.headerRows) {
+      requests.push({
+        repeatCell: {
+          range: { sheetId, startRowIndex: row, endRowIndex: row + 1, startColumnIndex: 0, endColumnIndex: colCount },
+          cell: { userEnteredFormat: { backgroundColor: { red: 0.945, green: 0.961, blue: 0.976 }, textFormat: { bold: true, foregroundColor: { red: 0.2, green: 0.255, blue: 0.333 } } } },
+          fields: "userEnteredFormat(backgroundColor,textFormat)",
+        },
+      });
+    }
+    for (const row of t.sectionRows) {
+      requests.push({
+        repeatCell: {
+          range: { sheetId, startRowIndex: row, endRowIndex: row + 1, startColumnIndex: 0, endColumnIndex: colCount },
+          cell: { userEnteredFormat: { textFormat: { bold: true, fontSize: 12, foregroundColor: { red: 0.059, green: 0.09, blue: 0.165 } } } },
+          fields: "userEnteredFormat(textFormat)",
+        },
+      });
+    }
+    for (const col of t.moneyCols) {
+      if (col >= colCount) continue;
+      requests.push({
+        repeatCell: {
+          range: { sheetId, startRowIndex: 0, endRowIndex: rowCount, startColumnIndex: col, endColumnIndex: col + 1 },
+          cell: { userEnteredFormat: { numberFormat: { type: "NUMBER", pattern: "#,##0" } } },
+          fields: "userEnteredFormat.numberFormat",
+        },
+      });
+    }
+    requests.push({ autoResizeDimensions: { dimensions: { sheetId, dimension: "COLUMNS", startIndex: 0, endIndex: colCount } } });
+  });
+  return requests;
 }
 
 Deno.serve(async (req) => {
@@ -157,6 +208,15 @@ Deno.serve(async (req) => {
         }),
       });
       if (!valuesResp.ok) return json({ error: "Gagal mengisi Google Sheet." }, 502);
+
+      // Format tampilan. Kalau gagal, data tetap sudah masuk, jadi tidak dianggap error.
+      const sheetIds = (sheet.sheets || []).map((s: any) => s.properties?.sheetId);
+      const formatResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheet.spreadsheetId}:batchUpdate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ requests: formatRequests(tabs, sheetIds) }),
+      });
+      if (!formatResp.ok) console.log("[google-sheets] format failed", formatResp.status);
 
       return json({ url: sheet.spreadsheetUrl, tabs: tabs.length });
     }

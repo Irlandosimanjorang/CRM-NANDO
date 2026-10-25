@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, Printer, Presentation, Info, FileSpreadsheet } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Printer, Presentation, Info } from "lucide-react";
 import { downloadReportPpt } from "../lib/reportPpt";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
@@ -105,6 +105,16 @@ function InfoTip({ text }) {
     </span>
   );
 }
+
+// Ikon Google Sheet: dokumen dengan kisi tabel, garis tipis, warna hijau yang tenang.
+const SheetsIcon = ({ size = 22, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" fill="#16a34a" fillOpacity=".1" stroke="#15803d" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M14 3v5h5" stroke="#15803d" strokeWidth="1.5" strokeLinejoin="round" />
+    <rect x="8" y="11" width="8" height="6" rx="0.8" stroke="#15803d" strokeWidth="1.2" />
+    <path d="M8 14h8M12 11v6" stroke="#15803d" strokeWidth="1.2" />
+  </svg>
+);
 
 export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTxRaw = [], members = [], org, canImport = false, canManage = false, onChanged, onOpenLead, projectDeal = false }) {
   // Omzet org project_deal (16 Okt 2026, keputusan Nando): nilai proyek lead di tahap menang, bukan transaksi deal.
@@ -357,62 +367,82 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const buildSheetTabs = async () => {
     const who = personal ? "Report saya" : scopeId === "all" ? "Semua tim" : scopeName;
     const stageLabel = Object.fromEntries(stages.map((s) => [s.key, s.label]));
+    const wibDate = (ts) => new Date(new Date(ts).getTime() + 7 * 3600000).toISOString().slice(0, 10);
+    // Satu tab: baris, baris judul bagian, baris header, dan kolom angka (diberi format ribuan di Sheet).
+    const sheet = (title, moneyCols = []) => {
+      const s = { title, rows: [], headerRows: [], sectionRows: [], moneyCols };
+      s.push = (row) => s.rows.push(row);
+      s.head = (row) => { s.headerRows.push(s.rows.length); s.rows.push(row); };
+      s.section = (row) => { s.sectionRows.push(s.rows.length); s.rows.push(row); };
+      return s;
+    };
     const deals = [...r.dealRows].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    const penjualan = [
-      ["Report penjualan", who],
-      [org?.name || "", periodLabel],
-      [],
-      ["Ringkasan"],
-      ["Omzet", r.dealValue],
-      ...(target > 0 ? [["Target", target], ["Capaian target", `${Math.round((r.dealValue / target) * 100)}%`]] : []),
-      ["Data masuk", r.masuk.length],
-      ["SPH belum diproses", r.sphCount, r.sphValue],
-      ["Hot progress", r.hotCount, r.hotValue],
-      ["Deal", deals.length],
-      [],
-      [`Deal ${periodWord}`],
-      ["Tanggal", "Nama", "Nilai"],
-      ...deals.map((d) => [String(d.date).slice(0, 10), d.name, num(d.value)]),
-      [],
-      ["Lead masuk"],
-      ["Tanggal masuk", "Nama", "Tahap", "Nilai"],
-      ...r.masuk.map((l) => [String(l.created_at).slice(0, 10), l.name, stageLabel[l.stage_key] || l.stage_key || "", num(l.deal_value)]),
-    ];
+
+    const p = sheet("Penjualan", [1, 2, 3, 4, 5, 6, 7]);
+    p.section([`Report penjualan ${who}`]);
+    p.push([org?.name || "", periodLabel]);
+    p.push([]);
+    p.section(["Ringkasan"]);
+    p.head(["Keterangan", "Jumlah", "Nilai"]);
+    p.push(["Omzet", "", r.dealValue]);
+    if (target > 0) {
+      p.push(["Target", "", target]);
+      p.push(["Capaian target", "", `${Math.round((r.dealValue / target) * 100)}%`]);
+    }
+    p.push(["Data masuk", r.masuk.length, ""]);
+    p.push(["SPH belum diproses", r.sphCount, r.sphValue]);
+    p.push(["Hot progress", r.hotCount, r.hotValue]);
+    p.push(["Deal", deals.length, r.dealValue]);
+    p.push([]);
+    p.section([`Deal ${periodWord} (${deals.length})`]);
+    p.head(["Tanggal", "Nama", "Nilai"]);
+    for (const d of deals) p.push([String(d.date).slice(0, 10), d.name, num(d.value)]);
+    p.push([]);
+    p.section([`Lead masuk (${r.masuk.length})`]);
+    p.head(["Tanggal masuk", "Nama", "Tahap", "Nilai"]);
+    for (const l of r.masuk) p.push([wibDate(l.created_at), l.name, stageLabel[l.stage_key] || l.stage_key || "", num(l.deal_value)]);
     if (!personal && scopeId === "all" && team.length) {
-      penjualan.push([], ["Hasil per marketing"], ["Marketing", ...(act ? ["Aktivitas"] : []), "Lead masuk", "SPH", "Hot", "Deal", "Omzet", "Target"]);
-      for (const m of team) penjualan.push([m.name, ...(act ? [m.aktivitas ?? ""] : []), m.masuk, m.sph, m.hot, m.deals, m.omzet, targetOf(m.id)]);
+      p.push([]);
+      p.section(["Hasil per marketing"]);
+      p.head(["Marketing", ...(act ? ["Aktivitas"] : []), "Lead masuk", "SPH", "Hot", "Deal", "Omzet", "Target"]);
+      for (const m of team) p.push([m.name, ...(act ? [m.aktivitas ?? ""] : []), m.masuk, m.sph, m.hot, m.deals, m.omzet, targetOf(m.id)]);
     }
 
     // Rencana bulan yang sama, sesuai pilihan anggota di layar (RLS membatasi yang boleh dibaca).
     const plans = (await db.listRencana(`${ym}-01`, `${ym}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`))
       .filter((x) => scopeId === "all" || x.user_id === scopeId);
     const nameOf = (uid) => members.find((m) => m.user_id === uid)?.display_name || "";
-    const rencana = [
-      [`Rencana ${periodLabel}`, who],
-      [],
-      ["Tanggal", "Kegiatan", "Jenis", "Target", "Status", ...(personal ? [] : ["Anggota"])],
-      ...plans.map((x) => [x.plan_date, x.title, x.kind, num(x.target_value), x.done ? "Selesai" : "Belum", ...(personal ? [] : [nameOf(x.user_id)])]),
-    ];
+    const rc = sheet("Rencana", [3]);
+    rc.section([`Rencana ${periodLabel} (${plans.length})`]);
+    rc.head(["Tanggal", "Kegiatan", "Jenis", "Target", "Status", ...(personal ? [] : ["Anggota"])]);
+    for (const x of plans) rc.push([x.plan_date, x.title, x.kind, num(x.target_value), x.done ? "Selesai" : "Belum", ...(personal ? [] : [nameOf(x.user_id)])]);
 
-    // Rekap: jumlah dan nilai per tahap, lalu daftar lead yang sedang tampil.
+    // Rekap: ringkasan per tahap, lalu daftar lead per tahap dengan kolom seperti laporan Excel.
     const live = leads.filter((l) => !l.deleted_at);
-    const rekap = [
-      [`Rekap ${periodLabel}`, who],
-      [],
-      ["Tahap", "Jumlah lead", "Nilai"],
-      ...stages.map((s) => {
-        const ls = live.filter((l) => l.stage_key === s.key);
-        return [s.label, ls.length, ls.reduce((t, l) => t + num(l.deal_value), 0)];
-      }),
-      [],
-      ["Nama", "Tahap", "Nilai", "Tanggal masuk", "Kontak terakhir", "Kota", "Produk", "Next action"],
-      ...live.map((l) => [
-        l.name || "", stageLabel[l.stage_key] || "", num(l.deal_value), String(l.created_at).slice(0, 10),
-        l.last_contact ? String(l.last_contact).slice(0, 10) : "", l.city || "", l.product || "", l.next_action || "",
-      ]),
-    ];
+    const rk = sheet("Rekap", [7]);
+    rk.section([`Rekap ${periodLabel}`, who]);
+    rk.push([]);
+    rk.section(["Ringkasan per tahap"]);
+    rk.head(["Tahap", "Jumlah lead", "Nilai"]);
+    for (const s of stages) {
+      const ls = live.filter((l) => l.stage_key === s.key);
+      rk.push([s.label, ls.length, ls.reduce((t, l) => t + num(l.deal_value), 0)]);
+    }
+    rk.push(["Total", live.length, live.reduce((t, l) => t + num(l.deal_value), 0)]);
+    for (const s of stages) {
+      const ls = live.filter((l) => l.stage_key === s.key).sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+      rk.push([]);
+      rk.section([`${s.label} (${ls.length})`]);
+      rk.head(["NO", "TANGGAL", "NAMA", "INSTANSI", "NOMOR TELP", "ALAMAT", "NO SPH / INVOICE", "NILAI", "KETERANGAN", "SUMBER"]);
+      ls.forEach((l, i) => rk.push([
+        i + 1, wibDate(l.created_at), l.name || "", l.company_type || "", l.phone || "", l.city || "",
+        String(l.custom_field_1 || "").trim(), num(l.deal_value),
+        [l.next_action, l.key_person && l.key_person !== l.name ? `PIC ${l.key_person}` : ""].filter(Boolean).join(" · "),
+        sourceOfLead(l),
+      ]));
+    }
 
-    return [{ title: "Penjualan", rows: penjualan }, { title: "Rencana", rows: rencana }, { title: "Rekap", rows: rekap }];
+    return [p, rc, rk];
   };
   const exportSheet = async () => {
     setSheetBusy(true);
@@ -509,7 +539,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
             aria-label={sheetBusy ? "Memproses ekspor Google Sheet" : "Ekspor ke Google Sheet"}
             className={cn("inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-emerald-700 hover:bg-slate-50 disabled:opacity-60", focus)}
           >
-            <FileSpreadsheet size={22} />
+            <SheetsIcon size={22} />
           </button>
         )}
       </div>
@@ -838,7 +868,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                 disabled={sheetBusy}
                 className={cn("mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:opacity-60", focus)}
               >
-                <FileSpreadsheet size={14} className="text-emerald-700" />
+                <SheetsIcon size={16} />
                 {sheetBusy ? "Memproses…" : "Ekspor ke Google Sheet"}
               </button>
             </Panel>
