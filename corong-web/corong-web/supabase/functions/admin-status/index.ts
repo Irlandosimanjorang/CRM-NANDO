@@ -83,6 +83,19 @@ function statusOf(used, limit) {
   return "ok";
 }
 
+// Pemilik setiap lead (leads.user_id), diambil per halaman 1000 baris sampai habis.
+// Query tanpa paginasi dipotong 1000 baris oleh PostgREST, jadi hitungan per user salah.
+async function fetchAllLeadOwners(admin) {
+  const rows = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin.from("leads").select("user_id").is("deleted_at", null).order("id", { ascending: true }).range(from, from + 999);
+    if (error) { console.log("[admin-status] fetchAllLeadOwners GAGAL di offset", from, ":", String(error)); break; }
+    rows.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
+}
+
 async function getAllUsers(admin) {
   let allUsers = [];
   let page = 1;
@@ -139,7 +152,7 @@ Deno.serve(async (req) => {
       { data: todayChatMessages },
       { data: lastGarbageSweep },
       { data: recentVisits },
-      { data: allLeadOwners },
+      allLeadOwners,
       { data: aiUsageReport, error: aiUsageErr },
     ] = await Promise.all([
       admin.from("health_check_runs").select("*").order("checked_at", { ascending: false }).limit(1).maybeSingle(),
@@ -163,7 +176,7 @@ Deno.serve(async (req) => {
       admin.from("chat_messages").select("user_id").eq("role", "user").eq("source", "telegram").gte("created_at", dayStart.toISOString()),
       admin.from("garbage_sweep_runs").select("*").order("ran_at", { ascending: false }).limit(1).maybeSingle(),
       admin.from("page_visits").select("session_id, page_path, referrer, device, country, city, created_at").gte("created_at", sevenDaysAgo),
-      admin.from("leads").select("user_id").is("deleted_at", null),
+      fetchAllLeadOwners(admin),
       admin.rpc("admin_ai_usage_report"),
     ]);
     if (aiUsageErr) console.log("[admin-status] admin_ai_usage_report gagal:", aiUsageErr.message);
