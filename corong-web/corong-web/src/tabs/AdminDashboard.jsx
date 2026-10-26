@@ -529,6 +529,8 @@ const fmtUsd = (n) => {
   return `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: v > 0 && v < 1 ? 4 : 2 })}`;
 };
 const sumUsd = (accounts) => (accounts || []).reduce((s, a) => s + (Number(a.cost_usd) || 0), 0);
+// Total biaya AI bulan ini (semua akun berbayar + pemakaian di luar akun, mis. digest per organisasi).
+const sumMonthUsd = (aiu) => (aiu?.totals?.by_plan || []).reduce((s, p) => s + (Number(p.usd_month) || 0), 0) + (Number(aiu?.totals?.other?.usd_month) || 0);
 const fmtTokens = (n) => {
   const v = Number(n) || 0;
   if (v >= 1e6) return `${(v / 1e6).toFixed(1)} jt`;
@@ -1386,9 +1388,9 @@ export default function AdminDashboard() {
       noTrigger: true,
       noTriggerNote: "dicatat otomatis tiap panggilan AI",
       wide: true,
-      blurb: `${(status?.ai_usage?.accounts || []).length} akun berbayar, biaya AI tercatat ${fmtUsd(sumUsd(status?.ai_usage?.accounts))}.`,
-      statLabel: "BIAYA AI TERCATAT",
-      statValue: fmtUsd(sumUsd(status?.ai_usage?.accounts)),
+      blurb: `${(status?.ai_usage?.accounts || []).length} akun berbayar, biaya AI bulan ini ${fmtUsd(sumMonthUsd(status?.ai_usage))}.`,
+      statLabel: "BIAYA AI BULAN INI",
+      statValue: fmtUsd(sumMonthUsd(status?.ai_usage)),
       content: <AiCostPanel data={status?.ai_usage} />,
     },
     {
@@ -1427,8 +1429,8 @@ export default function AdminDashboard() {
       blurb: cashBalance?.has_checkpoint
         ? `Saldo token Anthropic ${fmtUsd(cashBalance.remaining_usd)} (sisa ${cashBalance.pct_remaining}%), laba rugi, arus kas, dan margin.`
         : "Laba rugi, arus kas, saldo token Anthropic, dan margin.",
-      statLabel: cashBalance?.has_checkpoint ? "SALDO ANTHROPIC" : "BIAYA AI TERCATAT",
-      statValue: cashBalance?.has_checkpoint ? fmtUsd(cashBalance.remaining_usd) : fmtUsd(sumUsd(status?.ai_usage?.accounts)),
+      statLabel: cashBalance?.has_checkpoint ? "SALDO ANTHROPIC" : "BIAYA AI BULAN INI",
+      statValue: cashBalance?.has_checkpoint ? fmtUsd(cashBalance.remaining_usd) : fmtUsd(sumMonthUsd(status?.ai_usage)),
       content: <CashflowPanel />,
     },
     {
