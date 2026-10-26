@@ -1889,9 +1889,56 @@ const CLIENTS = [
   { name: "EPDM (Era Pro D-Monomer)", logo: "/clients/epdm.webp", scale: 1 },
   { name: "Maju Abadi Perkasa", logo: "/clients/map.png", scale: 2.6 },
   { name: "INDO UPVC", logo: "/clients/indo-upvc.png", scale: 1 },
-  // Logo dengan latar putih: ditampilkan di kartu putih (card), bukan dibuat putih.
-  { name: "Elevasia", logo: "/clients/elevasia.jpg", scale: 1, card: true },
+  // Logo dengan latar putih: latarnya dihapus di browser (WhiteLogo), lalu dibuat putih seperti logo lain.
+  { name: "Elevasia", logo: "/clients/elevasia.jpg", processed: true },
 ];
+// Logo JPG dengan latar putih: setiap pixel diubah jadi putih dengan transparansi dari kegelapannya,
+// lalu area logo dipotong sesuai batas tepinya. Hasilnya sama dengan logo klien lain (putih, latar transparan).
+function WhiteLogo({ src, alt }) {
+  const ref = useRef(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive || !ref.current) return;
+      const w = img.naturalWidth, h = img.naturalHeight;
+      const work = document.createElement("canvas");
+      work.width = w; work.height = h;
+      const wctx = work.getContext("2d");
+      wctx.drawImage(img, 0, 0);
+      let data;
+      try { data = wctx.getImageData(0, 0, w, h); } catch (_) { return; }
+      const d = data.data;
+      let minX = w, minY = h, maxX = -1, maxY = -1;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          const a = Math.max(0, Math.min(255, (235 - lum) * 2.2));
+          d[i] = 255; d[i + 1] = 255; d[i + 2] = 255; d[i + 3] = a;
+          if (a > 24) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < 0) return;
+      wctx.putImageData(data, 0, 0);
+      const cw = maxX - minX + 1, ch = maxY - minY + 1;
+      const out = ref.current;
+      out.width = cw; out.height = ch;
+      out.getContext("2d").drawImage(work, minX, minY, cw, ch, 0, 0, cw, ch);
+      setReady(true);
+    };
+    img.src = src;
+    return () => { alive = false; };
+  }, [src]);
+  return <canvas ref={ref} role="img" aria-label={alt} className={"h-12 w-auto opacity-90" + (ready ? "" : " hidden")} />;
+}
+
 // Baris logo klien: marquee yang bergerak terus, logo dibuat putih agar terbaca di latar gelap.
 // Tepi memudar, dan berhenti sebentar saat disentuh kursor. Logo ditampilkan dua kali agar sambungannya mulus.
 function ClientRow({ clients }) {
@@ -1909,10 +1956,8 @@ function ClientRow({ clients }) {
       <div className="nexto-client-track flex w-max items-center">
         {track.map((c, i) => (
           <div key={`${c.name}-${i}`} className="flex shrink-0 items-center justify-center px-8">
-            {c.card ? (
-              <div className="flex h-12 items-center rounded-lg bg-white px-3">
-                <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-9 w-auto max-w-[160px] object-contain" />
-              </div>
+            {c.processed ? (
+              <WhiteLogo src={c.logo} alt={c.name} />
             ) : (
               <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-12 w-auto max-w-[200px] object-contain opacity-90" style={{ filter: "brightness(0) invert(1)", transform: `scale(${c.scale ?? 1})` }} />
             )}
