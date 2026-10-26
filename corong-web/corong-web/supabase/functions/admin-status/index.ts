@@ -317,7 +317,8 @@ Deno.serve(async (req) => {
         usage: usageByUserId[u.id] || {},
       };
     }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    const totalLeadsAllUsers = (allLeadOwners || []).length;
+    // Hitungan exact dari DB (count), bukan panjang daftar: query baris dibatasi 1000 oleh PostgREST.
+    const totalLeadsAllUsers = totalLeadsCount ?? 0;
     const usersOverview = { total: allUsersRaw.length, by_plan: byPlanCounts, new_7d: new7d, total_leads: totalLeadsAllUsers, list: usersList };
 
     // ---- RAKIT "TRAFFIC" (analitik sendiri, dari page_visits) ----
