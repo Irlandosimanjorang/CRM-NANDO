@@ -6,6 +6,7 @@ export async function setOrgIndustry(){ return null; }
 export async function switchDemoIndustry(){ return null; }
 export async function getStageHistory(){ return []; }
 export async function getDealsRange(){ return null; }
+export async function getProductBreakdown(){ return null; }
 export async function getDealEntries(){ return []; }
 export async function getTeamActivity(){ return window.__D.teamActivity; }
 export async function getTeamFeed(){ return window.__D.feed; }
@@ -95,6 +96,8 @@ export async function updateLeadAssignee(){ return null; }
 export async function saveLeadLocation(){ return null; }
 export async function reverseGeocode(){ return null; }
 export async function uploadCheckinPhoto(){ return null; }
+export async function checkinPhotoPath(){ return null; }
+export async function getCheckinPhotoUrl(){ return null; }
 export async function verifySelfiePhoto(){ return null; }
 export const formatQuotaDate = (iso) => new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 export async function getCheckinCooldown(){ return ({ canCheckIn: true, usedThisMonth: 2, quotaMax: 20, nextAvailableAt: null, resetAt: new Date(Date.now() + 20 * 86400000).toISOString() }); }
@@ -115,6 +118,7 @@ export async function uploadQuickVoiceNote(){ return null; }
 export async function transcribeQuickVoiceNote(){ return null; }
 export async function classifyQuickText(){ return (function () { const l = (window.__LEADS || [])[0]; return { transcript: 'catatan meeting', action: 'update_lead', lead_id: l ? l.id : null, lead_name: l ? l.name : null, confidence: 'high', progress_note: 'Meeting dengan klien, minta penawaran ulang.', updates: { next_action: 'Kirim penawaran revisi' }, cancel_visit: false, result: null, new_lead: null, quota: { used: 118, max: 125, reset_at: null } }; })(); }
 export async function getQuickVoiceQuota(){ return ({ used: 117, max: 125, reset_at: null }); }
+export async function listVisitCheckins(){ return []; }
 export async function listStageChanges(){ return window.__D.stageChanges; }
 export async function ensureChatChannel(){ return (function () { return { id: 'c1', secret: 'ac5b8e5ec93e48fb91d5828302432a9958b55362215448e5b715dfff7b970d45', active: true, auto_assign: true, last_event_at: '2026-10-08T14:42:39Z' }; })(); }
 export async function getChatWebhookLog(){ return (function () { return [{ id: 'l1', received_at: '2026-10-08T14:42:39Z', event: 'message_received', ok: true, note: 'Pesan masuk disimpan.', payload: { event: 'message_received', text: 'kak ada katalog?' } }, { id: 'l2', received_at: '2026-10-08T14:40:00Z', event: 'message_created', ok: false, note: 'Kontak tidak terbaca dari payload.', payload: { event: 'message_created' } }]; })(); }
@@ -132,6 +136,7 @@ export async function listAdBudgets(){ return []; }
 export async function setAdBudget(){ return null; }
 export async function getDealTransactions(){ return window.__D.deals; }
 export async function getOutcomeEvents(){ return []; }
+export async function updateFaktur(){ return null; }
 export async function addDealTransaction(){ return null; }
 export async function deleteDealTransaction(){ return null; }
 export async function smartImportMap(){ return null; }
@@ -141,6 +146,9 @@ export async function upsertCompetitor(){ return null; }
 export async function deleteCompetitor(){ return null; }
 export async function getAdvisorHistory(){ return [window.__D.advisorRun]; }
 export async function getTodayAdvisorRun(){ return window.__D.advisorRun; }
+export async function exportLeadsToSheet(){ return null; }
+export async function connectGoogleSheets(){ return null; }
+export async function getMyAiContext(){ return null; }
 export async function getMemoryHealth(){ return null; }
 export async function getLatestPipelineReview(){ return null; }
 export async function exportAllData(){ return null; }
