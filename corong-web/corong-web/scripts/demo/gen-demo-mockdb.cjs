@@ -15,6 +15,7 @@ Object.assign(SPECIAL, {
   getTodayAdvisorRun: "window.__D.advisorRun", getAdvisorHistory: "[window.__D.advisorRun]", getProductCatalog: "window.__D.catalog",
   getMemberNotes: "(window.__D.leads.slice(0, 6).map((l, i) => ({ id: 'mn' + i, lead_id: l.id, text: l.progressLog[0] ? l.progressLog[0].text : '', created_at: new Date(Date.now() - i * 3600000).toISOString(), leads: { name: l.name } })))",
   getProductBreakdown: "[]", getDealsRange: "[]",
+  getOutcomeEvents: "((L, S) => ({ won: L.filter((l) => S.some((s) => s.key === l.stage_key && s.type === 'won')).length, lost: L.filter((l) => S.some((s) => s.key === l.stage_key && s.type === 'lost')).length, by_user: [] }))(window.__D.leads, window.__D.stages)",
   getOrgDashboardStats: "((L, S) => { const w = S.filter((s) => s.type === 'won').map((s) => s.key); const x = S.filter((s) => s.type === 'lost').map((s) => s.key); return { total: L.length, won: L.filter((l) => w.includes(l.stage_key)).length, lost: L.filter((l) => x.includes(l.stage_key)).length, followups: L.filter((l) => l.next_action).length, visits: 0, win_rate: 0, deals: window.__D.deals.length, revenue: window.__D.deals.reduce((a, d) => a + (Number(d.deal_value) || 0), 0) }; })(window.__D.leads, window.__D.stages)",
   listAdSpend: "((from, to) => window.__D.ads.filter((a) => a.day >= from && a.day <= to))(arguments[0], arguments[1])", getTeamActivityDays: "window.__D.activityDays", getMyNotifications: "[]", getUnreadNotificationCount: "0",
 });

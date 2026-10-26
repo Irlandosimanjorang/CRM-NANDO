@@ -135,7 +135,7 @@ export async function deleteAdExpense(){ return null; }
 export async function listAdBudgets(){ return []; }
 export async function setAdBudget(){ return null; }
 export async function getDealTransactions(){ return window.__D.deals; }
-export async function getOutcomeEvents(){ return []; }
+export async function getOutcomeEvents(){ return ((L, S) => ({ won: L.filter((l) => S.some((s) => s.key === l.stage_key && s.type === 'won')).length, lost: L.filter((l) => S.some((s) => s.key === l.stage_key && s.type === 'lost')).length, by_user: [] }))(window.__D.leads, window.__D.stages); }
 export async function updateFaktur(){ return null; }
 export async function addDealTransaction(){ return null; }
 export async function deleteDealTransaction(){ return null; }
