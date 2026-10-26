@@ -323,6 +323,8 @@ export default function CashflowPanel() {
   // HPP rata-rata per akun berbayar: total HPP bulan ini (token + infrastruktur) dibagi jumlah akun berbayar aktif.
   const paidAccounts = data.planner?.accounts?.total ?? 0;
   const hppPerAccount = paidAccounts > 0 ? inc.cogs.total / paidAccounts : null;
+  // Bagian biaya tetap (HPP infrastruktur) per akun berbayar, dipakai di kolom "HPP per akun" tabel pelanggan.
+  const fixedPerAccount = paidAccounts > 0 ? inc.cogs.infra / paidAccounts : 0;
 
   const incomeRows = [
     { head: true, l: "Pendapatan" },
@@ -458,12 +460,13 @@ export default function CashflowPanel() {
                 <th className="py-2 pr-2 font-medium text-right">Per bulan</th>
                 <th className="py-2 pr-2 font-medium text-right">Jatah token</th>
                 <th className="py-2 pr-2 font-medium text-right">Biaya AI</th>
+                <th className="py-2 pr-2 font-medium text-right">HPP per akun</th>
                 <th className="py-2 pr-2 font-medium text-right">Margin kotor</th>
                 <th className="py-2 pr-3 font-medium">Terpakai</th>
               </tr>
             </thead>
             <tbody>
-              {contracts.length === 0 && <tr><td colSpan={7} className="py-4 text-center text-[12px] text-slate-400 font-mono">Belum ada invoice atau langganan.</td></tr>}
+              {contracts.length === 0 && <tr><td colSpan={8} className="py-4 text-center text-[12px] text-slate-400 font-mono">Belum ada invoice atau langganan.</td></tr>}
               {contracts.map((c) => (
                 <tr key={c.id} className="border-t border-white/[0.12]">
                   <td className="py-2 pl-3 pr-2 min-w-0">
@@ -484,6 +487,11 @@ export default function CashflowPanel() {
                   <td className="py-2 pr-2 text-[11.5px] font-mono tabular-nums text-right text-slate-200">{idr(c.quota_idr)}</td>
                   <td className="py-2 pr-2 text-[11.5px] font-mono tabular-nums text-right text-pink-200">
                     {c.ai_idr === null ? <span className="text-slate-500">-</span> : <>{idr(c.ai_idr)}<div className="text-[10px] text-slate-400">{usd(c.ai_usd)}</div></>}
+                  </td>
+                  {/* HPP per akun = biaya AI kontrak dibagi jumlah user, ditambah bagian biaya tetap per akun */}
+                  <td className="py-2 pr-2 text-[11.5px] font-mono tabular-nums text-right text-amber-200">
+                    {c.seats > 0 ? idr((c.ai_idr ?? 0) / c.seats + fixedPerAccount) : <span className="text-slate-500">-</span>}
+                    {c.seats > 0 && <div className="text-[10px] text-slate-400">{c.seats} user</div>}
                   </td>
                   <td className="py-2 pr-2 text-[11.5px] font-mono tabular-nums text-right">
                     {c.margin_pct === null ? <span className="text-slate-500">-</span> : <span className="font-bold" style={{ color: c.margin_pct >= 50 ? "#34d399" : c.margin_pct >= 20 ? "#fbbf24" : "#fb7185" }}>{c.margin_pct}%</span>}
