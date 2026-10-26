@@ -1889,8 +1889,8 @@ const CLIENTS = [
   { name: "EPDM (Era Pro D-Monomer)", logo: "/clients/epdm.webp", scale: 1 },
   { name: "Maju Abadi Perkasa", logo: "/clients/map.png", scale: 2.6 },
   { name: "INDO UPVC", logo: "/clients/indo-upvc.png", scale: 1 },
-  // Logo dengan latar putih: filter SVG (nexto-logo-white-bg) membuat latar putih transparan dan logonya putih.
-  { name: "Elevasia", logo: "/clients/elevasia.jpg", scale: 1.7, filter: "url(#nexto-logo-white-bg)" },
+  // Logo dengan latar putih: ditampilkan di kartu putih (card), bukan dibuat putih.
+  { name: "Elevasia", logo: "/clients/elevasia.jpg", scale: 1, card: true },
 ];
 // Baris logo klien: marquee yang bergerak terus, logo dibuat putih agar terbaca di latar gelap.
 // Tepi memudar, dan berhenti sebentar saat disentuh kursor. Logo ditampilkan dua kali agar sambungannya mulus.
@@ -1906,17 +1906,16 @@ function ClientRow({ clients }) {
         .nexto-client-track:hover { animation-play-state: paused; }
         @media (prefers-reduced-motion: reduce) { .nexto-client-track { animation: none; } }
       `}</style>
-      <svg width="0" height="0" className="absolute" aria-hidden="true" focusable="false">
-        {/* Latar putih jadi transparan (luminans -> alpha), logo jadi putih. */}
-        <filter id="nexto-logo-white-bg" colorInterpolationFilters="sRGB">
-          <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -0.2125 -0.7154 -0.0721 0 1" result="gray" />
-          <feComponentTransfer in="gray"><feFuncA type="linear" slope="3" intercept="-1.2" /></feComponentTransfer>
-        </filter>
-      </svg>
       <div className="nexto-client-track flex w-max items-center">
         {track.map((c, i) => (
           <div key={`${c.name}-${i}`} className="flex shrink-0 items-center justify-center px-8">
-            <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-12 w-auto max-w-[200px] object-contain opacity-90" style={{ filter: c.filter ?? "brightness(0) invert(1)", transform: `scale(${c.scale ?? 1})` }} />
+            {c.card ? (
+              <div className="flex h-12 items-center rounded-lg bg-white px-3">
+                <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-9 w-auto max-w-[160px] object-contain" />
+              </div>
+            ) : (
+              <img src={c.logo} alt={c.name} draggable={false} loading="lazy" className="h-12 w-auto max-w-[200px] object-contain opacity-90" style={{ filter: "brightness(0) invert(1)", transform: `scale(${c.scale ?? 1})` }} />
+            )}
           </div>
         ))}
       </div>
