@@ -285,9 +285,9 @@ async function callClaudeWithContinuation(body, signal) {
     if (dat.stop_reason !== "pause_turn") break;
     messages.push({ role: "assistant", content: dat.content });
   }
-  // Harga Haiku 4.5 (per MTok): input $1, cache write 5m $1.25, cache read
-  // $0.1, output $5; web search $10/1000.
-  const costUsd = (usage.input * 1 + usage.cache_write * 1.25 + usage.cache_read * 0.1 + usage.output * 5) / 1e6 + usage.searches * 0.01;
+  // Harga Sonnet 5.5 (per MTok): input $2, cache write $2.5, cache read $0.2,
+  // output $10; web search $10/1000.
+  const costUsd = (usage.input * 2 + usage.cache_write * 2.5 + usage.cache_read * 0.2 + usage.output * 10) / 1e6 + usage.searches * 0.01;
   console.log("[enrich-generated-lead] USAGE", JSON.stringify({ ...usage, cost_usd: Math.round(costUsd * 10000) / 10000 }));
   return (dat?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
 }
@@ -334,12 +334,14 @@ Balas HANYA JSON tanpa markdown:
 {"key_person":"","key_person_title":"","pic_status":"confirmed|left|not_found","website":"","phone":"","email":""}
 pic_status: "confirmed" = PIC terbukti masih bekerja di sini; "left" = PIC yang tercatat terbukti sudah pindah; "not_found" = tidak berhasil memastikan.`;
   const text = await callClaudeWithContinuation({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 600,
+    model: "claude-sonnet-5-5",
+    max_tokens: 1200,
     messages: [{ role: "user", content: prompt }],
-    // 2 pencarian untuk PIC (prioritas), +1 hanya kalau website tidak
-    // memuat kontak yang dibutuhkan.
-    tools: [{ type: "web_search_20250305", name: "web_search", max_uses: extra ? 3 : 2 }],
+    // Sonnet 5.5: maks 4 pencarian web dan 3 pembacaan halaman (web_fetch) untuk PIC dan kontak.
+    tools: [
+      { type: "web_search_20260318", name: "web_search", max_uses: 4, response_inclusion: "excluded" },
+      { type: "web_fetch_20260318", name: "web_fetch", max_uses: 3, max_content_tokens: 3000, response_inclusion: "excluded" },
+    ],
   }, signal);
   const x = text.replace(/```json/gi, "").replace(/```/g, "").trim();
   const a = x.indexOf("{"), e = x.lastIndexOf("}");
