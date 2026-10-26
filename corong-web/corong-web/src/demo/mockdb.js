@@ -5,8 +5,8 @@ export async function getMyOrg(){ return window.__D.org; }
 export async function setOrgIndustry(){ return null; }
 export async function switchDemoIndustry(){ return null; }
 export async function getStageHistory(){ return []; }
-export async function getDealsRange(){ return null; }
-export async function getProductBreakdown(){ return null; }
+export async function getDealsRange(){ return []; }
+export async function getProductBreakdown(){ return []; }
 export async function getDealEntries(){ return []; }
 export async function getTeamActivity(){ return window.__D.teamActivity; }
 export async function getTeamFeed(){ return window.__D.feed; }
@@ -27,7 +27,7 @@ export async function getPendingInviteCodes(){ return []; }
 export async function revokeInviteCode(){ return null; }
 export async function redeemInviteCode(){ return null; }
 export async function getMyRole(){ return window.__D.role; }
-export async function getOrgDashboardStats(){ return []; }
+export async function getOrgDashboardStats(){ return ((L, S) => { const w = S.filter((s) => s.type === 'won').map((s) => s.key); const x = S.filter((s) => s.type === 'lost').map((s) => s.key); return { total: L.length, won: L.filter((l) => w.includes(l.stage_key)).length, lost: L.filter((l) => x.includes(l.stage_key)).length, followups: L.filter((l) => l.next_action).length, visits: 0, win_rate: 0, deals: window.__D.deals.length, revenue: window.__D.deals.reduce((a, d) => a + (Number(d.deal_value) || 0), 0) }; })(window.__D.leads, window.__D.stages); }
 export async function getSalesCompanyView(){ return null; }
 export async function requestApproval(){ return null; }
 export async function getMyLatestApproval(){ return null; }
