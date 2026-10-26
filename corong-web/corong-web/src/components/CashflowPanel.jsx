@@ -320,6 +320,9 @@ export default function CashflowPanel() {
   const months = monthsBack(per.current_ym, 24);
   const idx = months.indexOf(per.ym);
   const profitAccent = inc.net_profit >= 0 ? "#34d399" : "#fb7185";
+  // HPP rata-rata per akun berbayar: total HPP bulan ini (token + infrastruktur) dibagi jumlah akun berbayar aktif.
+  const paidAccounts = data.planner?.accounts?.total ?? 0;
+  const hppPerAccount = paidAccounts > 0 ? inc.cogs.total / paidAccounts : null;
 
   const incomeRows = [
     { head: true, l: "Pendapatan" },
@@ -405,8 +408,9 @@ export default function CashflowPanel() {
           <Tile label="Sisa kas" value={cf.closing_cash === null ? "-" : acc(cf.closing_cash)} sub={cf.closing_cash === null ? "isi saldo kas awal di Pengaturan" : "uang bisnis di rekening"} />
           <Tile label="Untung bulan ini" value={acc(inc.net_profit)} sub={`margin ${mp(inc.net_margin_pct)}`} accent={profitAccent} />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
           <Tile label="Uang klien yang layanannya belum berjalan" value={idr(s.unearned)} sub="kewajiban melayani, bukan untung" accent="#fbbf24" />
+          <Tile label="HPP rata-rata per akun berbayar" value={hppPerAccount === null ? "-" : idr(hppPerAccount)} sub={paidAccounts > 0 ? `total HPP ${idr(inc.cogs.total)} dibagi ${paidAccounts} akun` : "belum ada akun berbayar aktif"} accent="#fcd34d" />
           <Tile label="Piutang" value={idr(s.receivables)} sub={s.overdue_count ? `${s.overdue_count} lewat jatuh tempo` : "tidak ada yang lewat tempo"} accent={s.overdue_count ? "#fbbf24" : undefined} />
           <Tile label="Pendapatan berulang / bulan (MRR)" value={idr(s.mrr)} sub={`nilai kontrak aktif ${idr(s.active_contract_value)}`} />
         </div>
