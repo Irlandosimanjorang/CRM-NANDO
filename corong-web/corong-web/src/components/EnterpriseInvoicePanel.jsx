@@ -878,7 +878,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
         </div>
 
         <div className="min-w-0 overflow-hidden rounded-xl border border-slate-700 bg-white">
-          <iframe ref={frameRef} title="Pratinjau invoice" srcDoc={initialHtml} onLoad={syncFrame} className="block h-[min(72vh,760px)] w-full bg-white" />
+          <iframe ref={frameRef} title="Pratinjau invoice" srcDoc={initialHtml} sandbox="allow-same-origin" onLoad={syncFrame} className="block h-[min(72vh,760px)] w-full bg-white" />
         </div>
       </div>
 
