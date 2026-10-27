@@ -63,6 +63,9 @@ function monthsBetween(fromYm: string, toYm: string) {
   return out;
 }
 
+// Fitur AI untuk Generate Leads (pencarian + enrich tiap lead), sama dengan logKeys di aiFeatureCatalog.js.
+const GEN_FEATURES = new Set(["generate-leads", "enrich-generated-lead"]);
+
 const DEFAULT_SETTINGS = {
   kurs: 17700, // dipakai bila kurs otomatis dimatikan, atau sebagai cadangan bila sumber kurs tidak dapat dihubungi
   kurs_auto: true,
@@ -173,12 +176,12 @@ async function loadRateOn(admin: any, auto: boolean, manual: number, spot: numbe
 
 // Semua baris ai_usage sejak tanggal tertentu (dipaginasi 1000/halaman).
 async function fetchAiUsage(admin: any, sinceIso: string) {
-  const rows: { user_id: string | null; cost_usd: number; created_at: string }[] = [];
+  const rows: { user_id: string | null; feature: string; cost_usd: number; created_at: string }[] = [];
   for (let from = 0; from < 200000; from += 1000) {
-    const { data, error } = await admin.from("ai_usage").select("user_id, cost_usd, created_at")
+    const { data, error } = await admin.from("ai_usage").select("user_id, feature, cost_usd, created_at")
       .gte("created_at", sinceIso).order("created_at", { ascending: true }).range(from, from + 999);
     if (error) throw error;
-    for (const r of data || []) rows.push({ user_id: r.user_id, cost_usd: num(r.cost_usd), created_at: r.created_at });
+    for (const r of data || []) rows.push({ user_id: r.user_id, feature: r.feature || "", cost_usd: num(r.cost_usd), created_at: r.created_at });
     if (!data || data.length < 1000) break;
   }
   return rows;
@@ -283,6 +286,11 @@ Deno.serve(async (req) => {
     const { data: payRows, error: payErr } = await admin.from("subscription_payments")
       .select("id, email, user_id, tier, amount, months, paid_at, source, note").order("paid_at", { ascending: true }).limit(2000);
     if (payErr) throw payErr;
+    // Token add-on Generate Leads yang nominalnya sudah dicatat (diakui pada tanggal lot diberikan).
+    const { data: addonRows, error: addonErr } = await admin.from("addon_token_lots")
+      .select("tokens_total, amount_idr, created_at").not("amount_idr", "is", null).limit(5000);
+    if (addonErr) throw addonErr;
+    const addonSales = (addonRows || []).map((l: any) => ({ date: wibDateOf(l.created_at), tokens: num(l.tokens_total), idr: num(l.amount_idr) }));
 
     // ai_usage dan kurs dari tanggal paling awal yang dibutuhkan.
     const thirtyAgo = wibDateOf(new Date(Date.now() - 30 * DAY_MS).toISOString());
@@ -294,6 +302,7 @@ Deno.serve(async (req) => {
       if (inv.status === "paid" && DATE_RE.test(st || "") && st < earliest) earliest = st;
     }
     for (const pay of payRows || []) { const d = wibDateOf(pay.paid_at); if (d < earliest) earliest = d; }
+    for (const a of addonSales) if (a.date < earliest) earliest = a.date;
     if (settings.cash_opening.month && `${settings.cash_opening.month}-01` < earliest) earliest = `${settings.cash_opening.month}-01`;
     for (const t of settings.topups) if (t.date < earliest) earliest = t.date;
 
@@ -390,8 +399,11 @@ Deno.serve(async (req) => {
     // Pendapatan diakui dalam periode, per sumber (dibulatkan per sumber).
     const revBySource = { invoice: 0, mayar: 0, estimate: 0 };
     for (const b of paidBases) revBySource[b.kind] += recognizedUntil(b, pEnd) - recognizedUntil(b, pStart);
-    const revenue = { invoice: R(revBySource.invoice), mayar: R(revBySource.mayar), estimate: R(revBySource.estimate), total: 0 };
-    revenue.total = revenue.invoice + revenue.mayar + revenue.estimate;
+    // Token add-on: diakui saat token diberikan (pembayaran dicatat admin setelah transfer diterima).
+    const addonInPeriod = addonSales.filter((a) => a.date >= pStart && a.date < pEnd);
+    const addonIdrPeriod = addonInPeriod.reduce((s, a) => s + a.idr, 0);
+    const revenue = { invoice: R(revBySource.invoice), mayar: R(revBySource.mayar), estimate: R(revBySource.estimate), addon: R(addonIdrPeriod), total: 0 };
+    revenue.total = revenue.invoice + revenue.mayar + revenue.estimate + revenue.addon;
 
     // Pendapatan diterima di muka pada akhir periode: uang sudah diterima, layanan belum berjalan.
     let unearned = 0;
@@ -495,7 +507,8 @@ Deno.serve(async (req) => {
       const fx = rateOn(mEnd < today ? mEnd : today);
       const sumCosts = (k: (x: any) => boolean) => settings.costs.filter(k).reduce((s, x) => s + R(x.currency === "USD" ? x.amount * fx : x.amount), 0);
       const infra = sumCosts((x) => x.kind === "hpp"), opex = sumCosts((x) => x.kind !== "hpp");
-      const rec = { invoice: R(recInvoice), mayar: R(recMayar), total: R(recInvoice) + R(recMayar) };
+      const recAddon = addonSales.filter((x) => x.date >= a && x.date < b).reduce((s, x) => s + x.idr, 0);
+      const rec = { invoice: R(recInvoice), mayar: R(recMayar), addon: R(recAddon), total: R(recInvoice) + R(recMayar) + R(recAddon) };
       const pay = { anthropic: tIdr, infra, opex, total: tIdr + infra + opex };
       return { receipts: rec, payments: pay, net: rec.total - pay.total };
     };
@@ -510,6 +523,17 @@ Deno.serve(async (req) => {
     const cashflow = {
       receipts: cf.receipts, payments: cf.payments, net_operating: cf.net, investing: 0, financing: 0, net_change: cf.net,
       opening_cash: openingCash, closing_cash: closingCash,
+    };
+
+    // ---- GENERATE LEADS: biaya token dan pendapatan add-on periode ini (memo; sudah termasuk dalam HPP token) ----
+    // Biaya memakai kurs harian, sama dengan biaya AI per pelanggan. Bagian ini tidak menambah HPP lagi.
+    const genUsage = usage.filter((u) => GEN_FEATURES.has(u.feature) && u.created_at >= startOfWibDay(pStart) && u.created_at < startOfWibDay(pEnd));
+    const genLeads = {
+      calls: genUsage.length,
+      cost_usd: r4(genUsage.reduce((s, u) => s + u.cost_usd, 0)),
+      cost_idr: R(genUsage.reduce((s, u) => s + u.cost_usd * rateOn(wibDateOf(u.created_at)), 0)),
+      addon_tokens: addonInPeriod.reduce((s, a) => s + a.tokens, 0),
+      addon_idr: R(addonIdrPeriod),
     };
 
     // ---- POSISI KEUANGAN RINGKAS (akhir periode) ----
@@ -585,6 +609,7 @@ Deno.serve(async (req) => {
         mrr: R(mrr), active_contract_value: R(activeValue), sub_mrr: R(subMrr), sub_count: subCount, manual_grants: manualGrants,
         receivables: R(receivables), overdue_count: overdueCount, unearned: R(unearned), fixed_costs_idr: hppFixed + opexFixed,
       },
+      gen_leads: genLeads,
       balance, planner, contracts,
     });
   } catch (e) {

@@ -5,7 +5,8 @@
 //
 // Body: { action: "list" }                                      -> semua lot (terbaru dulu)
 //       { action: "lookup", email }                              -> cek akun penerima (paket, organisasi)
-//       { action: "grant", email, tokens, expires_at?, note? }   -> beri token (1 token = 1 pencarian)
+//       { action: "grant", email, tokens, expires_at?, note?, amount_idr? } -> beri token (1 token = 1 pencarian;
+//         amount_idr = Rupiah yang dibayar, dipakai kartu CASH FLOW)
 //       { action: "revoke", lot_id }                             -> cabut sisa token sebuah lot
 //       { action: "requests" }                                   -> permintaan token dari pengguna yang masih menunggu
 //       { action: "dismiss_request", request_id }                -> abaikan sebuah permintaan
@@ -68,7 +69,7 @@ Deno.serve(async (req) => {
 
     if (body.action === "list") {
       const { data: lots, error } = await admin.from("addon_token_lots")
-        .select("id, user_id, feature, tokens_total, tokens_left, expires_at, note, granted_by, created_at")
+        .select("id, user_id, feature, tokens_total, tokens_left, expires_at, note, granted_by, created_at, amount_idr")
         .order("created_at", { ascending: false }).limit(300);
       if (error) throw error;
       const ids = [...new Set((lots || []).map((l) => l.user_id))];
@@ -122,12 +123,15 @@ Deno.serve(async (req) => {
         if (d.getTime() <= Date.now()) return json({ error: "Tanggal kedaluwarsa harus di masa depan." }, 400);
         expiresAt = d.toISOString();
       }
+      // Nominal Rupiah yang dibayar (opsional). Kosong = belum dicatat, tidak masuk pendapatan Cash Flow.
+      const amountIdr = body.amount_idr === null || body.amount_idr === undefined || body.amount_idr === "" ? null : Math.round(Number(body.amount_idr));
+      if (amountIdr !== null && (!Number.isFinite(amountIdr) || amountIdr < 0 || amountIdr > 2000000000)) return json({ error: "Nominal pembayaran tidak valid." }, 400);
       const user = await findUserByEmail(admin, email);
       if (!user) return json({ error: `Belum ada akun Nexto dengan email ${email}.` }, 404);
       const { data, error } = await admin.from("addon_token_lots").insert({
         user_id: user.id, feature: "generate-leads", tokens_total: tokens, tokens_left: tokens,
-        expires_at: expiresAt, note: String(body.note || "").trim().slice(0, 300), granted_by: userData.user.email,
-      }).select("id, user_id, feature, tokens_total, tokens_left, expires_at, note, granted_by, created_at").single();
+        expires_at: expiresAt, note: String(body.note || "").trim().slice(0, 300), granted_by: userData.user.email, amount_idr: amountIdr,
+      }).select("id, user_id, feature, tokens_total, tokens_left, expires_at, note, granted_by, created_at, amount_idr").single();
       if (error) throw error;
       // Pemberian dari sebuah permintaan: tandai selesai (hanya kalau milik pengguna yang sama).
       if (UUID_RE.test(String(body.request_id || ""))) {

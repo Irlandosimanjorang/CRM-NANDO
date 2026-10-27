@@ -10,6 +10,7 @@ import { fmtShort, isoDay, addDays, field, lbl } from "./EnterpriseInvoicePanel"
 
 const PLAN_LABEL = { enterprise: "Enterprise", professional: "Professional", standard: "Standard" };
 const PRESETS = [5, 10, 20, 50];
+const PRICE_PER_TOKEN = 15000; // harga paket token, sama dengan GenerateLeads.jsx
 const EXPIRY_PRESETS = [[30, "30 hari"], [90, "90 hari"], [365, "1 tahun"]];
 
 function lotStatus(l, now) {
@@ -25,6 +26,7 @@ export default function AddonTokensPanel() {
   const [err, setErr] = useState("");
   const [email, setEmail] = useState("");
   const [tokens, setTokens] = useState(10);
+  const [amountIdr, setAmountIdr] = useState(String(10 * PRICE_PER_TOKEN)); // Rupiah yang dibayar, default jumlah token x harga
   const [expiry, setExpiry] = useState("");
   const [note, setNote] = useState("");
   const [lookup, setLookup] = useState(null); // null | { status: "checking" | ... }
@@ -43,7 +45,7 @@ export default function AddonTokensPanel() {
 
   // Proses sebuah permintaan: isi form dengan email dan jumlahnya, admin tinggal memeriksa lalu "Beri token".
   const processRequest = (rq) => {
-    setEmail(rq.email || ""); setTokens(rq.tokens); setNote(`Permintaan pengguna${rq.note ? `: ${rq.note}` : ""}`);
+    setEmail(rq.email || ""); setTokens(rq.tokens); setAmountIdr(String(rq.tokens * PRICE_PER_TOKEN)); setNote(`Permintaan pengguna${rq.note ? `: ${rq.note}` : ""}`);
     setFromRequest(rq.id);
     document.getElementById("tok-email")?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
@@ -83,7 +85,8 @@ export default function AddonTokensPanel() {
     if (!window.confirm(`Beri ${n} token pencarian Generate Leads ke ${email.trim()}${expiry ? `, berlaku sampai ${fmtShort(expiry)}` : ", tanpa batas waktu"}?${warn}`)) return;
     setBusy(true);
     try {
-      const r = await db.adminAddonTokens("grant", { email: email.trim(), tokens: n, expires_at: expiry || undefined, note: note.trim(), request_id: fromRequest || undefined });
+      const paid = amountIdr.trim() === "" ? null : Math.round(Number(amountIdr));
+      const r = await db.adminAddonTokens("grant", { email: email.trim(), tokens: n, expires_at: expiry || undefined, note: note.trim(), request_id: fromRequest || undefined, amount_idr: paid });
       setLots((cur) => [r.lot, ...(cur || [])]);
       if (fromRequest) { setRequests((cur) => cur.filter((x) => x.id !== fromRequest)); setFromRequest(null); }
       setNote("");
@@ -148,12 +151,17 @@ export default function AddonTokensPanel() {
           </div>
           <div>
             <label className={lbl} htmlFor="tok-n">Jumlah token (pencarian)</label>
-            <input id="tok-n" type="number" min="1" max="1000" className={field} value={tokens} onChange={(e) => setTokens(e.target.value)} />
+            <input id="tok-n" type="number" min="1" max="1000" className={field} value={tokens} onChange={(e) => { setTokens(e.target.value); setAmountIdr(String(Math.floor(Number(e.target.value) || 0) * PRICE_PER_TOKEN)); }} />
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {PRESETS.map((n) => (
-                <button key={n} type="button" onClick={() => setTokens(n)} className={`rounded-md border px-2 py-0.5 text-[12px] font-semibold ${Number(tokens) === n ? "border-violet-400 bg-violet-500/20 text-violet-100" : "border-slate-600 text-slate-300 hover:bg-slate-800"}`}>{n}</button>
+                <button key={n} type="button" onClick={() => { setTokens(n); setAmountIdr(String(n * PRICE_PER_TOKEN)); }} className={`rounded-md border px-2 py-0.5 text-[12px] font-semibold ${Number(tokens) === n ? "border-violet-400 bg-violet-500/20 text-violet-100" : "border-slate-600 text-slate-300 hover:bg-slate-800"}`}>{n}</button>
               ))}
             </div>
+          </div>
+          <div>
+            <label className={lbl} htmlFor="tok-amount">Dibayar (Rp, opsional)</label>
+            <input id="tok-amount" type="number" min="0" className={field} value={amountIdr} onChange={(e) => setAmountIdr(e.target.value)} placeholder="mis. 150000" />
+            <p className="mt-1 text-[11px] text-slate-400">Rp {PRICE_PER_TOKEN.toLocaleString("id-ID")} per token. Isi sesuai transfer yang masuk; kosong = tidak masuk pendapatan Cash Flow.</p>
           </div>
           <div>
             <label className={lbl} htmlFor="tok-exp">Berlaku sampai (opsional)</label>
@@ -200,7 +208,7 @@ export default function AddonTokensPanel() {
                       <tr key={l.id}>
                         <td className="max-w-[240px] px-4 py-2">
                           <div className="truncate text-slate-200" title={l.email || ""}>{l.email || "-"}</div>
-                          <div className="truncate text-[11px] text-slate-400" title={l.note || ""}>{fmtShort(l.created_at.slice(0, 10))}{l.note ? `, ${l.note}` : ""}</div>
+                          <div className="truncate text-[11px] text-slate-400" title={l.note || ""}>{fmtShort(l.created_at.slice(0, 10))}{l.amount_idr != null ? `, Rp${Number(l.amount_idr).toLocaleString("id-ID")}` : ""}{l.note ? `, ${l.note}` : ""}</div>
                         </td>
                         <td className="px-2 py-2 text-right font-mono text-slate-100">{l.tokens_left} / {l.tokens_total}</td>
                         <td className="px-2 py-2 text-slate-400">{l.expires_at ? fmtShort(isoDay(new Date(l.expires_at))) : "Tanpa batas"}</td>

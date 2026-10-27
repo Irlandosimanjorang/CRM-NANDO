@@ -312,6 +312,9 @@ export default function CashflowPanel() {
   if (!data || !form) return <div className="flex items-center gap-2 text-[12px] text-slate-300 font-mono"><Loader2 className="w-3.5 h-3.5 animate-spin" /> memuat cash flow...</div>;
 
   const { summary: s, income: inc, cashflow: cf, position: pos, prepaid: pre, contracts, period: per } = data;
+  // Generate Leads (memo dari server): biaya token pencarian dan pendapatan token add-on bulan ini.
+  const gen = s.gen_leads || { calls: 0, cost_usd: 0, cost_idr: 0, addon_tokens: 0, addon_idr: 0 };
+  const genShare = inc.cogs.ai > 0 ? Math.round((gen.cost_idr / inc.cogs.ai) * 1000) / 10 : null;
   const kurs = Number(data.kurs) || 17700;
   const ki = data.kurs_info || {};
   const kursNote = ki.mode === "auto"
@@ -331,9 +334,10 @@ export default function CashflowPanel() {
     { l: "Pendapatan invoice", v: inc.revenue.invoice, indent: 1 },
     { l: "Pendapatan langganan Mayar", v: inc.revenue.mayar, indent: 1 },
     ...(inc.revenue.estimate ? [{ l: "Pendapatan langganan (perkiraan)", v: inc.revenue.estimate, indent: 1, c: "#fcd34d" }] : []),
+    { l: "Pendapatan token add-on Generate Leads", v: inc.revenue.addon, indent: 1 },
     { l: "Total pendapatan", v: inc.revenue.total, bold: true, top: true },
     { head: true, l: "Harga pokok pendapatan (HPP)" },
-    { l: "Token Anthropic (pemakaian)", v: -inc.cogs.ai, indent: 1, sub: `${mp(inc.ai_pct_of_revenue)} dari pendapatan` },
+    { l: "Token Anthropic (pemakaian)", v: -inc.cogs.ai, indent: 1, sub: `${mp(inc.ai_pct_of_revenue)} dari pendapatan · Generate Leads ${idr(gen.cost_idr)}${genShare === null ? "" : ` (${genShare}%)`}` },
     { l: "Infrastruktur (Supabase, dll)", v: -inc.cogs.infra, indent: 1 },
     { l: "Total HPP", v: -inc.cogs.total, top: true },
     { l: "Laba kotor", v: inc.gross_profit, bold: true, top: true, sub: `margin ${mp(inc.gross_margin_pct)}`, c: inc.gross_profit >= 0 ? "#34d399" : "#fb7185" },
@@ -345,6 +349,7 @@ export default function CashflowPanel() {
     { head: true, l: "Arus kas dari aktivitas operasi" },
     { l: "Penerimaan dari pelanggan: invoice", v: cf.receipts.invoice, indent: 1 },
     { l: "Penerimaan dari pelanggan: Mayar", v: cf.receipts.mayar, indent: 1 },
+    { l: "Penerimaan dari token add-on Generate Leads", v: cf.receipts.addon, indent: 1 },
     { l: "Total penerimaan", v: cf.receipts.total, top: true },
     { l: "Pembelian token Anthropic (top-up)", v: -cf.payments.anthropic, indent: 1 },
     { l: "Pembayaran infrastruktur", v: -cf.payments.infra, indent: 1 },
@@ -402,6 +407,17 @@ export default function CashflowPanel() {
           </button>
         </div>
       </div>
+
+      <Section title="Generate Leads bulan ini" hint="pemakaian token dan pendapatan add-on">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Tile label="Biaya token Generate Leads" value={idr(gen.cost_idr)} sub={`${gen.calls} panggilan AI · ${usd(gen.cost_usd)}`} accent="#f9a8d4" />
+          <Tile label="Pendapatan token add-on" value={idr(gen.addon_idr)} sub={gen.addon_tokens > 0 ? `${gen.addon_tokens} token diberikan bulan ini` : "belum ada token add-on diberikan"} accent="#34d399" />
+          <Tile label="Bagian dari total biaya token" value={genShare === null ? "-" : `${genShare}%`} sub={`dari HPP token ${idr(inc.cogs.ai)}`} />
+        </div>
+        <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
+          Pendapatan add-on diakui saat token diberikan, dengan nominal yang dicatat admin di kartu TOKEN ADD-ON (kosong = tidak terhitung). Biaya token Generate Leads sudah termasuk HPP token di atas, jadi tidak dihitung dua kali.
+        </div>
+      </Section>
 
       <Section title="Ringkasan bulan ini" hint="dalam bahasa sederhana">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
