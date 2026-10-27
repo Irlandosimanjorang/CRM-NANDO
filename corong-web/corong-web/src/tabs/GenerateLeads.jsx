@@ -71,7 +71,8 @@ function TokenRequestDialog({ pending, onClose, onSent }) {
     const paket = `Paket ${chosen.tokens} token, total ${rupiah(chosen.price)}`;
     const catatan = note.trim() ? `${paket}. ${note.trim()}` : paket;
     try { const r = await db.requestAddonTokens(chosen.tokens, catatan); onSent({ tokens: r.tokens, created_at: r.created_at }); }
-    catch (e) { setErr(e.message || "Gagal mengirim permintaan."); setBusy(false); }
+    catch (e) { setErr(e.message || "Gagal mengirim permintaan."); }
+    finally { setBusy(false); }
   };
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
