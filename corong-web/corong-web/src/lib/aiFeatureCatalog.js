@@ -104,7 +104,7 @@ export const AI_FEATURES = [
   {
     id: "pipeline-review", group: "auto", label: "Pipeline Review", fn: "pipeline-review", logKeys: ["pipeline-review"],
     model: "Claude Sonnet 5.5 (+ embedding)", plans: { standard: null, professional: "auto", enterprise: "auto" },
-    gate: "Professional ke atas. Otomatis 2x per bulan (tanggal 1 dan 15) per organisasi.", desc: "Laporan kesehatan pipeline dua mingguan dan sintesis pola menang-kalah (org memory).",
+    gate: "Professional ke atas. Otomatis tiap Senin, satu laporan per pengguna.", desc: "Laporan kesehatan pipeline mingguan (7 hari terakhir) dan sintesis pola menang-kalah (org memory).",
     est: null, note: "Belum pernah jalan sejak pencatatan biaya dimulai, jadi biayanya belum diketahui.",
   },
   {

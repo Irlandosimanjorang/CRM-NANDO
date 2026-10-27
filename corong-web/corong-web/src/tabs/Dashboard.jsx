@@ -296,7 +296,7 @@ export default function Dashboard({
             aria-expanded={pipeOpen}
             className="flex w-full flex-wrap items-baseline justify-between gap-2 text-left"
           >
-            <h2 className="text-[15px] font-bold text-ink">Pipeline Review 2 mingguan</h2>
+            <h2 className="text-[15px] font-bold text-ink">Pipeline Review mingguan</h2>
             <span className="flex items-center gap-2">
               <span className="text-[11px] text-slate-500">{new Date(pipeReview.generated_at ?? pipeReview.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
               <ChevronDown size={16} className={`text-slate-400 transition-transform ${pipeOpen ? "rotate-180" : ""}`} />

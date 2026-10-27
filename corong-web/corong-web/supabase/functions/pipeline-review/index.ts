@@ -1,9 +1,9 @@
 // Supabase Edge Function: pipeline-review
-// "Pipeline Review (AI)" - OTOMATIS jalan 2x/bulan lewat cron (tanggal 1 &
-// 16), BUKAN tombol on-demand (beda dari fitur AI lain di Nexto yang
+// "Pipeline Review (AI)" - OTOMATIS jalan tiap Senin lewat cron,
+// BUKAN tombol on-demand (beda dari fitur AI lain di Nexto yang
 // kebanyakan manual-trigger). Ngasih ringkasan kesehatan SELURUH pipeline
 // (bukan per-lead kayak AI Advisor harian) - lead stuck, yang kelupaan
-// next_action, tren lead baru/menang/kalah 14 hari terakhir, dan 2-3 lead
+// next_action, tren lead baru/menang/kalah 7 hari terakhir, dan 2-3 lead
 // yang paling perlu difokusin minggu ini.
 //
 // Khusus Professional ke atas. Dipanggil via x-cron-secret (sama kayak
@@ -123,7 +123,8 @@ const CRON_SECRET = Deno.env.get("CRON_SECRET");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-const PERIOD_DAYS = 14;
+const PERIOD_DAYS = 7; // jendela tren lead baru/menang/kalah
+const STUCK_DAYS = 14; // lead dianggap stuck kalau tidak ada progres selama ini
 const MIN_CLOSED_FOR_MEMORY = 5;
 const MAX_CLOSED_IN_PROMPT = 25;
 
@@ -163,7 +164,7 @@ function computeStats(active, allLeads, stagesArr) {
       const daysStuck = known.length ? Math.min(...known) : null;
       return { ...c, _daysStuck: daysStuck };
     })
-    .filter((c) => c._daysStuck === null || c._daysStuck > PERIOD_DAYS)
+    .filter((c) => c._daysStuck === null || c._daysStuck > STUCK_DAYS)
     .sort((a, b) => (b.deal_value || 0) - (a.deal_value || 0));
 
   const missingNextAction = active.filter((c) => !c.next_action || !c.next_action.trim()).length;
@@ -209,11 +210,11 @@ async function generateReview(orgLabel, stats, focusCandidates) {
     return `- ${c.name} (id: ${c.id}, deal_value: ${c.deal_value || 0}, tahap: ${c.stage_key})\n  Progress terakhir: ${notes.length ? notes.join(" | ") : "belum ada catatan"}`;
   }).join("\n");
 
-  const prompt = `Kamu sales manager berpengalaman yang lagi bikin laporan kesehatan pipeline 2 mingguan buat timnya.
+  const prompt = `Kamu sales manager berpengalaman yang lagi bikin laporan kesehatan pipeline mingguan buat timnya.
 
 Statistik pipeline (${PERIOD_DAYS} hari terakhir):
 - Total lead aktif: ${stats.total_active}
-- Lead "stuck" (gak ada progress/kontak > ${PERIOD_DAYS} hari): ${stats.stuck_count}
+- Lead "stuck" (gak ada progress/kontak > ${STUCK_DAYS} hari): ${stats.stuck_count}
 - Lead aktif yang belum punya next_action tercatat: ${stats.missing_next_action}
 - Lead baru masuk: ${stats.new_leads}
 - Deal closing (menang): ${stats.won_recent}
@@ -402,7 +403,7 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
 
         await admin.from("notifications").insert({
           user_id: u.id, org_id: memberRow.org_id, type: "pipeline_review",
-          title: "Pipeline Review 2 mingguan siap dilihat",
+          title: "Pipeline Review mingguan siap dilihat",
           body: result.summary.slice(0, 180),
           link_tab: "dashboard",
         });
