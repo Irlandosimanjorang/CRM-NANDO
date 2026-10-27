@@ -175,6 +175,10 @@ export default function Dashboard({
   const [aiCtx, setAiCtx] = useState(null);
   // Hasil Pipeline Review terbaru (cron 1 dan 16 tiap bulan) - ditampilkan di kartu di bawah, dibuka dari notifikasi.
   const [pipeReview, setPipeReview] = useState(null);
+  // Review yang sudah ditutup disimpan per id di browser ini, jadi review baru tetap muncul otomatis.
+  const [pipeDismissed, setPipeDismissed] = useState(() => {
+    try { return localStorage.getItem("nexto.pipelineReview.dismissed") || ""; } catch { return ""; }
+  });
   useEffect(() => {
     db.getLatestPipelineReview().then(setPipeReview).catch(() => setPipeReview(null));
     db.getMemoryHealth().then(setMemoryHealth).catch(() => setMemoryHealth(null));
@@ -286,11 +290,22 @@ export default function Dashboard({
           secara umum"). Ditaruh paling atas biar keliatan tiap buka app. */}
       {isEnterprise && !canManage && <CompanyPerformanceCard />}
 
-      {pipeReview && (
+      {pipeReview && pipeReview.id !== pipeDismissed && (
         <section id="pipeline-review" className="rounded-panel border border-slate-200 bg-white p-4 md:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-[15px] font-bold text-ink">Pipeline Review 2 mingguan</h2>
-            <span className="text-[11px] text-slate-500">{new Date(pipeReview.generated_at ?? pipeReview.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-500">{new Date(pipeReview.generated_at ?? pipeReview.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
+              <button
+                type="button"
+                aria-label="Tutup Pipeline Review"
+                onClick={() => {
+                  setPipeDismissed(pipeReview.id);
+                  try { localStorage.setItem("nexto.pipelineReview.dismissed", pipeReview.id); } catch { /* penyimpanan diblokir: kartu hanya tertutup sampai halaman dimuat ulang */ }
+                }}
+                className="p-1 text-slate-400 hover:text-slate-700"
+              ><X size={16} /></button>
+            </div>
           </div>
           <p className="mt-2 text-[13px] leading-6 text-slate-700">{pipeReview.summary}</p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-slate-600">
