@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Save, Plus, X, Trash2, Download, Loader2, Zap, Mic, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot, Smartphone, Share, MoreVertical, Eye, EyeOff, Presentation } from "lucide-react";
+import { Save, Plus, X, Trash2, Download, Loader2, Zap, Mic, CheckCircle2, Copy, Calendar, RefreshCw, Sparkles, KeyRound, Users, UserPlus, Crown, ShieldCheck, ShieldAlert, Lock, Bot, Smartphone, Share, MoreVertical, Eye, EyeOff } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 import DataCleanupModal from "../components/DataCleanupModal";
@@ -49,7 +49,6 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
   const [exportingExcel, setExportingExcel] = useState(false);
   const [gcalLink, setGcalLink] = useState(null);
   const [gcalBusy, setGcalBusy] = useState(false);
-  const [gcalGuide, setGcalGuide] = useState(false);
   const [gcalLoading, setGcalLoading] = useState(true);
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
@@ -921,29 +920,6 @@ export default function Settings({ settings, stages, leads, onChanged, userEmail
       <div className="bg-white border border-slate-100 rounded-panel p-4">
         <h3 className="font-semibold text-sm mb-1 flex items-center gap-1.5"><Calendar size={15} className="text-rose-500" /> Google Calendar</h3>
         <p className="text-xs text-slate-500 mb-3">Hubungkan Google Calendar Anda agar jadwal visit & follow-up dari NEX Pro otomatis masuk ke kalender.</p>
-        <button type="button" onClick={() => setGcalGuide(true)} className="mb-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200">
-          <Presentation size={14} /> Lihat panduan
-        </button>
-        {gcalGuide && (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setGcalGuide(false); }}>
-            <div role="dialog" aria-modal="true" aria-label="Panduan Google Calendar" className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                <div className="text-sm font-semibold text-slate-900">Panduan Hubungkan Google Calendar</div>
-                <button type="button" onClick={() => setGcalGuide(false)} aria-label="Tutup" className="p-1 text-slate-500 hover:text-slate-800"><X size={16} /></button>
-              </div>
-              {/* Pemutar dimuat hanya saat panduan dibuka, supaya halaman Pengaturan tetap ringan. */}
-              <div className="aspect-video w-full bg-black">
-                <iframe
-                  className="h-full w-full"
-                  src="https://www.youtube-nocookie.com/embed/FkNP3y9qA6Q"
-                  title="Panduan Hubungkan Google Calendar"
-                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            </div>
-          </div>
-        )}
         {myLevel < 2 ? (
           <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><Lock size={14} /></span>
