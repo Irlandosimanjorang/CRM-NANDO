@@ -127,9 +127,9 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// 10 (dulu 14) - tiap lead sekarang dilengkapi kontaknya otomatis & itu
-// biaya per lead, jadi dibatesin (29 Sep 2026, permintaan Nando).
-const MAX_LEADS = 10;
+// 8 (dulu 10, dulu 14) - tiap lead sekarang dilengkapi kontaknya otomatis & itu
+// biaya per lead, jadi dibatesin (29 Sep 2026, permintaan Nando; 27 Okt 2026 dari 10 ke 8 untuk tekan biaya per run).
+const MAX_LEADS = 8;
 // Pencarian ulang kalau hasil baru < 8 (dulu < 6) dan waktu masih cukup.
 const RETRY_MIN_THRESHOLD = 8;
 // AI diminta lebih banyak calon dari yang disimpan, supaya setelah duplikat
