@@ -173,7 +173,10 @@ export default function Dashboard({
   // Advisor - lihat edge function memory-health-check).
   const [memoryHealth, setMemoryHealth] = useState(null);
   const [aiCtx, setAiCtx] = useState(null);
+  // Hasil Pipeline Review terbaru (cron 1 dan 16 tiap bulan) - ditampilkan di kartu di bawah, dibuka dari notifikasi.
+  const [pipeReview, setPipeReview] = useState(null);
   useEffect(() => {
+    db.getLatestPipelineReview().then(setPipeReview).catch(() => setPipeReview(null));
     db.getMemoryHealth().then(setMemoryHealth).catch(() => setMemoryHealth(null));
     db.getMyAiContext().then(setAiCtx).catch(() => setAiCtx(null));
   }, []);
@@ -282,6 +285,32 @@ export default function Dashboard({
           permintaan calon klien "Sales bisa lihat dashboard perusahaan
           secara umum"). Ditaruh paling atas biar keliatan tiap buka app. */}
       {isEnterprise && !canManage && <CompanyPerformanceCard />}
+
+      {pipeReview && (
+        <section id="pipeline-review" className="rounded-panel border border-slate-200 bg-white p-4 md:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-[15px] font-bold text-ink">Pipeline Review 2 mingguan</h2>
+            <span className="text-[11px] text-slate-500">{new Date(pipeReview.generated_at ?? pipeReview.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
+          </div>
+          <p className="mt-2 text-[13px] leading-6 text-slate-700">{pipeReview.summary}</p>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-slate-600">
+            <span>Lead aktif <b className="text-slate-900">{pipeReview.stats?.total_active ?? 0}</b></span>
+            <span>Tanpa progres 14 hari <b className="text-slate-900">{pipeReview.stats?.stuck_count ?? 0}</b></span>
+            <span>Tanpa next action <b className="text-slate-900">{pipeReview.stats?.missing_next_action ?? 0}</b></span>
+            <span>Lead baru <b className="text-slate-900">{pipeReview.stats?.new_leads ?? 0}</b></span>
+            <span>Menang <b className="text-slate-900">{pipeReview.stats?.won_recent ?? 0}</b></span>
+          </div>
+          {pipeReview.focus_leads?.length > 0 && (
+            <ul className="mt-3 grid gap-2">
+              {pipeReview.focus_leads.map((f) => (
+                <li key={f.lead_id} className="rounded-inner border border-slate-100 bg-slate-50 px-3 py-2 text-[12.5px]">
+                  <b className="text-slate-900">{f.name || "Lead"}</b> <span className="text-slate-600">· {f.reason}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* NEX AI - satu-satunya permukaan gelap di Dashboard (titik fokus).
           Ungu = warna khusus AI. */}
