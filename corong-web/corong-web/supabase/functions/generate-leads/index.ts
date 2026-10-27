@@ -135,8 +135,10 @@ const RETRY_MIN_THRESHOLD = 8;
 // AI diminta lebih banyak calon dari yang disimpan, supaya setelah duplikat
 // dibuang masih bisa terisi 10 (6 Okt 2026: AI kasih 9, 2 duplikat -> 7).
 const CANDIDATE_TARGET = 14;
-const FIRST_PASS_MAX_SEARCH = 12;
-const RETRY_PASS_MAX_SEARCH = 6;
+// Jatah pencarian web dipangkas (27 Okt 2026, biaya 1x generate ~$2 -> target ~$1,1):
+// pass 1 dari 12 jadi 6, pencarian ulang dari 6 jadi 3.
+const FIRST_PASS_MAX_SEARCH = 6;
+const RETRY_PASS_MAX_SEARCH = 3;
 // 300 (dulu 40, dan dulu cuma dipakai di pencarian ulang): 6 Okt 2026 org
 // dengan ±430 lead PVC cuma dapet 1 lead baru - AI nemuin ulang pabrik yang
 // udah ada (Pralon, Maspion, dst) karena pencarian pertama gak dikasih tau
