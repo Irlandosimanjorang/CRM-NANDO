@@ -550,20 +550,38 @@ async function runGeneration({ jobId, orgId, userId, industryTerms, keyword, pro
     // lead jalan di invocation enrich-generated-lead sendiri (batas waktu
     // masing-masing), gak numpuk di sisa waktu function ini. Frontend nunggu
     // semua enrich_status beres baru bilang "selesai".
-    const ids = (inserted || []).map((r) => r.id);
-    const { error: dispatchErr } = await admin.rpc("dispatch_lead_enrichment", { p_ids: ids, p_secret: CRON_SECRET });
-    if (dispatchErr) {
-      console.log("[generate-leads] dispatch enrichment gagal:", dispatchErr.message);
-      await admin.from("generated_leads").update({ enrich_status: "failed" }).in("id", ids);
-    }
-
+    // Dikirim langsung dari sini, bertahap (1,5 detik antar lead) dan dicoba ulang bila
+    // function enrich belum siap (503 BOOT_ERROR). Dulu dikirim sekaligus lewat pg_net.
+    // Job ditandai selesai dulu supaya layar tidak menunggu; pelengkapan kontak jalan di background.
     await admin.from("lead_gen_jobs").update({ status: "done", run_id: runId, result_count: rows.length, updated_at: new Date().toISOString() }).eq("id", jobId);
+    const ids = (inserted || []).map((r) => r.id);
+    const enrichAll = Promise.all(ids.map((id, i) => enrichWithRetry(admin, id, i * 1500)));
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(enrichAll);
+    else enrichAll.catch((e) => console.log("[generate-leads] enrich background gagal:", String(e)));
 
     console.log(`[generate-leads] total selesai dalam ${Date.now() - startedAt}ms, ${rows.length} lead, retried=${retried}`);
   } catch (e) {
     console.log(`[generate-leads] FATAL (background) setelah ${Date.now() - startedAt}ms:`, String(e));
     try { await failJob(String(e).slice(0, 500)); } catch (_) { /* jangan sampe cleanup gagal nge-crash */ }
   }
+}
+
+async function enrichWithRetry(admin, id, delayMs) {
+  await new Promise((r) => setTimeout(r, delayMs));
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/enrich-generated-lead`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-cron-secret": CRON_SECRET },
+        body: JSON.stringify({ generated_lead_id: id }),
+      });
+      if (resp.status !== 503) return;
+    } catch (e) {
+      console.log("[generate-leads] kirim enrich gagal:", String(e));
+    }
+    await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+  }
+  await admin.from("generated_leads").update({ enrich_status: "failed" }).eq("id", id).eq("enrich_status", "pending");
 }
 
 Deno.serve((req) => AI_CTX.run({ req }, async () => {
