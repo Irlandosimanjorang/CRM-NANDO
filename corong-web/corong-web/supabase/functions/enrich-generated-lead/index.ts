@@ -327,7 +327,7 @@ Website: ${site || "(belum diketahui)"}
 PIC yang tercatat: ${gl.key_person ? `${gl.key_person} (${gl.key_person_title || "-"})` : "(belum ada)"}
 Jabatan PIC yang dicari: ${targetRole}
 
-Cari orang dengan jabatan target (atau padanan dekatnya) yang MASIH bekerja di perusahaan ini menurut cuplikan hasil pencarian. Tolak yang tertulis "ex-", "former", "mantan", atau sudah di perusahaan lain. JANGAN ganti dengan CEO/Direktur kalau bukan jabatan target.${extra ? `\n\nSetelah urusan PIC selesai, kamu boleh memakai SATU pencarian tambahan (misal: "${gl.name}" ${gl.city || ""} kontak telepon email) untuk mengisi:\n${extra}` : ""}
+Cari orang dengan jabatan target (atau padanan dekatnya) yang MASIH bekerja di perusahaan ini menurut cuplikan hasil pencarian. Tolak yang tertulis "ex-", "former", "mantan", atau sudah di perusahaan lain. JANGAN ganti dengan CEO/Direktur kalau bukan jabatan target.${extra ? `\n\nKalau jatah pencarian masih tersisa setelah urusan PIC, pakai untuk mengisi (misal: "${gl.name}" ${gl.city || ""} kontak telepon email):\n${extra}` : ""}
 
 ATURAN: jangan mengarang nama, nomor, atau pola email. Yang tidak terlihat jelas = string kosong.
 Balas HANYA JSON tanpa markdown:
@@ -337,9 +337,9 @@ pic_status: "confirmed" = PIC terbukti masih bekerja di sini; "left" = PIC yang 
     model: "claude-sonnet-5-5",
     max_tokens: 1200,
     messages: [{ role: "user", content: prompt }],
-    // Sonnet 5.5: maks 4 pencarian web dan 3 pembacaan halaman (web_fetch) untuk PIC dan kontak.
+    // Sonnet 5.5: maks 2 pencarian web (PIC + kontak) dan 3 pembacaan halaman (web_fetch).
     tools: [
-      { type: "web_search_20260318", name: "web_search", max_uses: 4, response_inclusion: "excluded" },
+      { type: "web_search_20260318", name: "web_search", max_uses: 2, response_inclusion: "excluded" },
       { type: "web_fetch_20260318", name: "web_fetch", max_uses: 3, max_content_tokens: 3000, response_inclusion: "excluded" },
     ],
   }, signal);
