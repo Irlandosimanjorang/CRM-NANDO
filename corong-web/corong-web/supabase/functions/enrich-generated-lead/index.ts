@@ -16,13 +16,12 @@
 //   Tahap 1 (GRATIS, tanpa AI): server membuka sendiri halaman utama +
 //     halaman Kontak website perusahaan, ambil telepon & email dari tautan
 //     tel:/mailto: dan teks halaman.
-//   Tahap 2 (AI hemat): Haiku dengan maksimal DUA pencarian web, tanpa
-//     web_fetch, khusus mencari PIC di jabatan target - prioritas utama
-//     klien (Nando: "yang paling penting cari nama PIC sesuai keinginan
-//     client"). Plus SATU pencarian kontak hanya kalau website tidak memuat
-//     telepon/email (banyak website perusahaan dirender lewat JavaScript
-//     atau tidak mencantumkan kontak di halaman yang bisa dibaca langsung).
-// Target biaya ±Rp700-1.000 per lead.
+//   Tahap 2 (AI, 27 Okt 2026): Sonnet 5.5 dengan maksimal DUA pencarian web
+//     (PIC + kontak, sisa jatah dipakai untuk telepon/email kalau website
+//     tidak memuat keduanya) dan maksimal TIGA pembacaan halaman (web_fetch),
+//     khusus mencari PIC di jabatan target - prioritas utama klien (Nando:
+//     "yang paling penting cari nama PIC sesuai keinginan client").
+// Biaya Sonnet ±$0,13 per lead (kebanyakan dari token input hasil pencarian).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -250,7 +249,7 @@ async function scrapeWebsite(site) {
 }
 
 // ---------------------------------------------------------------------------
-// Tahap 2: AI hemat (2 pencarian PIC, +1 kontak bila perlu, tanpa web_fetch)
+// Tahap 2: AI (Sonnet 5.5, maks 2 pencarian web + 3 pembacaan halaman)
 // ---------------------------------------------------------------------------
 // - "pause_turn": server tool berhenti di tengah, harus dilanjutin biar JSON
 //   final-nya keluar.

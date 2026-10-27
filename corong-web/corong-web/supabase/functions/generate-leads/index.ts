@@ -122,9 +122,16 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
-const cors = {
-  "Access-Control-Allow-Origin": "https://nexto.site",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Origin aplikasi Android (Capacitor, androidScheme https) dan web dev juga diizinkan.
+// Sebelumnya hanya https://nexto.site, jadi panggilan dari aplikasi Android ditolak CORS.
+const CORS_ORIGINS = ["https://nexto.site", "https://localhost", "capacitor://localhost", "http://localhost:5173"];
+const corsFor = (req) => {
+  const origin = req.headers.get("Origin") || "";
+  return {
+    "Access-Control-Allow-Origin": CORS_ORIGINS.includes(origin) ? origin : "https://nexto.site",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
 };
 
 // 8 (dulu 10, dulu 14) - tiap lead sekarang dilengkapi kontaknya otomatis & itu
@@ -587,7 +594,7 @@ async function enrichWithRetry(admin, id, delayMs) {
 }
 
 Deno.serve((req) => AI_CTX.run({ req }, async () => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsFor(req) });
 
   try {
     const authHeader = req.headers.get("Authorization") || "";
@@ -596,7 +603,7 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Belum login" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Belum login" }), { status: 401, headers: { ...corsFor(req), "Content-Type": "application/json" } });
     }
     const userId = userData.user.id;
     const isAdmin = !!ADMIN_EMAIL && userData.user.email === ADMIN_EMAIL;
@@ -604,7 +611,7 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     const { data: memberRow } = await admin.from("organization_members").select("org_id").eq("user_id", userId).limit(1).maybeSingle();
-    if (!memberRow) return new Response(JSON.stringify({ error: "Organisasi tidak ditemukan" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+    if (!memberRow) return new Response(JSON.stringify({ error: "Organisasi tidak ditemukan" }), { status: 400, headers: { ...corsFor(req), "Content-Type": "application/json" } });
     const orgId = memberRow.org_id;
 
     const { data: orgRow } = await admin.from("organizations").select("industry, plan").eq("id", orgId).maybeSingle();
@@ -615,7 +622,7 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     const PLAN_LEVEL = { free: 0, standard: 1, premium: 2 };
     const myPlanLevel = orgRow?.plan === "enterprise" ? 2 : (PLAN_LEVEL[settingsRow?.plan] ?? 0);
     if (!isAdmin && myPlanLevel < 2) {
-      return new Response(JSON.stringify({ error: "Generate Leads AI tersedia untuk paket Professional ke atas. Silakan upgrade melalui tab Pengaturan." }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Generate Leads AI tersedia untuk paket Professional ke atas. Silakan upgrade melalui tab Pengaturan." }), { status: 403, headers: { ...corsFor(req), "Content-Type": "application/json" } });
     }
 
     // ---- KUOTA BULANAN PER PENGGUNA - admin platform (ADMIN_EMAIL) skip sama
@@ -624,11 +631,11 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     if (!isAdmin) {
       const { data: reserved, error: reserveErr } = await admin.rpc("reserve_lead_gen_slot", { p_org_id: orgId, p_max: QUOTA_MAX_RUNS, p_user_id: userId });
       if (reserveErr) {
-        return new Response(JSON.stringify({ error: "Gagal cek kuota: " + reserveErr.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Gagal cek kuota: " + reserveErr.message }), { status: 500, headers: { ...corsFor(req), "Content-Type": "application/json" } });
       }
       if (!reserved) {
         const nextAt = await quotaResetAt(admin, userId, "generate-leads");
-        return new Response(JSON.stringify({ error: `Kuota Generate Leads Anda (${QUOTA_MAX_RUNS}x per bulan) sudah terpakai. Kuota terisi kembali pada ${nextAt ? fmtTanggal(nextAt) : "1 bulan setelah pemakaian pertama"}.`, next_available_at: nextAt ? nextAt.toISOString() : null }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: `Kuota Generate Leads Anda (${QUOTA_MAX_RUNS}x per bulan) sudah terpakai. Kuota terisi kembali pada ${nextAt ? fmtTanggal(nextAt) : "1 bulan setelah pemakaian pertama"}.`, next_available_at: nextAt ? nextAt.toISOString() : null }), { status: 429, headers: { ...corsFor(req), "Content-Type": "application/json" } });
       }
       reservedRunId = reserved;
     }
@@ -642,12 +649,12 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     const targetType = ["company", "individual"].includes(body.targetType) ? body.targetType : "";
 
     const { data: jobRow, error: jobErr } = await admin.from("lead_gen_jobs").insert({
-      org_id: orgId, created_by: userId, status: "running",
+      org_id: orgId, created_by: userId, status: "running", reserved_run_id: reservedRunId,
       params: { keyword, province, targetRole, productSold, companyScale, targetType },
     }).select("id").single();
     if (jobErr || !jobRow) {
       if (reservedRunId) await admin.rpc("release_lead_gen_slot", { p_run_id: reservedRunId });
-      return new Response(JSON.stringify({ error: "Gagal mulai proses generate: " + (jobErr?.message || "unknown") }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Gagal mulai proses generate: " + (jobErr?.message || "unknown") }), { status: 500, headers: { ...corsFor(req), "Content-Type": "application/json" } });
     }
     const jobId = jobRow.id;
 
@@ -669,11 +676,11 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     const { data: finalJob } = await admin.from("lead_gen_jobs").select("status, result_count, error_message, run_id").eq("id", jobId).maybeSingle();
     if (finalJob?.status === "failed") {
       if (reservedRunId) await admin.rpc("release_lead_gen_slot", { p_run_id: reservedRunId });
-      return new Response(JSON.stringify({ error: finalJob.error_message || "Gagal generate lead." }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: finalJob.error_message || "Gagal generate lead." }), { status: 200, headers: { ...corsFor(req), "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ ok: true, count: finalJob?.result_count ?? 0, job_id: jobId, run_id: finalJob?.run_id || null }), { headers: { ...cors, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ok: true, count: finalJob?.result_count ?? 0, job_id: jobId, run_id: finalJob?.run_id || null }), { headers: { ...corsFor(req), "Content-Type": "application/json" } });
   } catch (e) {
     console.log(`[generate-leads] FATAL (sinkron):`, String(e));
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsFor(req), "Content-Type": "application/json" } });
   }
 }));

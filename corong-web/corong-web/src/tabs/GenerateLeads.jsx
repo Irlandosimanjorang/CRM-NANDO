@@ -193,7 +193,9 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   // ke-mount, BUKAN cuma dari state lokal - jadi walau tab sempet ke-reload
   // total, begitu balik ke tab Generate Leads, app otomatis nunjukin "masih
   // nyari..." lagi (bukan form kosong) dan beres sendiri pas hasilnya kelar.
-  const STALE_JOB_MS = 160 * 1000; // dikit di atas limit eksekusi 150 detik
+  // Job "running" dianggap masih hidup sampai 12 menit (sweeper server menutup job macet setelah 10 menit).
+  // Dulu 160 detik: pencarian yang masih jalan dianggap gagal, tombol aktif lagi, dan klik ulang bikin job kedua.
+  const STALE_JOB_MS = 12 * 60 * 1000;
   // Tahap 2: kontak tiap lead dilengkapi otomatis di server (paralel, 1
   // invocation per lead, ±1-2 menit). Lebih dari ini dianggap macet - yang
   // belum beres ditampilin apa adanya + tombol "Coba lagi" di kartunya.
