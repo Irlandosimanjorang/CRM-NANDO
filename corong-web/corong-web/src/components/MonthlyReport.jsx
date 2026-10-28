@@ -923,21 +923,6 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
               </ul>
             </Panel>
           )}
-          {org?.plan === "enterprise" && (
-            <Panel className="mt-5 p-5">
-              <PanelHeader title="Unduh laporan" meta="File Excel berisi tab Penjualan, Rencana, dan Rekap, sesuai layar ini." />
-              <button
-                type="button"
-                onClick={downloadReport}
-                disabled={sheetBusy}
-                aria-busy={sheetBusy}
-                className={cn("mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70", focus)}
-              >
-                {sheetBusy ? <Loader2 size={14} className="animate-spin" /> : <SheetsIcon size={16} />}
-                {sheetBusy ? "Menyiapkan file…" : "Unduh laporan (Excel)"}
-              </button>
-            </Panel>
-          )}
           {canManage && <div className="mt-5"><ProyekDashboard leads={allLeads} stages={stages} /></div>}
         </>
       )}
