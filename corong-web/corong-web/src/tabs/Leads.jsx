@@ -733,6 +733,15 @@ export default function Leads({
       onChanged({ silent: true });
       return;
     }
+    if (extra?.selesai) {
+      // Proyek Selesai (BSB): tanggal selesai disimpan di deal_stage_date, bukan deal_date, supaya omzet tidak berubah.
+      const s = extra.selesai;
+      await db.upsertLead({ ...lead, stage_key: key, deal_stage_date: s.date });
+      await db.addProgress(lead.id, `[Proyek selesai] ${s.note || "Tanggal selesai " + s.date}`);
+      if (onLocalDeal) onLocalDeal(lead.id, { stage_key: key, deal_stage_date: s.date }, null);
+      onChanged({ silent: true });
+      return;
+    }
     if (extra?.projectDeal) {
       // Proyek Deal (15 Okt 2026): tahap normal, bukan deal menang, jadi tidak ada transaksi atau outcome.
       const p = extra.projectDeal;

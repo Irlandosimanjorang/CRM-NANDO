@@ -40,6 +40,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // Pop-up data proyek saat kartu digeser ke Proyek Deal (tanggal, nilai, No. SPH, total diskon wajib).
   const [proyek, setProyek] = useState(null);
   const [dealStage, setDealStage] = useState(null); // pipeline faktur (MAP): pop-up tahap Deal
+  // Pop-up tanggal selesai dan catatan saat kartu digeser ke Proyek Selesai (pipeline BSB).
+  const [selesai, setSelesai] = useState(null);
   // Saran nama barang: produk yang sudah pernah dipakai di organisasi ini (tanpa duplikat beda huruf besar-kecil).
   const productOptions = useMemo(() => {
     const seen = new Map();
@@ -141,6 +143,12 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setProyek({ lead, key });
       return;
     }
+    // Pop-up tanggal selesai dan catatan saat kartu digeser ke Proyek Selesai (pipeline BSB).
+    if (key === "proyek_selesai" && cols.some((c) => c.key === "proyek_berjalan")) {
+      setPending((p) => ({ ...p, [lead.id]: key }));
+      setSelesai({ lead, key });
+      return;
+    }
     flipMove(lead, () => setPending((p) => ({ ...p, [lead.id]: key })), fromRect);
     Promise.resolve(onMove(lead, key)).catch((e) => {
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
@@ -156,6 +164,20 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const cancelProyek = () => {
     if (proyek) setPending((p) => { const n = { ...p }; delete n[proyek.lead.id]; return n; });
     setProyek(null);
+  };
+
+  const cancelSelesai = () => {
+    if (selesai) setPending((p) => { const n = { ...p }; delete n[selesai.lead.id]; return n; });
+    setSelesai(null);
+  };
+
+  const saveSelesai = (values) => {
+    const { lead, key } = selesai;
+    setSelesai(null);
+    Promise.resolve(onMove(lead, key, { selesai: values })).catch((e) => {
+      setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
+      alert("Gagal menyimpan: " + (e?.message || e));
+    });
   };
 
   const cancelDealStage = () => {
@@ -318,6 +340,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
         />
       )}
       {proyek && <ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} />}
+      {selesai && <SelesaiDialog lead={selesai.lead} onCancel={cancelSelesai} onSave={saveSelesai} />}
 
       {/* Kartu yang diseret dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke wrapper yang punya transform. */}
       {drag && createPortal(
@@ -632,6 +655,39 @@ function DealStageDialog({ lead, onCancel, onSave, productOptions = [] }) {
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
           <button type="button" disabled={!ready} onClick={() => onSave({ date, product: product.trim() })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Pop-up Proyek Selesai (pipeline BSB): tanggal selesai wajib, catatan opsional.
+function SelesaiDialog({ lead, onCancel, onSave }) {
+  const [date, setDate] = useState(todayISO());
+  const [note, setNote] = useState("");
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  const ready = !!date;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+        <span className="inline-flex rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-700">Proyek Selesai</span>
+        <h3 className="mt-2 text-[15px] font-semibold text-slate-900">Proyek selesai</h3>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
+        <label className="mt-4 block">
+          <span className="text-[11px] font-medium text-slate-500">Tanggal selesai *</span>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+        </label>
+        <label className="mt-3 block">
+          <span className="text-[11px] font-medium text-slate-500">Catatan</span>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Opsional" className="mt-1 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
+        </label>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button type="button" disabled={!ready} onClick={() => onSave({ date, note: note.trim() })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
         </div>
       </div>
     </div>
