@@ -37,9 +37,6 @@ Kalau ragu, pilih yang lebih tenang.
 - Radius bertingkat: panel 20px (`rounded-panel`), elemen dalam 12px
   (`rounded-inner`), pill bulat penuh.
 - Bayangan hanya untuk yang melayang: modal, dropdown, toast (`shadow-float`).
-- Pengecualian: Dashboard memakai kartu kaca (transparan, blur, bayangan lembut
-  dan latar cahaya di belakangnya) atas permintaan Nando. Kartu kaca dibuat di
-  `DashPanel` dalam `src/tabs/Dashboard.jsx`. Tab lain tetap memakai `Panel`.
 - Satu permukaan gelap per halaman sebagai titik fokus (mis. NEX AI di
   Dashboard, Denyut Team di tab Team).
 

@@ -5,17 +5,16 @@ import { NextoRobotHead } from "../Auth";
 import * as db from "../lib/db";
 import CompanyPerformanceCard from "../components/CompanyPerformanceCard";
 import AiContextPanel from "../components/AiContextPanel";
-import { PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../ui";
+import { Panel, PanelHeader, Stat, StatRow, Pill, Meter, EmptyState } from "../ui";
 
 import { IDLE_DAYS, collectIdleLeads } from "../lib/idleLeads";
 import { NEW_LEAD_MINUTES, collectUntouchedNewLeads, formatAge } from "../lib/newLeadsIdle";
 import { todayISO, fmtRp } from "../lib/helpers";
 
-// Kartu kaca (glassy) khusus Dashboard: permukaan transparan dengan blur, sudut 28px, dan bayangan lembut.
-// Tidak memakai Panel karena Panel memaksa bg-white. Tab lain tetap memakai Panel.
-const GLASS_CARD = "rounded-[28px] border border-white/70 bg-white/55 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_8px_32px_-12px_rgba(15,23,42,0.18)]";
-function DashPanel({ as: Tag = "section", className = "", ...rest }) {
-  return <Tag className={`${GLASS_CARD} ${className}`} {...rest} />;
+// Kartu dashboard: sudut lebih membulat, bayangan lembut, dan jarak dalam lebih lega (gaya kartu Nexto yang baru).
+const DASH_CARD = "!rounded-[28px] border-slate-200/60 shadow-[0_2px_6px_rgba(15,23,42,0.05),0_18px_40px_-18px_rgba(15,23,42,0.22)]";
+function DashPanel({ className = "", ...rest }) {
+  return <Panel className={`${DASH_CARD} ${className}`} {...rest} />;
 }
 
 const cn = (...v) => v.filter(Boolean).join(" ");
@@ -267,16 +266,7 @@ export default function Dashboard({
   const TASK_TONE = { "Hari ini": "brand", Prioritas: "warn", Terjadwal: "neutral", "Follow-up": "neutral" };
 
   return (
-    <div className="relative isolate space-y-5">
-      {/* Latar cahaya lembut di belakang kartu kaca. Hanya dekorasi, tidak menerima klik. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 -top-6 -z-10 h-[460px] overflow-hidden"
-        style={{
-          background:
-            "radial-gradient(circle at 12% 18%, rgba(249,115,22,0.20), transparent 42%), radial-gradient(circle at 88% 8%, rgba(56,189,248,0.18), transparent 40%), radial-gradient(circle at 60% 60%, rgba(251,146,60,0.10), transparent 45%)",
-        }}
-      />
+    <div className="space-y-5">
       {/* Kepala halaman */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -299,7 +289,7 @@ export default function Dashboard({
       {isEnterprise && !canManage && <CompanyPerformanceCard />}
 
       {pipeReview && (
-        <DashPanel id="pipeline-review" className="p-4 md:p-5">
+        <section id="pipeline-review" className="rounded-panel border border-slate-200 bg-white p-4 md:p-5">
           <button
             type="button"
             onClick={() => setPipeOpen((v) => !v)}
@@ -333,7 +323,7 @@ export default function Dashboard({
               )}
             </>
           )}
-        </DashPanel>
+        </section>
       )}
 
       {/* NEX AI - satu-satunya permukaan gelap di Dashboard (titik fokus).
