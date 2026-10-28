@@ -258,7 +258,7 @@ export default function Dashboard({
   // sama kayak buildGreetingText() di daily-digest.ts (email). Plus tanggal
   // kecil di bawah heading kayak versi sebelumnya.
   const hourNow = new Date().getHours();
-  const greeting = hourNow < 11 ? "Selamat pagi" : hourNow < 15 ? "Selamat siang" : hourNow < 18 ? "Selamat sore" : "Selamat malam";
+  const greeting = hourNow < 11 ? "Good morning" : hourNow < 15 ? "Good afternoon" : hourNow < 18 ? "Good evening" : "Good night";
   const todayLabel = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   const nextVisit = upcoming[0];
