@@ -37,6 +37,9 @@ Kalau ragu, pilih yang lebih tenang.
 - Radius bertingkat: panel 20px (`rounded-panel`), elemen dalam 12px
   (`rounded-inner`), pill bulat penuh.
 - Bayangan hanya untuk yang melayang: modal, dropdown, toast (`shadow-float`).
+- Pengecualian: tab Report tampil sebagai dashboard kaca gelap atas permintaan
+  Nando. Gayanya diatur di `.report-glass` (`src/index.css`), dan `MonthlyReport`
+  memakai kelas itu sebagai pembungkus. Tab lain tetap `Panel` putih.
 - Satu permukaan gelap per halaman sebagai titik fokus (mis. NEX AI di
   Dashboard, Denyut Team di tab Team).
 

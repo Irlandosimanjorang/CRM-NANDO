@@ -561,7 +561,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
   };
 
   return (
-    <div className="space-y-4">
+    <div className="report-glass space-y-4">
       <SheetsAnnouncement enterprise={org?.plan === "enterprise"} />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">{personal ? "Report saya" : "Report"}</h1>
