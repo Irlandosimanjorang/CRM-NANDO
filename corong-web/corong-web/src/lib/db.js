@@ -3,6 +3,15 @@ import { getIndustryTemplate, CUSTOM_FIELD_KEYS } from "./industryTemplates";
 import { todayISO, normalizePeopleForSave, limitMulti } from "./helpers";
 import { compressImage } from "./imageCompress";
 
+// Sesi login habis (token kedaluwarsa) bikin getUser() balikin user null, dan
+// `.data.user.id` langsung meledak dengan "reading 'id'" yang gak jelas buat user.
+// Helper ini ngelempar pesan yang bisa dipahami dan minta user login ulang.
+async function currentUserId() {
+  const { data } = await supabase.auth.getUser();
+  if (!data?.user) throw new Error("Sesi login habis. Muat ulang halaman lalu login lagi.");
+  return data.user.id;
+}
+
 // Bersihin kolom telepon/WA: cuma boleh angka + karakter pemisah wajar (+, -, spasi,
 // koma, slash, kurung). Nama/label kayak "Admin 1:" otomatis kebuang, sisa nomornya
 // digabung dipisah koma. Dipake di semua jalur nulis lead (manual, import Excel).
@@ -48,7 +57,7 @@ export async function setOrgIndustry(industryKey) {
 // bukan cuma kosmetik doang.
 export async function switchDemoIndustry(industryKey) {
   const orgId = await getMyOrgId();
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   // custom_field_labels ikut dikosongkan: label custom dari import industri
   // sebelumnya (misal "Consumption" dari PVC) gak boleh kebawa ke industri baru.
   const { error: orgErr } = await supabase.from("organizations").update({ industry: industryKey, custom_field_labels: {} }).eq("id", orgId);
@@ -214,7 +223,7 @@ export async function getMemberCommissions() {
 }
 export async function setMemberCommissionRate(userId, ratePct) {
   const orgId = await getMyOrgId();
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { error } = await supabase
     .from("member_commissions")
     .upsert({ org_id: orgId, user_id: userId, commission_rate_pct: ratePct, updated_by: uid, updated_at: new Date().toISOString() }, { onConflict: "org_id,user_id" });
@@ -222,7 +231,7 @@ export async function setMemberCommissionRate(userId, ratePct) {
 }
 
 export async function createInviteCode(role = "sales_rep") {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   const code = Array.from({ length: 6 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
   const expires = new Date(Date.now() + 60 * 60000).toISOString(); // 1 jam
@@ -258,7 +267,7 @@ export async function redeemInviteCode(code) {
 }
 
 export async function getMyRole() {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { data, error } = await supabase.from("organization_members").select("role").eq("user_id", uid).maybeSingle();
   if (error) throw error;
   return data?.role || null;
@@ -287,7 +296,7 @@ export async function getSalesCompanyView() {
 // buat hapus lead atau export data, biar data tim gak bisa dibawa kabur atau
 // dihapus sepihak tanpa sepengetahuan owner. ----
 export async function requestApproval(action_type, payload = {}) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   const { data, error } = await supabase
     .from("approval_requests")
@@ -301,7 +310,7 @@ export async function requestApproval(action_type, payload = {}) {
 // Request approval PALING BARU milik user ini sendiri buat 1 jenis aksi -
 // dipake sales_rep buat ngecek "request gua udah di-approve belum".
 export async function getMyLatestApproval(action_type) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { data, error } = await supabase
     .from("approval_requests")
     .select("*")
@@ -358,7 +367,7 @@ export async function decideApproval(id, approve) {
   if (approve && reqRow.action_type === "delete_competitor" && reqRow.payload?.competitor_id) {
     await deleteCompetitor(reqRow.payload.competitor_id);
   }
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { error } = await supabase
     .from("approval_requests")
     .update({ status: approve ? "approved" : "denied", decided_by: uid, decided_at: new Date().toISOString() })
@@ -411,7 +420,7 @@ export async function updateMemberRole(memberId, role) {
 // Buat ANGGOTA (bukan Owner) keluar dari organisasi yang dia join - abis ini
 // dia otomatis balik punya organisasi sendiri lagi (solo), bukan nyangkut kosong.
 export async function leaveOrg() {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { error } = await supabase.from("organization_members").delete().eq("user_id", uid);
   if (error) throw error;
   clearOrgCache();
@@ -438,7 +447,7 @@ export async function uploadAvatar(file) {
   if (file.size > AVATAR_MAX_SIZE_MB * 1024 * 1024) {
     throw new Error(`Ukuran file maksimal ${AVATAR_MAX_SIZE_MB}MB (file Anda ${(file.size / 1024 / 1024).toFixed(1)}MB).`);
   }
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${uid}/avatar-${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
@@ -448,7 +457,7 @@ export async function uploadAvatar(file) {
 }
 
 export async function saveMyProfile({ avatar_url, job_title, name, whatsapp }) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const patch = { user_id: uid, updated_at: new Date().toISOString() };
   if (avatar_url !== undefined) patch.avatar_url = avatar_url;
   if (job_title !== undefined) patch.job_title = job_title;
@@ -709,7 +718,7 @@ export async function deleteRencana(id) {
 
 export async function saveProductCatalog(companyProfile, products) {
   const orgId = await getMyOrgId();
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { error } = await supabase.from("org_product_catalog").upsert(
     { org_id: orgId, company_profile: companyProfile, products, updated_by: uid, updated_at: new Date().toISOString() },
     { onConflict: "org_id" }
@@ -901,7 +910,7 @@ export async function saveStages(stages) {
 export async function initDefaultStages() {
   const { data: existing } = await supabase.from("stages").select("id").limit(1);
   if (existing && existing.length > 0) return; // udah ada isinya, jangan ditimpa
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   const org = await getMyOrg().catch(() => null);
   const tpl = getIndustryTemplate(org?.industry);
@@ -923,7 +932,7 @@ export async function getSettings() {
 // khusus tab yang baru kebuka doang, bukan ngulang tur dari awal. null =
 // belum pernah liat tur sama sekali (akun baru).
 export async function markOnboardingLevelSeen(level) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { error } = await supabase.from("settings").upsert({ user_id: uid, onboarding_level_seen: level, updated_at: new Date().toISOString() });
   if (error) throw error;
 }
@@ -971,7 +980,7 @@ function cekNilaiDeal(v) {
 
 export async function upsertLead(lead) {
   cekNilaiDeal(lead?.deal_value);
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   const row = {
     user_id: uid, org_id: orgId,
@@ -1186,7 +1195,7 @@ export async function uploadCheckinPhoto(file) {
   // Foto check-in dikompres (sisi terpanjang 1600 px) - foto kamera HP bisa
   // 5-10 MB, lambat diunggah di lapangan & bisa melewati batas bucket 8 MB.
   file = await compressImage(file, { maxSide: 1600 });
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${uid}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("checkin-photos").upload(path, file);
@@ -1243,7 +1252,7 @@ export async function getCheckinCooldown() {
 }
 
 export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters, photo_url, accuracy_m = null }) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   const { used, resetAt } = await getMyQuotaUsage("checkin");
   if (used >= CHECKIN_QUOTA_MAX) {
@@ -1359,7 +1368,7 @@ export async function markAllNotificationsRead() {
 
 // ---- PROGRESS ----
 export async function addProgress(lead_id, text) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   // BUG FIX (audit 16 Sep 2026): sama kayak checkIn() - date UTC diganti
   // todayISO() (lokal), dan update last_contact sekarang dicek error-nya.
@@ -1411,7 +1420,7 @@ async function invokeWithMessage(name, body, fallback) {
 
 export async function uploadMeetingAudio(leadId, blob) {
   const { ext, contentType } = audioUploadMeta(blob);
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const path = `${uid}/${leadId}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("meeting-audio").upload(path, blob, { contentType });
   if (error) throw error;
@@ -1447,7 +1456,7 @@ export async function leadFromUrl(url) {
 // ownership-nya di edge function transcribe-meeting, dipake ulang persis).
 export async function uploadQuickVoiceNote(blob) {
   const { ext, contentType } = audioUploadMeta(blob);
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const path = `${uid}/quicknote-${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("meeting-audio").upload(path, blob, { contentType });
   if (error) throw error;
@@ -1542,7 +1551,7 @@ export async function listAdSpend(fromISO, toISO) {
 
 // Impor ulang baris yang sama (platform + kampanye + tanggal) memperbarui angkanya, bukan menggandakan.
 export async function importAdSpend(rows) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   const payload = rows.map((r) => ({ org_id: orgId, created_by: uid, platform: r.platform, campaign: r.campaign || "", day: r.day, spend: r.spend, impressions: r.impressions || 0, clicks: r.clicks || 0, results: r.results || 0 }));
   for (let i = 0; i < payload.length; i += 500) {
@@ -1629,7 +1638,7 @@ export async function updateFaktur(lead, { value, date, invoice_number, payment_
 
 export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type, sph_number, invoice_number }) {
   cekNilaiDeal(deal_value);
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   const { data, error } = await supabase.from("deal_transactions").insert({
     user_id: uid, org_id: orgId, lead_id, lead_name, deal_date: deal_date || null,
@@ -1674,7 +1683,7 @@ export async function smartImportMap(sampleRows) {
 
 // ---- BULK IMPORT ----
 export async function bulkInsertLeads(leads) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   // Insert massal: baris yang tidak memuat sebuah kolom dikirim sebagai NULL, padahal parent_company
   // dan group_holding NOT NULL. Hirarki hanya mengisi sebagian baris, jadi kedua kolom itu SELALU
@@ -1699,7 +1708,7 @@ export async function getCompetitors() {
   return (data || []).map((c) => ({ ...c, usages: c.competitor_usages || [] }));
 }
 export async function upsertCompetitor(comp) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const orgId = await getMyOrgId();
   const row = { user_id: uid, org_id: orgId, name: comp.name, background: comp.background || "", product: comp.product || "", notes: comp.notes || "" };
   let compId = comp.id;
@@ -1784,7 +1793,7 @@ export async function getMyAiContext() {
 
 export async function getMemoryHealth() {
   const orgId = await getMyOrgId();
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { data, error } = await supabase.from("member_memory_health").select("*").eq("org_id", orgId).eq("user_id", uid).maybeSingle();
   if (error) throw error;
   return data || null;
@@ -1856,7 +1865,7 @@ export async function getGoogleCalendarLink() {
 }
 
 export async function connectGoogleCalendar() {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const state = crypto.randomUUID();
   const expires = new Date(Date.now() + 10 * 60000).toISOString();
   const { error } = await supabase.from("google_oauth_states").insert({ state, user_id: uid, expires_at: expires });
@@ -1875,7 +1884,7 @@ export async function connectGoogleCalendar() {
 }
 
 export async function disconnectGoogleCalendar() {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const { error } = await supabase.from("google_calendar_links").delete().eq("user_id", uid);
   if (error) throw error;
 }
@@ -1894,7 +1903,7 @@ export async function getCommunityDisplayName() {
 }
 export async function uploadCommunityImage(file) {
   file = await compressImage(file, { maxSide: 1600 });
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage.from("community-images").upload(path, file);
@@ -1904,7 +1913,7 @@ export async function uploadCommunityImage(file) {
 }
 
 export async function getCommunityPosts() {
-  const uid = (await supabase.auth.getUser()).data.user?.id;
+  const uid = await currentUserId();
   const { data, error } = await supabase
     .from("community_posts")
     .select("*, community_replies(id), community_likes(user_id)")
@@ -1919,7 +1928,7 @@ export async function getCommunityPosts() {
 }
 
 export async function createCommunityPost({ body, imageUrls }) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const displayName = (await getCommunityDisplayName()) || "User Nexto";
   const { data, error } = await supabase.from("community_posts").insert({
     user_id: uid, author_name: displayName, body: body || "", image_urls: imageUrls || [],
@@ -1934,7 +1943,7 @@ export async function deleteCommunityPost(id) {
 }
 
 export async function toggleCommunityLike(postId, liked) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   if (liked) {
     const { error } = await supabase.from("community_likes").insert({ post_id: postId, user_id: uid });
     if (error) throw error;
@@ -1956,7 +1965,7 @@ export async function getReplies(postId) {
 }
 
 export async function addReply(postId, body) {
-  const uid = (await supabase.auth.getUser()).data.user.id;
+  const uid = await currentUserId();
   const displayName = (await getCommunityDisplayName()) || "User Nexto";
   const { data, error } = await supabase.from("community_replies").insert({ post_id: postId, user_id: uid, author_name: displayName, body }).select().single();
   if (error) throw error;
