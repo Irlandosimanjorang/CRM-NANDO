@@ -1,0 +1,14 @@
+# Secret dan env lokal, jangan pernah di-commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+service-account*.json
+
+# Salinan skill milik tool lain (bukan bagian dari aplikasi)
+.aider-desk/
