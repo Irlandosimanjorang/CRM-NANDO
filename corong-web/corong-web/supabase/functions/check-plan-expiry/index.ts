@@ -116,7 +116,8 @@ Deno.serve(async (req) => {
     for (const row of settingsRows || []) {
       try {
         const daysLeft = wibDaysUntil(row.plan_expires_at, now);
-        if (daysLeft <= -MAYAR_GRACE_PERIOD_DAYS) {
+        // Sama seperti organisasi: turun paket setelah tanggal habis lewat, bukan di hari habisnya.
+        if (daysLeft < -MAYAR_GRACE_PERIOD_DAYS) {
           const { error } = await admin.from("settings").update({ plan: null, plan_expires_at: null, plan_expiry_reminder_sent_at: null }).eq("user_id", row.user_id);
           if (error) throw error;
           console.log("[check-plan-expiry] SAFETY-NET downgrade (settings):", row.user_id, "expired", row.plan_expires_at, "(lewat masa tenggang)");
@@ -149,7 +150,9 @@ Deno.serve(async (req) => {
     for (const org of orgRows || []) {
       try {
         const daysLeft = wibDaysUntil(org.plan_expires_at, now);
-        if (daysLeft <= -MAYAR_GRACE_PERIOD_DAYS) {
+        // Turun paket hanya setelah tanggal habis lewat (daysLeft < 0), bukan di hari habisnya.
+        // Sebelumnya "<=" bikin paket yang habis jam 23.59 WIB sudah turun jam 09.00 WIB di hari yang sama.
+        if (daysLeft < -MAYAR_GRACE_PERIOD_DAYS) {
           const { error } = await admin.from("organizations").update({ plan: null, plan_expires_at: null, plan_expiry_reminder_sent_at: null, member_limit: 1 }).eq("id", org.id);
           if (error) throw error;
           console.log("[check-plan-expiry] SAFETY-NET downgrade (organizations):", org.id, "expired", org.plan_expires_at, "(lewat masa tenggang)");
