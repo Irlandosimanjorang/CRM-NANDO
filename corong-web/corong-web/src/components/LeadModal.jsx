@@ -9,52 +9,14 @@ import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE, reasonCategoriesFor } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
-import { MEMO_FIELDS, memoComplete } from "../lib/proyekMemo";
+import { memoComplete } from "../lib/proyekMemo";
+import ProyekDocDialog from "./ProyekDocDialog";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 // Sumber lead untuk organisasi yang tidak punya isian "Sumber lead" sendiri (kolom bawaan leads.source).
 const SOURCE_OPTIONS = ["Tokopedia", "Shopee", "Meta", "Instagram", "TikTok", "Google", "Lainnya"];
 const inpRow = "flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
-
-// Pop-up memo atau detil proyek (31 Okt 2026). Perubahan baru masuk ke lead saat tombol Simpan di LeadModal ditekan.
-function ProyekDocDialog({ kind, value, onCancel, onSave }) {
-  const [detail, setDetail] = useState(value.detail_proyek || "");
-  const [memo, setMemo] = useState(() => ({ ...(value.memo || {}) }));
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
-  const isMemo = kind === "memo";
-  return createPortal(
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
-        <h3 className="text-base font-semibold text-slate-900">{isMemo ? "Memo proyek" : "Detil proyek"}</h3>
-        {isMemo ? (
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {MEMO_FIELDS.map((m) => (
-              <div key={m.key} className={m.wide ? "col-span-2" : ""}>
-                <Field label={`${m.label}${m.required ? " *" : ""}`}>
-                  <input className={inp} value={memo[m.key] || ""} placeholder={m.placeholder} onChange={(e) => setMemo((p) => ({ ...p, [m.key]: e.target.value }))} />
-                </Field>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Field label="Detil proyek *">
-            <textarea className={`${inp} resize-none`} rows={6} value={detail} placeholder="Ruang lingkup dan detail pekerjaan" onChange={(e) => setDetail(e.target.value)} />
-          </Field>
-        )}
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Batal</button>
-          <button type="button" onClick={() => onSave(isMemo ? { memo } : { detail_proyek: detail })} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Simpan</button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
 
 // Field yang bisa nampung beberapa nilai (email, key person) - disimpen di
 // kolom yang SAMA (masih 1 kolom text di DB), dipisah koma persis kayak pola
@@ -669,18 +631,14 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                   />
                 </Field>
               </div>
-              {/* Memo dan detil proyek (31 Okt 2026): diisi lewat pop-up supaya form ini tetap ringkas. */}
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { kind: "memo", label: "Memo", done: memoComplete(f.memo) },
-                  { kind: "detail", label: "Detil proyek", done: !!String(f.detail_proyek || "").trim() },
-                ].map((b) => (
-                  <button key={b.kind} type="button" onClick={() => setProyekDoc(b.kind)} className="flex items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-left text-sm hover:border-orange-400">
-                    <span className="font-medium text-slate-700">{b.label}</span>
-                    <span className={`text-[11px] font-semibold ${b.done ? "text-emerald-600" : "text-amber-600"}`}>{b.done ? "Lengkap" : "Belum diisi"}</span>
-                  </button>
-                ))}
-              </div>
+              <Field label="Detil proyek *">
+                <textarea className={`${inp} resize-none`} rows={3} placeholder="Ruang lingkup dan detail pekerjaan" value={f.detail_proyek || ""} onChange={(e) => set("detail_proyek", e.target.value)} />
+              </Field>
+              {/* Memo di halaman sendiri (31 Okt 2026), sama seperti langkah kedua di pop-up pipeline. */}
+              <button type="button" onClick={() => setProyekDoc("memo")} className="flex w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-left text-sm hover:border-orange-400">
+                <span className="font-medium text-slate-700">Memo *</span>
+                <span className={`text-[11px] font-semibold ${memoComplete(f.memo) ? "text-emerald-600" : "text-amber-600"}`}>{memoComplete(f.memo) ? "Lengkap" : "Belum diisi"}</span>
+              </button>
               {proyekDoc && (
                 <ProyekDocDialog
                   kind={proyekDoc}
