@@ -747,7 +747,7 @@ export default function Leads({
       const p = extra.projectDeal;
       // Status "Berjalan" (17 Okt 2026, BSB): lead langsung ke tahap Proyek Berjalan.
       const nextKey = p.berjalan ? "proyek_berjalan" : key;
-      leadPatch = { stage_key: nextKey, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_pct: p.discount_pct, discount_total: p.discount_total };
+      leadPatch = { stage_key: nextKey, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_pct: p.discount_pct, discount_total: p.discount_total, detail_proyek: p.detail_proyek, memo: p.memo };
       await db.upsertLead({ ...lead, ...leadPatch });
       if (onLocalDeal) onLocalDeal(lead.id, leadPatch, null);
       onChanged({ silent: true });

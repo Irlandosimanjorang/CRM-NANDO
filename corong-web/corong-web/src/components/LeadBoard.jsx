@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
+import { MEMO_FIELDS } from "../lib/proyekMemo";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
 // dan kolom yang panjang atau papan yang lebar digulir otomatis saat kursor dekat tepinya. Kartu langsung pindah di layar,
@@ -514,7 +515,12 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
   const discountValue = Math.round(dealValue * discountPct / 100);
   // Status proyek (17 Okt 2026, BSB): kalau "Berjalan", lead langsung pindah ke tahap Proyek Berjalan.
   const [berjalan, setBerjalan] = useState(lead.stage_key === "proyek_berjalan");
-  const ready = !!date && dealValue > 0 && sph.trim().length > 0;
+  // Detil proyek dan memo (31 Okt 2026, BSB): memo mengikuti formulir pengajuan sales order. Keterangan opsional.
+  const [detail, setDetail] = useState(lead.detail_proyek || "");
+  const [memo, setMemo] = useState(() => Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, lead.memo?.[f.key] || ""])));
+  const setMemoField = (key, v) => setMemo((m) => ({ ...m, [key]: v }));
+  const memoReady = MEMO_FIELDS.every((f) => !f.required || memo[f.key].trim().length > 0);
+  const ready = !!date && dealValue > 0 && sph.trim().length > 0 && detail.trim().length > 0 && memoReady;
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -526,7 +532,7 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
       className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
         <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">Proyek Deal</span>
         <h3 className="mt-2 text-[15px] font-semibold text-slate-900">Data proyek</h3>
         <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
@@ -555,12 +561,27 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
             <option value="berjalan">Berjalan (pindah ke Proyek Berjalan)</option>
           </select>
         </label>
+        <label className="mt-3 block">
+          <span className="text-[11px] font-medium text-slate-500">Detil proyek *</span>
+          <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={3} placeholder="Ruang lingkup dan detail pekerjaan" className={field + " resize-none"} />
+        </label>
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="text-[12px] font-semibold text-slate-900">Memo</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {MEMO_FIELDS.map((f) => (
+              <label key={f.key} className={f.wide ? "col-span-2 block" : "block"}>
+                <span className="text-[11px] font-medium text-slate-500">{f.label}{f.required ? " *" : ""}</span>
+                <input value={memo[f.key]} onChange={(e) => setMemoField(f.key, e.target.value)} placeholder={f.placeholder} className={field} />
+              </label>
+            ))}
+          </div>
+        </div>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
           <button
             type="button"
             disabled={!ready}
-            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan })}
+            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), memo: Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, memo[f.key].trim()])) })}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan

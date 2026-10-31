@@ -9,12 +9,52 @@ import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE, reasonCategoriesFor } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
+import { MEMO_FIELDS, memoComplete } from "../lib/proyekMemo";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 // Sumber lead untuk organisasi yang tidak punya isian "Sumber lead" sendiri (kolom bawaan leads.source).
 const SOURCE_OPTIONS = ["Tokopedia", "Shopee", "Meta", "Instagram", "TikTok", "Google", "Lainnya"];
 const inpRow = "flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-medium text-slate-500">{label}</span>{children}</label>; }
+
+// Pop-up memo atau detil proyek (31 Okt 2026). Perubahan baru masuk ke lead saat tombol Simpan di LeadModal ditekan.
+function ProyekDocDialog({ kind, value, onCancel, onSave }) {
+  const [detail, setDetail] = useState(value.detail_proyek || "");
+  const [memo, setMemo] = useState(() => ({ ...(value.memo || {}) }));
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  const isMemo = kind === "memo";
+  return createPortal(
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
+        <h3 className="text-base font-semibold text-slate-900">{isMemo ? "Memo proyek" : "Detil proyek"}</h3>
+        {isMemo ? (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {MEMO_FIELDS.map((m) => (
+              <div key={m.key} className={m.wide ? "col-span-2" : ""}>
+                <Field label={`${m.label}${m.required ? " *" : ""}`}>
+                  <input className={inp} value={memo[m.key] || ""} placeholder={m.placeholder} onChange={(e) => setMemo((p) => ({ ...p, [m.key]: e.target.value }))} />
+                </Field>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Field label="Detil proyek *">
+            <textarea className={`${inp} resize-none`} rows={6} value={detail} placeholder="Ruang lingkup dan detail pekerjaan" onChange={(e) => setDetail(e.target.value)} />
+          </Field>
+        )}
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button type="button" onClick={() => onSave(isMemo ? { memo } : { detail_proyek: detail })} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Simpan</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 // Field yang bisa nampung beberapa nilai (email, key person) - disimpen di
 // kolom yang SAMA (masih 1 kolom text di DB), dipisah koma persis kayak pola
@@ -219,6 +259,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const [editText, setEditText] = useState("");
   const [busy, setBusy] = useState(false);
   const [locBusy, setLocBusy] = useState(false);
+  const [proyekDoc, setProyekDoc] = useState(null); // "memo" | "detail" | null
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const isProfessional = myLevel >= 2;
 
@@ -419,6 +460,8 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
       if (!f.deal_date) { alert("Tanggal deal wajib diisi untuk tahap Proyek Deal."); return; }
       if (!(Number(f.deal_value) > 0)) { alert("Nilai proyek wajib diisi untuk tahap Proyek Deal."); return; }
       if (!String(f.sph_number || "").trim()) { alert("No. SPH wajib diisi untuk tahap Proyek Deal."); return; }
+      if (!String(f.detail_proyek || "").trim()) { alert("Detil proyek wajib diisi untuk tahap Proyek Deal."); return; }
+      if (!memoComplete(f.memo)) { alert("Memo wajib diisi untuk tahap Proyek Deal."); return; }
     }
     if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
@@ -626,6 +669,26 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                   />
                 </Field>
               </div>
+              {/* Memo dan detil proyek (31 Okt 2026): diisi lewat pop-up supaya form ini tetap ringkas. */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { kind: "memo", label: "Memo", done: memoComplete(f.memo) },
+                  { kind: "detail", label: "Detil proyek", done: !!String(f.detail_proyek || "").trim() },
+                ].map((b) => (
+                  <button key={b.kind} type="button" onClick={() => setProyekDoc(b.kind)} className="flex items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-left text-sm hover:border-orange-400">
+                    <span className="font-medium text-slate-700">{b.label}</span>
+                    <span className={`text-[11px] font-semibold ${b.done ? "text-emerald-600" : "text-amber-600"}`}>{b.done ? "Lengkap" : "Belum diisi"}</span>
+                  </button>
+                ))}
+              </div>
+              {proyekDoc && (
+                <ProyekDocDialog
+                  kind={proyekDoc}
+                  value={f}
+                  onCancel={() => setProyekDoc(null)}
+                  onSave={(patch) => { setF((p) => ({ ...p, ...patch })); setProyekDoc(null); }}
+                />
+              )}
             </div>
           )}
 
