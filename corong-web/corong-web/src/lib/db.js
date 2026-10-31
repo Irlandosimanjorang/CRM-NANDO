@@ -887,6 +887,13 @@ export async function suggestVisitPoints(leadId) {
 }
 
 // ---- STAGES ----
+// Link progres untuk klien (31 Okt 2026): token dibuat otomatis saat lead masuk Proyek Deal.
+export async function getLeadTrackingLink(leadId) {
+  const { data, error } = await supabase.rpc("get_lead_tracking_token", { p_lead_id: leadId });
+  if (error) throw error;
+  return data ? "https://journey-order.vercel.app/track/" + data : null;
+}
+
 export async function getStages() {
   const { data, error } = await supabase.from("stages").select("*").order("position");
   if (error) throw error;

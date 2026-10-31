@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { MEMO_FIELDS, memoComplete } from "../lib/proyekMemo";
+import * as db from "../lib/db";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
 // dan kolom yang panjang atau papan yang lebar digulir otomatis saat kursor dekat tepinya. Kartu langsung pindah di layar,
@@ -40,6 +41,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const [closing, setClosing] = useState(null);
   // Pop-up data proyek saat kartu digeser ke Proyek Deal (tanggal, nilai, No. SPH, total diskon wajib).
   const [proyek, setProyek] = useState(null);
+  const [trackingLink, setTrackingLink] = useState(null); // { name, link } setelah proyek masuk Proyek Deal
   const [dealStage, setDealStage] = useState(null); // pipeline faktur (MAP): pop-up tahap Deal
   // Pop-up tanggal selesai dan catatan saat kartu digeser ke Proyek Selesai (pipeline BSB).
   const [selesai, setSelesai] = useState(null);
@@ -198,10 +200,14 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const saveProyek = (values) => {
     const { lead, key } = proyek;
     setProyek(null);
-    Promise.resolve(onMove(lead, key, { projectDeal: values })).catch((e) => {
-      setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
-      alert("Gagal menyimpan: " + (e?.message || e));
-    });
+    Promise.resolve(onMove(lead, key, { projectDeal: values }))
+      // Link progres untuk klien (31 Okt 2026): tampil setelah Simpan, bukan di Lead Modal.
+      // Gagal ambil link tidak dianggap gagal simpan, jadi tidak ada alert.
+      .then(() => db.getLeadTrackingLink(lead.id).then((link) => { if (link) setTrackingLink({ name: lead.name, link }); }).catch(() => {}))
+      .catch((e) => {
+        setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
+        alert("Gagal menyimpan: " + (e?.message || e));
+      });
   };
 
   const saveClose = (category, note, deal, wonDate) => {
@@ -341,6 +347,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
         />
       )}
       {proyek && <ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} />}
+      {trackingLink && <TrackingLinkDialog name={trackingLink.name} link={trackingLink.link} onClose={() => setTrackingLink(null)} />}
       {selesai && <SelesaiDialog lead={selesai.lead} onCancel={cancelSelesai} onSave={saveSelesai} />}
 
       {/* Kartu yang diseret dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke wrapper yang punya transform. */}
@@ -599,6 +606,38 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
               </button>
             </>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Link progres untuk klien (31 Okt 2026): muncul setelah proyek masuk Proyek Deal. Klien membukanya tanpa login.
+function TrackingLinkDialog({ name, link, onClose }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+    } catch (_) {
+      window.prompt("Salin link ini:", link);
+    }
+  };
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+        <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">Proyek Deal</span>
+        <h3 className="mt-2 text-[15px] font-semibold text-slate-900">Link progres untuk klien</h3>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{name}</p>
+        <p className="mt-3 break-all rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-slate-700">{link}</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Tutup</button>
+          <button type="button" onClick={copy} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white">{copied ? "Tersalin" : "Salin link"}</button>
         </div>
       </div>
     </div>
