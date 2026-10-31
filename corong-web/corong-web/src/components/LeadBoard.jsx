@@ -197,6 +197,13 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     });
   };
 
+  // Link progres untuk klien dari kartu proyek (kapan saja, tidak harus baru pindah tahap).
+  const openTrackingLink = (lead) => {
+    db.getLeadTrackingLink(lead.id)
+      .then((link) => { if (link) setTrackingLink({ name: lead.name, link }); else alert("Link progres belum tersedia untuk lead ini."); })
+      .catch((e) => alert("Gagal mengambil link: " + (e?.message || e)));
+  };
+
   const saveProyek = (values) => {
     const { lead, key } = proyek;
     setProyek(null);
@@ -473,6 +480,17 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                       >
                         {cols.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
                       </select>
+
+                      {(stageOf(l) === "proyek_deal" || stageOf(l) === "proyek_berjalan") && (
+                        <button
+                          type="button"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={() => { if (!suppressClick.current) openTrackingLink(l); }}
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11.5px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Link progres
+                        </button>
+                      )}
 
                       {/* Status proyek di kartu (17 Okt 2026, BSB): pilih Berjalan langsung memindahkan lead ke Proyek Berjalan. */}
                       {stageOf(l) === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan") && (
