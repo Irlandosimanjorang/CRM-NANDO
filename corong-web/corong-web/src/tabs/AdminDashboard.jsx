@@ -858,7 +858,7 @@ function TrafficPanel({ data }) {
   const maxHourly = hourly && hourly.length ? Math.max(...hourly.map((h) => h.count), 1) : 1;
   return (
     <div className="grid gap-3 min-w-0">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <StatTile label="KUNJUNGAN HARI INI" value={visits_today} />
         <StatTile label="VISITOR UNIK HARI INI" value={unique_today} accent="#34d399" />
         <StatTile label="TOTAL 7 HARI" value={visits_7d} accent="#38bdf8" />

@@ -738,20 +738,21 @@ export default function App() {
             Center KEBUKA PENUH 1 LAYAR (permintaan Nando), scroll cuma jadi
             fallback kalau layarnya beneran pendek/di-zoom, bukan default. */}
         <div className="relative max-w-[1400px] mx-auto h-full flex flex-col px-4 py-3.5 md:px-8 md:py-5">
-          <div className="grid grid-cols-3 items-center gap-3 mb-3.5 shrink-0">
+          {/* HP: tombol kembali di atas, judul di tengah baris berikutnya, logo disembunyikan. Desktop: 3 kolom seperti semula. */}
+          <div className="flex flex-col gap-2.5 mb-3.5 shrink-0 md:grid md:grid-cols-3 md:items-center md:gap-3">
             <button
               onClick={() => {
                 if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
                 setTab("dashboard");
               }}
-              className="flex items-center gap-2 text-[12px] font-mono text-slate-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl px-3.5 py-2 transition-colors justify-self-start"
+              className="flex items-center gap-2 text-[12px] font-mono text-slate-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-xl px-3.5 py-2 transition-colors self-start md:justify-self-start"
             >
               <ArrowLeft size={13} /> Kembali ke Workspace
             </button>
-            <h1 className="justify-self-center font-mono text-[26px] md:text-[32px] font-bold uppercase tracking-[0.15em] text-white mt-2.5">
+            <h1 className="text-center font-mono text-[20px] md:text-[32px] font-bold uppercase tracking-[0.12em] md:tracking-[0.15em] text-white md:mt-2.5">
               Command Center
             </h1>
-            <div className="flex items-center gap-2 justify-self-end">
+            <div className="hidden md:flex items-center gap-2 justify-self-end">
               <NextoRobotHead size={26} />
               <NextoDarkWordmark width={62} />
             </div>
