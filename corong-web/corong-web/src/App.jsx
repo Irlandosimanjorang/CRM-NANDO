@@ -956,7 +956,7 @@ export default function App() {
               </button>
             </div>
             {!sidebarCollapsed && (settings?.is_platform_admin || org?.industry) && (
-              <div className="pl-[38px] mt-2 flex items-center gap-1.5 flex-wrap min-w-0">
+              <div className="pl-[38px] mt-2 min-w-0">
                 {settings?.is_platform_admin ? (
                   <IndustryDemoSwitcher org={org} onSwitched={reload} />
                 ) : (
@@ -964,7 +964,7 @@ export default function App() {
                     // Warna & ukuran disamain sama badge plan di footer sidebar
                     // (16 Sep 2026, permintaan Nando) - biar 2 badge ini kerasa
                     // 1 bahasa visual, bukan 2 gaya beda sendiri-sendiri.
-                    <span className="inline-block text-[9.5px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 rounded-full px-1.5 py-0.5 truncate max-w-full">
+                    <span className="block max-w-full truncate text-[9.5px] font-semibold uppercase tracking-wide text-slate-300 bg-white/8 ring-1 ring-white/10 rounded-full px-1.5 py-0.5">
                       {getIndustryTemplate(org.industry).label}
                     </span>
                   )
