@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
-import { MEMO_FIELDS, memoComplete } from "../lib/proyekMemo";
+import { MEMO_FIELDS } from "../lib/proyekMemo";
 import * as db from "../lib/db";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
@@ -544,8 +544,8 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
   const [detail, setDetail] = useState(lead.detail_proyek || "");
   const [memo, setMemo] = useState(() => Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, lead.memo?.[f.key] || ""])));
   const [step, setStep] = useState(1);
-  const dataReady = !!date && dealValue > 0 && sph.trim().length > 0 && detail.trim().length > 0;
-  const memoReady = memoComplete(memo);
+  // Sementara detil dan memo belum wajib: proyek boleh disimpan dulu, dilengkapi nanti.
+  const dataReady = !!date && dealValue > 0 && sph.trim().length > 0;
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -589,7 +589,7 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
               </select>
             </label>
             <label className="mt-3 block">
-              <span className="text-[11px] font-medium text-slate-500">Detil proyek *</span>
+              <span className="text-[11px] font-medium text-slate-500">Detil proyek</span>
               <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={3} placeholder="Ruang lingkup dan detail pekerjaan" className={field + " resize-none"} />
             </label>
           </>
@@ -616,7 +616,6 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
               <button type="button" onClick={() => setStep(1)} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Kembali</button>
               <button
                 type="button"
-                disabled={!memoReady}
                 onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), memo: Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, memo[f.key].trim()])) })}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
               >

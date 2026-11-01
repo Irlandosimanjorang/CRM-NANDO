@@ -422,8 +422,6 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
       if (!f.deal_date) { alert("Tanggal deal wajib diisi untuk tahap Proyek Deal."); return; }
       if (!(Number(f.deal_value) > 0)) { alert("Nilai proyek wajib diisi untuk tahap Proyek Deal."); return; }
       if (!String(f.sph_number || "").trim()) { alert("No. SPH wajib diisi untuk tahap Proyek Deal."); return; }
-      if (!String(f.detail_proyek || "").trim()) { alert("Detil proyek wajib diisi untuk tahap Proyek Deal."); return; }
-      if (!memoComplete(f.memo)) { alert("Memo wajib diisi untuk tahap Proyek Deal."); return; }
     }
     if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
