@@ -315,13 +315,13 @@ export default function App() {
   // ---- TOAST STATE - lihat komentar di komponen Toast di atas ----
   const [toasts, setToasts] = useState([]);
 
-  // ---- SIDEBAR DESKTOP BISA DISEMBUNYIKAN - pilihan disimpen per browser ----
-  const [sidebarHidden, setSidebarHidden] = useState(() => {
-    try { return localStorage.getItem("nexto_sidebar_hidden") === "1"; } catch { return false; }
+  // ---- SIDEBAR DESKTOP BISA DICIUTKAN JADI IKON SAJA - pilihan disimpen per browser ----
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem("nexto_sidebar_collapsed") === "1"; } catch { return false; }
   });
-  const toggleSidebar = (hidden) => {
-    setSidebarHidden(hidden);
-    try { localStorage.setItem("nexto_sidebar_hidden", hidden ? "1" : "0"); } catch {}
+  const toggleSidebar = (collapsed) => {
+    setSidebarCollapsed(collapsed);
+    try { localStorage.setItem("nexto_sidebar_collapsed", collapsed ? "1" : "0"); } catch {}
   };
 
   // Sidebar desktop: scroll roda mouse di atasnya tidak boleh ikut menggulung
@@ -936,37 +936,26 @@ export default function App() {
       {/* DESKTOP SIDEBAR - panel melayang (16 Sep 2026), rounded penuh +
           inset dari tepi layar, ganti border-r doang jadi border keliling
           biar konsisten sama bentuk panel yang gak nempel ke sisi manapun. */}
-      {/* Tombol buka sidebar saat tersembunyi (desktop saja) */}
-      {sidebarHidden && (
-        <button
-          onClick={() => toggleSidebar(false)}
-          title="Tampilkan sidebar"
-          aria-label="Tampilkan sidebar"
-          className="hidden md:flex fixed top-3 left-3 z-30 items-center justify-center w-9 h-9 rounded-xl bg-[#0b1220] text-white shadow-float hover:bg-slate-800"
-        >
-          <PanelLeftOpen size={18} strokeWidth={1.9} />
-        </button>
-      )}
-
-      <aside ref={sidebarRef} className={`nexto-sidebar hidden ${sidebarHidden ? "" : "md:flex"} flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float`}>
+      <aside ref={sidebarRef} className={`nexto-sidebar hidden md:flex flex-col ${sidebarCollapsed ? "w-[72px]" : "w-[228px]"} fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float transition-[width] duration-200`}>
         {/* Header sidebar (16 Sep 2026): profil + badge plan DIPINDAH ke
             bawah (pola app pada umumnya - Slack/Notion dst naro profil di
-            footer sidebar, bukan header). Header sekarang logo doang. */}
-        <div className="px-4 pt-5 pb-4">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3.5">
-            <div className="flex items-center gap-2.5">
+            footer sidebar, bukan header). Header sekarang logo doang.
+            Mode ciut (72px): cuma ikon robot + tombol buka, badge disembunyikan. */}
+        <div className={sidebarCollapsed ? "px-2 pt-4 pb-3" : "px-4 pt-5 pb-4"}>
+          <div className={`rounded-2xl border border-white/[0.06] bg-white/[0.025] ${sidebarCollapsed ? "p-2 flex flex-col items-center gap-2" : "p-3.5"}`}>
+            <div className={`flex items-center ${sidebarCollapsed ? "flex-col gap-2" : "gap-2.5"}`}>
               <NextoRobotHead size={30} />
-              <NextoDarkWordmark width={70} />
+              {!sidebarCollapsed && <NextoDarkWordmark width={70} />}
               <button
-                onClick={() => toggleSidebar(true)}
-                title="Sembunyikan sidebar"
-                aria-label="Sembunyikan sidebar"
-                className="ml-auto flex items-center justify-center w-7 h-7 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06]"
+                onClick={() => toggleSidebar(!sidebarCollapsed)}
+                title={sidebarCollapsed ? "Buka sidebar" : "Ciutkan jadi ikon"}
+                aria-label={sidebarCollapsed ? "Buka sidebar" : "Ciutkan sidebar"}
+                className={`flex items-center justify-center w-7 h-7 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] ${sidebarCollapsed ? "" : "ml-auto"}`}
               >
-                <PanelLeftClose size={16} strokeWidth={1.9} />
+                {sidebarCollapsed ? <PanelLeftOpen size={16} strokeWidth={1.9} /> : <PanelLeftClose size={16} strokeWidth={1.9} />}
               </button>
             </div>
-            {(settings?.is_platform_admin || org?.industry) && (
+            {!sidebarCollapsed && (settings?.is_platform_admin || org?.industry) && (
               <div className="pl-[38px] mt-2 flex items-center gap-1.5 flex-wrap min-w-0">
                 {settings?.is_platform_admin ? (
                   <IndustryDemoSwitcher org={org} onSwitched={reload} />
@@ -987,8 +976,8 @@ export default function App() {
 
         <div className="mx-4 mb-3 h-px bg-white/10" />
 
-        <nav className="flex-1 px-3 py-2.5 space-y-1 overflow-y-auto overscroll-contain">
-          <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Menu utama</div>
+        <nav className={`flex-1 ${sidebarCollapsed ? "px-2" : "px-3"} py-2.5 space-y-1 overflow-y-auto overscroll-contain`}>
+          {!sidebarCollapsed && <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Menu utama</div>}
           {navItems.map((n) => {
             const I = n.icon;
             const active = effectiveTab === n.key;
@@ -1003,6 +992,8 @@ export default function App() {
               <button
                 key={n.key}
                 data-tour-nav={n.key}
+                title={sidebarCollapsed ? n.label : undefined}
+                aria-label={sidebarCollapsed ? n.label : undefined}
                 onClick={() => {
                   // Command Center itu "fullscreen takeover" - minta browser
                   // masuk mode fullscreen beneran (nutupin tab/address bar),
@@ -1014,12 +1005,12 @@ export default function App() {
                   }
                   setTab(n.key);
                 }}
-                className={`nexto-nav-item relative w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[12.5px] ${cls}`}
+                className={`nexto-nav-item relative w-full flex items-center ${sidebarCollapsed ? "justify-center px-0" : "gap-3 px-3"} py-2.5 rounded-[12px] text-[12.5px] ${cls}`}
               >
                 {active && !locked && !n.special && <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-white/90" />}
                 <I size={17} strokeWidth={active ? 2.4 : 1.9} />
-                <span className="flex-1 text-left">{n.label}</span>
-                {locked && <Lock size={12} className="shrink-0 text-slate-600" />}
+                {!sidebarCollapsed && <span className="flex-1 text-left">{n.label}</span>}
+                {locked && !sidebarCollapsed && <Lock size={12} className="shrink-0 text-slate-600" />}
               </button>
             );
           })}
@@ -1031,9 +1022,9 @@ export default function App() {
             ProfileAvatar) buka popup profil, dan tombol "Keluar" ada DI
             DALAM popup itu (di bawah "Edit Profil"), bukan tombol terpisah
             di sidebar lagi. */}
-        <div className="px-3 pb-3 pt-2 border-t border-white/[0.06]">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.05] px-2.5 py-2.5 transition-colors">
-            <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={36} align="left" expanded />
+        <div className={`${sidebarCollapsed ? "px-2" : "px-3"} pb-3 pt-2 border-t border-white/[0.06]`}>
+          <div className={`rounded-2xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.05] ${sidebarCollapsed ? "px-1 py-2 flex justify-center" : "px-2.5 py-2.5"} transition-colors`}>
+            <ProfileAvatar settings={settings} session={session} org={org} onChanged={reload} size={36} align="left" expanded={!sidebarCollapsed} />
           </div>
         </div>
       </aside>
@@ -1044,7 +1035,7 @@ export default function App() {
           .nexto-app (tetep terang, cuma ditambah glow tipis) keliatan di
           celahnya. bg-[#f7f8fc] eksplisit di sini biar warnanya presisi
           sama walau nanti .nexto-app di-tweak lagi. */}
-      <div className={`flex-1 min-w-0 flex flex-col relative nexto-content-glow bg-[#f7f8fc] ${sidebarHidden ? "md:ml-3" : "md:ml-[252px]"} md:mr-3 md:my-3 md:rounded-panel md:overflow-hidden md:shadow-float`}>
+      <div className={`flex-1 min-w-0 flex flex-col relative nexto-content-glow bg-[#f7f8fc] ${sidebarCollapsed ? "md:ml-[96px]" : "md:ml-[252px]"} md:mr-3 transition-[margin] duration-200 md:my-3 md:rounded-panel md:overflow-hidden md:shadow-float`}>
 
         {/* MOBILE TOPBAR */}
         <header className="md:hidden sticky top-0 z-30 bg-white/82 backdrop-blur-2xl border-b border-slate-200/70">
