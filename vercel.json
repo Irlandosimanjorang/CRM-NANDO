@@ -1,0 +1,24 @@
+{
+  "installCommand": "cd corong-web/corong-web && npm ci",
+  "buildCommand": "cd corong-web/corong-web && npm run build",
+  "outputDirectory": "corong-web/corong-web/dist",
+  "rewrites": [
+    { "source": "/grok-bot", "destination": "/index.html" },
+    { "source": "/demo", "destination": "/demo/demo.html" },
+    { "source": "/invoice", "destination": "/index.html" },
+    { "source": "/tv", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
+        { "key": "Permissions-Policy", "value": "usb=(), midi=(), payment=(), interest-cohort=()" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://cewggulyfshnbebcpyui.supabase.co data: blob:; connect-src 'self' https://cewggulyfshnbebcpyui.supabase.co wss://cewggulyfshnbebcpyui.supabase.co https://challenges.cloudflare.com https://nominatim.openstreetmap.org; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" }
+      ]
+    }
+  ]
+}
