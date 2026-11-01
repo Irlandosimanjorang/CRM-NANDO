@@ -942,9 +942,9 @@ export default function App() {
         onClick={() => toggleSidebar(!sidebarCollapsed)}
         title={sidebarCollapsed ? "Buka sidebar" : "Ciutkan sidebar"}
         aria-label={sidebarCollapsed ? "Buka sidebar" : "Ciutkan sidebar"}
-        className={`hidden md:flex fixed top-1/2 -translate-y-1/2 z-40 items-center justify-center w-[18px] h-11 rounded-r-full bg-[#0b1220] border border-l-0 border-white/[0.07] text-slate-400 hover:text-white shadow-float transition-[left] duration-200 ${sidebarCollapsed ? "left-[84px]" : "left-[240px]"}`}
+        className={`hidden md:flex fixed top-[44px] z-40 items-center justify-center w-5 h-5 text-slate-500 hover:text-slate-800 transition-[left] duration-200 ${sidebarCollapsed ? "left-[88px]" : "left-[244px]"}`}
       >
-        {sidebarCollapsed ? <PanelLeftOpen size={13} strokeWidth={2} /> : <PanelLeftClose size={13} strokeWidth={2} />}
+        {sidebarCollapsed ? <PanelLeftOpen size={16} strokeWidth={1.9} /> : <PanelLeftClose size={16} strokeWidth={1.9} />}
       </button>
 
       <aside ref={sidebarRef} className={`nexto-sidebar hidden md:flex flex-col ${sidebarCollapsed ? "w-[72px]" : "w-[228px]"} fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float transition-[width] duration-200`}>
