@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: invoice-reminders (2 Okt 2026)
 // Dipanggil pg_cron setiap hari 08.00 WIB (header x-cron-secret). Mengirim
 // pengingat ke klien untuk invoice yang BELUM DIBAYAR:
@@ -21,7 +22,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const wibDate = (offsetDays = 0) => new Date(Date.now() + 7 * 3600000 + offsetDays * 86400000).toISOString().slice(0, 10);
 
 Deno.serve(async (req) => {
-  if (!CRON_SECRET || req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!CRON_SECRET || !safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);

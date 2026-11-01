@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: member-memory-agent (23 Okt 2026)
 // Lapisan berpikir untuk memori per user. Fakta pipeline dihitung SQL (member_facts), lalu Claude Haiku
 // menulis ringkasan, risiko, langkah berikutnya, dan skor AI (uji berdampingan dengan skor rumus).
@@ -100,7 +101,7 @@ async function logUsage(admin, orgId, userId, usage) {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "content-type": "application/json" } });
   }
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);

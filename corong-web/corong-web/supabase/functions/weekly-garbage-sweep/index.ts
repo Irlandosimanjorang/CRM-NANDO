@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: weekly-garbage-sweep
 // Dipicu cron 1x/minggu (Senin dini hari). Dua tugas beda level resiko,
 // SENGAJA dipisah biar gak ada AI yang "nebak" terus ngehapus data bisnis
@@ -86,7 +87,7 @@ async function wipeOrgCompletely(admin, orgId) {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

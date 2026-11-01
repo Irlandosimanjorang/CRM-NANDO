@@ -71,7 +71,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const clientIp = (req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown").split(",")[0].trim();
+    // Ambil entri TERAKHIR dari x-forwarded-for: proxy menambahkan IP klien di ujung,
+    // sedangkan entri pertama bisa diisi sembarang oleh klien (dipakai untuk bypass rate limit).
+    const forwarded = (req.headers.get("x-forwarded-for") || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const clientIp = forwarded.length ? forwarded[forwarded.length - 1] : (req.headers.get("x-real-ip") || "unknown");
     const ipHash = clientIp !== "unknown" ? await sha256Hex(clientIp) : null;
 
     if (ipHash) {

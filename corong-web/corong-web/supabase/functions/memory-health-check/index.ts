@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: memory-health-check
 // Dipanggil oleh Cron Job Supabase SENDIRI. Menilai kualitas "memori" (riwayat progress notes) tiap organisasi pakai AI (Claude)
 // lalu menyimpan skornya di org_memory_health. Jalan 1x per ORG, panggilan Claude kecil. Model: Sonnet 5.5.
@@ -87,7 +88,7 @@ Balas HANYA JSON, tanpa markdown: {"score": <angka 0-100>, "label": "<1-3 kata s
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 

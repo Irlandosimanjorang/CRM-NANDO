@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: health-check
 // Jalan OTOMATIS via cron tiap beberapa jam. Ngecek beberapa sinyal kesehatan
 // sistem, dan kalau nemu yang mencurigakan, AI nulis laporan jelas & kirim
@@ -627,7 +628,7 @@ BATAS KETAT: maksimal 15 baris, DAN maksimal 3000 karakter total - kalau temuann
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
   try {

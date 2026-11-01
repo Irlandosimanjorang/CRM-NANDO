@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: pipeline-review
 // "Pipeline Review (AI)" - OTOMATIS jalan tiap Senin lewat cron,
 // BUKAN tombol on-demand (beda dari fitur AI lain di Nexto yang
@@ -345,7 +346,7 @@ async function refreshOrgMemory(admin, orgId) {
 }
 
 Deno.serve((req) => AI_CTX.run({ req }, async () => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
   const reqUrl = new URL(req.url);

@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: weekly-team-report
 // Laporan mingguan tab Team (30 Sep 2026, permintaan Nando) - dikirim tiap
 // Senin 08:00 WIB (cron nexto-weekly-team-report) ke owner & manager tiap org
@@ -76,7 +77,7 @@ function renderHtml(orgName, range, r) {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
   const url = new URL(req.url);

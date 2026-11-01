@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: daily-alerts (9 Okt 2026)
 // Email alert harian untuk owner dan manager organisasi Enterprise yang menyalakan saklar features.daily_alerts:
 // chat belum dibalas, lead high-value belum di-follow-up, lead stuck per marketing, target tercapai.
@@ -15,7 +16,7 @@ const CRON_SECRET = Deno.env.get("CRON_SECRET");
 const WIB = 7 * 3600 * 1000;
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   const url = new URL(req.url);
   const dry = url.searchParams.get("dry") === "true";
   const onlyOrg = url.searchParams.get("org_id");

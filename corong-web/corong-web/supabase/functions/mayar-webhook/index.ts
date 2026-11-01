@@ -13,6 +13,7 @@
 // dengan produk di dashboard Mayar. Nominal lama sengaja dipertahankan karena subscriber lama
 // masih ditagih nominal lama saat perpanjangan.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { safeEqual } from "../_shared/safeEqual.ts";
 
 const MAYAR_WEBHOOK_TOKEN = Deno.env.get("MAYAR_WEBHOOK_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -232,7 +233,7 @@ Deno.serve(async (req) => {
     const bodyToken = body?.token;
     const incomingToken = headerToken || bodyToken;
 
-    if (!MAYAR_WEBHOOK_TOKEN || incomingToken !== MAYAR_WEBHOOK_TOKEN) {
+    if (!MAYAR_WEBHOOK_TOKEN || !safeEqual(incomingToken, MAYAR_WEBHOOK_TOKEN)) {
       console.error("Token webhook gak cocok - ditolak. Header yang diterima:", JSON.stringify(redact(Object.fromEntries(req.headers))));
       return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
     }

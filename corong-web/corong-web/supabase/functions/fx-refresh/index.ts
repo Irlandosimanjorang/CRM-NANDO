@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: fx-refresh (26 Okt 2026)
 // Dipanggil cron tiap 6 jam (x-cron-secret). Mengambil kurs USD/IDR terbaru dan menyimpannya di
 // admin_settings (fx_usd_idr). Dibaca oleh admin_ai_usage_report() dan Cash Flow, jadi estimasi biaya
@@ -14,7 +15,7 @@ const SOURCES: [string, string, (j: any) => unknown][] = [
 ];
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response("Unauthorized", { status: 401 });
   }
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);

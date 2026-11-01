@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: backfill-embeddings
 // Proses catatan lama yang belum punya embedding. Dilindungi query parameter ?key=CRON_SECRET (bukan header) - lebih
 // simpel dipakai lewat browser. CORS dibatasi ke nexto.site (28 Agt 2026).
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
   if (!CRON_SECRET) {
     return new Response(JSON.stringify({ error: "CRON_SECRET belum di-set di server" }), { status: 500, headers: CORS });
   }
-  if (key !== CRON_SECRET) {
+  if (!safeEqual(key, CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized - tambahin ?key=CRON_SECRET_LU di URL" }), { status: 401, headers: CORS });
   }
 

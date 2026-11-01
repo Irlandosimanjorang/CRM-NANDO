@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: check-plan-expiry
 // Dipanggil oleh Cron Job Supabase tiap hari (bukan oleh user login).
 //
@@ -96,7 +97,7 @@ async function sendReminderEmail(email, tierLabel, expiresAtISO) {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 

@@ -1,3 +1,4 @@
+import { safeEqual } from "../_shared/safeEqual.ts";
 // Supabase Edge Function: daily-digest
 // Dipanggil oleh Cron Job Supabase tiap pagi (bukan oleh user login).
 //
@@ -570,7 +571,7 @@ async function isRecentlyActive(admin, u) {
 
 Deno.serve((req) => AI_CTX.run({ req }, async () => {
   console.log("[digest] request received");
-  if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!safeEqual(req.headers.get("x-cron-secret"), CRON_SECRET)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
