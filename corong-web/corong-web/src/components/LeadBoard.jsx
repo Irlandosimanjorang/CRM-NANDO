@@ -598,7 +598,7 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
             {MEMO_FIELDS.map((f) => (
               <div key={f.key} className={f.wide ? "col-span-2" : ""}>
                 <label className="block">
-                  <span className="text-[11px] font-medium text-slate-500">{f.label}{f.required ? " *" : ""}</span>
+                  <span className="text-[11px] font-medium text-slate-500">{f.label}</span>
                   <input value={memo[f.key]} onChange={(e) => setMemo((m) => ({ ...m, [f.key]: e.target.value }))} placeholder={f.placeholder} className={field} />
                 </label>
               </div>
