@@ -891,7 +891,7 @@ export async function suggestVisitPoints(leadId) {
 export async function getLeadTrackingLink(leadId) {
   const { data, error } = await supabase.rpc("get_lead_tracking_token", { p_lead_id: leadId });
   if (error) throw error;
-  return data ? "https://journey-order.vercel.app/track/" + data : null;
+  return data ? "https://indoupvcjourney.live/track/" + data : null;
 }
 
 export async function getStages() {
