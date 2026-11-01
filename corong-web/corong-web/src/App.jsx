@@ -55,7 +55,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck, BarChart3,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck, BarChart3, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -314,6 +314,16 @@ export default function App() {
 
   // ---- TOAST STATE - lihat komentar di komponen Toast di atas ----
   const [toasts, setToasts] = useState([]);
+
+  // ---- SIDEBAR DESKTOP BISA DISEMBUNYIKAN - pilihan disimpen per browser ----
+  const [sidebarHidden, setSidebarHidden] = useState(() => {
+    try { return localStorage.getItem("nexto_sidebar_hidden") === "1"; } catch { return false; }
+  });
+  const toggleSidebar = (hidden) => {
+    setSidebarHidden(hidden);
+    try { localStorage.setItem("nexto_sidebar_hidden", hidden ? "1" : "0"); } catch {}
+  };
+
   // Sidebar desktop: scroll roda mouse di atasnya tidak boleh ikut menggulung
   // halaman/tab di sebelahnya (6 Okt 2026, laporan Nando). Menu yang bisa
   // digulung dibiarkan (overscroll-contain di <nav>); area lain (header,
@@ -926,7 +936,19 @@ export default function App() {
       {/* DESKTOP SIDEBAR - panel melayang (16 Sep 2026), rounded penuh +
           inset dari tepi layar, ganti border-r doang jadi border keliling
           biar konsisten sama bentuk panel yang gak nempel ke sisi manapun. */}
-      <aside ref={sidebarRef} className="nexto-sidebar hidden md:flex flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float">
+      {/* Tombol buka sidebar saat tersembunyi (desktop saja) */}
+      {sidebarHidden && (
+        <button
+          onClick={() => toggleSidebar(false)}
+          title="Tampilkan sidebar"
+          aria-label="Tampilkan sidebar"
+          className="hidden md:flex fixed top-3 left-3 z-30 items-center justify-center w-9 h-9 rounded-xl bg-[#0b1220] text-white shadow-float hover:bg-slate-800"
+        >
+          <PanelLeftOpen size={18} strokeWidth={1.9} />
+        </button>
+      )}
+
+      <aside ref={sidebarRef} className={`nexto-sidebar hidden ${sidebarHidden ? "" : "md:flex"} flex-col w-[228px] fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float`}>
         {/* Header sidebar (16 Sep 2026): profil + badge plan DIPINDAH ke
             bawah (pola app pada umumnya - Slack/Notion dst naro profil di
             footer sidebar, bukan header). Header sekarang logo doang. */}
@@ -935,6 +957,14 @@ export default function App() {
             <div className="flex items-center gap-2.5">
               <NextoRobotHead size={30} />
               <NextoDarkWordmark width={70} />
+              <button
+                onClick={() => toggleSidebar(true)}
+                title="Sembunyikan sidebar"
+                aria-label="Sembunyikan sidebar"
+                className="ml-auto flex items-center justify-center w-7 h-7 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06]"
+              >
+                <PanelLeftClose size={16} strokeWidth={1.9} />
+              </button>
             </div>
             {(settings?.is_platform_admin || org?.industry) && (
               <div className="pl-[38px] mt-2 flex items-center gap-1.5 flex-wrap min-w-0">
@@ -1014,7 +1044,7 @@ export default function App() {
           .nexto-app (tetep terang, cuma ditambah glow tipis) keliatan di
           celahnya. bg-[#f7f8fc] eksplisit di sini biar warnanya presisi
           sama walau nanti .nexto-app di-tweak lagi. */}
-      <div className="flex-1 min-w-0 flex flex-col relative nexto-content-glow bg-[#f7f8fc] md:ml-[252px] md:mr-3 md:my-3 md:rounded-panel md:overflow-hidden md:shadow-float">
+      <div className={`flex-1 min-w-0 flex flex-col relative nexto-content-glow bg-[#f7f8fc] ${sidebarHidden ? "md:ml-3" : "md:ml-[252px]"} md:mr-3 md:my-3 md:rounded-panel md:overflow-hidden md:shadow-float`}>
 
         {/* MOBILE TOPBAR */}
         <header className="md:hidden sticky top-0 z-30 bg-white/82 backdrop-blur-2xl border-b border-slate-200/70">
