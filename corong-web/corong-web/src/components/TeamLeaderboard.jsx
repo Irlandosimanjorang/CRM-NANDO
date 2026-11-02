@@ -136,6 +136,9 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
     dari.setUTCDate(dari.getUTCDate() - 29);
     return { from: dari.toISOString().slice(0, 10), to: hari };
   });
+  // Popover rentang tanggal: isian sementara sampai tombol Terapkan ditekan.
+  const [popoverRentang, setPopoverRentang] = useState(false);
+  const [draftRentang, setDraftRentang] = useState(rentangTx);
 
   useEffect(() => {
     if (!externalMembers) db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
@@ -258,10 +261,19 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
             <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">Performa team</h2>
             <p className="mt-0.5 text-[11.5px] text-slate-500">Peringkat berdasarkan total revenue closing{labelPeriodeTx}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex flex-wrap items-center gap-2">
             <select
               value={periodeTx}
-              onChange={(e) => setPeriodeTx(e.target.value)}
+              onChange={(e) => {
+                const nilai = e.target.value;
+                if (nilai === "custom") {
+                  // Rentang custom disetel lewat popover; pilihan baru berlaku setelah Terapkan.
+                  setDraftRentang(rentangTx);
+                  setPopoverRentang(true);
+                  return;
+                }
+                setPeriodeTx(nilai);
+              }}
               aria-label="Pilih periode transaksi"
               className="rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-900"
             >
@@ -269,11 +281,36 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
               {pilihanBulan.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
               <option value="custom">Pilih tanggal</option>
             </select>
-            {periodeTx === "custom" && (
+            {periodeTx === "custom" && !popoverRentang && (
+              <button type="button" onClick={() => { setDraftRentang(rentangTx); setPopoverRentang(true); }} className="rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-700 hover:border-orange-400">
+                {rentangTx.from} s.d. {rentangTx.to}
+              </button>
+            )}
+            {popoverRentang && (
               <>
-                <input type="date" aria-label="Dari tanggal" value={rentangTx.from} max={rentangTx.to} onChange={(e) => e.target.value && setRentangTx((r) => ({ ...r, from: e.target.value }))} className="rounded-inner border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-900" />
-                <span className="text-[12px] text-slate-500">s.d.</span>
-                <input type="date" aria-label="Sampai tanggal" value={rentangTx.to} min={rentangTx.from} onChange={(e) => e.target.value && setRentangTx((r) => ({ ...r, to: e.target.value }))} className="rounded-inner border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-900" />
+                <div className="fixed inset-0 z-20" onClick={() => setPopoverRentang(false)} aria-hidden="true" />
+                <div role="dialog" aria-label="Rentang tanggal" className="absolute right-0 top-full z-30 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                  <div className="text-[13px] font-semibold text-slate-900">Rentang tanggal</div>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <label className="block text-[12px] text-slate-500">Dari
+                      <input type="date" value={draftRentang.from} max={draftRentang.to} onChange={(e) => e.target.value && setDraftRentang((r) => ({ ...r, from: e.target.value }))} className="mt-1 w-full rounded-inner border border-slate-200 bg-white px-2 py-2 text-[12px] text-slate-900" />
+                    </label>
+                    <label className="block text-[12px] text-slate-500">Sampai
+                      <input type="date" value={draftRentang.to} min={draftRentang.from} onChange={(e) => e.target.value && setDraftRentang((r) => ({ ...r, to: e.target.value }))} className="mt-1 w-full rounded-inner border border-slate-200 bg-white px-2 py-2 text-[12px] text-slate-900" />
+                    </label>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button type="button" onClick={() => setPopoverRentang(false)} className="rounded-xl px-3 py-2 text-[12px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button
+                      type="button"
+                      disabled={!draftRentang.from || !draftRentang.to || draftRentang.from > draftRentang.to}
+                      onClick={() => { setRentangTx(draftRentang); setPeriodeTx("custom"); setPopoverRentang(false); }}
+                      className="rounded-xl bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-40"
+                    >
+                      Terapkan
+                    </button>
+                  </div>
+                </div>
               </>
             )}
           </div>
