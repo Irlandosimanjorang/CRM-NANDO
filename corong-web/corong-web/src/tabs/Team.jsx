@@ -30,8 +30,15 @@ import { chipStyle } from "../lib/helpers";
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
 const INACTIVE_DAYS = 3;
 
-function rangeFor(key) {
+// custom = { from: "YYYY-MM-DD", to: "YYYY-MM-DD" } (WIB), hanya dipakai saat key === "custom".
+function rangeFor(key, custom) {
   const now = new Date();
+  if (key === "custom" && custom?.from && custom?.to) {
+    return {
+      from: new Date(`${custom.from}T00:00:00+07:00`),
+      to: new Date(`${custom.to}T23:59:59.999+07:00`),
+    };
+  }
   const wib = new Date(now.getTime() + WIB_OFFSET_MS);
   const y = wib.getUTCFullYear(), m = wib.getUTCMonth(), d = wib.getUTCDate();
   let start;
@@ -45,7 +52,18 @@ const RANGES = [
   { key: "today", label: "Hari ini" },
   { key: "week", label: "Minggu ini" },
   { key: "month", label: "Bulan ini" },
+  { key: "custom", label: "Pilih tanggal" },
 ];
+
+// Rentang default untuk "Pilih tanggal": 7 hari terakhir sampai hari ini (WIB).
+const defaultCustom = () => {
+  const today = new Date(Date.now() + WIB_OFFSET_MS).toISOString().slice(0, 10);
+  const from = new Date(`${today}T00:00:00Z`);
+  from.setUTCDate(from.getUTCDate() - 6);
+  return { from: from.toISOString().slice(0, 10), to: today };
+};
+
+const fmtRangeDate = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 const KIND = {
   visit: { icon: MapPin, color: "text-sky-600 bg-sky-50", verb: "check-in di" },
@@ -273,6 +291,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
     return () => { alive = false; };
   }, [leads, dealTransactions]);
   const [range, setRange] = useState("week");
+  const [custom, setCustom] = useState(defaultCustom);
   const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
   const [activityFor, setActivityFor] = useState(null); // { member, kind: "stage_moves" | "deals" }
   const [data, setData] = useState(null);
@@ -284,7 +303,8 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
   const [reloadKey, setReloadKey] = useState(0);
 
   const load = () => {
-    const { from, to } = rangeFor(range);
+    const { from, to } = rangeFor(range, custom);
+    if (from > to) { setErr("Tanggal \"Sampai\" harus sama atau setelah \"Dari\"."); setLoading(false); return; }
     setLoading(true);
     setErr("");
     setReloadKey((k) => k + 1);
@@ -295,14 +315,14 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
       .catch((e) => setErr(e.message || "Gagal memuat rekap aktivitas"))
       .finally(() => setLoading(false));
   };
-  useEffect(load, [range]);
+  useEffect(load, [range, custom.from, custom.to]);
   // Perubahan tim dari sales rep (App mengirim "nexto-data-changed" setelah realtime) langsung masuk ke rekap ini.
   useEffect(() => {
     const onData = () => load();
     window.addEventListener("nexto-data-changed", onData);
     return () => window.removeEventListener("nexto-data-changed", onData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range]);
+  }, [range, custom.from, custom.to]);
 
   const members = data?.members || [];
   const nameOf = Object.fromEntries(members.map((m) => [m.user_id, m.name]));
@@ -310,7 +330,9 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
     const l = (leads || []).find((x) => x.id === id);
     if (l) onOpenLead?.(l);
   };
-  const rangeLabel = RANGES.find((r) => r.key === range)?.label || "";
+  const rangeLabel = range === "custom"
+    ? `${fmtRangeDate(custom.from)} – ${fmtRangeDate(custom.to)}`
+    : RANGES.find((r) => r.key === range)?.label || "";
 
   const maxOf = Object.fromEntries(COLS.map((c) => [c.key, Math.max(1, ...members.map((m) => Number(m[c.key]) || 0))]));
   const totalOf = (m) => COLS.reduce((s, c) => s + (Number(m[c.key]) || 0), 0);
@@ -350,6 +372,18 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         <div className="flex flex-wrap items-center gap-2">
           <SharedOrgTeam onOpen={setSharedOrg} />
           <Segmented options={RANGES.map((r) => [r.key, r.label])} value={range} onChange={setRange} />
+          {range === "custom" && (
+            <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
+              <label className="flex items-center gap-1.5">
+                <span>Dari</span>
+                <input type="date" value={custom.from} max={custom.to} onChange={(e) => e.target.value && setCustom((c) => ({ ...c, from: e.target.value }))} className="rounded-inner border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-900" />
+              </label>
+              <label className="flex items-center gap-1.5">
+                <span>Sampai</span>
+                <input type="date" value={custom.to} min={custom.from} onChange={(e) => e.target.value && setCustom((c) => ({ ...c, to: e.target.value }))} className="rounded-inner border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-900" />
+              </label>
+            </div>
+          )}
           <button onClick={load} disabled={loading} className="rounded-inner border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-slate-900 disabled:opacity-50" title="Muat ulang" aria-label="Muat ulang">
             <RefreshCw size={14} className={loading ? "motion-safe:animate-spin" : ""} />
           </button>
@@ -491,7 +525,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
           api={api}
           member={activityFor.member}
           kind={activityFor.kind}
-          range={rangeFor(range)}
+          range={rangeFor(range, custom)}
           rangeLabel={rangeLabel}
           stages={stages}
           leads={leads}
@@ -505,7 +539,7 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         <MemberNotesModal
           api={api}
           member={notesFor}
-          range={rangeFor(range)}
+          range={rangeFor(range, custom)}
           rangeLabel={rangeLabel}
           onClose={() => setNotesFor(null)}
           onOpenLead={(id) => { setNotesFor(null); openLeadById(id); }}
