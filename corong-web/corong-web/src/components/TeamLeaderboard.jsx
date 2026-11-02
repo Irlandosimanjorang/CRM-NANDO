@@ -127,6 +127,8 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
   const [rateInput, setRateInput] = useState("");
   const [rateBusy, setRateBusy] = useState(false);
   const [komisiBulan, setKomisiBulan] = useState(null); // YYYY-MM, null = bulan berjalan
+  // Filter bulan transaksi (per tanggal deal). "all" = semua waktu, YYYY-MM = satu bulan (mis. bulan lalu).
+  const [periodeTx, setPeriodeTx] = useState("all");
 
   useEffect(() => {
     if (!externalMembers) db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
@@ -168,12 +170,13 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
   const bulanIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }).slice(0, 7);
   const bulanKomisi = komisiBulan || bulanIni;
   const inBulanKomisi = (tanggal) => String(tanggal || "").slice(0, 7) === bulanKomisi;
-  // 12 bulan terakhir (termasuk bulan berjalan) untuk pilihan bulan komisi.
+  // 12 bulan terakhir (termasuk bulan berjalan) untuk pilihan bulan komisi dan filter transaksi.
   const pilihanBulan = Array.from({ length: 12 }, (_, i) => {
     const [y, mo] = bulanIni.split("-").map(Number);
     const tgl = new Date(Date.UTC(y, mo - 1 - i, 1));
     return { key: tgl.toISOString().slice(0, 7), label: tgl.toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }) };
   });
+  const inPeriodeTx = (tanggal) => periodeTx === "all" || String(tanggal || "").slice(0, 7) === periodeTx;
   // Per transaksi (dealEntries dari server): omzet, jumlah deal, dan komisi dihitung dari transaksi.
   // Tanpa dealEntries (mis. halaman tim org lain), tetap memakai lead menang.
   const leadById = new Map((leads || []).map((l) => [l.id, l]));
@@ -187,10 +190,12 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
       const closed = won.length + lost.length;
       const winRate = closed > 0 ? Math.round((won.length / closed) * 100) : null;
 
-      const myEntries = dealEntries ? (entriesByPic[m.user_id] || []) : null;
+      // Transaksi ikut filter periode (tanggal deal). Komisi tetap memakai bulan komisi sendiri.
+      const myEntries = dealEntries ? (entriesByPic[m.user_id] || []).filter((e) => inPeriodeTx(e.deal_date)) : null;
+      const wonPeriode = won.filter((l) => inPeriodeTx(l.deal_date));
       const revenue = myEntries
         ? myEntries.reduce((sum, e) => sum + (Number(e.deal_value) || 0), 0)
-        : won.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
+        : wonPeriode.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
       // Komisi dihitung per bulan yang dipilih (WIB), berdasarkan tanggal transaksi deal.
       const commissionRevenue = myEntries
         ? myEntries.filter((e) => inBulanKomisi(e.deal_date)).reduce((sum, e) => sum + (Number(e.deal_value) || 0), 0)
@@ -205,7 +210,7 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
         name: m.display_name || `Anggota ${m.user_id.slice(0, 8)}`,
         leadCount: mine.length,
         // Jumlah deal = lead milik penanggung jawab yang sekarang di tahap menang, sama dengan Rekap aktivitas.
-        dealCount: myEntries ? myEntries.length : won.length,
+        dealCount: myEntries ? myEntries.length : wonPeriode.length,
         visitCount: myCheckins.length,
         winRate,
         revenue,
@@ -219,7 +224,7 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
               const l = leadById.get(e.lead_id);
               return { id: e.tx_id || e.lead_id, leadId: e.lead_id, primary: l?.name || "Lead", secondary: [fmtRp(e.deal_value), e.deal_date].filter(Boolean).join(" · "), detail: l ? dealDetail(l, stages) : "" };
             })
-          : won.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: [fmtRp(l.deal_value), l.deal_date].filter(Boolean).join(" · "), detail: dealDetail(l, stages) })),
+          : wonPeriode.map((l) => ({ id: l.id, leadId: l.id, primary: l.name, secondary: [fmtRp(l.deal_value), l.deal_date].filter(Boolean).join(" · "), detail: dealDetail(l, stages) })),
         visitItems: myCheckins.map((c) => ({ id: c.id, leadId: c.lead_id, primary: c.lead_name || "Kunjungan", secondary: c.checked_in_at ? new Date(c.checked_in_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "" })),
       };
     })
@@ -231,8 +236,21 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
   return (
     <div className="rounded-panel border border-slate-200/80 bg-white p-5 sm:p-6">
       <div className="mb-5">
-        <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">Performa team</h2>
-        <p className="mt-0.5 text-[11.5px] text-slate-500">Peringkat berdasarkan total revenue closing</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">Performa team</h2>
+            <p className="mt-0.5 text-[11.5px] text-slate-500">Peringkat berdasarkan total revenue closing{periodeTx !== "all" ? ` · ${pilihanBulan.find((p) => p.key === periodeTx)?.label}` : ""}</p>
+          </div>
+          <select
+            value={periodeTx}
+            onChange={(e) => setPeriodeTx(e.target.value)}
+            aria-label="Pilih bulan transaksi"
+            className="rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-900"
+          >
+            <option value="all">Semua waktu</option>
+            {pilihanBulan.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="divide-y divide-slate-100">
