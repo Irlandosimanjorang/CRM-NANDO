@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Crown, X, ChevronRight, Pencil, Check, Loader2 } from "lucide-react";
+import { Crown, X, ChevronLeft, ChevronRight, ChevronDown, Pencil, Check, Loader2 } from "lucide-react";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
+
+const fmtTanggalPendek = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 // Laporan performa tim (leaderboard) - gap yang ketauan pas audit 9 Sep
 // 2026: paket Enterprise dijual dengan "role-based visibility" & tim
@@ -139,6 +141,7 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
   // Popover rentang tanggal: isian sementara sampai tombol Terapkan ditekan.
   const [popoverRentang, setPopoverRentang] = useState(false);
   const [draftRentang, setDraftRentang] = useState(rentangTx);
+  const [menuPeriode, setMenuPeriode] = useState(false);
 
   useEffect(() => {
     if (!externalMembers) db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
@@ -192,6 +195,17 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
     if (periodeTx === "custom") return tgl >= rentangTx.from && tgl <= rentangTx.to;
     return tgl.slice(0, 7) === periodeTx;
   };
+  // Bulan yang sedang ditampilkan untuk navigasi panah. "Semua waktu" dan rentang custom mulai dari bulan berjalan.
+  const bulanEfektif = periodeTx === "all" || periodeTx === "custom" ? bulanIni : periodeTx;
+  const geserBulan = (selisih) => {
+    const [y, mo] = bulanEfektif.split("-").map(Number);
+    setPeriodeTx(new Date(Date.UTC(y, mo - 1 + selisih, 1)).toISOString().slice(0, 7));
+  };
+  const labelPeriodeTeks = periodeTx === "all"
+    ? "Semua waktu"
+    : periodeTx === "custom"
+      ? `${fmtTanggalPendek(rentangTx.from)} – ${fmtTanggalPendek(rentangTx.to)}`
+      : pilihanBulan.find((p) => p.key === periodeTx)?.label;
   const labelPeriodeTx = periodeTx === "all"
     ? ""
     : periodeTx === "custom"
@@ -261,29 +275,49 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
             <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">Performa team</h2>
             <p className="mt-0.5 text-[11.5px] text-slate-500">Peringkat berdasarkan total revenue closing{labelPeriodeTx}</p>
           </div>
-          <div className="relative flex flex-wrap items-center gap-2">
-            <select
-              value={periodeTx}
-              onChange={(e) => {
-                const nilai = e.target.value;
-                if (nilai === "custom") {
-                  // Rentang custom disetel lewat popover; pilihan baru berlaku setelah Terapkan.
-                  setDraftRentang(rentangTx);
-                  setPopoverRentang(true);
-                  return;
-                }
-                setPeriodeTx(nilai);
-              }}
-              aria-label="Pilih periode transaksi"
-              className="rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-900"
+          <div className="relative flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => geserBulan(-1)}
+              disabled={bulanEfektif === pilihanBulan[pilihanBulan.length - 1].key}
+              aria-label="Bulan sebelumnya"
+              className="grid h-8 w-8 place-items-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30"
             >
-              <option value="all">Semua waktu</option>
-              {pilihanBulan.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
-              <option value="custom">Pilih tanggal</option>
-            </select>
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setMenuPeriode((v) => !v)}
+              aria-expanded={menuPeriode}
+              className="flex items-center gap-1.5 rounded-inner px-2.5 py-1.5 text-[14px] font-semibold text-slate-900 hover:bg-slate-100"
+            >
+              {labelPeriodeTeks}
+              <ChevronDown size={14} className="text-slate-500" />
+            </button>
+            <button
+              type="button"
+              onClick={() => geserBulan(1)}
+              disabled={periodeTx === "all" || periodeTx === "custom" || periodeTx >= bulanIni}
+              aria-label="Bulan berikutnya"
+              className="grid h-8 w-8 place-items-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30"
+            >
+              <ChevronRight size={16} />
+            </button>
+            {menuPeriode && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setMenuPeriode(false)} aria-hidden="true" />
+                <ul role="listbox" aria-label="Pilih periode transaksi" className="absolute left-0 top-full z-30 mt-2 max-h-[320px] w-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                  <li><button type="button" onClick={() => { setPeriodeTx("all"); setMenuPeriode(false); }} className="w-full rounded-lg px-3 py-2 text-left text-[13px] text-slate-700 hover:bg-slate-100">Semua waktu</button></li>
+                  {pilihanBulan.map((p) => (
+                    <li key={p.key}><button type="button" onClick={() => { setPeriodeTx(p.key); setMenuPeriode(false); }} className={`w-full rounded-lg px-3 py-2 text-left text-[13px] hover:bg-slate-100 ${periodeTx === p.key ? "font-semibold text-slate-900" : "text-slate-700"}`}>{p.label}</button></li>
+                  ))}
+                  <li><button type="button" onClick={() => { setMenuPeriode(false); setDraftRentang(rentangTx); setPopoverRentang(true); }} className="w-full rounded-lg px-3 py-2 text-left text-[13px] text-orange-600 hover:bg-slate-100">Pilih tanggal…</button></li>
+                </ul>
+              </>
+            )}
             {periodeTx === "custom" && !popoverRentang && (
-              <button type="button" onClick={() => { setDraftRentang(rentangTx); setPopoverRentang(true); }} className="rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-700 hover:border-orange-400">
-                {rentangTx.from} s.d. {rentangTx.to}
+              <button type="button" onClick={() => { setDraftRentang(rentangTx); setPopoverRentang(true); }} className="ml-1 rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-700 hover:border-orange-400">
+                Ubah rentang
               </button>
             )}
             {popoverRentang && (
