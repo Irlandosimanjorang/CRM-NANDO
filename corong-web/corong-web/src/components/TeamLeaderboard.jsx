@@ -165,7 +165,8 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
     finally { setRateBusy(false); }
   };
 
-  if (!members || members.length <= 1) return null;
+  // Tetap tampil walau anggota cuma satu (mis. akun manager yang belum punya tim), supaya transaksi sendiri bisa difilter.
+  if (!members || members.length === 0) return null;
 
   // Sama persis kayak PerformanceInsight & daily-digest: won/lost ditentuin
   // dari stage TEMPAT LEAD ITU SEKARANG BERADA, bukan field outcome.
