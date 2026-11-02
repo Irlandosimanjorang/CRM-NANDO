@@ -187,7 +187,7 @@ export default function AdsAnalysis({ leads = [], stages = [], members = [], org
       </StatRow>
 
       {!hasAds && (
-        <EmptyState>Belum ada data iklan untuk periode ini. {canImport ? "Klik Impor data iklan untuk mengunggah file dari Ads Manager." : "Owner atau manager dapat mengimpornya."}</EmptyState>
+        <EmptyState>Belum ada data iklan untuk periode ini. {canImport ? "Klik Impor data iklan untuk mengunggah file dari Ads Manager." : "Impor dilakukan oleh anggota tim."}</EmptyState>
       )}
 
       <Panel className="grid md:grid-cols-2 md:divide-x md:divide-slate-100">
