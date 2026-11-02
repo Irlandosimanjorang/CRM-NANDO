@@ -6,6 +6,7 @@
     { "source": "/grok-bot", "destination": "/index.html" },
     { "source": "/demo", "destination": "/demo/demo.html" },
     { "source": "/invoice", "destination": "/index.html" },
+    { "source": "/isi", "destination": "/index.html" },
     { "source": "/tv", "destination": "/index.html" }
   ],
   "headers": [

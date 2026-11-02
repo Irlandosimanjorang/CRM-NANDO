@@ -10,6 +10,7 @@ import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE,
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
 import { memoComplete } from "../lib/proyekMemo";
+import CustomerFormQrDialog from "./CustomerFormQrDialog";
 import ProyekDocDialog from "./ProyekDocDialog";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
@@ -222,6 +223,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const [busy, setBusy] = useState(false);
   const [locBusy, setLocBusy] = useState(false);
   const [proyekDoc, setProyekDoc] = useState(null); // "memo" | "detail" | null
+  const [showCustomerQr, setShowCustomerQr] = useState(false); // QR form customer (2 Nov 2026)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const isProfessional = myLevel >= 2;
 
@@ -637,6 +639,19 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 <span className="font-medium text-slate-700">Memo *</span>
                 <span className={`text-[11px] font-semibold ${memoComplete(f.memo) ? "text-emerald-600" : "text-amber-600"}`}>{memoComplete(f.memo) ? "Lengkap" : "Belum diisi"}</span>
               </button>
+              {/* QR form customer (2 Nov 2026): butuh proyek yang sudah tersimpan. */}
+              <button
+                type="button"
+                onClick={() => setShowCustomerQr(true)}
+                disabled={!lead.id}
+                className="flex w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-left text-sm hover:border-orange-400 disabled:opacity-60"
+              >
+                <span className="font-medium text-slate-700">QR form customer</span>
+                <span className="text-[11px] font-semibold text-slate-500">{lead.id ? "Buat / lihat" : "Simpan proyek dulu"}</span>
+              </button>
+              {showCustomerQr && (
+                <CustomerFormQrDialog leadId={lead.id} orgId={lead.org_id} onClose={() => setShowCustomerQr(false)} />
+              )}
               {proyekDoc && (
                 <ProyekDocDialog
                   kind={proyekDoc}
