@@ -129,11 +129,23 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
 
   const hasName = assign.includes("name");
   // Semua baris tampil (3 Nov 2026). Baris data (sejak dataStartRow) tercentang otomatis; user menghapus centang yang tidak mau dimasukkan.
-  const preview = rawRows;
+  // Baris setelah data terakhir (kosong semua, atau tanpa nama di kolom Nama) tidak ditampilkan dan tidak ikut diimpor.
+  const nameColIdx = assign.indexOf("name");
+  const hasValue = (row, idx) => {
+    if (!row) return false;
+    if (idx >= 0) return String(row[idx] ?? "").trim() !== "";
+    return Array.from(row).some((c) => String(c ?? "").trim() !== "");
+  };
+  const dataEnd = useMemo(() => {
+    let last = -1;
+    rawRows.forEach((row, i) => { if (hasValue(row, nameColIdx)) last = i; });
+    return last + 1;
+  }, [rawRows, nameColIdx]);
+  const preview = rawRows.slice(0, dataEnd);
   const [excludedRows, setExcludedRows] = useState(() => new Set());
   const isSelectedRow = (rowIdx) => rowIdx >= dataStartRow && !excludedRows.has(rowIdx);
-  const selectedCount = rawRows.reduce((n, _, rowIdx) => n + (isSelectedRow(rowIdx) ? 1 : 0), 0);
-  const dataRowCount = Math.max(0, rawRows.length - dataStartRow);
+  const selectedCount = preview.reduce((n, _, rowIdx) => n + (isSelectedRow(rowIdx) ? 1 : 0), 0);
+  const dataRowCount = Math.max(0, dataEnd - dataStartRow);
   const toggleRow = (rowIdx) => setExcludedRows((prev) => {
     const next = new Set(prev);
     if (next.has(rowIdx)) next.delete(rowIdx); else next.add(rowIdx);
@@ -167,7 +179,9 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
 
     clearManualMapDraft();
     const extraNoteCols = noteExtras ? noteCols.filter((c) => !assign[c.index]) : [];
-    onConfirm(mapping, dataStartRow, customEntries, undefined, extraNoteCols, [...excludedRows]);
+    // Baris di bawah data terakhir ikut dikeluarkan dari impor.
+    const trailing = rawRows.map((_, i) => i).filter((i) => i >= dataEnd);
+    onConfirm(mapping, dataStartRow, customEntries, undefined, extraNoteCols, [...excludedRows, ...trailing]);
   };
 
   const handleCancel = () => { clearManualMapDraft(); onCancel(); };
