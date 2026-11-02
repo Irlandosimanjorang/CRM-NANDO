@@ -1469,6 +1469,11 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       alert("Tidak ada baris yang terbaca. Pastikan ada data nama perusahaan/lead.");
       return;
     }
+    // Tidak ada duplikat: langsung masuk. Ada duplikat: tampilkan pilihan supaya user yang memutuskan.
+    if (!items.some((it) => it.status === "duplikat")) {
+      await commitImport(items, new Set(items.filter((it) => it.status === "baru").map((it) => it.key)), usedAiFallback);
+      return;
+    }
     setImportPreview({ items, usedAiFallback });
   };
 
@@ -1665,7 +1670,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
     }
   };
 
-  const handleManualMapConfirm = async (mapping, dataStartRow, customEntries, hierarchy, noteExtraCols = []) => {
+  const handleManualMapConfirm = async (mapping, dataStartRow, customEntries, hierarchy, noteExtraCols = [], excludedRows = []) => {
     if (!manualMapRequest) return;
     const { rawRows, firstStage, usedAiGuess } = manualMapRequest;
 
@@ -1728,7 +1733,9 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       if (Object.keys(newLabelAssignments).length > 0) {
         await db.mergeCustomFieldLabels(newLabelAssignments);
       }
-      const dataRows = rawRows.slice(Math.max(0, dataStartRow));
+      // Baris yang tidak dicentang di tabel mapping tidak ikut diimpor.
+      const excluded = new Set(excludedRows);
+      const dataRows = rawRows.slice(Math.max(0, dataStartRow)).filter((_, i) => !excluded.has(Math.max(0, dataStartRow) + i));
       const leadRows = extractRowsFromMapping(dataRows, finalMapping, firstStage, { ...(hierarchy || {}), stages, members, noteCols: noteExtraCols });
       await finalizeImport(leadRows, usedAiGuess);
     } catch (e) {

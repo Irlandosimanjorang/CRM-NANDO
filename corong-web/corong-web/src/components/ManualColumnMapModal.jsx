@@ -66,8 +66,6 @@ const BASE_FIELD_OPTIONS = [
 ];
 const NEW_CUSTOM_VALUE = "__new_custom__";
 
-const MAX_PREVIEW_ROWS = 12;
-
 export default function ManualColumnMapModal({ request, onConfirm, onCancel, onPickSheet }) {
   const { rawRows, sheetName, initialMapping = {}, initialDataStartRow = 0, usedAiGuess, existingCustomSlots = [], initialReasons = {}, initialCustom = {}, noteCols = [], sheetNames = [] } = request;
 
@@ -130,7 +128,21 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
   };
 
   const hasName = assign.includes("name");
-  const preview = rawRows.slice(0, MAX_PREVIEW_ROWS);
+  // Semua baris tampil (3 Nov 2026). Baris data (sejak dataStartRow) tercentang otomatis; user menghapus centang yang tidak mau dimasukkan.
+  const preview = rawRows;
+  const [excludedRows, setExcludedRows] = useState(() => new Set());
+  const isSelectedRow = (rowIdx) => rowIdx >= dataStartRow && !excludedRows.has(rowIdx);
+  const selectedCount = rawRows.reduce((n, _, rowIdx) => n + (isSelectedRow(rowIdx) ? 1 : 0), 0);
+  const dataRowCount = Math.max(0, rawRows.length - dataStartRow);
+  const toggleRow = (rowIdx) => setExcludedRows((prev) => {
+    const next = new Set(prev);
+    if (next.has(rowIdx)) next.delete(rowIdx); else next.add(rowIdx);
+    return next;
+  });
+  const setAllRows = (checked) => setExcludedRows(() => {
+    if (checked) return new Set();
+    return new Set(rawRows.map((_, i) => i).filter((i) => i >= dataStartRow));
+  });
 
   const handleConfirm = () => {
     const mapping = {};
@@ -155,7 +167,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
 
     clearManualMapDraft();
     const extraNoteCols = noteExtras ? noteCols.filter((c) => !assign[c.index]) : [];
-    onConfirm(mapping, dataStartRow, customEntries, undefined, extraNoteCols);
+    onConfirm(mapping, dataStartRow, customEntries, undefined, extraNoteCols, [...excludedRows]);
   };
 
   const handleCancel = () => { clearManualMapDraft(); onCancel(); };
@@ -190,11 +202,20 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
         )}
         <p className="text-xs text-amber-600 flex items-center gap-1 mb-3"><AlertTriangle size={12} /> Wajib memilih satu kolom sebagai "Nama Lead / Perusahaan". Kolom yang tidak memiliki padanan dapat dipilih "+ Custom..." dan diberi nama sendiri.</p>
 
-        <div className="overflow-x-auto max-w-full border border-slate-200 rounded-2xl">
+        <div className="flex flex-wrap items-center gap-2 mb-2 text-[12px]">
+          <span className="text-slate-600"><b>{selectedCount}</b> dari {dataRowCount} baris data dipilih</span>
+          <button type="button" onClick={() => setAllRows(true)} className="rounded-lg border border-slate-300 px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-50">Pilih semua</button>
+          <button type="button" onClick={() => setAllRows(false)} className="rounded-lg border border-slate-300 px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-50">Kosongkan</button>
+        </div>
+
+        <div className="overflow-auto max-h-[55vh] max-w-full border border-slate-200 rounded-2xl">
           <table className="text-xs w-full border-collapse">
             <thead>
               <tr>
-                <th className="sticky left-0 bg-slate-50 border-b border-slate-200 p-2 text-left w-10 z-10">#</th>
+                <th className="sticky top-0 left-0 bg-slate-50 border-b border-slate-200 p-2 text-left w-16 z-20">
+                  <span className="sr-only">Pilih</span>
+                  <span className="font-normal text-slate-400">#</span>
+                </th>
                 {Array.from({ length: numCols }).map((_, colIdx) => (
                   <th key={colIdx} className="border-b border-l border-slate-200 p-1.5 min-w-[150px] bg-slate-50 align-top">
                     <select
@@ -236,8 +257,18 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
                   className={`cursor-pointer ${rowIdx === dataStartRow ? "bg-emerald-50" : rowIdx < dataStartRow ? "opacity-40" : "hover:bg-slate-50"}`}
                   title="Klik untuk menandai: data asli dimulai dari baris ini"
                 >
-                  <td className="sticky left-0 bg-white border-b border-slate-100 p-2 text-slate-400 font-mono">
-                    {rowIdx === dataStartRow ? "→" : rowIdx}
+                  <td className="sticky left-0 bg-white border-b border-slate-100 p-2 text-slate-400 font-mono" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelectedRow(rowIdx)}
+                        disabled={rowIdx < dataStartRow}
+                        onChange={() => toggleRow(rowIdx)}
+                        aria-label={`Masukkan baris ${rowIdx}`}
+                        className="h-3.5 w-3.5 accent-orange-600"
+                      />
+                      <span>{rowIdx === dataStartRow ? "→" : rowIdx}</span>
+                    </div>
                   </td>
                   {Array.from({ length: numCols }).map((_, colIdx) => (
                     <td key={colIdx} className="border-b border-l border-slate-100 p-1.5 text-slate-700 truncate max-w-[160px]">
@@ -250,8 +281,7 @@ export default function ManualColumnMapModal({ request, onConfirm, onCancel, onP
           </table>
         </div>
         <p className="text-[11px] text-slate-400 mt-1.5">
-          Klik salah satu baris di atas untuk menandai baris tersebut sebagai awal DATA ASLI (baris judul/header di atasnya akan dilewati).
-          {rawRows.length > MAX_PREVIEW_ROWS &&` Cuma ${MAX_PREVIEW_ROWS} baris pertama ditampilkan di sini, sisanya (${rawRows.length - MAX_PREVIEW_ROWS} baris lagi) tetap ikut diproses.`}
+          Klik salah satu baris di atas untuk menandai baris tersebut sebagai awal DATA ASLI (baris judul/header di atasnya akan dilewati). Centang baris yang mau dimasukkan.
         </p>
         {noteCols.some((c) => !assign[c.index]) && (
           <label className="mt-2 flex cursor-pointer items-start gap-2 text-[12px] text-slate-600">
