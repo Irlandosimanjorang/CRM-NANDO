@@ -129,6 +129,13 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
   const [komisiBulan, setKomisiBulan] = useState(null); // YYYY-MM, null = bulan berjalan
   // Filter bulan transaksi (per tanggal deal). "all" = semua waktu, YYYY-MM = satu bulan (mis. bulan lalu).
   const [periodeTx, setPeriodeTx] = useState("all");
+  // Rentang custom (YYYY-MM-DD, tanggal deal), dipakai saat periodeTx === "custom".
+  const [rentangTx, setRentangTx] = useState(() => {
+    const hari = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+    const dari = new Date(`${hari}T00:00:00Z`);
+    dari.setUTCDate(dari.getUTCDate() - 29);
+    return { from: dari.toISOString().slice(0, 10), to: hari };
+  });
 
   useEffect(() => {
     if (!externalMembers) db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
@@ -176,7 +183,17 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
     const tgl = new Date(Date.UTC(y, mo - 1 - i, 1));
     return { key: tgl.toISOString().slice(0, 7), label: tgl.toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }) };
   });
-  const inPeriodeTx = (tanggal) => periodeTx === "all" || String(tanggal || "").slice(0, 7) === periodeTx;
+  const inPeriodeTx = (tanggal) => {
+    const tgl = String(tanggal || "").slice(0, 10);
+    if (periodeTx === "all") return true;
+    if (periodeTx === "custom") return tgl >= rentangTx.from && tgl <= rentangTx.to;
+    return tgl.slice(0, 7) === periodeTx;
+  };
+  const labelPeriodeTx = periodeTx === "all"
+    ? ""
+    : periodeTx === "custom"
+      ? ` · ${rentangTx.from} s.d. ${rentangTx.to}`
+      : ` · ${pilihanBulan.find((p) => p.key === periodeTx)?.label}`;
   // Per transaksi (dealEntries dari server): omzet, jumlah deal, dan komisi dihitung dari transaksi.
   // Tanpa dealEntries (mis. halaman tim org lain), tetap memakai lead menang.
   const leadById = new Map((leads || []).map((l) => [l.id, l]));
@@ -239,17 +256,27 @@ export default function TeamLeaderboard({ leads, stages, onOpenLead, canManage, 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-[15px] font-bold tracking-[-0.02em] text-ink">Performa team</h2>
-            <p className="mt-0.5 text-[11.5px] text-slate-500">Peringkat berdasarkan total revenue closing{periodeTx !== "all" ? ` · ${pilihanBulan.find((p) => p.key === periodeTx)?.label}` : ""}</p>
+            <p className="mt-0.5 text-[11.5px] text-slate-500">Peringkat berdasarkan total revenue closing{labelPeriodeTx}</p>
           </div>
-          <select
-            value={periodeTx}
-            onChange={(e) => setPeriodeTx(e.target.value)}
-            aria-label="Pilih bulan transaksi"
-            className="rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-900"
-          >
-            <option value="all">Semua waktu</option>
-            {pilihanBulan.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
-          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={periodeTx}
+              onChange={(e) => setPeriodeTx(e.target.value)}
+              aria-label="Pilih periode transaksi"
+              className="rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-900"
+            >
+              <option value="all">Semua waktu</option>
+              {pilihanBulan.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+              <option value="custom">Pilih tanggal</option>
+            </select>
+            {periodeTx === "custom" && (
+              <>
+                <input type="date" aria-label="Dari tanggal" value={rentangTx.from} max={rentangTx.to} onChange={(e) => e.target.value && setRentangTx((r) => ({ ...r, from: e.target.value }))} className="rounded-inner border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-900" />
+                <span className="text-[12px] text-slate-500">s.d.</span>
+                <input type="date" aria-label="Sampai tanggal" value={rentangTx.to} min={rentangTx.from} onChange={(e) => e.target.value && setRentangTx((r) => ({ ...r, to: e.target.value }))} className="rounded-inner border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-900" />
+              </>
+            )}
+          </div>
         </div>
       </div>
 
