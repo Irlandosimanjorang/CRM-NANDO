@@ -294,6 +294,7 @@ const CRON_MAX_HOURS = {
   "nexto-pipeline-review": 17 * 24,
   "nexto-weekly-garbage-sweep": 8 * 24,
   "nexto-weekly-team-report": 8 * 24,
+  "nexto-refresh-member-memory": 8 * 24,
 };
 
 async function checkCronJobsHealthy(admin) {
