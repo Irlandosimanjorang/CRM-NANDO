@@ -292,6 +292,9 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
   }, [leads, dealTransactions]);
   const [range, setRange] = useState("week");
   const [custom, setCustom] = useState(defaultCustom);
+  // Popover rentang tanggal: isian sementara sampai tombol Terapkan ditekan.
+  const [popoverCustom, setPopoverCustom] = useState(false);
+  const [draftCustom, setDraftCustom] = useState(custom);
   const [notesFor, setNotesFor] = useState(null); // anggota yang daftar lead di-update-nya sedang dibuka
   const [activityFor, setActivityFor] = useState(null); // { member, kind: "stage_moves" | "deals" }
   const [data, setData] = useState(null);
@@ -371,19 +374,49 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SharedOrgTeam onOpen={setSharedOrg} />
-          <Segmented options={RANGES.map((r) => [r.key, r.label])} value={range} onChange={setRange} />
-          {range === "custom" && (
-            <div className="flex items-center gap-1.5 text-[12px] text-slate-500">
-              <label className="flex items-center gap-1.5">
-                <span>Dari</span>
-                <input type="date" value={custom.from} max={custom.to} onChange={(e) => e.target.value && setCustom((c) => ({ ...c, from: e.target.value }))} className="rounded-inner border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-900" />
-              </label>
-              <label className="flex items-center gap-1.5">
-                <span>Sampai</span>
-                <input type="date" value={custom.to} min={custom.from} onChange={(e) => e.target.value && setCustom((c) => ({ ...c, to: e.target.value }))} className="rounded-inner border border-slate-200 bg-white px-2 py-1.5 text-[12px] text-slate-900" />
-              </label>
-            </div>
-          )}
+          <div className="relative flex flex-wrap items-center gap-2">
+            <Segmented
+              options={RANGES.map((r) => [r.key, r.label])}
+              value={range}
+              onChange={(k) => {
+                // "Pilih tanggal" membuka popover dulu; rentang baru berlaku setelah Terapkan.
+                if (k === "custom") { setDraftCustom(custom); setPopoverCustom(true); return; }
+                setRange(k);
+              }}
+            />
+            {range === "custom" && !popoverCustom && (
+              <button type="button" onClick={() => { setDraftCustom(custom); setPopoverCustom(true); }} className="rounded-inner border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-700 hover:border-orange-400">
+                {fmtRangeDate(custom.from)} – {fmtRangeDate(custom.to)}
+              </button>
+            )}
+            {popoverCustom && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setPopoverCustom(false)} aria-hidden="true" />
+                <div role="dialog" aria-label="Rentang tanggal" className="absolute right-0 top-full z-30 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                  <div className="text-[13px] font-semibold text-slate-900">Rentang tanggal</div>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <label className="block text-[12px] text-slate-500">Dari
+                      <input type="date" value={draftCustom.from} max={draftCustom.to} onChange={(e) => e.target.value && setDraftCustom((c) => ({ ...c, from: e.target.value }))} className="mt-1 w-full rounded-inner border border-slate-200 bg-white px-2 py-2 text-[12px] text-slate-900" />
+                    </label>
+                    <label className="block text-[12px] text-slate-500">Sampai
+                      <input type="date" value={draftCustom.to} min={draftCustom.from} onChange={(e) => e.target.value && setDraftCustom((c) => ({ ...c, to: e.target.value }))} className="mt-1 w-full rounded-inner border border-slate-200 bg-white px-2 py-2 text-[12px] text-slate-900" />
+                    </label>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button type="button" onClick={() => setPopoverCustom(false)} className="rounded-xl px-3 py-2 text-[12px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button
+                      type="button"
+                      disabled={!draftCustom.from || !draftCustom.to || draftCustom.from > draftCustom.to}
+                      onClick={() => { setCustom(draftCustom); setRange("custom"); setPopoverCustom(false); }}
+                      className="rounded-xl bg-slate-900 px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-40"
+                    >
+                      Terapkan
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <button onClick={load} disabled={loading} className="rounded-inner border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-slate-900 disabled:opacity-50" title="Muat ulang" aria-label="Muat ulang">
             <RefreshCw size={14} className={loading ? "motion-safe:animate-spin" : ""} />
           </button>
