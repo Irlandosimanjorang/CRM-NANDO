@@ -107,7 +107,8 @@ export default function MarketingAdsPanel({ leads = [], stages = [], members = [
           <p className="text-[12px] text-slate-500">{canManage ? "Owner dan manager melihat semua marketing." : "Anda hanya melihat pengeluaran dan hasil Anda sendiri."}</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+        {/* Form tambah pengeluaran hanya untuk marketing; owner dan manager tidak mengisinya di sini. */}
+        {!canManage && <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
           <label className="text-[11px] font-medium text-slate-500 md:col-span-1">Marketing
             <select className={`${field} mt-1`} value={fUser} onChange={(e) => setFUser(e.target.value)} disabled={!canPickUser}>
               {(canPickUser ? members : members.filter((m) => m.user_id === myUid)).map((m) => <option key={m.user_id} value={m.user_id}>{nameOf(m)}</option>)}
@@ -130,7 +131,7 @@ export default function MarketingAdsPanel({ leads = [], stages = [], members = [
           <div className="flex items-end">
             <button type="button" onClick={addExpense} disabled={busy} className="w-full rounded-inner bg-ink px-4 py-2 text-[12px] font-semibold text-white hover:bg-slate-800 disabled:opacity-60">{busy ? "Menyimpan…" : "Tambah pengeluaran"}</button>
           </div>
-        </div>
+        </div>}
         {err && <p className="mt-3 rounded-inner bg-rose-50 px-3 py-2 text-[12px] text-rose-700">{err}</p>}
       </div>
 
