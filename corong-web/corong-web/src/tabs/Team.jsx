@@ -41,6 +41,12 @@ function rangeFor(key, custom) {
   }
   const wib = new Date(now.getTime() + WIB_OFFSET_MS);
   const y = wib.getUTCFullYear(), m = wib.getUTCMonth(), d = wib.getUTCDate();
+  if (key === "lastMonth") {
+    // Bulan kalender sebelumnya (WIB): tanggal 1 sampai akhir bulan.
+    const awal = Date.UTC(y, m - 1, 1) - WIB_OFFSET_MS;
+    const akhir = Date.UTC(y, m, 1) - WIB_OFFSET_MS - 1;
+    return { from: new Date(awal), to: new Date(akhir) };
+  }
   let start;
   if (key === "today") start = Date.UTC(y, m, d);
   else if (key === "month") start = Date.UTC(y, m, 1);
@@ -52,6 +58,7 @@ const RANGES = [
   { key: "today", label: "Hari ini" },
   { key: "week", label: "Minggu ini" },
   { key: "month", label: "Bulan ini" },
+  { key: "lastMonth", label: "Bulan lalu" },
   { key: "custom", label: "Pilih tanggal" },
 ];
 
@@ -335,7 +342,9 @@ export default function Team({ leads, stages, dealTransactions, onOpenLead, canM
   };
   const rangeLabel = range === "custom"
     ? `${fmtRangeDate(custom.from)} – ${fmtRangeDate(custom.to)}`
-    : RANGES.find((r) => r.key === range)?.label || "";
+    : range === "lastMonth"
+      ? new Date(rangeFor("lastMonth").from.getTime() + WIB_OFFSET_MS).toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" })
+      : RANGES.find((r) => r.key === range)?.label || "";
 
   const maxOf = Object.fromEntries(COLS.map((c) => [c.key, Math.max(1, ...members.map((m) => Number(m[c.key]) || 0))]));
   const totalOf = (m) => COLS.reduce((s, c) => s + (Number(m[c.key]) || 0), 0);
