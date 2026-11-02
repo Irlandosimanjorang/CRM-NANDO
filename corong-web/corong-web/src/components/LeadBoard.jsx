@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { MEMO_FIELDS } from "../lib/proyekMemo";
+import { paymentTypesFor } from "../lib/paymentTypes";
 import * as db from "../lib/db";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
@@ -30,7 +31,7 @@ const NX_RANGE_CSS = `
 .nx-kanban-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
 `;
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, onEditFaktur }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
@@ -348,6 +349,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} productOptions={productOptions} />}
       {fakturEdit && (
         <FakturEditDialog
+          marketplacePayment={marketplacePayment}
           lead={fakturEdit}
           onCancel={() => setFakturEdit(null)}
           onSave={(values) => { const lead = fakturEdit; setFakturEdit(null); Promise.resolve(onEditFaktur?.(lead, values)).catch((e) => alert("Gagal menyimpan faktur: " + (e?.message || e))); }}
@@ -666,9 +668,8 @@ function TrackingLinkDialog({ name, link, onClose }) {
 // jadi di sini cukup alasan dan catatan. Record deal dibuat otomatis dari lead ini.
 // Edit data faktur dari kartu (pipeline faktur, MAP): tanggal, no. faktur, dan nominal.
 // Pilihan tipe payment untuk pipeline faktur (dipakai di dialog faktur dan kartu).
-const PAYMENT_TYPES = ["Transfer", "Tunai", "Termin", "Giro", "Kartu kredit", "Lainnya"];
-
-function FakturEditDialog({ lead, onCancel, onSave }) {
+function FakturEditDialog({ lead, onCancel, onSave, marketplacePayment = false }) {
+  const PAYMENT_TYPES = paymentTypesFor(marketplacePayment);
   const [date, setDate] = useState(lead.deal_date ? String(lead.deal_date).slice(0, 10) : todayISO());
   const [invoice, setInvoice] = useState(lead.invoice_number || "");
   const [value, setValue] = useState(lead.deal_value ? String(lead.deal_value) : "");

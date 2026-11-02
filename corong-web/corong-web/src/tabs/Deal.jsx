@@ -4,6 +4,7 @@ import { Trophy, Eye, EyeOff, ChevronDown, ChevronLeft, ChevronRight, Trash2 } f
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
 import { getFieldLabel, getQuantityUnits } from "../lib/industryTemplates";
+import { paymentTypesFor } from "../lib/paymentTypes";
 
 // Tahap proyek BSB (org project_deal): omzet dihitung sejak Proyek Deal sampai Proyek Selesai.
 const PROJECT_KEYS = ["proyek_deal", "proyek_berjalan", "proyek_selesai"];
@@ -31,7 +32,7 @@ function qtyTotals(deals, units) {
 const namaBulan = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 const labelBulanSingkat = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "short" });
 
-export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged, projectDeal = false }) {
+export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged, projectDeal = false, marketplacePayment = false }) {
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
   const units = getQuantityUnits(industry);
   const [qtyRevealed, setQtyRevealed] = useState(false);
@@ -397,7 +398,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             Tipe payment
             <select value={fTipe} onChange={(e) => setFTipe(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-800">
               <option value="">Semua</option>
-              {["Transfer", "Tunai", "Termin", "Giro", "Kartu kredit", "Lainnya"].map((p) => <option key={p} value={p}>{p}</option>)}
+              {paymentTypesFor(marketplacePayment).map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </label>
           {(fNama || fDoc || fDari || fSampai || fTipe) && (
