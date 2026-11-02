@@ -1107,6 +1107,8 @@ export default function Leads({
               c.sales_owner,
               c.parent_company,
               c.group_holding,
+              c.sph_number,
+              c.invoice_number,
             ].map(
               (x) =>
                 (
@@ -1899,7 +1901,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
                   e.target.value
                 )
               }
-              placeholder="Cari nama / kota / PIC / produk / progress…"
+              placeholder="Cari nama / kota / PIC / produk / no. SPH / no. faktur…"
               aria-label="Cari lead"
               className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-200 rounded-inner bg-white focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
             />

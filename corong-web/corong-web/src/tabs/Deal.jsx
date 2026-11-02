@@ -41,6 +41,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const [fNama, setFNama] = useState("");
   const [fDari, setFDari] = useState("");
   const [fTipe, setFTipe] = useState("");
+  // Cari no. faktur atau no. SPH (dari lead maupun transaksi).
+  const [fDoc, setFDoc] = useState("");
   const [fSampai, setFSampai] = useState("");
   const [subTab, setSubTab] = useState("deal"); // khusus org project_deal: "deal" (Proyek Deal) atau "selesai" (Proyek Selesai)
   const leadsById = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
@@ -59,6 +61,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const wonKeys = new Set((stages || []).filter((s) => s.type === "won").map((s) => s.key));
     return new Set((leads || []).filter((l) => !l.deleted_at && (wonKeys.has(l.stage_key) || txLeadIds.has(l.id))).map((l) => l.id));
   }, [projectDeal, txSource, leads, stages, txLeadIds]);
+  const docCari = fDoc.trim().toLowerCase();
+  const cocokDoc = (...nilai) => !docCari || nilai.some((v) => String(v || "").toLowerCase().includes(docCari));
   const deals = useMemo(() => {
     const namaCari = fNama.trim().toLowerCase();
     return txSource.filter((t) => {
@@ -67,18 +71,19 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
       if (namaCari && !String(leadsById[t.lead_id]?.name || t.lead_name || "").toLowerCase().includes(namaCari)) return false;
       if (fDari && String(t.deal_date || "") < fDari) return false;
       if (fSampai && String(t.deal_date || "") > fSampai) return false;
+      if (!cocokDoc(t.invoice_number, t.sph_number)) return false;
       return true;
     });
-  }, [txSource, wonIds, leadsById, fNama, fDari, fSampai, fTipe]);
+  }, [txSource, wonIds, leadsById, fNama, fDari, fSampai, fTipe, docCari]);
   const totalValue = useMemo(() => {
     const txSum = deals.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
     // Lead tanpa transaksi ikut dihitung hanya kalau filter tanggal tidak aktif dan namanya cocok dengan filter.
     const namaCari = fNama.trim().toLowerCase();
     const tanpaTx = fDari || fSampai ? 0 : (leads || [])
-      .filter((l) => wonIds.has(l.id) && !txLeadIds.has(l.id) && (!namaCari || String(l.name || "").toLowerCase().includes(namaCari)))
+      .filter((l) => wonIds.has(l.id) && !txLeadIds.has(l.id) && (!namaCari || String(l.name || "").toLowerCase().includes(namaCari)) && cocokDoc(l.invoice_number, l.sph_number))
       .reduce((a, l) => a + (Number(l.deal_value) || 0), 0);
     return txSum + tanpaTx;
-  }, [leads, deals, wonIds, txLeadIds, fNama, fDari, fSampai]);
+  }, [leads, deals, wonIds, txLeadIds, fNama, fDari, fSampai, docCari]);
   const totals = qtyTotals(deals, units);
 
   // 1 baris per lead menang. Nilai baris = deal_value lead (satu aturan deal di semua tab).
@@ -94,6 +99,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         if (namaCari && !String(leadsById[leadId]?.name || "").toLowerCase().includes(namaCari)) return false;
         // Filter tanggal: lead tanpa transaksi di rentang itu tidak ditampilkan.
         if (dateActive && !txByLead[leadId]?.length) return false;
+        // Filter no. faktur / SPH: lead cocok lewat field lead-nya atau lewat transaksinya (deals sudah tersaring).
+        if (docCari && !(cocokDoc(leadsById[leadId]?.invoice_number, leadsById[leadId]?.sph_number) || txByLead[leadId]?.length)) return false;
         return true;
       })
       .map((leadId) => ({
@@ -102,7 +109,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         txs: (txByLead[leadId] || []).slice().sort((a, b) => String(b.deal_date || "").localeCompare(String(a.deal_date || ""))),
       }))
       .sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
-  }, [deals, wonIds, leadsById, fNama, fDari, fSampai]);
+  }, [deals, wonIds, leadsById, fNama, fDari, fSampai, docCari]);
 
   // Setiap transaksi dihitung di bulan tanggal transaksinya (repeat order ikut di bulannya sendiri).
   // Lead tanpa transaksi (deal lama) dihitung sekali di bulan deal_date-nya dengan deal_value lead.
@@ -374,6 +381,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             Nama lead
             <input value={fNama} onChange={(e) => setFNama(e.target.value)} placeholder="Cari nama lead" className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500" />
           </label>
+          <label className="flex min-w-[10rem] flex-col gap-1 text-slate-500">
+            No. faktur / SPH
+            <input value={fDoc} onChange={(e) => setFDoc(e.target.value)} placeholder="Ketik no. faktur atau SPH" className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500" />
+          </label>
           <label className="flex flex-col gap-1 text-slate-500">
             Dari tanggal
             <input type="date" value={fDari} onChange={(e) => setFDari(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
@@ -389,8 +400,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               {["Transfer", "Tunai", "Termin", "Giro", "Kartu kredit", "Lainnya"].map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </label>
-          {(fNama || fDari || fSampai || fTipe) && (
-            <button type="button" onClick={() => { setFNama(""); setFDari(""); setFSampai(""); setFTipe(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
+          {(fNama || fDoc || fDari || fSampai || fTipe) && (
+            <button type="button" onClick={() => { setFNama(""); setFDoc(""); setFDari(""); setFSampai(""); setFTipe(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
           )}
         </div>
       )}
