@@ -158,9 +158,9 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     document.addEventListener("mousedown", off); document.addEventListener("keydown", esc);
     return () => { document.removeEventListener("mousedown", off); document.removeEventListener("keydown", esc); };
   }, [sheetMenu]);
-  // Anggota biasa: laporan lead miliknya saja, tanpa tab Iklan dan target tim.
+  // Anggota biasa: laporan lead miliknya saja, tanpa target tim. Tab Iklan tetap terbuka: marketing hanya melihat pengeluaran dan hasilnya sendiri.
   const personal = !canManage;
-  const view = personal && viewRaw === "iklan" ? "penjualan" : viewRaw;
+  const view = viewRaw;
   const [selected, setSelected] = useState(todayIso);
   const [memberId, setMemberId] = useState("all");
   const [err, setErr] = useState("");
@@ -566,7 +566,7 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="font-display text-[22px] font-bold tracking-[-0.03em] text-ink">{personal ? "Report saya" : "Report"}</h1>
         <div className="flex rounded-full bg-slate-100 p-0.5 text-[12px] font-semibold" role="tablist" aria-label="Jenis laporan">
-          {[["penjualan", "Penjualan"], ["rekap", "Rekap"], ...(personal ? [] : [["iklan", "Iklan"]]), ["rencana", "Rencana"]].map(([k, l]) => (
+          {[["penjualan", "Penjualan"], ["rekap", "Rekap"], ["iklan", "Iklan"], ["rencana", "Rencana"]].map(([k, l]) => (
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-3.5 py-1.5", focus, view === k ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-ink")}>{l}</button>
           ))}
         </div>
