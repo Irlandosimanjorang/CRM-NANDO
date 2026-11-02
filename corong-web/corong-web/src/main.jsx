@@ -6,6 +6,8 @@ import GrokBotMcp from "./pages/GrokBotMcp.jsx";
 import PublicDemo from "./pages/PublicDemo.jsx";
 import InvoicePublic from "./pages/InvoicePublic.jsx";
 import CustomerFormPublic from "./pages/CustomerFormPublic.jsx";
+import WarrantyPublic from "./pages/WarrantyPublic.jsx";
+import WarrantyService from "./pages/WarrantyService.jsx";
 import TvScreen from "./pages/TvScreen.jsx";
 import { installClientErrorLog } from "./lib/clientErrorLog";
 import { reloadForNewVersion } from "./lib/staleBuild";
@@ -31,7 +33,9 @@ const path = window.location.pathname.replace(/\/+$/, "") || "/";
 // /invoice (2 Okt 2026) - halaman invoice untuk klien dari link email.
 // /tv (25 Okt 2026) - layar kantor berputar (kunjungan, deal menang, target). Tetap login akun di browser TV.
 // /isi (2 Nov 2026) - form data customer dari QR proyek deal, tanpa login.
-const RootComponent = path === "/grok-bot" ? GrokBotMcp : path === "/demo" ? PublicDemo : path === "/invoice" ? InvoicePublic : path === "/isi" ? CustomerFormPublic : path === "/tv" ? TvScreen : App;
+// /garansi dan /servis (3 Nov 2026) - kartu garansi QR dan halaman teknisi, tanpa login.
+const RootComponent = path === "/grok-bot" ? GrokBotMcp : path === "/demo" ? PublicDemo : path === "/invoice" ? InvoicePublic : path === "/isi" ? CustomerFormPublic : path === "/garansi" ? WarrantyPublic : path === "/servis" ? WarrantyService : path === "/tv" ? TvScreen : App;
+const PRIVATE_TOKEN_PATHS = ["/invoice", "/isi", "/garansi", "/servis"];
 
 // Vercel Analytics (17 Sep 2026, permintaan Nando) - biar bisa liat jumlah
 // pengunjung nexto.site tiap hari dari dashboard Vercel yang udah ada.
@@ -42,7 +46,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <ErrorBoundary name="app" fullScreen>
       <RootComponent />
     </ErrorBoundary>
-    {/* Halaman invoice klien dan form customer tidak dilacak (URL-nya memuat token rahasia). */}
-    {path !== "/invoice" && path !== "/isi" && <Analytics />}
+    {/* Halaman dengan token rahasia di URL (invoice, form customer, kartu garansi, servis) tidak dilacak. */}
+    {!PRIVATE_TOKEN_PATHS.includes(path) && <Analytics />}
   </React.StrictMode>
 );

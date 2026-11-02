@@ -11,6 +11,7 @@ import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCo
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
 import { memoComplete } from "../lib/proyekMemo";
 import CustomerFormQrDialog from "./CustomerFormQrDialog";
+import WarrantyCardDialog from "./WarrantyCardDialog";
 import ProyekDocDialog from "./ProyekDocDialog";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
@@ -224,6 +225,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const [locBusy, setLocBusy] = useState(false);
   const [proyekDoc, setProyekDoc] = useState(null); // "memo" | "detail" | null
   const [showCustomerQr, setShowCustomerQr] = useState(false); // QR form customer (2 Nov 2026)
+  const [showWarrantyCard, setShowWarrantyCard] = useState(false); // kartu garansi QR (3 Nov 2026)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const isProfessional = myLevel >= 2;
 
@@ -651,6 +653,19 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               </button>
               {showCustomerQr && (
                 <CustomerFormQrDialog leadId={lead.id} orgId={lead.org_id} onClose={() => setShowCustomerQr(false)} />
+              )}
+              {/* Kartu garansi QR (3 Nov 2026): QR permanen pada unit, riwayat servis dicatat teknisi. */}
+              <button
+                type="button"
+                onClick={() => setShowWarrantyCard(true)}
+                disabled={!lead.id}
+                className="flex w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-left text-sm hover:border-orange-400 disabled:opacity-60"
+              >
+                <span className="font-medium text-slate-700">Kartu garansi QR</span>
+                <span className="text-[11px] font-semibold text-slate-500">{lead.id ? "Buat / lihat" : "Simpan proyek dulu"}</span>
+              </button>
+              {showWarrantyCard && (
+                <WarrantyCardDialog leadId={lead.id} orgId={lead.org_id} onClose={() => setShowWarrantyCard(false)} />
               )}
               {proyekDoc && (
                 <ProyekDocDialog
