@@ -50,6 +50,7 @@ import DeleteAllLeadsModal from "../components/DeleteAllLeadsModal";
 import GroupAssignDialog from "../components/GroupAssignDialog";
 import { detectHeaderRow, smartMapping, suggestExtras, normalizePhone, parseMoney, parseDate, normalizePriority, matchStage, matchMember } from "../lib/importSmart";
 import ImportSummaryModal from "../components/ImportSummaryModal";
+import ImportPreviewModal from "../components/ImportPreviewModal";
 import ManualColumnMapModal from "../components/ManualColumnMapModal";
 import AiDraftPopup from "../components/AiDraftPopup";
 import { useAiOff } from "../lib/aiOff";
@@ -620,6 +621,20 @@ function MiniKpi({ icon: Icon, label, value, active, onClick, iconClass = "text-
    LEADS
 ========================================================= */
 
+// Mapping kolom impor disimpan per susunan header (3 Nov 2026). Impor berikutnya dengan header yang sama langsung terisi.
+const IMPORT_MAP_KEY = "nexto_import_map_v1";
+const importHeaderSig = (headers) => headers.map((h) => String(h ?? "").trim().toLowerCase()).join("|");
+const loadSavedImportMap = (headers) => {
+  try { return JSON.parse(localStorage.getItem(IMPORT_MAP_KEY) || "{}")[importHeaderSig(headers)] || null; } catch { return null; }
+};
+const saveImportMap = (headers, mapping) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(IMPORT_MAP_KEY) || "{}");
+    all[importHeaderSig(headers)] = mapping;
+    localStorage.setItem(IMPORT_MAP_KEY, JSON.stringify(all));
+  } catch { /* penyimpanan penuh atau diblokir: impor tetap jalan tanpa mapping tersimpan */ }
+};
+
 export default function Leads({
   onLocalDeal,
   leads,
@@ -855,6 +870,8 @@ export default function Leads({
   // ngasih tau detail apa aja yang masuk atau yang dilewatin karena duplikat).
   const [importSummary, setImportSummary] =
     useState(null);
+  // Pratinjau impor: semua baris dari file, user memilih mana yang dimasukkan (3 Nov 2026).
+  const [importPreview, setImportPreview] = useState(null);
 
   // Kalau rule-based MAUPUN AI gagal nemuin kolom nama sama sekali - dulu
   // langsung nyerah (alert "Ga ada baris kebaca"). Sekarang dilempar ke sini,
@@ -1406,42 +1423,62 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
     const keysOfRow = (r) => [r.parent_company, r.group_holding, r._groupRow ? r.name : ""].filter(Boolean).map(groupKey);
     const parentOf = new Map(leads.map((l) => [l.name, keysOfRow(l)]));
 
-    const toInsert = []; // { lead, notes }
-    const duplicates = []; // { name, matchedName, score, source: "existing" | "this_import" }
+    // Setiap baris dianalisis dulu (baru / duplikat / tanpa nama). Tidak ada yang dibuang diam-diam:
+    // hasilnya ditampilkan di ImportPreviewModal dan user yang memilih mana yang dimasukkan.
+    const items = []; // { key, name, city, phone, key_person, status, matchedName, score, source, lead, notes }
 
-    for (const m of leadRows) {
+    leadRows.forEach((m, idx) => {
+      const key = String(idx);
       const name = (m.name || "").trim();
-      if (!name) continue;
-      const key = name.toLowerCase();
+      const preview = { key, name, city: m.city, phone: m.phone, key_person: m.key_person };
+      if (!name) { items.push({ ...preview, status: "kosong" }); return; }
+      const nameKey = name.toLowerCase();
+      // Data lead disiapkan untuk semua baris, supaya duplikat yang dicentang manual tetap bisa dimasukkan.
+      const notes = m.notes;
+      const leadPayload = { ...m };
+      delete leadPayload.notes;
+      delete leadPayload._groupRow; // penanda internal, bukan kolom database
+      const lead = { ...leadPayload, name };
 
-      const existingExact = existingByKey.get(key);
+      const existingExact = existingByKey.get(nameKey);
       let otherBranch = false;
-      if (existingExact || seenThisImport.has(key)) {
-        otherBranch = isOtherBranch(key, m);
+      if (existingExact || seenThisImport.has(nameKey)) {
+        otherBranch = isOtherBranch(nameKey, m);
         if (!otherBranch) {
-          duplicates.push({ name, matchedName: existingExact || name, score: 1, source: existingExact ? "existing" : "this_import" });
-          continue;
+          items.push({ ...preview, lead, notes, status: "duplikat", matchedName: existingExact || name, score: 1, source: existingExact ? "existing" : "this_import" });
+          return;
         }
       }
 
       const myKeys = keysOfRow(m);
       const fuzzyMatchName = otherBranch ? null : knownNames.find((n) => nameSimilarity(n, name) >= IMPORT_DUP_THRESHOLD && !(myKeys.length && (parentOf.get(n) || []).some((k) => myKeys.includes(k))));
       if (fuzzyMatchName) {
-        duplicates.push({ name, matchedName: fuzzyMatchName, score: nameSimilarity(fuzzyMatchName, name), source: originalLeadNames.has(fuzzyMatchName) ? "existing" : "this_import" });
-        continue;
+        items.push({ ...preview, lead, notes, status: "duplikat", matchedName: fuzzyMatchName, score: nameSimilarity(fuzzyMatchName, name), source: originalLeadNames.has(fuzzyMatchName) ? "existing" : "this_import" });
+        return;
       }
 
-      seenThisImport.add(key);
-      if (!importSigs.has(key)) importSigs.set(key, new Set());
-      importSigs.get(key).add(fullSig(m));
+      seenThisImport.add(nameKey);
+      if (!importSigs.has(nameKey)) importSigs.set(nameKey, new Set());
+      importSigs.get(nameKey).add(fullSig(m));
       knownNames.push(name);
       parentOf.set(name, myKeys);
-      const notes = m.notes;
-      const leadPayload = { ...m };
-      delete leadPayload.notes;
-      delete leadPayload._groupRow; // penanda internal, bukan kolom database
-      toInsert.push({ lead: { ...leadPayload, name }, notes });
+      items.push({ ...preview, status: "baru", lead, notes });
+    });
+
+    if (items.length === 0) {
+      alert("Tidak ada baris yang terbaca. Pastikan ada data nama perusahaan/lead.");
+      return;
     }
+    setImportPreview({ items, usedAiFallback });
+  };
+
+  // Dipanggil setelah user memilih baris di ImportPreviewModal. Baris yang dipilih dimasukkan, sisanya dicatat sebagai dilewati.
+  const commitImport = async (items, selectedKeys, usedAiFallback) => {
+    const existingByKey = new Map(leads.map((l) => [l.name.trim().toLowerCase(), l.name]));
+    const toInsert = items.filter((it) => selectedKeys.has(it.key) && it.lead).map((it) => ({ lead: it.lead, notes: it.notes }));
+    const duplicates = items
+      .filter((it) => it.status === "duplikat" && !selectedKeys.has(it.key))
+      .map((it) => ({ name: it.name, matchedName: it.matchedName, score: it.score, source: it.source }));
 
     // Nama kembar jadi satu grup otomatis (12 Okt 2026): baris bernama persis sama (mis. banyak cabang "JASA RAHARJA") yang belum
     // punya Pusat diberi Pusat = namanya sendiri, supaya tampil sebagai satu grup. Lead lama bernama sama ikut masuk grup itu.
@@ -1580,6 +1617,10 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       let initialCustom = chosen.initialCustom;
       let noteCols = chosen.noteCols;
 
+      // Header yang sama dengan impor sebelumnya: mapping tersimpan langsung dipakai.
+      const savedMap = loadSavedImportMap(rawRows[chosen.headerRow] || []);
+      if (savedMap) guessedMapping = savedMap;
+
       // Kalau kolom nama tetap tidak ketemu, minta AI membaca sampel (kuota Smart Import) seperti sebelumnya.
       if (!aiOff && (guessedMapping.name === undefined || guessedMapping.name === null)) {
         try {
@@ -1604,6 +1645,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
       setManualMapRequest({
         sheetName: chosen.sheetName,
+        headerRow: chosen.headerRow,
         rawRows,
         firstStage,
         initialMapping: guessedMapping,
@@ -1676,6 +1718,9 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
       );
       return;
     }
+
+    // Mapping disimpan untuk impor berikutnya dengan header yang sama.
+    saveImportMap(rawRows[manualMapRequest.headerRow] || [], finalMapping);
 
     setManualMapRequest(null);
     setBusy(true);
@@ -2684,6 +2729,21 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             </button>
           </div>
         </div>
+      )}
+
+      {importPreview && (
+        <ImportPreviewModal
+          items={importPreview.items}
+          onCancel={() => setImportPreview(null)}
+          onConfirm={(keys) => {
+            const { items, usedAiFallback } = importPreview;
+            setImportPreview(null);
+            setBusy(true);
+            commitImport(items, keys, usedAiFallback)
+              .catch((e) => alert("Gagal import: " + e.message))
+              .finally(() => setBusy(false));
+          }}
+        />
       )}
 
       {importSummary && (
