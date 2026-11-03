@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { MEMO_FIELDS } from "../lib/proyekMemo";
@@ -19,8 +19,17 @@ const daysAgo = (d) => {
 };
 // Bulan kalender (WIB) dalam format "YYYY-MM", dipakai untuk filter pindah tahap bulan ini / bulan lalu.
 const wibYM = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit" }).format(d).slice(0, 7);
-const prevYM = (ym) => { const [y, m] = ym.split("-").map(Number); return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`; };
-const BULAN_OPSI = [["semua", "Semua"], ["ini", "Pindah bulan ini"], ["lalu", "Pindah bulan lalu"]];
+// Geser bulan "YYYY-MM" sebanyak delta bulan (negatif = mundur).
+const geserYM = (ym, delta) => {
+  const [y, m] = ym.split("-").map(Number);
+  const t = y * 12 + (m - 1) + delta;
+  const yy = Math.floor(t / 12);
+  return `${yy}-${String(t - yy * 12 + 1).padStart(2, "0")}`;
+};
+const labelYM = (ym) => {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+};
 const START_DISTANCE = 6; // piksel sebelum tekanan dianggap geser, bukan klik
 const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada di pipeline
 const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
@@ -43,7 +52,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const [overKey, setOverKey] = useState(null);
   // Perubahan yang sudah tampil tapi belum tercermin dari data: id -> tahap baru.
   const [pending, setPending] = useState({});
-  // Filter bulan: lead yang pindah ke tahap sekarang di bulan ini atau bulan lalu (WIB), dari riwayat tahap.
+  // Filter bulan: "semua" atau "YYYY-MM" (kalender). Cocok dengan bulan lead masuk tahap sekarang (WIB).
   const [bulan, setBulan] = useState("semua");
   // Pop-up alasan menang / kalah (muncul setelah kartu dipindah).
   const [closing, setClosing] = useState(null);
@@ -315,16 +324,15 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // Lead yang tahapnya sudah tidak ada di pipeline (mis. tahap lama dari impor) tetap ditampilkan di kolom khusus,
   // supaya tidak hilang dari Kanban. Lead itu bisa diseret ke tahap yang benar.
   // Filter bulan: lead yang sedang diseret atau baru dipindah tetap tampil sampai riwayatnya dimuat ulang.
-  const peta = stageDates || new Map();
-  const targetBulan = bulan === "ini" ? wibYM(new Date()) : prevYM(wibYM(new Date()));
+  const peta = useMemo(() => stageDates || new Map(), [stageDates]);
   const shownLeads = useMemo(() => {
     if (bulan === "semua") return leads;
     return leads.filter((l) => {
       if (pending[l.id]) return true;
       const at = peta.get(`${l.id}|${l.stage_key}`);
-      return !!at && wibYM(new Date(at)) === targetBulan;
+      return !!at && wibYM(new Date(at)) === bulan;
     });
-  }, [leads, bulan, peta, pending, targetBulan]);
+  }, [leads, bulan, peta, pending]);
 
   const knownKeys = new Set(cols.map((s) => s.key));
   const orphans = shownLeads.filter((l) => !knownKeys.has(stageOf(l)));
@@ -334,17 +342,47 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   return (
     <div className="mt-1">
-      <div className="mb-2 flex flex-wrap items-center gap-1">
-        {BULAN_OPSI.map(([k, label]) => (
+      {/* Filter bulan (kalender): pilih "Semua" atau satu bulan. Bulan dipilih lewat panah atau kalender bawaan browser. */}
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-[11px] font-medium text-slate-500">Pindah tahap</span>
+        <button
+          type="button"
+          onClick={() => setBulan("semua")}
+          className={`text-[12px] font-semibold rounded-inner px-3 py-1.5 border ${bulan === "semua" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+        >
+          Semua
+        </button>
+        <div className={`flex items-center rounded-inner border ${bulan !== "semua" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-600"}`}>
           <button
-            key={k}
             type="button"
-            onClick={() => setBulan(k)}
-            className={`text-[12px] font-semibold rounded-inner px-3 py-1.5 border ${bulan === k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+            onClick={() => setBulan(geserYM(bulan === "semua" ? wibYM(new Date()) : bulan, -1))}
+            className="grid h-8 w-7 place-items-center hover:opacity-80"
+            aria-label="Bulan sebelumnya"
           >
-            {label}
+            <ChevronLeft size={14} />
           </button>
-        ))}
+          <label className="relative cursor-pointer px-2 text-[12px] font-semibold tabular-nums hover:opacity-80">
+            <span className="flex items-center gap-1.5 whitespace-nowrap">
+              <CalendarDays size={13} />
+              {labelYM(bulan === "semua" ? wibYM(new Date()) : bulan)}
+            </span>
+            <input
+              type="month"
+              value={bulan === "semua" ? wibYM(new Date()) : bulan}
+              onChange={(e) => { if (e.target.value) setBulan(e.target.value); }}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              aria-label="Pilih bulan"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => setBulan(geserYM(bulan === "semua" ? wibYM(new Date()) : bulan, 1))}
+            className="grid h-8 w-7 place-items-center hover:opacity-80"
+            aria-label="Bulan berikutnya"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
         {bulan !== "semua" && !stageDates && <span className="ml-1 text-[11px] text-slate-500">Memuat riwayat tahap…</span>}
       </div>
       {overflowPx > 0 && (() => {
