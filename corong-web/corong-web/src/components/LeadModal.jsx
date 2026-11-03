@@ -11,6 +11,7 @@ import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCo
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
 import { memoComplete } from "../lib/proyekMemo";
 import CustomerFormQrDialog from "./CustomerFormQrDialog";
+import { PROYEK_CHECKLIST } from "../lib/proyekChecklist";
 import WarrantyCardDialog from "./WarrantyCardDialog";
 import ProyekDocDialog from "./ProyekDocDialog";
 
@@ -667,6 +668,32 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               {showWarrantyCard && (
                 <WarrantyCardDialog leadId={lead.id} orgId={lead.org_id} onClose={() => setShowWarrantyCard(false)} />
               )}
+              {/* Checklist proyek (3 Nov 2026): cukup centang, boleh disimpan belum lengkap dan diubah lagi nanti. */}
+              <div className="space-y-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+                <div className="text-xs font-semibold text-slate-700">Checklist proyek</div>
+                {PROYEK_CHECKLIST.map((item) => {
+                  const tanda = (f.proyek_checklist || {})[item.key];
+                  return (
+                    <label key={item.key} className="flex cursor-pointer items-start gap-2.5 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 accent-orange-600"
+                        checked={!!tanda}
+                        onChange={(e) => {
+                          const cur = { ...(f.proyek_checklist || {}) };
+                          if (e.target.checked) cur[item.key] = { at: new Date().toISOString(), by: myUid || null };
+                          else delete cur[item.key];
+                          set("proyek_checklist", cur);
+                        }}
+                      />
+                      <span>
+                        {item.label}
+                        {tanda?.at && <span className="block text-[11px] text-slate-500">Dicentang {new Date(tanda.at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
               {proyekDoc && (
                 <ProyekDocDialog
                   kind={proyekDoc}

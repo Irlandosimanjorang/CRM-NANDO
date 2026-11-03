@@ -1028,6 +1028,8 @@ export async function upsertLead(lead) {
     // Pipeline faktur (MAP): tanggal masuk tahap Deal dan nomor faktur.
     ...(lead.deal_stage_date !== undefined ? { deal_stage_date: lead.deal_stage_date || null } : {}),
     ...(lead.invoice_number !== undefined ? { invoice_number: (lead.invoice_number || "").trim() || null } : {}),
+    // Checklist proyek deal (3 Nov 2026): hanya ikut disimpan kalau field-nya ada di form.
+    ...(lead.proyek_checklist !== undefined ? { proyek_checklist: lead.proyek_checklist || {} } : {}),
     // Detil proyek dan memo (31 Okt 2026): diisi di pop-up Proyek Deal (BSB).
     ...(lead.detail_proyek !== undefined ? { detail_proyek: (lead.detail_proyek || "").trim() || null } : {}),
     ...(lead.memo !== undefined ? { memo: lead.memo || null } : {}),

@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { MEMO_FIELDS } from "../lib/proyekMemo";
 import { paymentTypesFor } from "../lib/paymentTypes";
+import { PROYEK_CHECKLIST } from "../lib/proyekChecklist";
 import * as db from "../lib/db";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
@@ -435,6 +436,14 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                         <div className="mt-1.5 text-[11px] text-slate-500">Visit {new Date(l.visit_date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
                       )}
 
+                      {projectDeal && s.key === "proyek_deal" && (() => {
+                        const n = PROYEK_CHECKLIST.filter((c) => (l.proyek_checklist || {})[c.key]).length;
+                        return (
+                          <div className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${n === PROYEK_CHECKLIST.length ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                            Checklist {n}/{PROYEK_CHECKLIST.length}
+                          </div>
+                        );
+                      })()}
                       {invoicePipeline && s.type === "won" && (
                         <div className="mt-2.5 rounded-lg bg-slate-50 px-2.5 py-2 text-[11.5px] text-slate-600">
                           <div className="flex items-center justify-between gap-2">
