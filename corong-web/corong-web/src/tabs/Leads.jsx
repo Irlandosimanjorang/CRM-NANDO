@@ -729,6 +729,22 @@ export default function Leads({
   // Tampilan daftar (Lead) atau papan kanban per tahap (Kanban). Dipilih dengan dua tombol di atas daftar.
   const [viewMode, setViewMode] = useState(() => { try { return localStorage.getItem("nexto_leads_view") === "papan" ? "papan" : "daftar"; } catch (_) { return "daftar"; } });
   useEffect(() => { try { localStorage.setItem("nexto_leads_view", viewMode); } catch (_) { /* abaikan */ } }, [viewMode]);
+  // Waktu tiap lead masuk tahap sekarang (dari riwayat tahap), untuk filter bulan di Kanban. Riwayat diurut naik,
+  // jadi entri terakhir per lead dan tahap yang menang.
+  const [stageDates, setStageDates] = useState(null);
+  useEffect(() => {
+    if (viewMode !== "papan") return undefined;
+    let aktif = true;
+    db.getStageHistory()
+      .then((rows) => {
+        if (!aktif) return;
+        const peta = new Map();
+        for (const r of rows) peta.set(`${r.lead_id}|${r.to_stage}`, r.changed_at);
+        setStageDates(peta);
+      })
+      .catch(() => { if (aktif) setStageDates(new Map()); });
+    return () => { aktif = false; };
+  }, [viewMode, leads]);
   // Simpan di belakang layar: papan sudah menampilkan tahap baru, jadi tidak perlu menunggu muat ulang.
   // Error dilempar lagi ke papan, yang mengembalikan kartu ke tempat semula.
   // Edit faktur dari kartu tahap Faktur (pipeline MAP): nilai, tanggal, dan no. faktur.
@@ -2264,6 +2280,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             invoicePipeline={invoicePipeline}
             marketplacePayment={marketplacePayment}
             onEditFaktur={editFaktur}
+            stageDates={stageDates}
           />
         </div>
       )}

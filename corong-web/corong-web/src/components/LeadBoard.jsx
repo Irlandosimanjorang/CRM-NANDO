@@ -17,6 +17,10 @@ const daysAgo = (d) => {
   const n = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
   return Number.isNaN(n) ? null : n;
 };
+// Bulan kalender (WIB) dalam format "YYYY-MM", dipakai untuk filter pindah tahap bulan ini / bulan lalu.
+const wibYM = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit" }).format(d).slice(0, 7);
+const prevYM = (ym) => { const [y, m] = ym.split("-").map(Number); return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`; };
+const BULAN_OPSI = [["semua", "Semua"], ["ini", "Pindah bulan ini"], ["lalu", "Pindah bulan lalu"]];
 const START_DISTANCE = 6; // piksel sebelum tekanan dianggap geser, bukan klik
 const UNKNOWN_KEY = "__unknown"; // kolom untuk lead dengan tahap yang tidak ada di pipeline
 const EDGE = 110; // jarak dari tepi yang memicu gulir otomatis
@@ -32,13 +36,15 @@ const NX_RANGE_CSS = `
 .nx-kanban-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
 `;
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
   const [overKey, setOverKey] = useState(null);
   // Perubahan yang sudah tampil tapi belum tercermin dari data: id -> tahap baru.
   const [pending, setPending] = useState({});
+  // Filter bulan: lead yang pindah ke tahap sekarang di bulan ini atau bulan lalu (WIB), dari riwayat tahap.
+  const [bulan, setBulan] = useState("semua");
   // Pop-up alasan menang / kalah (muncul setelah kartu dipindah).
   const [closing, setClosing] = useState(null);
   // Pop-up data proyek saat kartu digeser ke Proyek Deal (tanggal, nilai, No. SPH, total diskon wajib).
@@ -308,14 +314,39 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   // Lead yang tahapnya sudah tidak ada di pipeline (mis. tahap lama dari impor) tetap ditampilkan di kolom khusus,
   // supaya tidak hilang dari Kanban. Lead itu bisa diseret ke tahap yang benar.
+  // Filter bulan: lead yang sedang diseret atau baru dipindah tetap tampil sampai riwayatnya dimuat ulang.
+  const peta = stageDates || new Map();
+  const targetBulan = bulan === "ini" ? wibYM(new Date()) : prevYM(wibYM(new Date()));
+  const shownLeads = useMemo(() => {
+    if (bulan === "semua") return leads;
+    return leads.filter((l) => {
+      if (pending[l.id]) return true;
+      const at = peta.get(`${l.id}|${l.stage_key}`);
+      return !!at && wibYM(new Date(at)) === targetBulan;
+    });
+  }, [leads, bulan, peta, pending, targetBulan]);
+
   const knownKeys = new Set(cols.map((s) => s.key));
-  const orphans = leads.filter((l) => !knownKeys.has(stageOf(l)));
+  const orphans = shownLeads.filter((l) => !knownKeys.has(stageOf(l)));
   const boardCols = orphans.length ? [...cols, { key: UNKNOWN_KEY, label: "Tahap tidak dikenal", hex: "#94a3b8", type: "normal", unknown: true }] : cols;
-  const board = boardCols.map((s) => ({ stage: s, items: s.unknown ? orphans : leads.filter((l) => stageOf(l) === s.key) }));
+  const board = boardCols.map((s) => ({ stage: s, items: s.unknown ? orphans : shownLeads.filter((l) => stageOf(l) === s.key) }));
   const accent = (s) => s.hex || "#94a3b8";
 
   return (
     <div className="mt-1">
+      <div className="mb-2 flex flex-wrap items-center gap-1">
+        {BULAN_OPSI.map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setBulan(k)}
+            className={`text-[12px] font-semibold rounded-inner px-3 py-1.5 border ${bulan === k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+          >
+            {label}
+          </button>
+        ))}
+        {bulan !== "semua" && !stageDates && <span className="ml-1 text-[11px] text-slate-500">Memuat riwayat tahap…</span>}
+      </div>
       {overflowPx > 0 && (() => {
         // Rentang tahap yang sedang terlihat (perkiraan dari lebar tiap kolom).
         const total = (stages || []).length || 1;
