@@ -390,12 +390,12 @@ function SendDialog({ invoice, onClose, onChange }) {
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !sending) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-labelledby="send-title" className="w-full max-w-[480px] rounded-xl border border-slate-700 bg-[#0f1420] shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="send-title" className="flex max-h-[90vh] w-full max-w-[480px] flex-col rounded-xl border border-slate-700 bg-[#0f1420] shadow-2xl">
         <div className="border-b border-slate-800 px-5 py-4">
           <h3 id="send-title" className="text-[15px] font-semibold text-slate-100">{paid ? "Kirim bukti pembayaran" : "Kirim invoice"}</h3>
           <p className="mt-0.5 text-[12px] text-slate-400"><span className="font-mono">{invoice.number}</span>, {invoice.company}, {rp(invoice.total)}</p>
         </div>
-        <div className="space-y-4 px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
           <p className="rounded-lg bg-slate-900/70 px-3 py-2 text-[12px] text-slate-300">
             {paid
               ? "Invoice ini sudah Lunas, jadi yang dikirim adalah bukti pembayaran: ucapan terima kasih, tanggal pembayaran, dan masa aktif paket, tanpa rincian cara pembayaran."
