@@ -555,6 +555,7 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
   const [detail, setDetail] = useState(lead.detail_proyek || "");
   const [memo, setMemo] = useState(() => Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, lead.memo?.[f.key] || ""])));
   const [step, setStep] = useState(1);
+  const [checklist, setChecklist] = useState(() => ({ ...(lead.proyek_checklist || {}) }));
   // Sementara detil dan memo belum wajib: proyek boleh disimpan dulu, dilengkapi nanti.
   const dataReady = !!date && dealValue > 0 && sph.trim().length > 0;
   useEffect(() => {
@@ -599,6 +600,29 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
                 <option value="berjalan">Berjalan (pindah ke Proyek Berjalan)</option>
               </select>
             </label>
+            {/* Checklist proyek (3 Nov 2026): cukup centang, boleh disimpan belum lengkap. */}
+            <div className="mt-3 space-y-2 rounded-lg border border-slate-200 px-3 py-2.5">
+              <div className="text-[11px] font-medium text-slate-500">Checklist proyek</div>
+              {PROYEK_CHECKLIST.map((item) => {
+                const tanda = checklist[item.key];
+                return (
+                  <label key={item.key} className="flex cursor-pointer items-start gap-2.5 text-[12.5px] text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 accent-orange-600"
+                      checked={!!tanda}
+                      onChange={(e) => {
+                        const cur = { ...checklist };
+                        if (e.target.checked) cur[item.key] = { at: new Date().toISOString() };
+                        else delete cur[item.key];
+                        setChecklist(cur);
+                      }}
+                    />
+                    <span>{item.label}</span>
+                  </label>
+                );
+              })}
+            </div>
             <label className="mt-3 block">
               <span className="text-[11px] font-medium text-slate-500">Detil proyek</span>
               <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={3} placeholder="Ruang lingkup dan detail pekerjaan" className={field + " resize-none"} />
@@ -627,7 +651,7 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
               <button type="button" onClick={() => setStep(1)} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Kembali</button>
               <button
                 type="button"
-                onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), memo: Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, memo[f.key].trim()])) })}
+                onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), memo: Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, memo[f.key].trim()])), checklist })}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
               >
                 Simpan

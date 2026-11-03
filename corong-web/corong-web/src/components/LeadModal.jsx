@@ -12,6 +12,9 @@ import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
 import { memoComplete } from "../lib/proyekMemo";
 import CustomerFormQrDialog from "./CustomerFormQrDialog";
 import { PROYEK_CHECKLIST } from "../lib/proyekChecklist";
+
+// Tombol QR form customer dan kartu garansi (3 Nov 2026): disembunyikan dulu, kodenya tetap ada.
+const SHOW_QR_FORMS = false;
 import WarrantyCardDialog from "./WarrantyCardDialog";
 import ProyekDocDialog from "./ProyekDocDialog";
 
@@ -642,6 +645,8 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 <span className="font-medium text-slate-700">Memo *</span>
                 <span className={`text-[11px] font-semibold ${memoComplete(f.memo) ? "text-emerald-600" : "text-amber-600"}`}>{memoComplete(f.memo) ? "Lengkap" : "Belum diisi"}</span>
               </button>
+              {/* Tombol QR disembunyikan dulu (3 Nov 2026). Ubah SHOW_QR_FORMS ke true untuk menampilkannya lagi. */}
+              {SHOW_QR_FORMS && <>
               {/* QR form customer (2 Nov 2026): butuh proyek yang sudah tersimpan. */}
               <button
                 type="button"
@@ -668,6 +673,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               {showWarrantyCard && (
                 <WarrantyCardDialog leadId={lead.id} orgId={lead.org_id} onClose={() => setShowWarrantyCard(false)} />
               )}
+              </>}
               {/* Checklist proyek (3 Nov 2026): cukup centang, boleh disimpan belum lengkap dan diubah lagi nanti. */}
               <div className="space-y-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5">
                 <div className="text-xs font-semibold text-slate-700">Checklist proyek</div>
