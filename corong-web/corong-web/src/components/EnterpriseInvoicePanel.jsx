@@ -505,6 +505,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
   const [seller, setSeller] = useState(loadProfile);
   const [showSeller, setShowSeller] = useState(false);
   const [viewing, setViewing] = useState(null); // invoice tersimpan yang sedang dilihat
+  const [editingId, setEditingId] = useState(null); // invoice belum lunas yang sedang diedit (3 Nov 2026)
   const [history, setHistory] = useState(null);
   const [historyErr, setHistoryErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -627,10 +628,28 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     if (!company.trim()) { alert("Isi nama perusahaan terlebih dahulu."); return; }
     const emailWarn = emailCheck?.status === "notfound" ? `\n\nPerhatian: belum ada akun Nexto dengan email ${email.trim()}. Pastikan email benar, karena paket nanti diaktifkan ke akun dengan email ini.`
       : emailCheck?.status === "invalid" ? "\n\nPerhatian: format email klien tidak valid." : !email.trim() ? "\n\nPerhatian: email klien belum diisi." : "";
+    const payload = { company: draft.company, invoice_date: draft.date, due_date: draft.due, total, data: draft };
+    if (editingId) {
+      const cur = (history || []).find((x) => x.id === editingId);
+      if (!window.confirm(`Simpan perubahan pada invoice ${cur?.number || ""} untuk ${company.trim()} sebesar ${rp(total)}? Nomor invoice dan link tetap sama.${emailWarn}`)) return;
+      setBusy(true);
+      try {
+        const { invoice } = await db.adminInvoices("update", { id: editingId, invoice: payload });
+        setEditingId(null);
+        setViewing(invoice);
+        setHistory((h) => (h || []).map((x) => (x.id === invoice.id ? { ...x, ...invoice } : x)));
+        await downloadInvoicePdf(invoice).catch((e) => alert("Invoice tersimpan, tetapi PDF gagal diunduh: " + e.message));
+      } catch (e) {
+        alert("Gagal menyimpan perubahan: " + e.message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (!window.confirm(`Simpan invoice untuk ${company.trim()} sebesar ${rp(total)}? Nomor invoice dibuat berurutan dan invoice tidak dapat diubah setelah disimpan.${emailWarn}`)) return;
     setBusy(true);
     try {
-      const { invoice } = await db.adminInvoices("create", { invoice: { company: draft.company, invoice_date: draft.date, due_date: draft.due, total, data: draft } });
+      const { invoice } = await db.adminInvoices("create", { invoice: payload });
       setViewing(invoice);
       setHistory((h) => [invoice, ...(h || []).filter((x) => x.id !== invoice.id)]);
       await downloadInvoicePdf(invoice).catch((e) => alert("Invoice tersimpan, tetapi PDF gagal diunduh: " + e.message));
@@ -667,6 +686,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     const d = inv.data || {};
     skipAutofill.current = (d.company || "") !== company;
     setViewing(null);
+    setEditingId(null);
     setCompany(d.company || ""); setContact(d.contact || ""); setEmail(d.email || ""); setAddress(d.address || ""); setPo(d.po || "");
     const pl = PLANS[d.plan] ? d.plan : "custom";
     setPlan(pl); setCustomItem(pl === "custom" ? (d.item || "") : ""); setActivatePlan(d.activatePlan || "enterprise");
@@ -682,7 +702,16 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
     setActivating(null);
   };
 
-  const newInvoice = () => { setViewing(null); setCompany(""); setContact(""); setEmail(""); setAddress(""); setPo(""); setNote(""); setDiscountValue(""); setDiscountLabel(""); setDate(today); setStart(today); };
+  // Edit (3 Nov 2026): form diisi dari invoice tersimpan, tanggalnya tetap, dan simpan memperbarui invoice yang sama (nomor tetap).
+  const editInvoice = (inv) => {
+    duplicate(inv);
+    const d = inv.data || {};
+    setEditingId(inv.id);
+    setDate(d.date || inv.invoice_date || today);
+    setStart(d.start || today);
+  };
+
+  const newInvoice = () => { setEditingId(null); setViewing(null); setCompany(""); setContact(""); setEmail(""); setAddress(""); setPo(""); setNote(""); setDiscountValue(""); setDiscountLabel(""); setDate(today); setStart(today); };
 
   const unpaid = (history || []).filter((x) => x.status === "unpaid");
   const overdue = unpaid.filter((x) => x.due_date < today);
@@ -695,7 +724,15 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
             menggulir form tidak ikut menggeser pratinjau; total & tombol
             simpan tetap terlihat di bawah. */}
         <div className="flex flex-col gap-3 lg:h-[min(72vh,760px)]">
-          {viewing && (
+          {editingId && (
+            <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 text-[12px] text-amber-100">
+              Mengedit invoice <b>{(history || []).find((x) => x.id === editingId)?.number}</b>. Nomor dan link tetap sama. Simpan untuk memperbarui.
+              <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                <button type="button" onClick={newInvoice} className="font-semibold underline underline-offset-2">Batal edit</button>
+              </span>
+            </div>
+          )}
+          {viewing && !editingId && (
             <div className="rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-[12px] text-violet-100">
               Menampilkan invoice tersimpan <b>{viewing.number}</b>. Invoice tersimpan tidak dapat diubah.
               <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
@@ -870,7 +907,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
             {viewing ? (
               <button type="button" onClick={() => downloadInvoicePdf(viewing).catch((e) => alert("PDF gagal diunduh: " + e.message))} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400">Unduh PDF</button>
             ) : (
-              <button type="button" disabled={busy} onClick={saveAndPrint} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:opacity-60">{busy ? "Menyimpan…" : "Simpan & unduh PDF"}</button>
+              <button type="button" disabled={busy} onClick={saveAndPrint} className="rounded-lg bg-violet-500 px-4 py-2 text-[13px] font-semibold text-white hover:bg-violet-400 disabled:opacity-60">{busy ? "Menyimpan…" : editingId ? "Simpan perubahan & unduh PDF" : "Simpan & unduh PDF"}</button>
             )}
           </div>
           <p className="text-[11px] text-slate-400">Berkas PDF langsung terunduh.</p>
@@ -938,6 +975,7 @@ export default function EnterpriseInvoicePanel({ users = [] }) {
                       <td className="px-4 py-2 text-right">
                         {x.public_token && <button type="button" onClick={() => downloadInvoicePdf(x).catch((e) => alert("PDF gagal diunduh: " + e.message))} className="mr-3 font-semibold text-emerald-300 hover:text-emerald-200">Unduh</button>}
                         {x.status !== "void" && x.public_token && <button type="button" onClick={() => setSendingInv(x)} className="mr-3 font-semibold text-violet-300 hover:text-violet-200">Kirim</button>}
+                        {x.status === "unpaid" && !x.data?.activation && <button type="button" onClick={() => editInvoice(x)} className="mr-3 font-semibold text-amber-300 hover:text-amber-200" title="Ubah isi invoice yang belum dibayar">Edit</button>}
                         <button type="button" onClick={() => duplicate(x)} className="mr-3 font-semibold text-slate-400 hover:text-slate-200" title="Salin isi invoice ini ke form baru">Duplikat</button>
                         {viewing?.id === x.id
                           ? <button type="button" onClick={newInvoice} className="font-semibold text-slate-300 hover:text-white">Tutup</button>

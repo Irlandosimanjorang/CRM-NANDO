@@ -254,6 +254,30 @@ Deno.serve(async (req) => {
       return json({ invoice: row });
     }
 
+    // Edit invoice (3 Nov 2026): hanya untuk invoice yang belum lunas, belum dibatalkan, dan paketnya belum diaktifkan.
+    // Nomor invoice dan link publik tetap, jadi tautan dan PDF yang sudah dikirim ikut menunjuk isi terbaru.
+    if (body.action === "update") {
+      const inv = body.invoice || {};
+      const { data: cur } = await admin.from("admin_invoices").select("id, status, data").eq("id", body.id).maybeSingle();
+      if (!cur) return json({ error: "Invoice tidak ditemukan." }, 404);
+      if (cur.status !== "unpaid") return json({ error: "Hanya invoice yang belum dibayar yang bisa diedit." }, 409);
+      if (cur.data?.activation) return json({ error: "Paket dari invoice ini sudah diaktifkan, jadi tidak bisa diedit." }, 409);
+      const company = String(inv.company || "").trim().slice(0, 200);
+      if (!company) return json({ error: "Nama perusahaan wajib diisi." }, 400);
+      if (!DATE_RE.test(inv.invoice_date || "") || !DATE_RE.test(inv.due_date || "")) return json({ error: "Tanggal invoice atau jatuh tempo tidak valid." }, 400);
+      const total = Number(inv.total);
+      if (!Number.isFinite(total) || total < 0) return json({ error: "Total tidak valid." }, 400);
+      const data = { ...(inv.data || {}) };
+      delete data.activation;
+      const { data: row, error } = await admin.from("admin_invoices")
+        .update({ company, invoice_date: inv.invoice_date, due_date: inv.due_date, total, data })
+        .eq("id", body.id)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return json({ invoice: row });
+    }
+
     if (body.action === "set_status") {
       if (!["unpaid", "paid", "void"].includes(body.status)) return json({ error: "Status tidak valid." }, 400);
       const { data: cur } = await admin.from("admin_invoices").select("status, data").eq("id", body.id).maybeSingle();
