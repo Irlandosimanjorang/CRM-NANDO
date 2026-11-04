@@ -813,7 +813,22 @@ export default function Leads({
 
   // Peluang baru (repeat order) dari kolom Menang: lead kembali ke tahap awal dengan nilai dan outcome kosong.
   // Deal sebelumnya tetap ada di tab Deal (transaksi tidak dihapus), jadi menang berikutnya dicatat sebagai deal baru.
+  // Org project_deal (4 Nov 2026): repeat order dibuat sebagai lead baru untuk klien yang sama. Lead lama tetap di
+  // Proyek Deal/Selesai dengan nilai dan tanggal proyeknya, jadi tidak hilang dari tab Deal.
+  const repeatOrderProyek = async (lead, key) => {
+    const baru = await db.upsertLead({
+      name: lead.name, category: lead.category, company_type: lead.company_type, parent_company: lead.parent_company,
+      group_holding: lead.group_holding, email: lead.email, phone: lead.phone, key_person: lead.key_person,
+      key_person_title: lead.key_person_title, city: lead.city, province: lead.province, website: lead.website,
+      sales_owner: lead.sales_owner, assigned_to: lead.assigned_to, priority: lead.priority,
+      stage_key: key, deal_value: 0, deal_date: null,
+    });
+    await db.addProgress(lead.id, `[Repeat order] peluang baru dibuat sebagai lead terpisah (${baru?.name || lead.name}). Proyek ini tetap di tahapnya.`);
+    onChanged({ silent: true });
+  };
+
   const reopenLead = async (lead, key) => {
+    if (projectDeal) return repeatOrderProyek(lead, key);
     const cleared = { stage_key: key, deal_value: 0, deal_date: null, outcome: null };
     await db.upsertLead({ ...lead, ...cleared });
     await db.clearOutcome(lead.id);
@@ -1333,6 +1348,16 @@ export default function Leads({
       page,
     ]);
 
+
+  // Klien existing (4 Nov 2026): satu lead per nama klien, untuk dipilih dari dropdown saat menambah lead baru.
+  const klienOptions = useMemo(() => {
+    const seen = new Map();
+    for (const l of leads || []) {
+      const k = String(l.name || "").trim().toLowerCase();
+      if (k && !seen.has(k)) seen.set(k, l);
+    }
+    return [...seen.values()].sort((a, b) => String(a.name).localeCompare(String(b.name), "id"));
+  }, [leads]);
 
   const blank = () => ({
     name: "",
@@ -2585,6 +2610,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         <LeadModal
           projectDeal={projectDeal}
           uppercaseNames={uppercaseNames}
+          klienOptions={klienOptions}
           parentOptions={parentOptions}
           holdingOptions={holdingOptions}
           lead={edit}

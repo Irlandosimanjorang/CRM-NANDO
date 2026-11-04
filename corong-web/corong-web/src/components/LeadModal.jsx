@@ -206,7 +206,10 @@ function fillTemplate(str, lead) {
 // audit), tombol "Biarin AI nebak" keliatan aktif buat SEMUA tier walau
 // backend-nya tetep nolak (403). Default sekarang 0 (Free) - gagal AMAN
 // (terkunci) kalau ada pemanggil lain yang lupa pass ini lagi.
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true, projectDeal = false }) {
+// Data klien yang ikut terisi saat memilih klien existing (lead baru untuk klien yang sudah ada).
+const IDENTITAS_KLIEN = ["name", "category", "company_type", "parent_company", "group_holding", "city", "province", "phone", "email", "website", "key_person", "key_person_title", "sales_owner"];
+
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true, projectDeal = false, klienOptions = [] }) {
   const aiOff = useAiOff();
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
@@ -224,6 +227,14 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const [locBusy, setLocBusy] = useState(false);
   const [proyekDoc, setProyekDoc] = useState(null); // "memo" | "detail" | null
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  // Pilihan klien existing untuk lead baru: data identitas klien diisi dari lead klien itu (4 Nov 2026).
+  const [klienPilih, setKlienPilih] = useState("");
+  const pilihKlien = (id) => {
+    setKlienPilih(id);
+    const sumber = klienOptions.find((k) => k.id === id);
+    if (!sumber) return;
+    setF((p) => ({ ...p, ...Object.fromEntries(IDENTITAS_KLIEN.map((k) => [k, sumber[k] ?? ""])) }));
+  };
   const isProfessional = myLevel >= 2;
 
   // ---- OUTCOME MEMORY - pas Tahap diganti ke tipe Menang/Kalah (dan
@@ -574,6 +585,16 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 !needsSummaryErr && <p className="mt-2 text-[11px] text-slate-500">{!isEnterprise ? "Fitur khusus paket Enterprise. " : ""}Belum ada ringkasan. Klik "Simpulkan dari notulen" untuk membaca semua catatan progress lead ini dan menyimpulkan kebutuhan kliennya.</p>
               )}
             </div>
+          )}
+          {!lead.id && klienOptions.length > 0 && (
+            <Field label="Klien">
+              <select className={inp} value={klienPilih} onChange={(e) => pilihKlien(e.target.value)}>
+                <option value="">Klien baru</option>
+                <optgroup label="Klien existing">
+                  {klienOptions.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                </optgroup>
+              </select>
+            </Field>
           )}
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", uppercaseNames ? e.target.value.toUpperCase() : e.target.value)} /></Field>
           <div className="grid grid-cols-2 gap-3">
