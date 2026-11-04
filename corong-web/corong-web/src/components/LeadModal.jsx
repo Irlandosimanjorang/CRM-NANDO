@@ -438,7 +438,9 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
     try {
-      await db.upsertLead(f);
+      const tersimpan = await db.upsertLead(f);
+      // Lead baru dari klien existing: penanda "[Repeat order]" dicatat di lead klien itu, sebagai jejak repeat order.
+      if (!lead.id && klienPilih) await db.addProgress(klienPilih, `[Repeat order] lead baru dibuat untuk klien ini (${tersimpan?.name || f.name}).`).catch(() => {});
       if (showOutcome && outcomeResult && lead.id) {
         await db.saveOutcome(lead.id, { result: outcomeResult, reason_category: outcomeCategory, reason: outcomeReason, ai_generated: false });
       }

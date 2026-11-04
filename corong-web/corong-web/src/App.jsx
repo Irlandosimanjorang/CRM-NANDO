@@ -1170,7 +1170,7 @@ export default function App() {
                 <Dashboard leads={leads} stages={stageList} members={orgMembers} dealTransactions={dealTransactions} settings={settings} onGo={setTab} onOpenLead={setEditLead} myLevel={myLevel} onChanged={reload} isEnterprise={isEnterprise} canManage={canManage} hideAiRecs={monitorOwner} myUid={session?.user?.id} projectDeal={hasOrgFeature(org, "project_deal")} />
               </div>
               <div style={{ display: effectiveTab === "leads" ? "block" : "none" }}>
-                <Leads onLocalDeal={applyLocalDeal} leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} projectDeal={hasOrgFeature(org, "project_deal")} invoicePipeline={hasOrgFeature(org, "invoice_pipeline")} marketplacePayment={hasOrgFeature(org, "marketplace_payment")} />
+                <Leads onLocalDeal={applyLocalDeal} leads={leads} stages={stageList} settings={settings} industry={org?.industry} customFieldLabels={org?.custom_field_labels} myLevel={myLevel} onChanged={reload} canManage={canManage} isEnterprise={isEnterprise} projectDeal={hasOrgFeature(org, "project_deal")} sembunyikanPeluangBaru={hasOrgFeature(org, "sembunyikan_peluang_baru")} invoicePipeline={hasOrgFeature(org, "invoice_pipeline")} marketplacePayment={hasOrgFeature(org, "marketplace_payment")} />
               </div>
               <Suspense fallback={<div className="text-sm text-slate-400 py-16 text-center">Memuat…</div>}>
                 {visitedTabs.has("generateleads") && (

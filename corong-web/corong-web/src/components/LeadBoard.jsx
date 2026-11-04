@@ -45,7 +45,7 @@ const NX_RANGE_CSS = `
 .nx-kanban-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
 `;
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, sembunyikanPeluangBaru = false }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
@@ -542,7 +542,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                         </div>
                       )}
 
-                      {s.type === "won" && firstNormal && (
+                      {s.type === "won" && firstNormal && !sembunyikanPeluangBaru && (
                         <button
                           type="button"
                           onClick={() => { if (!suppressClick.current) onNewOpportunity(l, firstNormal.key); }}
