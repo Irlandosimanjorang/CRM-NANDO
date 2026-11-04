@@ -45,7 +45,7 @@ const NX_RANGE_CSS = `
 .nx-kanban-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
 `;
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, proyekChecklist = false, sembunyikanPeluangBaru = false }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, dealBulan = null, proyekChecklist = false, sembunyikanPeluangBaru = false }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
@@ -325,14 +325,16 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   // supaya tidak hilang dari Kanban. Lead itu bisa diseret ke tahap yang benar.
   // Filter bulan: lead yang sedang diseret atau baru dipindah tetap tampil sampai riwayatnya dimuat ulang.
   const peta = useMemo(() => stageDates || new Map(), [stageDates]);
+  // Lolos filter kalau pindah ke tahap sekarang di bulan itu, atau punya transaksi deal di bulan itu (sama dengan tab Deal).
   const shownLeads = useMemo(() => {
     if (bulan === "semua") return leads;
     return leads.filter((l) => {
       if (pending[l.id]) return true;
       const at = peta.get(`${l.id}|${l.stage_key}`);
-      return !!at && wibYM(new Date(at)) === bulan;
+      if (at && wibYM(new Date(at)) === bulan) return true;
+      return !!dealBulan?.get(l.id)?.has(bulan);
     });
-  }, [leads, bulan, peta, pending]);
+  }, [leads, bulan, peta, pending, dealBulan]);
 
   const knownKeys = new Set(cols.map((s) => s.key));
   const orphans = shownLeads.filter((l) => !knownKeys.has(stageOf(l)));
@@ -386,7 +388,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
         {bulan !== "semua" && !stageDates && <span className="ml-1 text-[11px] text-slate-500">Memuat riwayat tahap…</span>}
         {bulan !== "semua" && stageDates && shownLeads.length === 0 && (
           <div className="flex w-full items-center justify-between gap-3 rounded-inner border border-dashed border-slate-300 px-3 py-2 text-[12px] text-slate-600">
-            <span>Tidak ada lead yang pindah tahap di {labelYM(bulan)}.</span>
+            <span>Tidak ada lead yang pindah tahap atau punya transaksi di {labelYM(bulan)}.</span>
             <button type="button" onClick={() => setBulan("semua")} className="shrink-0 font-semibold text-slate-900 underline">Tampilkan semua</button>
           </div>
         )}

@@ -734,17 +734,26 @@ export default function Leads({
   // Waktu tiap lead masuk tahap sekarang (dari riwayat tahap), untuk filter bulan di Kanban. Riwayat diurut naik,
   // jadi entri terakhir per lead dan tahap yang menang.
   const [stageDates, setStageDates] = useState(null);
+  // Bulan transaksi deal tiap lead (tanggal transaksi, sama dengan tab Deal), untuk filter bulan di Kanban.
+  const [dealBulan, setDealBulan] = useState(null);
   useEffect(() => {
     if (viewMode !== "papan") return undefined;
     let aktif = true;
-    db.getStageHistory()
-      .then((rows) => {
+    Promise.all([db.getStageHistory(), db.getDealEntries("2000-01-01", "2100-01-01")])
+      .then(([rows, entries]) => {
         if (!aktif) return;
         const peta = new Map();
         for (const r of rows) peta.set(`${r.lead_id}|${r.to_stage}`, r.changed_at);
+        const bulanDeal = new Map();
+        for (const e of entries) {
+          if (!e.deal_date) continue;
+          if (!bulanDeal.has(e.lead_id)) bulanDeal.set(e.lead_id, new Set());
+          bulanDeal.get(e.lead_id).add(String(e.deal_date).slice(0, 7));
+        }
         setStageDates(peta);
+        setDealBulan(bulanDeal);
       })
-      .catch(() => { if (aktif) setStageDates(new Map()); });
+      .catch(() => { if (aktif) { setStageDates(new Map()); setDealBulan(new Map()); } });
     return () => { aktif = false; };
   }, [viewMode, leads]);
   // Simpan di belakang layar: papan sudah menampilkan tahap baru, jadi tidak perlu menunggu muat ulang.
@@ -2301,6 +2310,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             marketplacePayment={marketplacePayment}
             onEditFaktur={editFaktur}
             stageDates={stageDates}
+            dealBulan={dealBulan}
             sembunyikanPeluangBaru={sembunyikanPeluangBaru}
           />
         </div>
