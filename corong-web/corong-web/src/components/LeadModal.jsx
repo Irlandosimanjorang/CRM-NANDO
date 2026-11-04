@@ -209,7 +209,7 @@ function fillTemplate(str, lead) {
 // Data klien yang ikut terisi saat memilih klien existing (lead baru untuk klien yang sudah ada).
 const IDENTITAS_KLIEN = ["name", "category", "company_type", "parent_company", "group_holding", "city", "province", "phone", "email", "website", "key_person", "key_person_title", "sales_owner"];
 
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true, projectDeal = false, klienOptions = [] }) {
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true, projectDeal = false, klienOptions = [], proyekChecklist = false }) {
   const aiOff = useAiOff();
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
@@ -660,7 +660,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 <span className={`text-[11px] font-semibold ${memoComplete(f.memo) ? "text-emerald-600" : "text-amber-600"}`}>{memoComplete(f.memo) ? "Lengkap" : "Belum diisi"}</span>
               </button>
               {/* Checklist proyek (3 Nov 2026): cukup centang, boleh disimpan belum lengkap dan diubah lagi nanti. */}
-              <div className="space-y-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+              {proyekChecklist && <div className="space-y-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5">
                 <div className="text-xs font-semibold text-slate-700">Checklist proyek</div>
                 {PROYEK_CHECKLIST.map((item) => {
                   const tanda = (f.proyek_checklist || {})[item.key];
@@ -684,7 +684,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                     </label>
                   );
                 })}
-              </div>
+              </div>}
               {proyekDoc && (
                 <ProyekDocDialog
                   kind={proyekDoc}

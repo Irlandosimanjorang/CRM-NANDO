@@ -45,7 +45,7 @@ const NX_RANGE_CSS = `
 .nx-kanban-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
 `;
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, proyekChecklist = false }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
@@ -425,7 +425,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
           onSave={(values) => { const lead = fakturEdit; setFakturEdit(null); Promise.resolve(onEditFaktur?.(lead, values)).catch((e) => alert("Gagal menyimpan faktur: " + (e?.message || e))); }}
         />
       )}
-      {proyek && <ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} />}
+      {proyek && <ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} proyekChecklist={proyekChecklist} />}
       {trackingLink && <TrackingLinkDialog name={trackingLink.name} link={trackingLink.link} onClose={() => setTrackingLink(null)} />}
       {selesai && <SelesaiDialog lead={selesai.lead} onCancel={cancelSelesai} onSave={saveSelesai} />}
 
@@ -505,7 +505,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                         <div className="mt-1.5 text-[11px] text-slate-500">Visit {new Date(l.visit_date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</div>
                       )}
 
-                      {projectDeal && s.key === "proyek_deal" && (() => {
+                      {proyekChecklist && s.key === "proyek_deal" && (() => {
                         const n = PROYEK_CHECKLIST.filter((c) => (l.proyek_checklist || {})[c.key]).length;
                         return (
                           <div className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${n === PROYEK_CHECKLIST.length ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
@@ -609,7 +609,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
 // Pop-up data proyek untuk tahap Proyek Deal (15 Okt 2026): tanggal, nilai proyek, No. SPH wajib; total diskon opsional.
 // Nilai proyek bruto; diskon dicatat terpisah.
-function ProyekDealDialog({ lead, onCancel, onSave }) {
+function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   const [date, setDate] = useState(lead.deal_date || todayISO());
   const [value, setValue] = useState(lead.deal_value ? String(lead.deal_value) : "");
   const [sph, setSph] = useState(lead.sph_number || "");
@@ -670,7 +670,7 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
               </select>
             </label>
             {/* Checklist proyek (3 Nov 2026): cukup centang, boleh disimpan belum lengkap. */}
-            <div className="mt-3 space-y-2 rounded-lg border border-slate-200 px-3 py-2.5">
+            {proyekChecklist && <div className="mt-3 space-y-2 rounded-lg border border-slate-200 px-3 py-2.5">
               <div className="text-[11px] font-medium text-slate-500">Checklist proyek</div>
               {PROYEK_CHECKLIST.map((item) => {
                 const tanda = checklist[item.key];
@@ -691,7 +691,7 @@ function ProyekDealDialog({ lead, onCancel, onSave }) {
                   </label>
                 );
               })}
-            </div>
+            </div>}
             <label className="mt-3 block">
               <span className="text-[11px] font-medium text-slate-500">Detil proyek</span>
               <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={3} placeholder="Ruang lingkup dan detail pekerjaan" className={field + " resize-none"} />
