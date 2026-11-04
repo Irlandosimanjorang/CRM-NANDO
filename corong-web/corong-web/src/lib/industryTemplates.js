@@ -333,7 +333,6 @@ INDUSTRY_TEMPLATES.digital_ads = {
 // atau No Deal. Tahap setelah Proyek Deal bertipe "won" supaya tetap terhitung deal.
 INDUSTRY_TEMPLATES.bsb_upvc = {
   key: "bsb_upvc",
-  adminOnly: true,
   label: "Proyek uPVC / WPC / Alumunium (BSB)",
   description: "Penjualan jendela, pintu, dan WPC ke owner, kontraktor, purchasing, dan pabrik, dengan SPH per proyek",
   catalogExample: "Misal: jendela dan pintu uPVC, panel WPC, dan alumunium untuk rumah, kantor, dan proyek kontraktor.",
