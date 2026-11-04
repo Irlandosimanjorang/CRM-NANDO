@@ -384,6 +384,12 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
           </button>
         </div>
         {bulan !== "semua" && !stageDates && <span className="ml-1 text-[11px] text-slate-500">Memuat riwayat tahap…</span>}
+        {bulan !== "semua" && stageDates && shownLeads.length === 0 && (
+          <div className="flex w-full items-center justify-between gap-3 rounded-inner border border-dashed border-slate-300 px-3 py-2 text-[12px] text-slate-600">
+            <span>Tidak ada lead yang pindah tahap di {labelYM(bulan)}.</span>
+            <button type="button" onClick={() => setBulan("semua")} className="shrink-0 font-semibold text-slate-900 underline">Tampilkan semua</button>
+          </div>
+        )}
       </div>
       {overflowPx > 0 && (() => {
         // Rentang tahap yang sedang terlihat (perkiraan dari lebar tiap kolom).
