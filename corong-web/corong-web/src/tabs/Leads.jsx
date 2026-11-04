@@ -813,9 +813,9 @@ export default function Leads({
 
   // Peluang baru (repeat order) dari kolom Menang: lead kembali ke tahap awal dengan nilai dan outcome kosong.
   // Deal sebelumnya tetap ada di tab Deal (transaksi tidak dihapus), jadi menang berikutnya dicatat sebagai deal baru.
-  // Org project_deal (4 Nov 2026): repeat order dibuat sebagai lead baru untuk klien yang sama. Lead lama tetap di
-  // Proyek Deal/Selesai dengan nilai dan tanggal proyeknya, jadi tidak hilang dari tab Deal.
-  const repeatOrderProyek = async (lead, key) => {
+  // Repeat order (4 Nov 2026): dibuat sebagai lead baru untuk klien yang sama. Lead lama tetap di tahap menangnya
+  // dengan nilai, tanggal, dan transaksinya, jadi deal sebelumnya tetap tercatat di tab Deal.
+  const repeatOrderBaru = async (lead, key) => {
     const baru = await db.upsertLead({
       name: lead.name, category: lead.category, company_type: lead.company_type, parent_company: lead.parent_company,
       group_holding: lead.group_holding, email: lead.email, phone: lead.phone, key_person: lead.key_person,
@@ -827,15 +827,7 @@ export default function Leads({
     onChanged({ silent: true });
   };
 
-  const reopenLead = async (lead, key) => {
-    if (projectDeal) return repeatOrderProyek(lead, key);
-    const cleared = { stage_key: key, deal_value: 0, deal_date: null, outcome: null };
-    await db.upsertLead({ ...lead, ...cleared });
-    await db.clearOutcome(lead.id);
-    await db.addProgress(lead.id, "[Repeat order] dibuka kembali dari Menang. Deal sebelumnya tetap tercatat di tab Deal.");
-    if (onLocalDeal) onLocalDeal(lead.id, cleared, null);
-    onChanged({ silent: true });
-  };
+  const reopenLead = (lead, key) => repeatOrderBaru(lead, key);
 
   const [edit, setEdit] =
     useState(null);
