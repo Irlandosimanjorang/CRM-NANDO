@@ -648,6 +648,7 @@ export default function Leads({
   isEnterprise,
   projectDeal = false, // saklar org "project_deal" (khusus BSB): tahap Proyek Deal minta data proyek
   proyekChecklist = false, // saklar org "proyek_checklist" (hanya BSB): checklist proyek di form dan pop-up Proyek Deal
+  sembunyikanPeluangBaru = false, // saklar org "sembunyikan_peluang_baru" (ELEVASIA): tombol repeat order di kartu menang disembunyikan
   invoicePipeline = false, // saklar org "invoice_pipeline" (MAP): tahap Deal minta tanggal dan barang, Faktur minta no. faktur
   marketplacePayment = false, // saklar org "marketplace_payment" (MAP, BSB): pilihan payment Shopee dan Tokopedia
   uppercaseNames = true, // nama lead tampil HURUF BESAR (perilaku umum)
@@ -2300,6 +2301,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             marketplacePayment={marketplacePayment}
             onEditFaktur={editFaktur}
             stageDates={stageDates}
+            sembunyikanPeluangBaru={sembunyikanPeluangBaru}
           />
         </div>
       )}
