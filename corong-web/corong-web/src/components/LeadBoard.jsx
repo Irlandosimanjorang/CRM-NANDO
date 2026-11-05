@@ -656,7 +656,8 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
               </label>
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">No. SO</span>
-                <input value={so} disabled={soTerkunci} onChange={(e) => setSo(e.target.value)} placeholder={soTerkunci ? "Terkunci sampai payment aktif dari finance" : "Nomor sales order"} className={field + " disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"} />
+                {/* No. SO dibuat finance, tidak bisa diisi atau diubah dari Nexto. */}
+                <input value={so} readOnly disabled placeholder={soTerkunci ? "Terkunci sampai payment aktif dari finance" : "Belum dibuat finance"} className={field + " cursor-not-allowed bg-slate-50 text-slate-500"} />
               </label>
               <label className="col-span-2 block">
                 <span className="text-[11px] font-medium text-slate-500">Diskon (Rp){discountValue ? " · " + fmtRp(discountValue) : ""}</span>

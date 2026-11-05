@@ -795,7 +795,7 @@ export default function Leads({
       const uid = await db.getCurrentUserId().catch(() => null);
       const proyekChecklist = Object.fromEntries(Object.entries(p.checklist || {}).map(([k, v]) => [k, { at: v.at, by: v.by || uid || null }]));
       // No. SO disimpan di memo.so_number. Isi memo lain (mis. customer) dipertahankan.
-      leadPatch = { stage_key: nextKey, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_pct: p.discount_pct, discount_total: p.discount_total, detail_proyek: p.detail_proyek, proyek_checklist: proyekChecklist, memo: { ...(lead.memo || {}), so_number: p.so_number || null } };
+      leadPatch = { stage_key: nextKey, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_pct: p.discount_pct, discount_total: p.discount_total, detail_proyek: p.detail_proyek, proyek_checklist: proyekChecklist, memo: { ...(lead.memo || {}) } };
       await db.upsertLead({ ...lead, ...leadPatch });
       if (onLocalDeal) onLocalDeal(lead.id, leadPatch, null);
       onChanged({ silent: true });
