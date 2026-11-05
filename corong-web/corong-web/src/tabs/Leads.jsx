@@ -290,7 +290,8 @@ export function extractRowsFromMapping(dataRows, mapping, firstStage, opts = {})
     const name = get(row, mapping.name);
     if (!name || /^(xxx|yyyy-mm-dd|mr\/ms xxx)$/i.test(name.trim())) continue;
     // Baris total/subtotal di akhir laporan bukan lead.
-    if (/^(total|subtotal|sub total|jumlah|grand total)\b/i.test(name.trim())) continue;
+    // Hanya baris yang benar-benar total (mis. "TOTAL", "Grand Total"). Nama klien yang kebetulan diawali "Total" tetap masuk.
+    if (/^(total|subtotal|sub total|grand total|jumlah)\s*[:.]?\s*$/i.test(name.trim())) continue;
     const obj = { name, category: "Lainnya", stage_key: firstStage, source: "import" };
     const noteBits = [];
     for (const [field, idx] of Object.entries(mapping)) {
