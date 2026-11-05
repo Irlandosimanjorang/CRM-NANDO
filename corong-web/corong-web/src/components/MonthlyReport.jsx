@@ -26,11 +26,12 @@ const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 const SOURCES = ["Meta", "Instagram", "TikTok", "Google", "Tokopedia", "Shopee", "Customer datang", "Database", "Lainnya"];
 const cn = (...v) => v.filter(Boolean).join(" ");
 // Transaksi deal dari server -> baris deal berbentuk lead (nilai & tanggal = transaksi itu).
-const dealRowsFromEntries = (entries, leads) => {
+// Tipe pembayaran diambil dari transaksinya (txPay), bukan dari lead, supaya sama dengan tab Deal.
+const dealRowsFromEntries = (entries, leads, txPay) => {
   const byId = new Map(leads.map((l) => [l.id, l]));
   return entries.map((e) => {
     const lead = byId.get(e.lead_id);
-    return lead ? { ...lead, id: e.lead_id, deal_value: e.deal_value, deal_date: e.deal_date, assigned_to: e.pic } : null;
+    return lead ? { ...lead, id: e.lead_id, deal_value: e.deal_value, deal_date: e.deal_date, assigned_to: e.pic, payment_type: e.tx_id ? (txPay.get(e.tx_id) ?? null) : lead.payment_type } : null;
   }).filter(Boolean);
 };
 // Omzet per tipe payment (24 Okt 2026): dihitung dari deal yang sudah difilter sesuai lingkup laporan.
@@ -232,7 +233,8 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     db.getProductBreakdown(range.from, range.to).then((r) => { if (alive) setProductRows(r); }).catch(() => { if (alive) setProductRows([]); });
     return () => { alive = false; };
   }, [range.from, range.to, allLeads]);
-  const dealsSrv = useMemo(() => dealRowsFromEntries(entriesSrv, allLeads), [entriesSrv, allLeads]);
+  const txPay = useMemo(() => new Map(allTxRaw.map((t) => [t.id, t.payment_type])), [allTxRaw]);
+  const dealsSrv = useMemo(() => dealRowsFromEntries(entriesSrv, allLeads, txPay), [entriesSrv, allLeads, txPay]);
   // Deal dari server, disaring lingkup marketing dan filter sumber/tahap seperti tabel lead.
   const dealLeads = useMemo(() => dealsSrv.filter((l) => !l.deleted_at && (scopeId === "all" || (l.assigned_to || l.user_id) === scopeId) && passF(l)), [dealsSrv, scopeId, srcF, stF, srcSlot]);
 

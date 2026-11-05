@@ -447,7 +447,9 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
     try {
-      const tersimpan = await db.upsertLead(f);
+      // Tipe pembayaran tidak ditulis dari form lead: nilainya dari pop-up pindah ke Faktur (per transaksi).
+      // Form yang sudah lama terbuka bisa membawa nilai lama, jadi tidak boleh menimpanya.
+      const tersimpan = await db.upsertLead({ ...f, payment_type: undefined });
       // Lead baru dari klien existing: penanda "[Repeat order]" dicatat di lead klien itu, sebagai jejak repeat order.
       if (!lead.id && klienPilih) await db.addProgress(klienPilih, `[Repeat order] lead baru dibuat untuk klien ini (${tersimpan?.name || f.name}).`).catch(() => {});
       if (showOutcome && outcomeResult && lead.id) {
