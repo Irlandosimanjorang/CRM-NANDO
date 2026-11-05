@@ -761,7 +761,7 @@ export default function Leads({
   // Edit faktur dari kartu tahap Faktur (pipeline MAP): nilai, tanggal, dan no. faktur.
   const editFaktur = async (lead, values) => {
     await db.updateFaktur(lead, values);
-    const patch = { deal_value: values.value, deal_date: values.date, ...(values.invoice_number === undefined ? {} : { invoice_number: values.invoice_number || null }), payment_type: values.payment_type || null };
+    const patch = { deal_value: values.value, deal_date: values.date, ...(values.invoice_number === undefined ? {} : { invoice_number: values.invoice_number || null }), ...(values.payment_type === undefined ? {} : { payment_type: values.payment_type || null }) };
     if (onLocalDeal) onLocalDeal(lead.id, patch, null);
     onChanged({ silent: true });
   };
@@ -802,7 +802,7 @@ export default function Leads({
     if (extra?.deal) {
       // Transaksi dicatat dulu: dengan transaksi manual, pemicu otomatis tidak menulis ganda.
       tx = await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: extra.deal.date, deal_value: extra.deal.value, product_type: extra.deal.product || lead.product || null, invoice_number: extra.deal.invoice_number || null });
-      leadPatch = { ...leadPatch, deal_value: extra.deal.value, deal_date: extra.deal.date, ...(extra.deal.invoice_number !== undefined ? { invoice_number: extra.deal.invoice_number } : {}), ...(extra.deal.product ? { product: extra.deal.product } : {}) };
+      leadPatch = { ...leadPatch, deal_value: extra.deal.value, deal_date: extra.deal.date, ...(extra.deal.invoice_number !== undefined ? { invoice_number: extra.deal.invoice_number } : {}), ...(extra.deal.product ? { product: extra.deal.product } : {}), ...(extra.deal.payment_type !== undefined ? { payment_type: extra.deal.payment_type || null } : {}) };
       await db.upsertLead({ ...lead, ...leadPatch });
     } else {
       // Org project_deal (BSB): omzet dihitung dari tahap Proyek Deal (deal_date tetap tanggal proyek deal).

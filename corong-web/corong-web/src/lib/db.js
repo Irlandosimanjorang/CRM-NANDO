@@ -1028,6 +1028,8 @@ export async function upsertLead(lead) {
     // Pipeline faktur (MAP): tanggal masuk tahap Deal dan nomor faktur.
     ...(lead.deal_stage_date !== undefined ? { deal_stage_date: lead.deal_stage_date || null } : {}),
     ...(lead.invoice_number !== undefined ? { invoice_number: (lead.invoice_number || "").trim() || null } : {}),
+    // Tipe payment: diisi di pop-up pindah ke tahap Faktur, hanya ikut disimpan kalau dikirim.
+    ...(lead.payment_type !== undefined ? { payment_type: lead.payment_type || null } : {}),
     // Checklist proyek deal (3 Nov 2026): hanya ikut disimpan kalau field-nya ada di form.
     ...(lead.proyek_checklist !== undefined ? { proyek_checklist: lead.proyek_checklist || {} } : {}),
     // Detil proyek dan memo (31 Okt 2026): diisi di pop-up Proyek Deal (BSB).
@@ -1646,7 +1648,8 @@ export async function updateFaktur(lead, { value, date, invoice_number, payment_
   } else {
     await addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: date, deal_value: value, product_type: lead.product, invoice_number });
   }
-  const { error } = await supabase.from("leads").update({ deal_value: value, deal_date: date, ...fakturPatch, payment_type: payment_type || null }).eq("id", lead.id);
+  const paymentPatch = payment_type === undefined ? {} : { payment_type: payment_type || null };
+  const { error } = await supabase.from("leads").update({ deal_value: value, deal_date: date, ...fakturPatch, ...paymentPatch }).eq("id", lead.id);
   if (error) throw error;
 }
 
