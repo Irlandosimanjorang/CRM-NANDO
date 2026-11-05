@@ -194,6 +194,8 @@ export function unmappedColumns(aoa, headerRow, mapping) {
 
 export function buildLeadRows(aoa, headerRow, mapping, { platform, stageKey, slotKey, existing = [], extraNotes = true }) {
   const extras = extraNotes ? unmappedColumns(aoa, headerRow, mapping) : [];
+  // Duplikat hanya dicek terhadap lead yang sudah ada di Nexto. Baris yang kembar di dalam file yang sama tetap masuk
+  // (sebelumnya dibuang diam-diam dan terhitung sebagai "sudah ada").
   const seenPhone = new Set(existing.map((l) => phoneKey(l.phone)).filter(Boolean));
   const seenName = new Set(existing.map((l) => String(l.name || "").trim().toLowerCase()).filter(Boolean));
   const rows = [];
@@ -212,8 +214,6 @@ export function buildLeadRows(aoa, headerRow, mapping, { platform, stageKey, slo
     const pk = phoneKey(phone);
     const nk = name.toLowerCase();
     if ((pk && seenPhone.has(pk)) || seenName.has(nk)) { duplicates++; continue; }
-    if (pk) seenPhone.add(pk);
-    seenName.add(nk);
     const rowPlatform = normalizePlatform(get("platform")) || platform;
     const campaign = String(get("campaign") ?? "").trim();
     const day = mapping.day !== undefined && mapping.day !== "" ? parseDay(get("day")) : null;
