@@ -622,7 +622,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   // Detil proyek (31 Okt 2026, BSB). Memo dihapus (Nov 2026): detil boleh kosong, proyek boleh disimpan dulu.
   const [detail, setDetail] = useState(lead.detail_proyek || "");
   const [checklist, setChecklist] = useState(() => ({ ...(lead.proyek_checklist || {}) }));
-  const dataReady = !!date && dealValue > 0 && sph.trim().length > 0;
+  const dataReady = !!date && dealValue > 0 && sph.trim().length > 0 && so.trim().length > 0;
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -658,7 +658,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
               </label>
             </div>
             <label className="mt-3 block">
-              <span className="text-[11px] font-medium text-slate-500">No. SO</span>
+              <span className="text-[11px] font-medium text-slate-500">No. SO *</span>
               <input value={so} onChange={(e) => setSo(e.target.value)} placeholder="Nomor sales order (opsional)" className={field} />
             </label>
             <label className="mt-3 block">

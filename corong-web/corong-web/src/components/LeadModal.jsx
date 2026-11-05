@@ -443,6 +443,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
       if (!f.deal_date) { alert("Tanggal deal wajib diisi untuk tahap Proyek Deal."); return; }
       if (!(Number(f.deal_value) > 0)) { alert("Nilai proyek wajib diisi untuk tahap Proyek Deal."); return; }
       if (!String(f.sph_number || "").trim()) { alert("No. SPH wajib diisi untuk tahap Proyek Deal."); return; }
+      if (!String(f.memo?.so_number || "").trim()) { alert("No. SO wajib diisi untuk tahap Proyek Deal."); return; }
     }
     if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
@@ -686,6 +687,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                   />
                 </Field>
                 <Field label="No. SPH *"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101" /></Field>
+                <Field label="No. SO *"><input className={inp} value={f.memo?.so_number || ""} onChange={(e) => set("memo", { ...(f.memo || {}), so_number: e.target.value })} placeholder="Nomor sales order" /></Field>
                 <Field label={`Total diskon (%)${Number(f.discount_pct) > 0 ? ` · ${Math.round((Number(f.deal_value) || 0) * Number(f.discount_pct) / 100).toLocaleString("id-ID")}` : ""}`}>
                   <input
                     className={inp}
