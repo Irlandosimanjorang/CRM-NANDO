@@ -640,7 +640,10 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                 <div key={t.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-xs">
                   <div className="min-w-0">
                     <div className="font-medium text-slate-800">{t.deal_date ? fmtDate(t.deal_date) : "Tanpa tanggal"}{t.product_type ? ` · ${t.product_type}` : ""}</div>
-                    <div className={t.invoice_number ? "text-slate-600" : "text-slate-400"}>{t.invoice_number ? `Faktur ${t.invoice_number}` : "Faktur belum diisi"}</div>
+                    <div className={t.invoice_number ? "text-slate-600" : "text-slate-400"}>
+                      {t.invoice_number ? `Faktur ${t.invoice_number}` : "Faktur belum diisi"}
+                      {t.payment_type && <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t.payment_type}</span>}
+                    </div>
                   </div>
                   <div className="shrink-0 font-semibold tabular-nums text-slate-800">Rp {Number(t.deal_value || 0).toLocaleString("id-ID")}</div>
                 </div>

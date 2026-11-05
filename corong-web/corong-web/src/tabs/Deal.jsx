@@ -68,7 +68,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const namaCari = fNama.trim().toLowerCase();
     return txSource.filter((t) => {
       if (!wonIds.has(t.lead_id)) return false;
-      if (fTipe && (leadsById[t.lead_id]?.payment_type || "") !== fTipe) return false;
+      if (fTipe && (t.payment_type || "") !== fTipe) return false;
       if (namaCari && !String(leadsById[t.lead_id]?.name || t.lead_name || "").toLowerCase().includes(namaCari)) return false;
       if (fDari && String(t.deal_date || "") < fDari) return false;
       if (fSampai && String(t.deal_date || "") > fSampai) return false;
@@ -262,9 +262,12 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               {tanggal && <span className="tabular-nums">{fmtDate(tanggal)}</span>}
               {/* No. faktur tampil per transaksi (repeat order ikut), tanpa perlu membuka rincian. */}
               {!projectDeal && g.txs.length > 0
-                ? g.txs.map((t) => (t.invoice_number
-                  ? <span key={t.id} className="tabular-nums">Faktur {t.invoice_number}</span>
-                  : <span key={t.id} className="text-slate-400">Faktur belum diisi</span>))
+                ? g.txs.map((t) => (
+                  <span key={t.id} className="tabular-nums">
+                    {t.invoice_number ? `Faktur ${t.invoice_number}` : <span className="text-slate-400">Faktur belum diisi</span>}
+                    {t.payment_type && <span className="ml-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t.payment_type}</span>}
+                  </span>
+                ))
                 : lead?.invoice_number && <span className="tabular-nums">Faktur {lead.invoice_number}</span>}
               {projectDeal && lead?.sph_number && <span>SPH {lead.sph_number}</span>}
               {projectDeal && Number(lead?.discount_pct) > 0 && <span>Diskon {Number(lead.discount_pct)}%</span>}
@@ -276,7 +279,6 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             {(latest?.product_type || latest?.chemical) && (
               <span className="truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-[11.5px] font-medium text-slate-700">{latest.product_type || latest.chemical}</span>
             )}
-            {lead?.payment_type && <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11.5px] font-medium text-amber-800">{lead.payment_type}</span>}
             {typeBadge(lead?.company_type) && <span className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">{typeBadge(lead.company_type)}</span>}
           </div>
 
@@ -334,6 +336,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                         {t.product_type && <span>{t.product_type}</span>}
                         {t.sph_number && <span>SPH {t.sph_number}</span>}
                         {t.invoice_number ? <span>Faktur {t.invoice_number}</span> : !projectDeal && <span className="text-slate-400">Faktur belum diisi</span>}
+                        {t.payment_type && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t.payment_type}</span>}
                         {units && t.tonnage && <span className="font-mono">{qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : mask}</span>}
                       </div>
                       <div className="flex shrink-0 items-center gap-3 font-semibold tabular-nums text-slate-800">
