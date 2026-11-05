@@ -688,7 +688,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                   />
                 </Field>
                 <Field label="No. SPH"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101 (tentatif)" /></Field>
-                <Field label="No. SO"><input className={inp} value={f.memo?.so_number || ""} onChange={(e) => set("memo", { ...(f.memo || {}), so_number: e.target.value })} placeholder="Diisi setelah payment aktif" /></Field>
+                <Field label="No. SO"><input className={`${inp} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`} disabled={f.memo?.payment_aktif !== true} value={f.memo?.so_number || ""} onChange={(e) => set("memo", { ...(f.memo || {}), so_number: e.target.value })} placeholder={f.memo?.payment_aktif === true ? "Nomor sales order" : "Terkunci sampai payment aktif dari finance"} /></Field>
                 <Field label={`Diskon (Rp)${Number(f.discount_total) > 0 ? ` · ${Number(f.discount_total).toLocaleString("id-ID")}` : ""}`}>
                   <input
                     className={inp}

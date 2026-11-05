@@ -612,6 +612,8 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   const [sph, setSph] = useState(lead.sph_number || "");
   // No. SO disimpan di memo.so_number (tanpa kolom baru di tabel lead).
   const [so, setSo] = useState(lead.memo?.so_number || "");
+  // No. SO terkunci sampai finance mengaktifkan payment (memo.payment_aktif, diisi dari segmen Payment).
+  const soTerkunci = lead.memo?.payment_aktif !== true;
   const [discount, setDiscount] = useState(lead.discount_total ? String(lead.discount_total) : "");
   const dealValue = Number(value.replace(/\D/g, "")) || 0;
   // Diskon dalam Rupiah (nominal langsung, bukan persen).
@@ -654,7 +656,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
               </label>
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">No. SO</span>
-                <input value={so} onChange={(e) => setSo(e.target.value)} placeholder="Diisi setelah payment aktif" className={field} />
+                <input value={so} disabled={soTerkunci} onChange={(e) => setSo(e.target.value)} placeholder={soTerkunci ? "Terkunci sampai payment aktif dari finance" : "Nomor sales order"} className={field + " disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"} />
               </label>
               <label className="col-span-2 block">
                 <span className="text-[11px] font-medium text-slate-500">Diskon (Rp){discountValue ? " · " + fmtRp(discountValue) : ""}</span>
