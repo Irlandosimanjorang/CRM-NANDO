@@ -422,7 +422,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
         );
       })()}
     <div ref={boardRef} onScroll={(e) => setScrollPos(e.currentTarget.scrollLeft)} className="overflow-x-auto pb-4">
-      {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} productOptions={productOptions} />}
+      {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} marketplacePayment={marketplacePayment} productOptions={productOptions} />}
       {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} productOptions={productOptions} />}
       {fakturEdit && (
         <FakturEditDialog
@@ -526,17 +526,6 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                             <span className="truncate">{l.invoice_number ? `Faktur ${l.invoice_number}` : "Belum ada no. faktur"}</span>
                             <div className="shrink-0 text-right">
                               <div className="font-semibold tabular-nums text-slate-800">{fmtRp(Number(l.deal_value) || 0)}</div>
-                              {l.payment_type ? (
-                                <span className="mt-1 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10.5px] font-medium text-slate-700">{l.payment_type}</span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => { if (!suppressClick.current) setFakturEdit(l); }}
-                                  className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10.5px] font-medium text-amber-700 hover:bg-amber-100"
-                                >
-                                  + Tipe payment
-                                </button>
-                              )}
                             </div>
                           </div>
                           <button
@@ -753,11 +742,9 @@ function TrackingLinkDialog({ name, link, onClose }) {
 // jadi di sini cukup alasan dan catatan. Record deal dibuat otomatis dari lead ini.
 // Edit data faktur dari kartu (pipeline faktur, MAP): tanggal, no. faktur, dan nominal.
 // Pilihan tipe payment untuk pipeline faktur (dipakai di dialog faktur dan kartu).
-function FakturEditDialog({ lead, onCancel, onSave, marketplacePayment = false }) {
-  const PAYMENT_TYPES = paymentTypesFor(marketplacePayment);
+function FakturEditDialog({ lead, onCancel, onSave }) {
   const [date, setDate] = useState(lead.deal_date ? String(lead.deal_date).slice(0, 10) : todayISO());
   const [value, setValue] = useState(lead.deal_value ? String(lead.deal_value) : "");
-  const [paymentType, setPaymentType] = useState(lead.payment_type || "");
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -780,17 +767,10 @@ function FakturEditDialog({ lead, onCancel, onSave, marketplacePayment = false }
             <span className="text-[11px] font-medium text-slate-500">Nominal{nominal ? " · " + fmtRp(nominal) : ""}</span>
             <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))} placeholder="0" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] tabular-nums focus:border-slate-400 focus:outline-none" />
           </label>
-          <label className="block">
-            <span className="text-[11px] font-medium text-slate-500">Tipe payment</span>
-            <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none">
-              <option value="">Belum dipilih</option>
-              {PAYMENT_TYPES.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </label>
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
-          <button type="button" disabled={!ready} onClick={() => onSave({ date, value: nominal, payment_type: paymentType })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
+          <button type="button" disabled={!ready} onClick={() => onSave({ date, value: nominal })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
         </div>
       </div>
     </div>
@@ -866,7 +846,7 @@ function SelesaiDialog({ lead, onCancel, onSave }) {
   );
 }
 
-function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePipeline = false, productOptions = [] }) {
+function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePipeline = false, marketplacePayment = false, productOptions = [] }) {
   const [category, setCategory] = useState("");
   const [note, setNote] = useState("");
   const won = closing.result === "won";
@@ -874,6 +854,7 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
   const [date, setDate] = useState(todayISO());
   const [invoice, setInvoice] = useState(closing.lead.invoice_number || "");
   const [product, setProduct] = useState(closing.lead.product || "");
+  const [paymentType, setPaymentType] = useState(closing.lead.payment_type || "");
   const dealValue = Number(value.replace(/\D/g, "")) || 0;
   const lockedProject = won && projectDeal;
   const ready = !!category && (!won || dealValue > 0);
@@ -936,6 +917,13 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
                   <input value={product} onChange={(e) => setProduct(e.target.value)} list="nx-product-options-close" placeholder="Pilih atau ketik barang" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
                   <datalist id="nx-product-options-close">{productOptions.map((p) => <option key={p} value={p} />)}</datalist>
                 </label>
+                <label className="block">
+                  <span className="text-[11px] font-medium text-slate-500">Tipe payment</span>
+                  <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none">
+                    <option value="">Belum dipilih</option>
+                    {paymentTypesFor(marketplacePayment).map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </label>
               </>
             )}
             <label className="block">
@@ -971,7 +959,7 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
           <button
             type="button"
             disabled={!ready}
-            onClick={() => onSave(category, note.trim(), won && !projectDeal ? { value: dealValue, date, ...(invoicePipeline ? { invoice_number: invoice.trim(), product: product.trim() } : {}) } : null, lockedProject ? date : null)}
+            onClick={() => onSave(category, note.trim(), won && !projectDeal ? { value: dealValue, date, ...(invoicePipeline ? { invoice_number: invoice.trim(), product: product.trim(), payment_type: paymentType } : {}) } : null, lockedProject ? date : null)}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan
