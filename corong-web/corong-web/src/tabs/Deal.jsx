@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Trophy, Eye, EyeOff, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Trophy, Eye, EyeOff, ChevronDown, ChevronLeft, ChevronRight, Trash2, Loader2, Check } from "lucide-react";
 import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
 import { getFieldLabel, getQuantityUnits } from "../lib/industryTemplates";
@@ -226,13 +226,32 @@ export default function Deal({ leads, stages, dealTransactions, industry, org = 
   const [deletingTxIds, setDeletingTxIds] = useState(() => new Set());
   // Edit no. faktur satu transaksi dari rincian.
   const [editFaktur, setEditFaktur] = useState(null); // { id, value } saat sedang diedit
+  // Status simpan per transaksi: spinner saat proses, centang sebentar setelah berhasil.
+  const [savingTx, setSavingTx] = useState(null); // { id, kind: "tipe" | "faktur" }
+  const [savedTx, setSavedTx] = useState(null); // { id, kind }
+  const tandaiTersimpan = (id, kind) => {
+    setSavedTx({ id, kind });
+    setTimeout(() => setSavedTx((s) => (s?.id === id && s?.kind === kind ? null : s)), 1500);
+  };
   const simpanTipe = async (id) => {
-    try { await db.updateDealTxPayment(id, editTipe?.value || ""); setEditTipe(null); onChanged({ silent: true }); }
-    catch (e) { alert("Gagal simpan tipe pembayaran: " + e.message); }
+    setSavingTx({ id, kind: "tipe" });
+    try {
+      await db.updateDealTxPayment(id, editTipe?.value || "");
+      setEditTipe(null);
+      tandaiTersimpan(id, "tipe");
+      onChanged({ silent: true });
+    } catch (e) { alert("Gagal simpan tipe pembayaran: " + e.message); }
+    finally { setSavingTx(null); }
   };
   const simpanFaktur = async (id) => {
-    try { await db.updateDealTxInvoice(id, editFaktur?.value || ""); setEditFaktur(null); onChanged({ silent: true }); }
-    catch (e) { alert("Gagal simpan faktur: " + e.message); }
+    setSavingTx({ id, kind: "faktur" });
+    try {
+      await db.updateDealTxInvoice(id, editFaktur?.value || "");
+      setEditFaktur(null);
+      tandaiTersimpan(id, "faktur");
+      onChanged({ silent: true });
+    } catch (e) { alert("Gagal simpan faktur: " + e.message); }
+    finally { setSavingTx(null); }
   };
   const delTx = async (id) => {
     if (deletingTxIds.has(id)) return;
@@ -347,6 +366,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, org = 
                         {t.sph_number && <span>SPH {t.sph_number}</span>}
                         {t.invoice_number ? <span>Faktur {t.invoice_number}</span> : !projectDeal && <span className="text-slate-400">Faktur belum diisi</span>}
                         {t.payment_type && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t.payment_type}</span>}
+                        {savedTx?.id === t.id && <Check size={14} aria-label="Tersimpan" className="text-emerald-600" />}
                         {units && t.tonnage && <span className="font-mono">{qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : mask}</span>}
                       </div>
                       <div className="flex shrink-0 items-center gap-3 font-semibold tabular-nums text-slate-800">
@@ -389,7 +409,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, org = 
                             placeholder="No. faktur transaksi ini"
                             className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-[12.5px] text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
                           />
-                          <button type="button" onClick={() => simpanFaktur(t.id)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white">Simpan</button>
+                          <button type="button" onClick={() => simpanFaktur(t.id)} disabled={savingTx?.id === t.id} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-60">
+                            {savingTx?.id === t.id && savingTx.kind === "faktur" && <Loader2 size={13} className="animate-spin" />}
+                            {savingTx?.id === t.id && savingTx.kind === "faktur" ? "Menyimpan" : "Simpan"}
+                          </button>
                           <button type="button" onClick={() => setEditFaktur(null)} className="text-[12px] font-medium text-slate-500 hover:text-slate-800">Batal</button>
                         </div>
                       )}
@@ -404,7 +427,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, org = 
                             <option value="">Belum dipilih</option>
                             {paymentTypesFor(marketplacePayment).map((p) => <option key={p} value={p}>{p}</option>)}
                           </select>
-                          <button type="button" onClick={() => simpanTipe(t.id)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white">Simpan</button>
+                          <button type="button" onClick={() => simpanTipe(t.id)} disabled={savingTx?.id === t.id} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-60">
+                            {savingTx?.id === t.id && savingTx.kind === "tipe" && <Loader2 size={13} className="animate-spin" />}
+                            {savingTx?.id === t.id && savingTx.kind === "tipe" ? "Menyimpan" : "Simpan"}
+                          </button>
                           <button type="button" onClick={() => setEditTipe(null)} className="text-[12px] font-medium text-slate-500 hover:text-slate-800">Batal</button>
                         </div>
                       )}
