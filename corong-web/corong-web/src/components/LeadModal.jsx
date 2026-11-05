@@ -442,8 +442,9 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     if (enteringProyekDeal) {
       if (!f.deal_date) { alert("Tanggal deal wajib diisi untuk tahap Proyek Deal."); return; }
       if (!(Number(f.deal_value) > 0)) { alert("Nilai proyek wajib diisi untuk tahap Proyek Deal."); return; }
-      if (!String(f.sph_number || "").trim()) { alert("No. SPH wajib diisi untuk tahap Proyek Deal."); return; }
-      if (!String(f.memo?.so_number || "").trim()) { alert("No. SO wajib diisi untuk tahap Proyek Deal."); return; }
+      // No. SPH dan No. SO tentatif: boleh kosong. No. SO diisi setelah payment aktif.
+      if (proyekChecklist && !(f.proyek_checklist || {}).qr_berkas) { alert("QR code wajib dicentang untuk tahap Proyek Deal."); return; }
+      if (proyekChecklist && !(f.proyek_checklist || {}).invoice_performa) { alert("Performa invoice wajib dicentang untuk tahap Proyek Deal."); return; }
     }
     if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
@@ -686,19 +687,19 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                     onChange={(e) => set("deal_value", Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
                   />
                 </Field>
-                <Field label="No. SPH *"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101" /></Field>
-                <Field label="No. SO *"><input className={inp} value={f.memo?.so_number || ""} onChange={(e) => set("memo", { ...(f.memo || {}), so_number: e.target.value })} placeholder="Nomor sales order" /></Field>
-                <Field label={`Total diskon (%)${Number(f.discount_pct) > 0 ? ` · ${Math.round((Number(f.deal_value) || 0) * Number(f.discount_pct) / 100).toLocaleString("id-ID")}` : ""}`}>
+                <Field label="No. SPH"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101 (tentatif)" /></Field>
+                <Field label="No. SO"><input className={inp} value={f.memo?.so_number || ""} onChange={(e) => set("memo", { ...(f.memo || {}), so_number: e.target.value })} placeholder="Diisi setelah payment aktif" /></Field>
+                <Field label={`Diskon (Rp)${Number(f.discount_total) > 0 ? ` · ${Number(f.discount_total).toLocaleString("id-ID")}` : ""}`}>
                   <input
                     className={inp}
-                    inputMode="decimal"
+                    inputMode="numeric"
                     placeholder="0"
-                    value={f.discount_pct ?? ""}
-                    onChange={(e) => set("discount_pct", Math.min(100, Math.max(0, Number(e.target.value.replace(/[^\d.]/g, "")) || 0)) || null)}
+                    value={Number(f.discount_total) ? Number(f.discount_total).toLocaleString("id-ID") : ""}
+                    onChange={(e) => set("discount_total", Number(e.target.value.replace(/\D/g, "")) || 0)}
                   />
                 </Field>
               </div>
-              <Field label="Detil proyek *">
+              <Field label="Detil proyek">
                 <textarea className={`${inp} resize-none`} rows={3} placeholder="Ruang lingkup dan detail pekerjaan" value={f.detail_proyek || ""} onChange={(e) => set("detail_proyek", e.target.value)} />
               </Field>
               {/* Checklist proyek (3 Nov 2026): cukup centang, boleh disimpan belum lengkap dan diubah lagi nanti. */}
