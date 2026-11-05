@@ -610,6 +610,8 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   const [date, setDate] = useState(lead.deal_date || todayISO());
   const [value, setValue] = useState(lead.deal_value ? String(lead.deal_value) : "");
   const [sph, setSph] = useState(lead.sph_number || "");
+  // No. SO disimpan di memo.so_number (tanpa kolom baru di tabel lead).
+  const [so, setSo] = useState(lead.memo?.so_number || "");
   const [discount, setDiscount] = useState(lead.discount_pct ? String(lead.discount_pct) : "");
   const dealValue = Number(value.replace(/\D/g, "")) || 0;
   // Diskon dalam persen (17 Okt 2026, BSB); nominal Rp dihitung dari nilai proyek.
@@ -656,6 +658,10 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
               </label>
             </div>
             <label className="mt-3 block">
+              <span className="text-[11px] font-medium text-slate-500">No. SO</span>
+              <input value={so} onChange={(e) => setSo(e.target.value)} placeholder="Nomor sales order (opsional)" className={field} />
+            </label>
+            <label className="mt-3 block">
               <span className="text-[11px] font-medium text-slate-500">Status proyek</span>
               <select value={berjalan ? "berjalan" : "belum"} onChange={(e) => setBerjalan(e.target.value === "berjalan")} className={field}>
                 <option value="belum">Belum berjalan</option>
@@ -695,7 +701,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
           <button
             type="button"
             disabled={!dataReady}
-            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), checklist })}
+            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), so_number: so.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), checklist })}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan
