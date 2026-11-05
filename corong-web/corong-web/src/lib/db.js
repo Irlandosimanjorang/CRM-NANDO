@@ -1638,11 +1638,12 @@ export async function updateFaktur(lead, { value, date, invoice_number, payment_
   const { data: last, error: e1 } = await supabase.from("deal_transactions").select("id")
     .eq("lead_id", lead.id).order("deal_date", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (e1) throw e1;
+  // No. faktur ikut disimpan di transaksinya, supaya tab Deal bisa menampilkannya per transaksi.
   if (last) {
-    const { error } = await supabase.from("deal_transactions").update({ deal_value: value, deal_date: date }).eq("id", last.id);
+    const { error } = await supabase.from("deal_transactions").update({ deal_value: value, deal_date: date, invoice_number: invoice_number?.trim() || null }).eq("id", last.id);
     if (error) throw error;
   } else {
-    await addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: date, deal_value: value, product_type: lead.product });
+    await addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: date, deal_value: value, product_type: lead.product, invoice_number });
   }
   const { error } = await supabase.from("leads").update({ deal_value: value, deal_date: date, invoice_number: invoice_number || null, payment_type: payment_type || null }).eq("id", lead.id);
   if (error) throw error;

@@ -254,6 +254,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               {lead?.city && <span>{lead.city}</span>}
               {lead?.sales_owner && <span>{lead.sales_owner}</span>}
               {tanggal && <span className="tabular-nums">{fmtDate(tanggal)}</span>}
+              {/* No. faktur tampil per transaksi (repeat order ikut), tanpa perlu membuka rincian. */}
+              {g.txs.some((t) => t.invoice_number)
+                ? g.txs.filter((t) => t.invoice_number).map((t) => <span key={t.id} className="tabular-nums">Faktur {t.invoice_number}</span>)
+                : lead?.invoice_number && <span className="tabular-nums">Faktur {lead.invoice_number}</span>}
               {projectDeal && lead?.sph_number && <span>SPH {lead.sph_number}</span>}
               {projectDeal && Number(lead?.discount_pct) > 0 && <span>Diskon {Number(lead.discount_pct)}%</span>}
             </div>
