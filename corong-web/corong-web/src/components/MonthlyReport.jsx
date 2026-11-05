@@ -26,12 +26,18 @@ const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 const SOURCES = ["Meta", "Instagram", "TikTok", "Google", "Tokopedia", "Shopee", "Customer datang", "Database", "Lainnya"];
 const cn = (...v) => v.filter(Boolean).join(" ");
 // Transaksi deal dari server -> baris deal berbentuk lead (nilai & tanggal = transaksi itu).
-// Tipe pembayaran diambil dari transaksinya (txPay), bukan dari lead, supaya sama dengan tab Deal.
-const dealRowsFromEntries = (entries, leads, txPay) => {
+// Tipe pembayaran dan barang diambil dari transaksinya (txInfo), bukan dari lead, supaya sama dengan tab Deal.
+const dealRowsFromEntries = (entries, leads, txInfo) => {
   const byId = new Map(leads.map((l) => [l.id, l]));
   return entries.map((e) => {
     const lead = byId.get(e.lead_id);
-    return lead ? { ...lead, id: e.lead_id, deal_value: e.deal_value, deal_date: e.deal_date, assigned_to: e.pic, payment_type: e.tx_id ? (txPay.get(e.tx_id) ?? null) : lead.payment_type } : null;
+    if (!lead) return null;
+    const tx = e.tx_id ? txInfo.get(e.tx_id) : null;
+    return {
+      ...lead, id: e.lead_id, deal_value: e.deal_value, deal_date: e.deal_date, assigned_to: e.pic,
+      payment_type: tx ? (tx.payment_type ?? null) : lead.payment_type,
+      product_type: tx ? (tx.product_type || lead.product || null) : lead.product,
+    };
   }).filter(Boolean);
 };
 // Omzet per tipe payment (24 Okt 2026): dihitung dari deal yang sudah difilter sesuai lingkup laporan.
@@ -226,15 +232,22 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   // Transaksi deal dibaca dari server (rentang bulan lalu sampai akhir periode), lihat efek di bawah.
   // Per transaksi: repeat order masuk ke bulan transaksinya sendiri.
   const [entriesSrv, setEntriesSrv] = useState([]);
-  // Omzet per produk dalam periode yang dipilih (per transaksi, sama dengan tab lain).
-  const [productRows, setProductRows] = useState([]);
-  useEffect(() => {
-    let alive = true;
-    db.getProductBreakdown(range.from, range.to).then((r) => { if (alive) setProductRows(r); }).catch(() => { if (alive) setProductRows([]); });
-    return () => { alive = false; };
-  }, [range.from, range.to, allLeads]);
-  const txPay = useMemo(() => new Map(allTxRaw.map((t) => [t.id, t.payment_type])), [allTxRaw]);
-  const dealsSrv = useMemo(() => dealRowsFromEntries(entriesSrv, allLeads, txPay), [entriesSrv, allLeads, txPay]);
+  // Tipe pembayaran dan barang diambil dari transaksinya (sama dengan tab Deal).
+  const txInfo = useMemo(() => new Map(allTxRaw.map((t) => [t.id, { payment_type: t.payment_type, product_type: t.product_type }])), [allTxRaw]);
+  const dealsSrv = useMemo(() => dealRowsFromEntries(entriesSrv, allLeads, txInfo), [entriesSrv, allLeads, txInfo]);
+  // Omzet per produk dalam periode yang dipilih: dihitung dari transaksi (barang transaksi, cadangan barang lead).
+  const productRows = useMemo(() => {
+    const map = new Map();
+    for (const d of dealsSrv) {
+      const name = String(d.product_type || "").trim();
+      const key = name ? name.toLowerCase() : "belum diisi";
+      const cur = map.get(key) || { produk: name || "Belum diisi", deals: 0, omzet: 0 };
+      cur.deals += 1;
+      cur.omzet += Number(d.deal_value) || 0;
+      map.set(key, cur);
+    }
+    return [...map.values()].sort((a, b) => b.omzet - a.omzet);
+  }, [dealsSrv]);
   // Deal dari server, disaring lingkup marketing dan filter sumber/tahap seperti tabel lead.
   const dealLeads = useMemo(() => dealsSrv.filter((l) => !l.deleted_at && (scopeId === "all" || (l.assigned_to || l.user_id) === scopeId) && passF(l)), [dealsSrv, scopeId, srcF, stF, srcSlot]);
 
