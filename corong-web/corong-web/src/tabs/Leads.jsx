@@ -824,29 +824,26 @@ export default function Leads({
 
   // Peluang baru (repeat order) dari kolom Menang: lead kembali ke tahap awal dengan nilai dan outcome kosong.
   // Deal sebelumnya tetap ada di tab Deal (transaksi tidak dihapus), jadi menang berikutnya dicatat sebagai deal baru.
-  // Repeat order (4 Nov 2026): dibuat sebagai lead baru untuk klien yang sama. Lead lama tetap di tahap menangnya
-  // dengan nilai, tanggal, dan transaksinya, jadi deal sebelumnya tetap tercatat di tab Deal.
+  // Repeat order: lead yang sama dipindah lagi ke tahap awal (keluar dari Menang, hilang dari kolom Faktur).
+  // Transaksi deal tidak dihapus, jadi semua transaksinya tetap tercatat di tab Deal.
   const repeatBusy = useRef(false);
   const repeatOrderBaru = async (lead, key) => {
-    // Cegah klik ganda: tiap klik membuat lead baru, jadi selama proses berjalan tombol diabaikan.
+    // Cegah klik ganda selama proses berjalan.
     if (repeatBusy.current) return;
     repeatBusy.current = true;
-    // Sales hanya boleh membuat lead untuk dirinya sendiri (RLS), jadi peluang baru jadi milik yang membuatnya.
-    // Owner dan manager tetap memakai penanggung jawab lead lama.
     try {
-      const baru = await db.upsertLead({
-        name: lead.name, category: lead.category, company_type: lead.company_type, parent_company: lead.parent_company,
-        group_holding: lead.group_holding, email: lead.email, phone: lead.phone, key_person: lead.key_person,
-        key_person_title: lead.key_person_title, city: lead.city, province: lead.province, website: lead.website,
-        sales_owner: lead.sales_owner, assigned_to: canManage ? lead.assigned_to : myUid || undefined, priority: lead.priority,
-        stage_key: key, deal_value: 0, deal_date: null,
-      });
-      await db.addProgress(lead.id, `[Repeat order] peluang baru dibuat sebagai lead terpisah (${baru?.name || lead.name}). Proyek ini tetap di tahapnya.`);
+      // Lead tanpa transaksi (deal lama yang nilainya hanya ada di lead) dicatat dulu sebagai transaksi,
+      // supaya tetap muncul di tab Deal setelah lead keluar dari tahap menang.
+      const txs = await db.getLeadDealTransactions(lead.id);
+      if (txs.length === 0 && Number(lead.deal_value) > 0) {
+        await db.addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: lead.deal_date, deal_value: lead.deal_value, product_type: lead.product || null, invoice_number: lead.invoice_number || null });
+      }
+      await db.clearOutcome(lead.id);
+      await db.upsertLead({ ...lead, stage_key: key, deal_value: 0, deal_date: null });
+      await db.addProgress(lead.id, "[Repeat order] lead dibuka lagi dari Menang. Transaksi deal sebelumnya tetap tercatat di tab Deal.");
       onChanged({ silent: true });
-      const tahap = (stages || []).find((s) => s.key === key)?.label || "tahap pertama";
-      alert(`Peluang baru dibuat di tahap ${tahap}: ${baru?.name || lead.name}.`);
     } catch (e) {
-      alert("Gagal membuat peluang baru: " + (e?.message || e));
+      alert("Gagal membuka lagi peluang: " + (e?.message || e));
     } finally {
       repeatBusy.current = false;
     }
