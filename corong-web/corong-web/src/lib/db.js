@@ -1638,15 +1638,25 @@ export async function updateFaktur(lead, { value, date, invoice_number, payment_
   const { data: last, error: e1 } = await supabase.from("deal_transactions").select("id")
     .eq("lead_id", lead.id).order("deal_date", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (e1) throw e1;
-  // No. faktur ikut disimpan di transaksinya, supaya tab Deal bisa menampilkannya per transaksi.
+  // No. faktur hanya diubah kalau dikirim. Dialog edit faktur tidak lagi mengisinya, jadi faktur yang sudah ada tetap.
+  const fakturPatch = invoice_number === undefined ? {} : { invoice_number: invoice_number?.trim() || null };
   if (last) {
-    const { error } = await supabase.from("deal_transactions").update({ deal_value: value, deal_date: date, invoice_number: invoice_number?.trim() || null }).eq("id", last.id);
+    const { error } = await supabase.from("deal_transactions").update({ deal_value: value, deal_date: date, ...fakturPatch }).eq("id", last.id);
     if (error) throw error;
   } else {
     await addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: date, deal_value: value, product_type: lead.product, invoice_number });
   }
-  const { error } = await supabase.from("leads").update({ deal_value: value, deal_date: date, invoice_number: invoice_number || null, payment_type: payment_type || null }).eq("id", lead.id);
+  const { error } = await supabase.from("leads").update({ deal_value: value, deal_date: date, ...fakturPatch, payment_type: payment_type || null }).eq("id", lead.id);
   if (error) throw error;
+}
+
+// Semua transaksi deal satu lead, urut tanggal. Dipakai di form lead untuk menampilkan tiap transaksi.
+export async function getLeadDealTransactions(leadId) {
+  const { data, error } = await supabase.from("deal_transactions")
+    .select("id, deal_date, deal_value, invoice_number, product_type")
+    .eq("lead_id", leadId).order("deal_date", { ascending: true }).order("created_at", { ascending: true });
+  if (error) throw error;
+  return data || [];
 }
 
 // No. faktur satu transaksi (repeat order: tiap transaksi punya faktur sendiri).

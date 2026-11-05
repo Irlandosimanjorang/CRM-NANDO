@@ -252,6 +252,14 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const [needsSummary, setNeedsSummary] = useState(null);
   const [needsSummaryBusy, setNeedsSummaryBusy] = useState(false);
   const [needsSummaryErr, setNeedsSummaryErr] = useState("");
+  // Transaksi deal lead ini (satu baris per transaksi, termasuk repeat order). Diambil ulang setiap form dibuka.
+  const [txs, setTxs] = useState([]);
+  useEffect(() => {
+    if (!lead.id) return;
+    let alive = true;
+    db.getLeadDealTransactions(lead.id).then((rows) => { if (alive) setTxs(rows); }).catch(() => { if (alive) setTxs([]); });
+    return () => { alive = false; };
+  }, [lead.id]);
   useEffect(() => {
     if (!lead.id) return;
     let alive = true;
@@ -623,6 +631,22 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             )}
           </div>
           <Field label="Tahap"><select className={inp} value={f.stage_key || stages[0]?.key} onChange={(e) => onStageChange(e.target.value)}>{stages.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
+          {/* Transaksi deal: tiap transaksi jadi satu baris dengan fakturnya sendiri, otomatis dari tab Deal. Untuk semua org. */}
+          {lead.id && (
+            <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3">
+              <div className="text-xs font-semibold text-slate-700">Transaksi deal ({txs.length})</div>
+              {txs.length === 0 && <div className="text-xs text-slate-400">Belum ada transaksi.</div>}
+              {txs.map((t) => (
+                <div key={t.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800">{t.deal_date ? fmtDate(t.deal_date) : "Tanpa tanggal"}{t.product_type ? ` · ${t.product_type}` : ""}</div>
+                    <div className={t.invoice_number ? "text-slate-600" : "text-slate-400"}>{t.invoice_number ? `Faktur ${t.invoice_number}` : "Faktur belum diisi"}</div>
+                  </div>
+                  <div className="shrink-0 font-semibold tabular-nums text-slate-800">Rp {Number(t.deal_value || 0).toLocaleString("id-ID")}</div>
+                </div>
+              ))}
+            </div>
+          )}
           {/* Data proyek (15 Okt 2026, saklar project_deal): selalu tampil untuk org yang punya saklar. Tanggal, nilai, dan No. SPH
               wajib saat lead masuk tahap Proyek Deal. */}
           {projectDeal && (
