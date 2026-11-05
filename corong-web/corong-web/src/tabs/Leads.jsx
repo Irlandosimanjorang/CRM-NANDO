@@ -827,15 +827,21 @@ export default function Leads({
   // Repeat order (4 Nov 2026): dibuat sebagai lead baru untuk klien yang sama. Lead lama tetap di tahap menangnya
   // dengan nilai, tanggal, dan transaksinya, jadi deal sebelumnya tetap tercatat di tab Deal.
   const repeatOrderBaru = async (lead, key) => {
-    const baru = await db.upsertLead({
-      name: lead.name, category: lead.category, company_type: lead.company_type, parent_company: lead.parent_company,
-      group_holding: lead.group_holding, email: lead.email, phone: lead.phone, key_person: lead.key_person,
-      key_person_title: lead.key_person_title, city: lead.city, province: lead.province, website: lead.website,
-      sales_owner: lead.sales_owner, assigned_to: lead.assigned_to, priority: lead.priority,
-      stage_key: key, deal_value: 0, deal_date: null,
-    });
-    await db.addProgress(lead.id, `[Repeat order] peluang baru dibuat sebagai lead terpisah (${baru?.name || lead.name}). Proyek ini tetap di tahapnya.`);
-    onChanged({ silent: true });
+    // Sales hanya boleh membuat lead untuk dirinya sendiri (RLS), jadi peluang baru jadi milik yang membuatnya.
+    // Owner dan manager tetap memakai penanggung jawab lead lama.
+    try {
+      const baru = await db.upsertLead({
+        name: lead.name, category: lead.category, company_type: lead.company_type, parent_company: lead.parent_company,
+        group_holding: lead.group_holding, email: lead.email, phone: lead.phone, key_person: lead.key_person,
+        key_person_title: lead.key_person_title, city: lead.city, province: lead.province, website: lead.website,
+        sales_owner: lead.sales_owner, assigned_to: canManage ? lead.assigned_to : myUid || undefined, priority: lead.priority,
+        stage_key: key, deal_value: 0, deal_date: null,
+      });
+      await db.addProgress(lead.id, `[Repeat order] peluang baru dibuat sebagai lead terpisah (${baru?.name || lead.name}). Proyek ini tetap di tahapnya.`);
+      onChanged({ silent: true });
+    } catch (e) {
+      alert("Gagal membuat peluang baru: " + (e?.message || e));
+    }
   };
 
   const reopenLead = (lead, key) => repeatOrderBaru(lead, key);
