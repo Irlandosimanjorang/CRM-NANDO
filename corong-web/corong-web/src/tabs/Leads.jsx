@@ -826,7 +826,11 @@ export default function Leads({
   // Deal sebelumnya tetap ada di tab Deal (transaksi tidak dihapus), jadi menang berikutnya dicatat sebagai deal baru.
   // Repeat order (4 Nov 2026): dibuat sebagai lead baru untuk klien yang sama. Lead lama tetap di tahap menangnya
   // dengan nilai, tanggal, dan transaksinya, jadi deal sebelumnya tetap tercatat di tab Deal.
+  const repeatBusy = useRef(false);
   const repeatOrderBaru = async (lead, key) => {
+    // Cegah klik ganda: tiap klik membuat lead baru, jadi selama proses berjalan tombol diabaikan.
+    if (repeatBusy.current) return;
+    repeatBusy.current = true;
     // Sales hanya boleh membuat lead untuk dirinya sendiri (RLS), jadi peluang baru jadi milik yang membuatnya.
     // Owner dan manager tetap memakai penanggung jawab lead lama.
     try {
@@ -839,8 +843,12 @@ export default function Leads({
       });
       await db.addProgress(lead.id, `[Repeat order] peluang baru dibuat sebagai lead terpisah (${baru?.name || lead.name}). Proyek ini tetap di tahapnya.`);
       onChanged({ silent: true });
+      const tahap = (stages || []).find((s) => s.key === key)?.label || "tahap pertama";
+      alert(`Peluang baru dibuat di tahap ${tahap}: ${baru?.name || lead.name}.`);
     } catch (e) {
       alert("Gagal membuat peluang baru: " + (e?.message || e));
+    } finally {
+      repeatBusy.current = false;
     }
   };
 
