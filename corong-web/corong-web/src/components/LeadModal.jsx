@@ -226,6 +226,10 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   // Pilihan klien existing untuk lead baru: data identitas klien diisi dari lead klien itu (4 Nov 2026).
   const [klienPilih, setKlienPilih] = useState("");
+  const [klienCari, setKlienCari] = useState("");
+  const [klienBuka, setKlienBuka] = useState(false);
+  const klienNama = klienOptions.find((k) => k.id === klienPilih)?.name || "";
+  const klienHasil = klienOptions.filter((k) => !klienCari.trim() || String(k.name || "").toLowerCase().includes(klienCari.trim().toLowerCase())).slice(0, 50);
   const pilihKlien = (id) => {
     setKlienPilih(id);
     const sumber = klienOptions.find((k) => k.id === id);
@@ -595,12 +599,25 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
           )}
           {!lead.id && klienOptions.length > 0 && (
             <Field label="Klien">
-              <select className={inp} value={klienPilih} onChange={(e) => pilihKlien(e.target.value)}>
-                <option value="">Klien baru</option>
-                <optgroup label="Klien existing">
-                  {klienOptions.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
-                </optgroup>
-              </select>
+              <div className="relative">
+                <input
+                  className={inp}
+                  value={klienBuka ? klienCari : (klienNama || "Klien baru")}
+                  placeholder="Ketik nama klien untuk mencari"
+                  onFocus={() => { setKlienBuka(true); setKlienCari(""); }}
+                  onBlur={() => setTimeout(() => setKlienBuka(false), 150)}
+                  onChange={(e) => setKlienCari(e.target.value)}
+                />
+                {klienBuka && (
+                  <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { pilihKlien(""); setKlienBuka(false); }} className="block w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50">Klien baru</button>
+                    {klienHasil.map((k) => (
+                      <button key={k.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { pilihKlien(k.id); setKlienBuka(false); }} className="block w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50">{k.name}</button>
+                    ))}
+                    {klienHasil.length === 0 && <div className="px-3 py-2 text-xs text-slate-400">Tidak ada klien yang cocok.</div>}
+                  </div>
+                )}
+              </div>
             </Field>
           )}
           <Field label={lbl("name", "Nama perusahaan") + " *"}><input className={inp} value={f.name || ""} onChange={(e) => set("name", uppercaseNames ? e.target.value.toUpperCase() : e.target.value)} /></Field>
