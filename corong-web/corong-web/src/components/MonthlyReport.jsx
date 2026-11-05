@@ -5,7 +5,7 @@ import { downloadReportXlsx } from "../lib/reportXlsx";
 import * as db from "../lib/db";
 import { fmtRp } from "../lib/helpers";
 import { getCustomFieldSlots } from "../lib/industryTemplates";
-import { normalizePlatform } from "../lib/adsImport";
+import { sourceSlotOf, sourceOfLead as sourceOfLeadBy } from "../lib/leadSource";
 import { Panel, PanelHeader, Pill, Meter, EmptyState } from "../ui";
 import AdsAnalysis from "./AdsAnalysis";
 import RekapLaporan from "./RekapLaporan";
@@ -210,8 +210,8 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
   const inR = (d) => { const k = String(d || "").slice(0, 10); return k >= range.from && k <= range.to; };
 
   // Sumber lead dibaca seperti di tab Iklan: isian "Sumber lead" bila ada, selain itu kolom sumber bawaan.
-  const srcSlot = useMemo(() => getCustomFieldSlots(org?.industry, org?.custom_field_labels).find((s) => /sumber/i.test(s.label)), [org]);
-  const sourceOfLead = (l) => normalizePlatform((srcSlot ? l[srcSlot.key] : "") || l.source || "") || "Tidak diisi";
+  const srcSlot = useMemo(() => sourceSlotOf(org), [org]);
+  const sourceOfLead = (l) => sourceOfLeadBy(l, srcSlot);
   const sourceOptions = useMemo(() => [...new Set(allLeads.filter((l) => !l.deleted_at).map(sourceOfLead))].sort(), [allLeads, srcSlot]);
   const passF = (l) => (srcF === "all" || sourceOfLead(l) === srcF) && (stF === "all" || l.stage_key === stF);
   const filtered = srcF !== "all" || stF !== "all";
