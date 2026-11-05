@@ -753,8 +753,8 @@ function FakturEditDialog({ lead, onCancel, onSave }) {
   const nominal = Number(value.replace(/\D/g, "")) || 0;
   const ready = !!date && nominal > 0;
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="m-auto w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
         <h3 className="text-[15px] font-semibold text-slate-900">Edit faktur</h3>
         <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
         {/* No. faktur tidak diisi di sini: tiap transaksi punya faktur sendiri, dicatat saat pindah ke tahap Faktur. */}
@@ -865,10 +865,10 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
   }, [onCancel]);
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4"
+      className="fixed inset-0 z-50 flex overflow-y-auto bg-slate-900/30 p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+      <div className="m-auto w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${won ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
           {won ? "Menang" : "Kalah"}
         </span>
