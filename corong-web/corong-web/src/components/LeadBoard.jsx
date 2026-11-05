@@ -644,7 +644,8 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
             <div className="mt-4 grid grid-cols-2 gap-2">
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">Tanggal deal *</span>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+                {/* Tanggal deal otomatis (7 Nov 2026): hari ini saat lead masuk Proyek Deal, tidak bisa diubah. */}
+                <input type="date" value={date} readOnly disabled className={field + " cursor-not-allowed bg-slate-50 text-slate-500"} />
               </label>
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">Nilai proyek *{dealValue ? " · " + fmtRp(dealValue) : ""}</span>

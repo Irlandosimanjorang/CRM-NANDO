@@ -440,7 +440,6 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const save = async () => {
     if (!f.name?.trim()) { alert("Nama wajib diisi."); return; }
     if (enteringProyekDeal) {
-      if (!f.deal_date) { alert("Tanggal deal wajib diisi untuk tahap Proyek Deal."); return; }
       if (!(Number(f.deal_value) > 0)) { alert("Nilai proyek wajib diisi untuk tahap Proyek Deal."); return; }
       // No. SPH dan No. SO tentatif: boleh kosong. No. SO diisi setelah payment aktif.
       if (proyekChecklist && !(f.proyek_checklist || {}).qr_berkas) { alert("QR code wajib dicentang untuk tahap Proyek Deal."); return; }
@@ -451,7 +450,8 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
     try {
       // Tipe pembayaran tidak ditulis dari form lead: nilainya dari pop-up pindah ke Faktur (per transaksi).
       // Form yang sudah lama terbuka bisa membawa nilai lama, jadi tidak boleh menimpanya.
-      const tersimpan = await db.upsertLead({ ...f, payment_type: undefined });
+      // Tanggal deal otomatis (7 Nov 2026): hari ini kalau belum ada saat masuk Proyek Deal.
+      const tersimpan = await db.upsertLead({ ...f, payment_type: undefined, ...(enteringProyekDeal && !f.deal_date ? { deal_date: new Date().toLocaleDateString("sv-SE") } : {}) });
       // Lead baru dari klien existing: penanda "[Repeat order]" dicatat di lead klien itu, sebagai jejak repeat order.
       if (!lead.id && klienPilih) await db.addProgress(klienPilih, `[Repeat order] lead baru dibuat untuk klien ini (${tersimpan?.name || f.name}).`).catch(() => {});
       if (showOutcome && outcomeResult && lead.id) {
@@ -677,7 +677,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             <div className="border border-slate-200 bg-slate-50 rounded-2xl p-3 space-y-2.5">
               <div className="text-xs font-semibold text-slate-700">Data proyek {enteringProyekDeal ? "(wajib diisi)" : ""}</div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Tanggal deal *"><input type="date" className={inp} value={f.deal_date || ""} onChange={(e) => set("deal_date", e.target.value || null)} /></Field>
+                <Field label="Tanggal deal"><input type="date" className={`${inp} cursor-not-allowed bg-slate-50 text-slate-500`} readOnly disabled value={f.deal_date || new Date().toLocaleDateString("sv-SE")} /></Field>
                 <Field label="Nilai proyek (Rp) *">
                   <input
                     className={inp}
