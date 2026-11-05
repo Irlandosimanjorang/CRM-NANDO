@@ -227,18 +227,18 @@ export default function Deal({ leads, stages, dealTransactions, industry, org = 
   // Edit no. faktur satu transaksi dari rincian.
   const [editFaktur, setEditFaktur] = useState(null); // { id, value } saat sedang diedit
   const simpanTipe = async (id) => {
-    try { await db.updateDealTxPayment(id, editTipe?.value || ""); setEditTipe(null); onChanged(); }
+    try { await db.updateDealTxPayment(id, editTipe?.value || ""); setEditTipe(null); onChanged({ silent: true }); }
     catch (e) { alert("Gagal simpan tipe pembayaran: " + e.message); }
   };
   const simpanFaktur = async (id) => {
-    try { await db.updateDealTxInvoice(id, editFaktur?.value || ""); setEditFaktur(null); onChanged(); }
+    try { await db.updateDealTxInvoice(id, editFaktur?.value || ""); setEditFaktur(null); onChanged({ silent: true }); }
     catch (e) { alert("Gagal simpan faktur: " + e.message); }
   };
   const delTx = async (id) => {
     if (deletingTxIds.has(id)) return;
     if (!window.confirm("Hapus transaksi ini?")) return;
     setDeletingTxIds((prev) => new Set(prev).add(id));
-    try { await db.deleteDealTransaction(id); onChanged(); }
+    try { await db.deleteDealTransaction(id); onChanged({ silent: true }); }
     catch (e) { alert("Gagal hapus: " + e.message); }
     finally { setDeletingTxIds((prev) => { const n = new Set(prev); n.delete(id); return n; }); }
   };
