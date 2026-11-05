@@ -756,7 +756,6 @@ function TrackingLinkDialog({ name, link, onClose }) {
 function FakturEditDialog({ lead, onCancel, onSave, marketplacePayment = false }) {
   const PAYMENT_TYPES = paymentTypesFor(marketplacePayment);
   const [date, setDate] = useState(lead.deal_date ? String(lead.deal_date).slice(0, 10) : todayISO());
-  const [invoice, setInvoice] = useState(lead.invoice_number || "");
   const [value, setValue] = useState(lead.deal_value ? String(lead.deal_value) : "");
   const [paymentType, setPaymentType] = useState(lead.payment_type || "");
   useEffect(() => {
@@ -771,11 +770,8 @@ function FakturEditDialog({ lead, onCancel, onSave, marketplacePayment = false }
       <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
         <h3 className="text-[15px] font-semibold text-slate-900">Edit faktur</h3>
         <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
+        {/* No. faktur tidak diisi di sini: tiap transaksi punya faktur sendiri, dicatat saat pindah ke tahap Faktur. */}
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <label className="col-span-2 block">
-            <span className="text-[11px] font-medium text-slate-500">No. faktur</span>
-            <input value={invoice} onChange={(e) => setInvoice(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
-          </label>
           <label className="block">
             <span className="text-[11px] font-medium text-slate-500">Tanggal faktur</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-[12.5px] focus:border-slate-400 focus:outline-none" />
@@ -794,7 +790,7 @@ function FakturEditDialog({ lead, onCancel, onSave, marketplacePayment = false }
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
-          <button type="button" disabled={!ready} onClick={() => onSave({ date, invoice_number: invoice.trim(), value: nominal, payment_type: paymentType })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
+          <button type="button" disabled={!ready} onClick={() => onSave({ date, value: nominal, payment_type: paymentType })} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Simpan</button>
         </div>
       </div>
     </div>
