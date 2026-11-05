@@ -1649,6 +1649,12 @@ export async function updateFaktur(lead, { value, date, invoice_number, payment_
   if (error) throw error;
 }
 
+// No. faktur satu transaksi (repeat order: tiap transaksi punya faktur sendiri).
+export async function updateDealTxInvoice(id, invoice_number) {
+  const { error } = await supabase.from("deal_transactions").update({ invoice_number: invoice_number?.trim() || null }).eq("id", id);
+  if (error) throw error;
+}
+
 export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type, sph_number, invoice_number }) {
   cekNilaiDeal(deal_value);
   const uid = await currentUserId();

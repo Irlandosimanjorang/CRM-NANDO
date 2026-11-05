@@ -212,6 +212,12 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   // hapus sebelumnya bisa nembak 2x db.deleteDealTransaction buat id yang
   // sama sebelum list sempet re-render. Digurad pake Set id yang lagi diproses.
   const [deletingTxIds, setDeletingTxIds] = useState(() => new Set());
+  // Edit no. faktur satu transaksi dari rincian.
+  const [editFaktur, setEditFaktur] = useState(null); // { id, value } saat sedang diedit
+  const simpanFaktur = async (id) => {
+    try { await db.updateDealTxInvoice(id, editFaktur?.value || ""); setEditFaktur(null); onChanged(); }
+    catch (e) { alert("Gagal simpan faktur: " + e.message); }
+  };
   const delTx = async (id) => {
     if (deletingTxIds.has(id)) return;
     if (!window.confirm("Hapus transaksi ini?")) return;
@@ -255,8 +261,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               {lead?.sales_owner && <span>{lead.sales_owner}</span>}
               {tanggal && <span className="tabular-nums">{fmtDate(tanggal)}</span>}
               {/* No. faktur tampil per transaksi (repeat order ikut), tanpa perlu membuka rincian. */}
-              {g.txs.some((t) => t.invoice_number)
-                ? g.txs.filter((t) => t.invoice_number).map((t) => <span key={t.id} className="tabular-nums">Faktur {t.invoice_number}</span>)
+              {!projectDeal && g.txs.length > 0
+                ? g.txs.map((t) => (t.invoice_number
+                  ? <span key={t.id} className="tabular-nums">Faktur {t.invoice_number}</span>
+                  : <span key={t.id} className="text-slate-400">Faktur belum diisi</span>))
                 : lead?.invoice_number && <span className="tabular-nums">Faktur {lead.invoice_number}</span>}
               {projectDeal && lead?.sph_number && <span>SPH {lead.sph_number}</span>}
               {projectDeal && Number(lead?.discount_pct) > 0 && <span>Diskon {Number(lead.discount_pct)}%</span>}
@@ -320,16 +328,25 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                 <p className="text-[11.5px] text-slate-400">Rincian transaksi. Nilai ini tidak dijumlahkan lagi ke total.</p>
                 <ul className="mt-2 divide-y divide-slate-100">
                   {g.txs.map((t) => (
-                    <li key={t.id} className="flex items-center justify-between gap-4 py-2 text-[12.5px]">
+                    <li key={t.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 text-[12.5px]">
                       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
                         <span className="tabular-nums">{t.deal_date ? fmtDate(t.deal_date) : "—"}</span>
                         {t.product_type && <span>{t.product_type}</span>}
                         {t.sph_number && <span>SPH {t.sph_number}</span>}
-                        {t.invoice_number && <span>Faktur {t.invoice_number}</span>}
+                        {t.invoice_number ? <span>Faktur {t.invoice_number}</span> : !projectDeal && <span className="text-slate-400">Faktur belum diisi</span>}
                         {units && t.tonnage && <span className="font-mono">{qtyRevealed ? `${Number(t.tonnage).toLocaleString("id-ID")} ${unitLabel(units, t.tonnage_unit)}` : mask}</span>}
                       </div>
                       <div className="flex shrink-0 items-center gap-3 font-semibold tabular-nums text-slate-800">
                         {t.deal_value ? (rpRevealed ? fmtRp(t.deal_value) : mask) : "—"}
+                        {!projectDeal && !t.auto && (
+                          <button
+                            type="button"
+                            onClick={() => setEditFaktur({ id: t.id, value: t.invoice_number || "" })}
+                            className="text-[11.5px] font-medium text-slate-500 hover:text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
+                          >
+                            Ubah faktur
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => delTx(t.id)}
@@ -340,6 +357,20 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                           <Trash2 size={13} />
                         </button>
                       </div>
+                      {editFaktur?.id === t.id && (
+                        <div className="flex w-full items-center gap-2">
+                          <input
+                            autoFocus
+                            value={editFaktur.value}
+                            onChange={(e) => setEditFaktur({ id: t.id, value: e.target.value })}
+                            onKeyDown={(e) => { if (e.key === "Enter") simpanFaktur(t.id); if (e.key === "Escape") setEditFaktur(null); }}
+                            placeholder="No. faktur transaksi ini"
+                            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-[12.5px] text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
+                          />
+                          <button type="button" onClick={() => simpanFaktur(t.id)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white">Simpan</button>
+                          <button type="button" onClick={() => setEditFaktur(null)} className="text-[12px] font-medium text-slate-500 hover:text-slate-800">Batal</button>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
