@@ -1642,11 +1642,13 @@ export async function updateFaktur(lead, { value, date, invoice_number, payment_
   if (e1) throw e1;
   // No. faktur hanya diubah kalau dikirim. Dialog edit faktur tidak lagi mengisinya, jadi faktur yang sudah ada tetap.
   const fakturPatch = invoice_number === undefined ? {} : { invoice_number: invoice_number?.trim() || null };
+  // Tipe payment disimpan per transaksi juga, supaya transaksi lama tidak ikut berubah saat transaksi baru dipilih.
+  const tipePatch = payment_type === undefined ? {} : { payment_type: payment_type || null };
   if (last) {
-    const { error } = await supabase.from("deal_transactions").update({ deal_value: value, deal_date: date, ...fakturPatch }).eq("id", last.id);
+    const { error } = await supabase.from("deal_transactions").update({ deal_value: value, deal_date: date, ...fakturPatch, ...tipePatch }).eq("id", last.id);
     if (error) throw error;
   } else {
-    await addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: date, deal_value: value, product_type: lead.product, invoice_number });
+    await addDealTransaction({ lead_id: lead.id, lead_name: lead.name, deal_date: date, deal_value: value, product_type: lead.product, invoice_number, payment_type });
   }
   const paymentPatch = payment_type === undefined ? {} : { payment_type: payment_type || null };
   const { error } = await supabase.from("leads").update({ deal_value: value, deal_date: date, ...fakturPatch, ...paymentPatch }).eq("id", lead.id);
@@ -1656,7 +1658,7 @@ export async function updateFaktur(lead, { value, date, invoice_number, payment_
 // Semua transaksi deal satu lead, urut tanggal. Dipakai di form lead untuk menampilkan tiap transaksi.
 export async function getLeadDealTransactions(leadId) {
   const { data, error } = await supabase.from("deal_transactions")
-    .select("id, deal_date, deal_value, invoice_number, product_type")
+    .select("id, deal_date, deal_value, invoice_number, product_type, payment_type")
     .eq("lead_id", leadId).order("deal_date", { ascending: true }).order("created_at", { ascending: true });
   if (error) throw error;
   return data || [];
@@ -1668,7 +1670,7 @@ export async function updateDealTxInvoice(id, invoice_number) {
   if (error) throw error;
 }
 
-export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type, sph_number, invoice_number }) {
+export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_value, tonnage, tonnage_unit, chemical, product_type, sph_number, invoice_number, payment_type }) {
   cekNilaiDeal(deal_value);
   const uid = await currentUserId();
   const orgId = await getMyOrgId();
@@ -1678,6 +1680,7 @@ export async function addDealTransaction({ lead_id, lead_name, deal_date, deal_v
     tonnage_unit: tonnage_unit || "ton", chemical: chemical || "",
     product_type: product_type?.trim() || null,
     sph_number: sph_number?.trim() || null, invoice_number: invoice_number?.trim() || null,
+    payment_type: payment_type || null,
   }).select().single();
   if (error) throw error;
   // Transaksi deal berarti lead sudah menang: tahapnya ikut pindah ke tahap menang kalau belum.
