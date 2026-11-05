@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
-import { MEMO_FIELDS } from "../lib/proyekMemo";
 import { paymentTypesFor } from "../lib/paymentTypes";
 import { PROYEK_CHECKLIST } from "../lib/proyekChecklist";
 import * as db from "../lib/db";
@@ -628,12 +627,9 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   const discountValue = Math.round(dealValue * discountPct / 100);
   // Status proyek (17 Okt 2026, BSB): kalau "Berjalan", lead langsung pindah ke tahap Proyek Berjalan.
   const [berjalan, setBerjalan] = useState(lead.stage_key === "proyek_berjalan");
-  // Detil proyek (31 Okt 2026, BSB): langkah 1 data proyek dan detil, langkah 2 memo di halaman berikutnya.
+  // Detil proyek (31 Okt 2026, BSB). Memo dihapus (Nov 2026): detil boleh kosong, proyek boleh disimpan dulu.
   const [detail, setDetail] = useState(lead.detail_proyek || "");
-  const [memo, setMemo] = useState(() => Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, lead.memo?.[f.key] || ""])));
-  const [step, setStep] = useState(1);
   const [checklist, setChecklist] = useState(() => ({ ...(lead.proyek_checklist || {}) }));
-  // Sementara detil dan memo belum wajib: proyek boleh disimpan dulu, dilengkapi nanti.
   const dataReady = !!date && dealValue > 0 && sph.trim().length > 0;
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
@@ -648,10 +644,9 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
     >
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
         <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">Proyek Deal</span>
-        <h3 className="mt-2 text-[15px] font-semibold text-slate-900">{step === 1 ? "Data proyek" : "Memo"}</h3>
+        <h3 className="mt-2 text-[15px] font-semibold text-slate-900">Data proyek</h3>
         <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
-        {step === 1 ? (
-          <>
+        <>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">Tanggal deal *</span>
@@ -704,37 +699,17 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
               <span className="text-[11px] font-medium text-slate-500">Detil proyek</span>
               <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={3} placeholder="Ruang lingkup dan detail pekerjaan" className={field + " resize-none"} />
             </label>
-          </>
-        ) : (
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {MEMO_FIELDS.map((f) => (
-              <div key={f.key} className={f.wide ? "col-span-2" : ""}>
-                <label className="block">
-                  <span className="text-[11px] font-medium text-slate-500">{f.label}</span>
-                  <input value={memo[f.key]} onChange={(e) => setMemo((m) => ({ ...m, [f.key]: e.target.value }))} placeholder={f.placeholder} className={field} />
-                </label>
-              </div>
-            ))}
-          </div>
-        )}
+        </>
         <div className="mt-4 flex justify-end gap-2">
-          {step === 1 ? (
-            <>
-              <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
-              <button type="button" disabled={!dataReady} onClick={() => setStep(2)} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40">Lanjut ke memo</button>
-            </>
-          ) : (
-            <>
-              <button type="button" onClick={() => setStep(1)} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Kembali</button>
-              <button
-                type="button"
-                onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), memo: Object.fromEntries(MEMO_FIELDS.map((f) => [f.key, memo[f.key].trim()])), checklist })}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
-              >
-                Simpan
-              </button>
-            </>
-          )}
+          <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button
+            type="button"
+            disabled={!dataReady}
+            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), checklist })}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
+          >
+            Simpan
+          </button>
         </div>
       </div>
     </div>
