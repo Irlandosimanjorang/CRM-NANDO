@@ -422,19 +422,20 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
         );
       })()}
     <div ref={boardRef} onScroll={(e) => setScrollPos(e.currentTarget.scrollLeft)} className="overflow-x-auto pb-4">
-      {closing && <CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} marketplacePayment={marketplacePayment} productOptions={productOptions} />}
-      {dealStage && <DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} productOptions={productOptions} />}
-      {fakturEdit && (
+      {/* Pop-up dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke kartu/wrapper yang punya transform (bikin tidak bisa di-scroll). */}
+      {closing && createPortal(<CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} marketplacePayment={marketplacePayment} productOptions={productOptions} />, document.body)}
+      {dealStage && createPortal(<DealStageDialog lead={dealStage.lead} onCancel={cancelDealStage} onSave={saveDealStage} productOptions={productOptions} />, document.body)}
+      {fakturEdit && createPortal(
         <FakturEditDialog
-          marketplacePayment={marketplacePayment}
           lead={fakturEdit}
           onCancel={() => setFakturEdit(null)}
           onSave={(values) => { const lead = fakturEdit; setFakturEdit(null); Promise.resolve(onEditFaktur?.(lead, values)).catch((e) => alert("Gagal menyimpan faktur: " + (e?.message || e))); }}
-        />
+        />,
+        document.body
       )}
-      {proyek && <ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} proyekChecklist={proyekChecklist} />}
-      {trackingLink && <TrackingLinkDialog name={trackingLink.name} link={trackingLink.link} onClose={() => setTrackingLink(null)} />}
-      {selesai && <SelesaiDialog lead={selesai.lead} onCancel={cancelSelesai} onSave={saveSelesai} />}
+      {proyek && createPortal(<ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} proyekChecklist={proyekChecklist} />, document.body)}
+      {trackingLink && createPortal(<TrackingLinkDialog name={trackingLink.name} link={trackingLink.link} onClose={() => setTrackingLink(null)} />, document.body)}
+      {selesai && createPortal(<SelesaiDialog lead={selesai.lead} onCancel={cancelSelesai} onSave={saveSelesai} />, document.body)}
 
       {/* Kartu yang diseret dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke wrapper yang punya transform. */}
       {drag && createPortal(
