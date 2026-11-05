@@ -1664,6 +1664,12 @@ export async function getLeadDealTransactions(leadId) {
   return data || [];
 }
 
+// Tipe pembayaran satu transaksi.
+export async function updateDealTxPayment(id, payment_type) {
+  const { error } = await supabase.from("deal_transactions").update({ payment_type: payment_type || null }).eq("id", id);
+  if (error) throw error;
+}
+
 // No. faktur satu transaksi (repeat order: tiap transaksi punya faktur sendiri).
 export async function updateDealTxInvoice(id, invoice_number) {
   const { error } = await supabase.from("deal_transactions").update({ invoice_number: invoice_number?.trim() || null }).eq("id", id);

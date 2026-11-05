@@ -5,6 +5,7 @@ import * as db from "../lib/db";
 import { stageMeta, chipStyle, typeBadge, fmtRp, fmtDate } from "../lib/helpers";
 import { getFieldLabel, getQuantityUnits } from "../lib/industryTemplates";
 import { paymentTypesFor } from "../lib/paymentTypes";
+import { sourceSlotOf, sourceOfLead } from "../lib/leadSource";
 
 // Tahap proyek BSB (org project_deal): omzet dihitung sejak Proyek Deal sampai Proyek Selesai.
 const PROJECT_KEYS = ["proyek_deal", "proyek_berjalan", "proyek_selesai"];
@@ -32,7 +33,7 @@ function qtyTotals(deals, units) {
 const namaBulan = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 const labelBulanSingkat = (ym) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("id-ID", { month: "short" });
 
-export default function Deal({ leads, stages, dealTransactions, industry, onEdit, onChanged, projectDeal = false, marketplacePayment = false }) {
+export default function Deal({ leads, stages, dealTransactions, industry, org = null, onEdit, onChanged, projectDeal = false, marketplacePayment = false }) {
   const quantityLabel = getFieldLabel(industry, "quantity", "Quantity");
   const units = getQuantityUnits(industry);
   const [qtyRevealed, setQtyRevealed] = useState(false);
@@ -42,6 +43,13 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const [fNama, setFNama] = useState("");
   const [fDari, setFDari] = useState("");
   const [fTipe, setFTipe] = useState("");
+  // Filter sumber lead: dibaca sama dengan tab Report (lihat lib/leadSource).
+  const [fSumber, setFSumber] = useState("");
+  // Ubah tipe pembayaran satu transaksi dari rincian.
+  const [editTipe, setEditTipe] = useState(null); // { id, value } saat sedang diedit
+  const srcSlot = useMemo(() => sourceSlotOf(org), [org]);
+  const sourceOf = (lead) => sourceOfLead(lead || {}, srcSlot);
+  const sourceOptions = useMemo(() => [...new Set((leads || []).filter((l) => !l.deleted_at).map((l) => sourceOf(l)))].sort(), [leads, srcSlot]); // eslint-disable-line react-hooks/exhaustive-deps
   // Cari no. faktur atau no. SPH (dari lead maupun transaksi).
   const [fDoc, setFDoc] = useState("");
   const [fSampai, setFSampai] = useState("");
@@ -73,18 +81,22 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
       if (fDari && String(t.deal_date || "") < fDari) return false;
       if (fSampai && String(t.deal_date || "") > fSampai) return false;
       if (!cocokDoc(t.invoice_number, t.sph_number)) return false;
+      if (fSumber && sourceOf(leadsById[t.lead_id]) !== fSumber) return false;
       return true;
     });
-  }, [txSource, wonIds, leadsById, fNama, fDari, fSampai, fTipe, docCari]);
+  }, [txSource, wonIds, leadsById, fNama, fDari, fSampai, fTipe, fSumber, docCari, srcSlot]);
   const totalValue = useMemo(() => {
     const txSum = deals.reduce((a, t) => a + (Number(t.deal_value) || 0), 0);
-    // Lead tanpa transaksi ikut dihitung hanya kalau filter tanggal tidak aktif dan namanya cocok dengan filter.
+    // Lead tanpa transaksi ikut dihitung hanya kalau tidak ada filter tanggal, tipe, atau sumber, dan namanya cocok.
+    // Filter tipe dan sumber hanya berlaku untuk transaksi, jadi lead tanpa transaksi tidak ikut dihitung.
     const namaCari = fNama.trim().toLowerCase();
-    const tanpaTx = fDari || fSampai ? 0 : (leads || [])
+    const tanpaTx = fDari || fSampai || fTipe || fSumber ? 0 : (leads || [])
       .filter((l) => wonIds.has(l.id) && !txLeadIds.has(l.id) && (!namaCari || String(l.name || "").toLowerCase().includes(namaCari)) && cocokDoc(l.invoice_number, l.sph_number))
       .reduce((a, l) => a + (Number(l.deal_value) || 0), 0);
     return txSum + tanpaTx;
-  }, [leads, deals, wonIds, txLeadIds, fNama, fDari, fSampai, docCari]);
+  }, [leads, deals, wonIds, txLeadIds, fNama, fDari, fSampai, fTipe, fSumber, docCari]);
+  // Transaksi di daftar yang belum punya tipe pembayaran (org proyek tidak memakai tipe per transaksi).
+  const tanpaTipe = projectDeal ? 0 : deals.filter((t) => !t.payment_type).length;
   const totals = qtyTotals(deals, units);
 
   // 1 baris per lead menang. Nilai baris = deal_value lead (satu aturan deal di semua tab).
@@ -98,8 +110,8 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     return [...wonIds]
       .filter((leadId) => {
         if (namaCari && !String(leadsById[leadId]?.name || "").toLowerCase().includes(namaCari)) return false;
-        // Filter tanggal: lead tanpa transaksi di rentang itu tidak ditampilkan.
-        if (dateActive && !txByLead[leadId]?.length) return false;
+        // Filter tanggal, tipe, atau sumber: lead tanpa transaksi yang cocok tidak ditampilkan.
+        if ((dateActive || fTipe || fSumber) && !txByLead[leadId]?.length) return false;
         // Filter no. faktur / SPH: lead cocok lewat field lead-nya atau lewat transaksinya (deals sudah tersaring).
         if (docCari && !(cocokDoc(leadsById[leadId]?.invoice_number, leadsById[leadId]?.sph_number) || txByLead[leadId]?.length)) return false;
         return true;
@@ -110,7 +122,7 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
         txs: (txByLead[leadId] || []).slice().sort((a, b) => String(b.deal_date || "").localeCompare(String(a.deal_date || ""))),
       }))
       .sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
-  }, [deals, wonIds, leadsById, fNama, fDari, fSampai, docCari]);
+  }, [deals, wonIds, leadsById, fNama, fDari, fSampai, fTipe, fSumber, docCari]);
 
   // Setiap transaksi dihitung di bulan tanggal transaksinya (repeat order ikut di bulannya sendiri).
   // Lead tanpa transaksi (deal lama) dihitung sekali di bulan deal_date-nya dengan deal_value lead.
@@ -214,6 +226,10 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
   const [deletingTxIds, setDeletingTxIds] = useState(() => new Set());
   // Edit no. faktur satu transaksi dari rincian.
   const [editFaktur, setEditFaktur] = useState(null); // { id, value } saat sedang diedit
+  const simpanTipe = async (id) => {
+    try { await db.updateDealTxPayment(id, editTipe?.value || ""); setEditTipe(null); onChanged(); }
+    catch (e) { alert("Gagal simpan tipe pembayaran: " + e.message); }
+  };
   const simpanFaktur = async (id) => {
     try { await db.updateDealTxInvoice(id, editFaktur?.value || ""); setEditFaktur(null); onChanged(); }
     catch (e) { alert("Gagal simpan faktur: " + e.message); }
@@ -344,6 +360,15 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                             Ubah faktur
                           </button>
                         )}
+                        {!projectDeal && !t.auto && (
+                          <button
+                            type="button"
+                            onClick={() => setEditTipe({ id: t.id, value: t.payment_type || "" })}
+                            className="text-[11.5px] font-medium text-slate-500 hover:text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
+                          >
+                            Ubah tipe
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => delTx(t.id)}
@@ -366,6 +391,21 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
                           />
                           <button type="button" onClick={() => simpanFaktur(t.id)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white">Simpan</button>
                           <button type="button" onClick={() => setEditFaktur(null)} className="text-[12px] font-medium text-slate-500 hover:text-slate-800">Batal</button>
+                        </div>
+                      )}
+                      {editTipe?.id === t.id && (
+                        <div className="flex w-full items-center gap-2">
+                          <select
+                            autoFocus
+                            value={editTipe.value}
+                            onChange={(e) => setEditTipe({ id: t.id, value: e.target.value })}
+                            className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500"
+                          >
+                            <option value="">Belum dipilih</option>
+                            {paymentTypesFor(marketplacePayment).map((p) => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                          <button type="button" onClick={() => simpanTipe(t.id)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white">Simpan</button>
+                          <button type="button" onClick={() => setEditTipe(null)} className="text-[12px] font-medium text-slate-500 hover:text-slate-800">Batal</button>
                         </div>
                       )}
                     </li>
@@ -427,14 +467,24 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
             <input type="date" value={fSampai} onChange={(e) => setFSampai(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[13px] text-slate-800" />
           </label>
           <label className="flex flex-col gap-1 text-slate-500">
+            Sumber lead
+            <select value={fSumber} onChange={(e) => setFSumber(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-800">
+              <option value="">Semua</option>
+              {sourceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-slate-500">
             Tipe payment
             <select value={fTipe} onChange={(e) => setFTipe(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-800">
               <option value="">Semua</option>
               {paymentTypesFor(marketplacePayment).map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </label>
-          {(fNama || fDoc || fDari || fSampai || fTipe) && (
-            <button type="button" onClick={() => { setFNama(""); setFDoc(""); setFDari(""); setFSampai(""); setFTipe(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
+          {(fNama || fDoc || fDari || fSampai || fTipe || fSumber) && (
+            <button type="button" onClick={() => { setFNama(""); setFDoc(""); setFDari(""); setFSampai(""); setFTipe(""); setFSumber(""); }} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-50">Reset filter</button>
+          )}
+          {tanpaTipe > 0 && (
+            <p className="basis-full text-[12px] text-amber-700">{tanpaTipe} transaksi di daftar ini belum ada tipe pembayaran, jadi tidak ikut filter tipe.</p>
           )}
         </div>
       )}

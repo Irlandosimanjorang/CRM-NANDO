@@ -1183,7 +1183,7 @@ export default function App() {
                 {visitedTabs.has("deal") && (
                   <div style={{ display: effectiveTab === "deal" ? "block" : "none" }}>
                     <PreviewLock locked={isLocked("deal")} minLevel={TAB_MIN_LEVEL.deal}>
-                      <Deal leads={isLocked("deal") ? demo.leads : leads} stages={stageList} dealTransactions={isLocked("deal") ? demo.deals : dealTransactions} industry={org?.industry} onEdit={setEditLead} onChanged={reload} projectDeal={hasOrgFeature(org, "project_deal")} marketplacePayment={hasOrgFeature(org, "marketplace_payment")} />
+                      <Deal leads={isLocked("deal") ? demo.leads : leads} stages={stageList} dealTransactions={isLocked("deal") ? demo.deals : dealTransactions} industry={org?.industry} org={org} onEdit={setEditLead} onChanged={reload} projectDeal={hasOrgFeature(org, "project_deal")} marketplacePayment={hasOrgFeature(org, "marketplace_payment")} />
                     </PreviewLock>
                   </div>
                 )}
