@@ -237,12 +237,14 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
     const latest = g.txs[0];
     // Lead dengan lebih dari satu transaksi selalu menampilkan semua rincian tanggalnya.
     const isOpen = g.txs.length > 1 || expanded.has(g.leadId);
+    // Faktur dan tipe pembayaran hanya tampil di rincian transaksi, tidak di header lead.
     // Saat filter tanggal aktif, kartu hanya menghitung dan menampilkan transaksi di rentang itu.
     const dateFilterAktif = !!(fDari || fSampai);
     const nilai = dateFilterAktif ? g.txs.reduce((a, t) => a + (Number(t.deal_value) || 0), 0) : (g.nilaiBulan ?? (Number(lead?.deal_value) || 0));
     const tanggal = dateFilterAktif && latest ? latest.deal_date : (lead?.deal_date || latest?.deal_date);
     const jejak = jejakOf(g.leadId);
-    const punyaRincian = g.txs.length > 1;
+    // Rincian transaksi bisa dibuka untuk lead dengan satu transaksi juga.
+    const punyaRincian = g.txs.length > 0;
     const bisaBuka = punyaRincian || jejak.length > 0;
     const durasi = jejak.length > 1 ? Math.round((Date.parse(jejak[jejak.length - 1].at) - Date.parse(jejak[0].at)) / 86400000) : null;
     return (
@@ -257,20 +259,12 @@ export default function Deal({ leads, stages, dealTransactions, industry, onEdit
               {lead?.name || latest?.lead_name || "—"}
             </button>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+              {/* Lead dengan lebih dari satu transaksi: header hanya kota, detail ada di rincian transaksi. */}
               {lead?.city && <span>{lead.city}</span>}
-              {lead?.sales_owner && <span>{lead.sales_owner}</span>}
-              {tanggal && <span className="tabular-nums">{fmtDate(tanggal)}</span>}
-              {/* No. faktur tampil per transaksi (repeat order ikut), tanpa perlu membuka rincian. */}
-              {!projectDeal && g.txs.length > 0
-                ? g.txs.map((t) => (
-                  <span key={t.id} className="tabular-nums">
-                    {t.invoice_number ? `Faktur ${t.invoice_number}` : <span className="text-slate-400">Faktur belum diisi</span>}
-                    {t.payment_type && <span className="ml-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">{t.payment_type}</span>}
-                  </span>
-                ))
-                : lead?.invoice_number && <span className="tabular-nums">Faktur {lead.invoice_number}</span>}
-              {projectDeal && lead?.sph_number && <span>SPH {lead.sph_number}</span>}
-              {projectDeal && Number(lead?.discount_pct) > 0 && <span>Diskon {Number(lead.discount_pct)}%</span>}
+              {g.txs.length <= 1 && lead?.sales_owner && <span>{lead.sales_owner}</span>}
+              {g.txs.length <= 1 && tanggal && <span className="tabular-nums">{fmtDate(tanggal)}</span>}
+              {g.txs.length <= 1 && projectDeal && lead?.sph_number && <span>SPH {lead.sph_number}</span>}
+              {g.txs.length <= 1 && projectDeal && Number(lead?.discount_pct) > 0 && <span>Diskon {Number(lead.discount_pct)}%</span>}
             </div>
           </div>
 
