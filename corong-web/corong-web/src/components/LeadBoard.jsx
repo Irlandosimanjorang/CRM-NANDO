@@ -329,7 +329,9 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     if (bulan === "semua") return leads;
     return leads.filter((l) => {
       if (pending[l.id]) return true;
-      const at = peta.get(`${l.id}|${l.stage_key}`);
+      // Tanggal masuk tahap sekarang dari riwayat. Lead yang belum pernah pindah tahap pakai tanggal dibuat,
+      // supaya lead di Data Masuk dan tahap awal lain ikut muncul sesuai bulannya.
+      const at = peta.get(`${l.id}|${l.stage_key}`) || l.created_at;
       if (at && wibYM(new Date(at)) === bulan) return true;
       return !!dealBulan?.get(l.id)?.has(bulan);
     });
