@@ -651,7 +651,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
               </label>
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">Nilai proyek *{dealValue ? " · " + fmtRp(dealValue) : ""}</span>
-                <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))} placeholder="0" className={field + " tabular-nums"} />
+                <input inputMode="numeric" value={value ? Number(value).toLocaleString("id-ID") : ""} onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))} placeholder="0" className={field + " tabular-nums"} />
               </label>
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">No. SPH</span>
