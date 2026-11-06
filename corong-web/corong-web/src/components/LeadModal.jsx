@@ -724,7 +724,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                       />
                       <span>
                         {item.label}
-                        {tanda?.at && <span className="block text-[11px] text-slate-500">Dicentang {new Date(tanda.at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
+                        {(f.proyek_checklist || {})[item.key]?.at && <span className="block text-[11px] text-slate-500">Dicentang {new Date((f.proyek_checklist || {})[item.key].at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
                       </span>
                     </label>
                   );

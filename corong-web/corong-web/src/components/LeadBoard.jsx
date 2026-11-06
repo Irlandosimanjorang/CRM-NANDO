@@ -692,7 +692,10 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
                         setChecklist(cur);
                       }}
                     />
-                    <span>{item.label}</span>
+                    <span>
+                      {item.label}
+                      {checklist[item.key]?.at && <span className="block text-[11px] text-slate-500">Dicentang {new Date(checklist[item.key].at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
+                    </span>
                   </label>
                 );
               })}
