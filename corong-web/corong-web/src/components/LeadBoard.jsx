@@ -3,7 +3,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { paymentTypesFor } from "../lib/paymentTypes";
-import { PROYEK_CHECKLIST } from "../lib/proyekChecklist";
+import { PROYEK_CHECKLIST, sudahCentang, terkunci } from "../lib/proyekChecklist";
 import * as db from "../lib/db";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
@@ -516,7 +516,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                       )}
 
                       {proyekChecklist && s.key === "proyek_deal" && (() => {
-                        const n = PROYEK_CHECKLIST.filter((c) => (l.proyek_checklist || {})[c.key]).length;
+                        const n = PROYEK_CHECKLIST.filter((c) => sudahCentang(c, l.proyek_checklist, l.memo)).length;
                         return (
                           <div className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${n === PROYEK_CHECKLIST.length ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                             Checklist {n}/{PROYEK_CHECKLIST.length}
@@ -614,17 +614,19 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   const [sph, setSph] = useState(lead.sph_number || "");
   // No. SO disimpan di memo.so_number (tanpa kolom baru di tabel lead).
   const [so, setSo] = useState(lead.memo?.so_number || "");
-  const [discount, setDiscount] = useState(lead.discount_pct ? String(lead.discount_pct) : "");
+  // No. SO terkunci sampai finance mengaktifkan payment (memo.payment_aktif, diisi dari segmen Payment).
+  const soTerkunci = lead.memo?.payment_aktif !== true;
+  const [discount, setDiscount] = useState(lead.discount_total ? String(lead.discount_total) : "");
   const dealValue = Number(value.replace(/\D/g, "")) || 0;
-  // Diskon dalam persen (17 Okt 2026, BSB); nominal Rp dihitung dari nilai proyek.
-  const discountPct = Math.min(100, Math.max(0, Number(discount.replace(/[^\d.]/g, "")) || 0));
-  const discountValue = Math.round(dealValue * discountPct / 100);
+  // Diskon dalam Rupiah (nominal langsung, bukan persen).
+  const discountValue = Math.min(dealValue, Number(discount.replace(/\D/g, "")) || 0);
   // Status proyek (17 Okt 2026, BSB): kalau "Berjalan", lead langsung pindah ke tahap Proyek Berjalan.
   const [berjalan, setBerjalan] = useState(lead.stage_key === "proyek_berjalan");
   // Detil proyek (31 Okt 2026, BSB). Memo dihapus (Nov 2026): detil boleh kosong, proyek boleh disimpan dulu.
   const [detail, setDetail] = useState(lead.detail_proyek || "");
   const [checklist, setChecklist] = useState(() => ({ ...(lead.proyek_checklist || {}) }));
-  const dataReady = !!date && dealValue > 0 && sph.trim().length > 0 && so.trim().length > 0;
+  // Wajib saat masuk Proyek Deal: tanggal, nilai proyek, QR code, dan performa invoice. No. SPH, No. SO, dan detail tentatif.
+  const dataReady = !!date && dealValue > 0 && !!checklist.qr_berkas && !!checklist.invoice_performa;
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -644,25 +646,27 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
             <div className="mt-4 grid grid-cols-2 gap-2">
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">Tanggal deal *</span>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+                {/* Tanggal deal otomatis (7 Nov 2026): hari ini saat lead masuk Proyek Deal, tidak bisa diubah. */}
+                <input type="date" value={date} readOnly disabled className={field + " cursor-not-allowed bg-slate-50 text-slate-500"} />
               </label>
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">Nilai proyek *{dealValue ? " · " + fmtRp(dealValue) : ""}</span>
-                <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))} placeholder="0" className={field + " tabular-nums"} />
+                <input inputMode="numeric" value={value ? Number(value).toLocaleString("id-ID") : ""} onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))} placeholder="0" className={field + " tabular-nums"} />
               </label>
               <label className="block">
-                <span className="text-[11px] font-medium text-slate-500">No. SPH *</span>
-                <input value={sph} onChange={(e) => setSph(e.target.value)} placeholder="Mis. I/10/2026/UPVC/101" className={field} />
+                <span className="text-[11px] font-medium text-slate-500">No. SPH</span>
+                <input value={sph} onChange={(e) => setSph(e.target.value)} placeholder="Mis. I/10/2026/UPVC/101 (tentatif)" className={field} />
               </label>
               <label className="block">
-                <span className="text-[11px] font-medium text-slate-500">Total diskon (%){discountValue ? " · " + fmtRp(discountValue) : ""}</span>
-                <input inputMode="decimal" value={discount} onChange={(e) => setDiscount(e.target.value.replace(/[^\d.]/g, ""))} placeholder="0" className={field + " tabular-nums"} />
+                <span className="text-[11px] font-medium text-slate-500">No. SO</span>
+                {/* No. SO dibuat finance, tidak bisa diisi atau diubah dari Nexto. */}
+                <input value={so} readOnly disabled placeholder={soTerkunci ? "Terkunci sampai payment aktif dari finance" : "Belum dibuat finance"} className={field + " cursor-not-allowed bg-slate-50 text-slate-500"} />
+              </label>
+              <label className="col-span-2 block">
+                <span className="text-[11px] font-medium text-slate-500">Diskon (Rp){discountValue ? " · " + fmtRp(discountValue) : ""}</span>
+                <input inputMode="numeric" value={discount ? Number(discount).toLocaleString("id-ID") : ""} onChange={(e) => setDiscount(e.target.value.replace(/\D/g, ""))} placeholder="0" className={field + " tabular-nums"} />
               </label>
             </div>
-            <label className="mt-3 block">
-              <span className="text-[11px] font-medium text-slate-500">No. SO *</span>
-              <input value={so} onChange={(e) => setSo(e.target.value)} placeholder="Nomor sales order (opsional)" className={field} />
-            </label>
             <label className="mt-3 block">
               <span className="text-[11px] font-medium text-slate-500">Status proyek</span>
               <select value={berjalan ? "berjalan" : "belum"} onChange={(e) => setBerjalan(e.target.value === "berjalan")} className={field}>
@@ -672,13 +676,15 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
             </label>
             {/* Checklist proyek (3 Nov 2026): cukup centang, boleh disimpan belum lengkap. */}
             {proyekChecklist && <div className="mt-3 space-y-2 rounded-lg border border-slate-200 px-3 py-2.5">
-              <div className="text-[11px] font-medium text-slate-500">Checklist proyek</div>
+              <div className="text-[11px] font-medium text-slate-500">Checklist proyek · QR code dan performa invoice wajib dicentang</div>
               {PROYEK_CHECKLIST.map((item) => {
-                const tanda = checklist[item.key];
+                const tanda = sudahCentang(item, checklist, lead.memo);
+                const kunci = terkunci(item, lead.memo);
                 return (
-                  <label key={item.key} className="flex cursor-pointer items-start gap-2.5 text-[12.5px] text-slate-700">
+                  <label key={item.key} className={`flex items-start gap-2.5 text-[12.5px] text-slate-700 ${kunci ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                     <input
                       type="checkbox"
+                      disabled={kunci}
                       className="mt-0.5 h-4 w-4 accent-orange-600"
                       checked={!!tanda}
                       onChange={(e) => {
@@ -688,7 +694,10 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
                         setChecklist(cur);
                       }}
                     />
-                    <span>{item.label}</span>
+                    <span>
+                      {item.label}
+                      {checklist[item.key]?.at && <span className="block text-[11px] text-slate-500">Dicentang {new Date(checklist[item.key].at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
+                    </span>
                   </label>
                 );
               })}
@@ -703,7 +712,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
           <button
             type="button"
             disabled={!dataReady}
-            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), so_number: so.trim(), discount_pct: discountPct, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), checklist })}
+            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), so_number: so.trim(), discount_pct: null, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), checklist })}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan

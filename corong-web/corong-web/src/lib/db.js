@@ -1019,11 +1019,10 @@ export async function upsertLead(lead) {
     visit_mode: lead.visit_mode === "online" ? "online" : "offline",
     deal_date: lead.deal_date || null, deal_value: lead.deal_value || 0, tonnage: lead.tonnage || 0,
     // No. SPH dan total diskon (15 Okt 2026): diisi saat pindah ke Proyek Deal atau di LeadModal.
-    // Diskon diisi dalam persen (17 Okt 2026, BSB): nominal Rp dihitung dari persen terhadap nilai proyek.
+    // Diskon dalam Rupiah (nominal langsung). discount_pct tidak dipakai lagi dan dikosongkan.
     sph_number: (lead.sph_number || "").trim(),
-    ...(Number(lead.discount_pct) > 0
-      ? { discount_pct: Number(lead.discount_pct), discount_total: Math.round((Number(lead.deal_value) || 0) * Number(lead.discount_pct) / 100) }
-      : { discount_pct: null, discount_total: Number(lead.discount_total) || 0 }),
+    discount_pct: null,
+    discount_total: Number(lead.discount_total) || 0,
     last_contact: lead.last_contact || null, verified: !!lead.verified, source: lead.source || "manual",
     // Pipeline faktur (MAP): tanggal masuk tahap Deal dan nomor faktur.
     ...(lead.deal_stage_date !== undefined ? { deal_stage_date: lead.deal_stage_date || null } : {}),

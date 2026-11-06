@@ -9,7 +9,7 @@ import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE, reasonCategoriesFor } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
-import { PROYEK_CHECKLIST } from "../lib/proyekChecklist";
+import { PROYEK_CHECKLIST, sudahCentang, terkunci } from "../lib/proyekChecklist";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 // Sumber lead untuk organisasi yang tidak punya isian "Sumber lead" sendiri (kolom bawaan leads.source).
@@ -440,17 +440,18 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const save = async () => {
     if (!f.name?.trim()) { alert("Nama wajib diisi."); return; }
     if (enteringProyekDeal) {
-      if (!f.deal_date) { alert("Tanggal deal wajib diisi untuk tahap Proyek Deal."); return; }
       if (!(Number(f.deal_value) > 0)) { alert("Nilai proyek wajib diisi untuk tahap Proyek Deal."); return; }
-      if (!String(f.sph_number || "").trim()) { alert("No. SPH wajib diisi untuk tahap Proyek Deal."); return; }
-      if (!String(f.memo?.so_number || "").trim()) { alert("No. SO wajib diisi untuk tahap Proyek Deal."); return; }
+      // No. SPH dan No. SO tentatif: boleh kosong. No. SO diisi setelah payment aktif.
+      if (proyekChecklist && !(f.proyek_checklist || {}).qr_berkas) { alert("QR code wajib dicentang untuk tahap Proyek Deal."); return; }
+      if (proyekChecklist && !(f.proyek_checklist || {}).invoice_performa) { alert("Performa invoice wajib dicentang untuk tahap Proyek Deal."); return; }
     }
     if (showOutcome && outcomeResult && lead.id && !outcomeCategory) { alert("Pilih kategori alasan " + (outcomeResult === "won" ? "menang" : "kalah") + " terlebih dahulu. Pilih Lainnya jika tidak ada yang cocok."); return; }
     setBusy(true);
     try {
       // Tipe pembayaran tidak ditulis dari form lead: nilainya dari pop-up pindah ke Faktur (per transaksi).
       // Form yang sudah lama terbuka bisa membawa nilai lama, jadi tidak boleh menimpanya.
-      const tersimpan = await db.upsertLead({ ...f, payment_type: undefined });
+      // Tanggal deal otomatis (7 Nov 2026): hari ini kalau belum ada saat masuk Proyek Deal.
+      const tersimpan = await db.upsertLead({ ...f, payment_type: undefined, ...(enteringProyekDeal && !f.deal_date ? { deal_date: new Date().toLocaleDateString("sv-SE") } : {}) });
       // Lead baru dari klien existing: penanda "[Repeat order]" dicatat di lead klien itu, sebagai jejak repeat order.
       if (!lead.id && klienPilih) await db.addProgress(klienPilih, `[Repeat order] lead baru dibuat untuk klien ini (${tersimpan?.name || f.name}).`).catch(() => {});
       if (showOutcome && outcomeResult && lead.id) {
@@ -676,7 +677,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             <div className="border border-slate-200 bg-slate-50 rounded-2xl p-3 space-y-2.5">
               <div className="text-xs font-semibold text-slate-700">Data proyek {enteringProyekDeal ? "(wajib diisi)" : ""}</div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Tanggal deal *"><input type="date" className={inp} value={f.deal_date || ""} onChange={(e) => set("deal_date", e.target.value || null)} /></Field>
+                <Field label="Tanggal deal"><input type="date" className={`${inp} cursor-not-allowed bg-slate-50 text-slate-500`} readOnly disabled value={f.deal_date || new Date().toLocaleDateString("sv-SE")} /></Field>
                 <Field label="Nilai proyek (Rp) *">
                   <input
                     className={inp}
@@ -686,30 +687,32 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                     onChange={(e) => set("deal_value", Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
                   />
                 </Field>
-                <Field label="No. SPH *"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101" /></Field>
-                <Field label="No. SO *"><input className={inp} value={f.memo?.so_number || ""} onChange={(e) => set("memo", { ...(f.memo || {}), so_number: e.target.value })} placeholder="Nomor sales order" /></Field>
-                <Field label={`Total diskon (%)${Number(f.discount_pct) > 0 ? ` · ${Math.round((Number(f.deal_value) || 0) * Number(f.discount_pct) / 100).toLocaleString("id-ID")}` : ""}`}>
+                <Field label="No. SPH"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101 (tentatif)" /></Field>
+                <Field label="No. SO"><input className={`${inp} cursor-not-allowed bg-slate-50 text-slate-500`} readOnly disabled value={f.memo?.so_number || ""} placeholder={f.memo?.payment_aktif === true ? "Belum dibuat finance" : "Terkunci sampai payment aktif dari finance"} /></Field>
+                <Field label={`Diskon (Rp)${Number(f.discount_total) > 0 ? ` · ${Number(f.discount_total).toLocaleString("id-ID")}` : ""}`}>
                   <input
                     className={inp}
-                    inputMode="decimal"
+                    inputMode="numeric"
                     placeholder="0"
-                    value={f.discount_pct ?? ""}
-                    onChange={(e) => set("discount_pct", Math.min(100, Math.max(0, Number(e.target.value.replace(/[^\d.]/g, "")) || 0)) || null)}
+                    value={Number(f.discount_total) ? Number(f.discount_total).toLocaleString("id-ID") : ""}
+                    onChange={(e) => set("discount_total", Number(e.target.value.replace(/\D/g, "")) || 0)}
                   />
                 </Field>
               </div>
-              <Field label="Detil proyek *">
+              <Field label="Detil proyek">
                 <textarea className={`${inp} resize-none`} rows={3} placeholder="Ruang lingkup dan detail pekerjaan" value={f.detail_proyek || ""} onChange={(e) => set("detail_proyek", e.target.value)} />
               </Field>
               {/* Checklist proyek (3 Nov 2026): cukup centang, boleh disimpan belum lengkap dan diubah lagi nanti. */}
               {proyekChecklist && <div className="space-y-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5">
                 <div className="text-xs font-semibold text-slate-700">Checklist proyek</div>
                 {PROYEK_CHECKLIST.map((item) => {
-                  const tanda = (f.proyek_checklist || {})[item.key];
+                  const tanda = sudahCentang(item, f.proyek_checklist, f.memo);
+                  const kunci = terkunci(item, f.memo);
                   return (
-                    <label key={item.key} className="flex cursor-pointer items-start gap-2.5 text-sm text-slate-700">
+                    <label key={item.key} className={`flex items-start gap-2.5 text-sm text-slate-700 ${kunci ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                       <input
                         type="checkbox"
+                        disabled={kunci}
                         className="mt-0.5 h-4 w-4 accent-orange-600"
                         checked={!!tanda}
                         onChange={(e) => {
@@ -721,7 +724,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                       />
                       <span>
                         {item.label}
-                        {tanda?.at && <span className="block text-[11px] text-slate-500">Dicentang {new Date(tanda.at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
+                        {(f.proyek_checklist || {})[item.key]?.at && <span className="block text-[11px] text-slate-500">Dicentang {new Date((f.proyek_checklist || {})[item.key].at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
                       </span>
                     </label>
                   );
