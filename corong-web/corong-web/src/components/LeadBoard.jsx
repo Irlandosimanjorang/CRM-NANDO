@@ -3,7 +3,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { paymentTypesFor } from "../lib/paymentTypes";
-import { PROYEK_CHECKLIST } from "../lib/proyekChecklist";
+import { PROYEK_CHECKLIST, sudahCentang, terkunci } from "../lib/proyekChecklist";
 import * as db from "../lib/db";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
@@ -514,7 +514,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                       )}
 
                       {proyekChecklist && s.key === "proyek_deal" && (() => {
-                        const n = PROYEK_CHECKLIST.filter((c) => (l.proyek_checklist || {})[c.key]).length;
+                        const n = PROYEK_CHECKLIST.filter((c) => sudahCentang(c, l.proyek_checklist, l.memo)).length;
                         return (
                           <div className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${n === PROYEK_CHECKLIST.length ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                             Checklist {n}/{PROYEK_CHECKLIST.length}
@@ -676,11 +676,13 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
             {proyekChecklist && <div className="mt-3 space-y-2 rounded-lg border border-slate-200 px-3 py-2.5">
               <div className="text-[11px] font-medium text-slate-500">Checklist proyek · QR code dan performa invoice wajib dicentang</div>
               {PROYEK_CHECKLIST.map((item) => {
-                const tanda = checklist[item.key];
+                const tanda = sudahCentang(item, checklist, lead.memo);
+                const kunci = terkunci(item, lead.memo);
                 return (
-                  <label key={item.key} className="flex cursor-pointer items-start gap-2.5 text-[12.5px] text-slate-700">
+                  <label key={item.key} className={`flex items-start gap-2.5 text-[12.5px] text-slate-700 ${kunci ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                     <input
                       type="checkbox"
+                      disabled={kunci}
                       className="mt-0.5 h-4 w-4 accent-orange-600"
                       checked={!!tanda}
                       onChange={(e) => {

@@ -9,7 +9,7 @@ import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE, reasonCategoriesFor } from "../lib/helpers";
 import { getFieldLabel, isFieldHidden, getCustomFieldSlots, getCategories, getCompanyTypeOptions } from "../lib/industryTemplates";
 import { acquireLocation, MAX_PIN_ACCURACY_M } from "../lib/geo";
-import { PROYEK_CHECKLIST } from "../lib/proyekChecklist";
+import { PROYEK_CHECKLIST, sudahCentang, terkunci } from "../lib/proyekChecklist";
 
 const inp = "w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10";
 // Sumber lead untuk organisasi yang tidak punya isian "Sumber lead" sendiri (kolom bawaan leads.source).
@@ -706,11 +706,13 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               {proyekChecklist && <div className="space-y-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5">
                 <div className="text-xs font-semibold text-slate-700">Checklist proyek</div>
                 {PROYEK_CHECKLIST.map((item) => {
-                  const tanda = (f.proyek_checklist || {})[item.key];
+                  const tanda = sudahCentang(item, f.proyek_checklist, f.memo);
+                  const kunci = terkunci(item, f.memo);
                   return (
-                    <label key={item.key} className="flex cursor-pointer items-start gap-2.5 text-sm text-slate-700">
+                    <label key={item.key} className={`flex items-start gap-2.5 text-sm text-slate-700 ${kunci ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                       <input
                         type="checkbox"
+                        disabled={kunci}
                         className="mt-0.5 h-4 w-4 accent-orange-600"
                         checked={!!tanda}
                         onChange={(e) => {
