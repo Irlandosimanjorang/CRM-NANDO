@@ -55,7 +55,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords, ChevronLeft, ChevronRight,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck, BarChart3, ChevronsUpDown,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck, BarChart3,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -1540,7 +1540,6 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
             <span className="block truncate text-[13px] font-medium leading-5 text-white">{settings.community_display_name || "Akun Anda"}</span>
             <span className="block truncate text-[12px] leading-4 text-slate-400">{planLabelDark}</span>
           </span>
-          <ChevronsUpDown size={15} className="shrink-0 text-slate-500" aria-hidden="true" />
         </button>
       ) : (
         <button ref={btnRef} onClick={toggleOpen} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-brand-strong text-white flex items-center justify-center font-semibold" style={{ width: size, height: size, fontSize: size * 0.4 }}>
