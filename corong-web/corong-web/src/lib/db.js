@@ -1256,20 +1256,31 @@ export async function verifySelfiePhoto(photo_url) {
 // checkIn() (nolak insert kalo udah abis) dan getCheckinCooldown() (buat UI
 // nampilin sisa kuota SEBELUM user buka kamera, biar gak buang-buang usaha
 // foto duluan).
-const CHECKIN_QUOTA_MAX = 20;
+const CHECKIN_QUOTA_DEFAULT = 20;
+// Batas per pengguna bisa dinaikkan lewat tabel quota_overrides (RPC my_quota_max).
+// Kalau RPC gagal, pakai default supaya UI tetap jalan.
+async function getCheckinQuotaMax() {
+  try {
+    const { data, error } = await supabase.rpc("my_quota_max", { p_feature: "checkin", p_default: CHECKIN_QUOTA_DEFAULT });
+    if (error || typeof data !== "number") return CHECKIN_QUOTA_DEFAULT;
+    return data;
+  } catch (_) {
+    return CHECKIN_QUOTA_DEFAULT;
+  }
+}
 export const formatQuotaDate = (iso) => new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 export async function getCheckinCooldown() {
-  const { used, resetAt } = await getMyQuotaUsage("checkin");
-  const canCheckIn = used < CHECKIN_QUOTA_MAX;
-  return { canCheckIn, usedThisMonth: used, quotaMax: CHECKIN_QUOTA_MAX, nextAvailableAt: canCheckIn ? null : resetAt, resetAt };
+  const [{ used, resetAt }, quotaMax] = await Promise.all([getMyQuotaUsage("checkin"), getCheckinQuotaMax()]);
+  const canCheckIn = used < quotaMax;
+  return { canCheckIn, usedThisMonth: used, quotaMax, nextAvailableAt: canCheckIn ? null : resetAt, resetAt };
 }
 
 export async function checkIn({ lead_id, lead_name, latitude, longitude, distance_meters, photo_url, accuracy_m = null }) {
   const uid = await currentUserId();
   const orgId = await getMyOrgId();
-  const { used, resetAt } = await getMyQuotaUsage("checkin");
-  if (used >= CHECKIN_QUOTA_MAX) {
-    throw new Error(`Kuota check-in GPS Anda (${CHECKIN_QUOTA_MAX}x per bulan) sudah habis. ${resetAt ? `Kuota terisi kembali pada ${formatQuotaDate(resetAt)}.` : ""}`.trim());
+  const [{ used, resetAt }, quotaMax] = await Promise.all([getMyQuotaUsage("checkin"), getCheckinQuotaMax()]);
+  if (used >= quotaMax) {
+    throw new Error(`Kuota check-in GPS Anda (${quotaMax}x per bulan) sudah habis. ${resetAt ? `Kuota terisi kembali pada ${formatQuotaDate(resetAt)}.` : ""}`.trim());
   }
   const { data, error } = await supabase
     .from("visit_checkins")
