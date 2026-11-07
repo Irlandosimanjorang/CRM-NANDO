@@ -55,7 +55,7 @@ import { getIndustryTemplate, INDUSTRY_TEMPLATES } from "./lib/industryTemplates
 import {
   LayoutDashboard, Users, Trophy, CalendarCheck, Swords, ChevronLeft, ChevronRight,
   Bot, Settings as SettingsIcon, Loader2, LogOut, Users2, Lock, Camera, Mail, Sparkles, ArrowLeft, ShieldCheck,
-  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck, BarChart3,
+  CheckCircle2, XCircle, Info as InfoIcon, Bell, Mic, UserCheck, BarChart3, ChevronsUpDown,
 } from "lucide-react";
 
 // (Logo lama NextoBadge - segitiga oranye - udah diganti robot NextoRobotHead
@@ -1527,26 +1527,20 @@ function ProfileAvatar({ settings, session, org, onChanged, size = 36, align = "
   // Nando: "jangan terlalu mencolok... putih biar clean rapih") - sebelumnya
   // tiap tier punya warna sendiri (violet/orange/sky), kesannya rame di
   // trigger kecil kayak gini. Sekarang cuma bedain teksnya doang.
-  const planBadgeDark = {
-    label: org?.plan === "enterprise" ? "Enterprise" : settings.plan === "premium" ? "Professional" : settings.plan === "standard" ? "Standard" : "Free",
-    cls: "bg-white/8 text-slate-300 ring-1 ring-white/10",
-  };
+  const planLabelDark = org?.plan === "enterprise" ? "Enterprise" : settings.plan === "premium" ? "Professional" : settings.plan === "standard" ? "Standard" : "Free";
 
   return (
     <div className={`relative ${className}`}>
       {expanded ? (
-        <button ref={btnRef} onClick={toggleOpen} className="w-full flex items-center gap-2.5 text-left">
-          <span className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-brand-strong text-white flex items-center justify-center font-semibold" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+        <button ref={btnRef} onClick={toggleOpen} className="w-full flex items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">
+          <span className="shrink-0 rounded-lg overflow-hidden bg-brand-strong text-white flex items-center justify-center font-semibold" style={{ width: size, height: size, fontSize: size * 0.4 }}>
             {avatarImg}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[12px] font-semibold text-white">{settings.community_display_name || "Akun Anda"}</span>
-            {/* Subtitle diganti dari "Industri / Jabatan" jadi badge plan
-                (16 Sep 2026, permintaan Nando: "hapus aja industrinya ganti
-                dengan bedge plan") - lebih kepake buat cepet liat plan
-                lu tanpa buka popup profil. */}
-            <span className={`inline-block mt-0.5 text-[9.5px] font-semibold uppercase tracking-wide rounded-full px-1.5 py-0.5 ${planBadgeDark.cls}`}>{planBadgeDark.label}</span>
+            <span className="block truncate text-[13px] font-medium leading-5 text-white">{settings.community_display_name || "Akun Anda"}</span>
+            <span className="block truncate text-[12px] leading-4 text-slate-400">{planLabelDark}</span>
           </span>
+          <ChevronsUpDown size={15} className="shrink-0 text-slate-500" aria-hidden="true" />
         </button>
       ) : (
         <button ref={btnRef} onClick={toggleOpen} className="shrink-0 rounded-full overflow-hidden ring-2 ring-white/40 bg-brand-strong text-white flex items-center justify-center font-semibold" style={{ width: size, height: size, fontSize: size * 0.4 }}>
