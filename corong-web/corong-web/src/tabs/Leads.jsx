@@ -639,6 +639,11 @@ const saveImportMap = (headers, mapping) => {
 
 // Bulan kalender WIB "YYYY-MM", dipakai filter bulan lead masuk (lead baru) di daftar dan Kanban.
 const ymWib = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit" }).format(d).slice(0, 7);
+const BULAN_SINGKAT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const labelBulan = (ym) => {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+};
 
 export default function Leads({
   onLocalDeal,
@@ -709,6 +714,8 @@ export default function Leads({
   const [fAssignee, setFAssignee] = useState("");
   // Filter bulan lead masuk: "semua" atau "YYYY-MM" (berdasarkan tanggal lead dibuat). Berlaku di daftar dan Kanban.
   const [fBulanMasuk, setFBulanMasuk] = useState("semua");
+  const [bulanOpen, setBulanOpen] = useState(false);
+  const [tahunPicker, setTahunPicker] = useState(() => Number(ymWib(new Date()).slice(0, 4)));
   // Nama anggota pada filter sales (untuk label dan dialog "Hapus semua lead <nama>").
   const deleteScopeName = (() => { const m = members.find((x) => x.user_id === fAssignee); return m?.display_name || m?.name || "anggota ini"; })();
   useEffect(() => {
@@ -2131,22 +2138,58 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
           )}
 
 
-          <div className={`flex items-center gap-1 rounded-inner border bg-white px-2.5 py-2 text-[13px] ${fBulanMasuk !== "semua" ? "border-slate-900 text-slate-900" : "border-slate-200 text-slate-700"}`}>
-            <CalendarDays size={14} className="shrink-0" />
-            <input
-              type="month"
-              value={fBulanMasuk === "semua" ? "" : fBulanMasuk}
-              onChange={(e) => setFBulanMasuk(e.target.value || "semua")}
-              aria-label="Filter bulan lead masuk"
-              title="Tampilkan lead yang masuk di bulan ini"
-              className="bg-transparent text-[13px] tabular-nums focus:outline-none"
-            />
-            {fBulanMasuk !== "semua" ? (
-              <button type="button" onClick={() => setFBulanMasuk("semua")} aria-label="Hapus filter bulan lead masuk" className="grid h-5 w-5 place-items-center rounded hover:bg-slate-100">
-                <X size={12} />
-              </button>
-            ) : (
-              <span className="text-[12px] text-slate-500">Semua bulan</span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setTahunPicker(fBulanMasuk === "semua" ? Number(ymWib(new Date()).slice(0, 4)) : Number(fBulanMasuk.slice(0, 4)));
+                setBulanOpen((o) => !o);
+              }}
+              aria-expanded={bulanOpen}
+              aria-haspopup="dialog"
+              className={`flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-inner border bg-white px-3 text-[13px] ${fBulanMasuk !== "semua" ? "border-slate-900 font-medium text-slate-900" : "border-slate-200 text-slate-700"} hover:bg-slate-50`}
+            >
+              <CalendarDays size={14} className="shrink-0" />
+              {fBulanMasuk === "semua" ? "Semua bulan" : labelBulan(fBulanMasuk)}
+            </button>
+            {bulanOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setBulanOpen(false)} />
+                <div role="dialog" aria-label="Pilih bulan lead masuk" className="absolute right-0 z-50 mt-1.5 w-[248px] rounded-panel border border-slate-200 bg-white p-3 shadow-lg">
+                  <div className="mb-2 flex items-center justify-between">
+                    <button type="button" onClick={() => setTahunPicker((t) => t - 1)} aria-label="Tahun sebelumnya" className="grid h-7 w-7 place-items-center rounded hover:bg-slate-100">
+                      <ChevronLeft size={14} />
+                    </button>
+                    <span className="text-[13px] font-semibold tabular-nums text-slate-900">{tahunPicker}</span>
+                    <button type="button" onClick={() => setTahunPicker((t) => t + 1)} aria-label="Tahun berikutnya" className="grid h-7 w-7 place-items-center rounded hover:bg-slate-100">
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {BULAN_SINGKAT.map((nm, i) => {
+                      const ym = `${tahunPicker}-${String(i + 1).padStart(2, "0")}`;
+                      const aktif = fBulanMasuk === ym;
+                      return (
+                        <button
+                          key={ym}
+                          type="button"
+                          onClick={() => { setFBulanMasuk(ym); setBulanOpen(false); }}
+                          className={`rounded-md py-1.5 text-[12px] ${aktif ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+                        >
+                          {nm}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setFBulanMasuk("semua"); setBulanOpen(false); }}
+                    className="mt-2 w-full rounded-md py-1.5 text-[12px] font-semibold text-slate-600 hover:bg-slate-100"
+                  >
+                    Semua bulan
+                  </button>
+                </div>
+              </>
             )}
           </div>
 
