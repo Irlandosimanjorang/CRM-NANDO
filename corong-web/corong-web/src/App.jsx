@@ -947,7 +947,7 @@ export default function App() {
         {sidebarCollapsed ? <ChevronRight size={12} strokeWidth={2} /> : <ChevronLeft size={12} strokeWidth={2} />}
       </button>
 
-      <aside ref={sidebarRef} className={`nexto-sidebar hidden md:flex flex-col ${sidebarCollapsed ? "w-[72px]" : "w-[228px]"} fixed top-3 left-3 h-[calc(100vh-24px)] z-30 text-white rounded-panel overflow-hidden border border-white/[0.07] shadow-float transition-[width] duration-200`}>
+      <aside ref={sidebarRef} className={`nexto-sidebar hidden md:flex flex-col ${sidebarCollapsed ? "w-[72px]" : "w-[228px]"} fixed top-0 left-3 max-h-screen z-30 text-white rounded-b-[20px] overflow-hidden border border-t-0 border-white/[0.07] shadow-float transition-[width] duration-200`}>
         {/* Header sidebar (16 Sep 2026): profil + badge plan DIPINDAH ke
             bawah (pola app pada umumnya - Slack/Notion dst naro profil di
             footer sidebar, bukan header). Header sekarang logo doang.
@@ -979,7 +979,7 @@ export default function App() {
 
         <div className="mx-4 mb-3 h-px bg-white/10" />
 
-        <nav className={`flex-1 ${sidebarCollapsed ? "px-2" : "px-3"} py-2.5 space-y-1 overflow-y-auto overscroll-contain`}>
+        <nav className={`min-h-0 flex-1 ${sidebarCollapsed ? "px-2" : "px-3"} py-2.5 space-y-1 overflow-y-auto overscroll-contain`}>
           {!sidebarCollapsed && <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Menu utama</div>}
           {navItems.map((n) => {
             const I = n.icon;
