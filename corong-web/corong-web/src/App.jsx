@@ -942,12 +942,12 @@ export default function App() {
         onClick={() => toggleSidebar(!sidebarCollapsed)}
         title={sidebarCollapsed ? "Buka sidebar" : "Ciutkan sidebar"}
         aria-label={sidebarCollapsed ? "Buka sidebar" : "Ciutkan sidebar"}
-        className={`hidden md:flex fixed top-[44px] z-40 items-center justify-center w-[22px] h-[22px] rounded-full bg-[#0b1220] border border-[#334155] text-slate-400 hover:text-white shadow-float transition-[left] duration-200 ${sidebarCollapsed ? "left-[73px]" : "left-[229px]"}`}
+        className={`hidden md:flex fixed top-1/2 -translate-y-1/2 z-40 items-center justify-center w-[22px] h-[22px] rounded-full bg-[#0b1220] border border-[#334155] text-slate-400 hover:text-white shadow-float transition-[left] duration-200 ${sidebarCollapsed ? "left-[73px]" : "left-[229px]"}`}
       >
         {sidebarCollapsed ? <ChevronRight size={12} strokeWidth={2} /> : <ChevronLeft size={12} strokeWidth={2} />}
       </button>
 
-      <aside ref={sidebarRef} className={`nexto-sidebar hidden md:flex flex-col ${sidebarCollapsed ? "w-[72px]" : "w-[228px]"} fixed top-0 left-3 max-h-screen z-30 text-white rounded-b-[20px] overflow-hidden border border-t-0 border-white/[0.07] shadow-float transition-[width] duration-200`}>
+      <aside ref={sidebarRef} className={`nexto-sidebar hidden md:flex flex-col ${sidebarCollapsed ? "w-[72px]" : "w-[228px]"} fixed top-1/2 -translate-y-1/2 left-3 max-h-[calc(100vh-24px)] z-30 text-white rounded-[20px] overflow-hidden border border-white/[0.07] shadow-float transition-[width] duration-200`}>
         {/* Header sidebar (16 Sep 2026): profil + badge plan DIPINDAH ke
             bawah (pola app pada umumnya - Slack/Notion dst naro profil di
             footer sidebar, bukan header). Header sekarang logo doang.
