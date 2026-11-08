@@ -614,6 +614,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   const [sph, setSph] = useState(lead.sph_number || "");
   // No. SO disimpan di memo.so_number (tanpa kolom baru di tabel lead).
   const [so, setSo] = useState(lead.memo?.so_number || "");
+  const [jenis, setJenis] = useState(lead.memo?.jenis_penjualan || "proyek");
   // No. SO terkunci sampai finance mengaktifkan payment (memo.payment_aktif, diisi dari segmen Payment).
   const soTerkunci = lead.memo?.payment_aktif !== true;
   const [discount, setDiscount] = useState(lead.discount_total ? String(lead.discount_total) : "");
@@ -656,6 +657,13 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">No. SPH</span>
                 <input value={sph} onChange={(e) => setSph(e.target.value)} placeholder="Mis. I/10/2026/UPVC/101 (tentatif)" className={field} />
+              </label>
+              <label className="block">
+                <span className="text-[11px] font-medium text-slate-500">Jenis penjualan</span>
+                <select value={jenis} onChange={(e) => setJenis(e.target.value)} className={field}>
+                  <option value="proyek">Proyek</option>
+                  <option value="product_only">Product only</option>
+                </select>
               </label>
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">No. SO</span>
@@ -712,7 +720,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
           <button
             type="button"
             disabled={!dataReady}
-            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), so_number: so.trim(), discount_pct: null, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), checklist })}
+            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), so_number: so.trim(), discount_pct: null, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), checklist, jenis_penjualan: jenis })}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan
