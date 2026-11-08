@@ -27,6 +27,7 @@ import {
   Link as LinkIcon,
   Loader2,
   X,
+  CalendarDays,
 } from "lucide-react";
 
 import * as db from "../lib/db";
@@ -636,6 +637,9 @@ const saveImportMap = (headers, mapping) => {
   } catch { /* penyimpanan penuh atau diblokir: impor tetap jalan tanpa mapping tersimpan */ }
 };
 
+// Bulan kalender WIB "YYYY-MM", dipakai filter bulan lead masuk (lead baru) di daftar dan Kanban.
+const ymWib = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit" }).format(d).slice(0, 7);
+
 export default function Leads({
   onLocalDeal,
   leads,
@@ -703,6 +707,8 @@ export default function Leads({
   // manager gak keliatan fitur ini padahal RLS-nya udah ngasih akses.
   const [members, setMembers] = useState([]);
   const [fAssignee, setFAssignee] = useState("");
+  // Filter bulan lead masuk: "semua" atau "YYYY-MM" (berdasarkan tanggal lead dibuat). Berlaku di daftar dan Kanban.
+  const [fBulanMasuk, setFBulanMasuk] = useState("semua");
   // Nama anggota pada filter sales (untuk label dan dialog "Hapus semua lead <nama>").
   const deleteScopeName = (() => { const m = members.find((x) => x.user_id === fAssignee); return m?.display_name || m?.name || "anggota ini"; })();
   useEffect(() => {
@@ -1161,6 +1167,13 @@ export default function Leads({
             return false;
           }
 
+          if (
+            fBulanMasuk !== "semua" &&
+            (!c.created_at || ymWib(new Date(c.created_at)) !== fBulanMasuk)
+          ) {
+            return false;
+          }
+
           if (q) {
 
             const s =
@@ -1221,6 +1234,7 @@ export default function Leads({
         fCat,
         fType,
         fAssignee,
+        fBulanMasuk,
         fKpi,
         kpiActiveStageKeys,
         kpiWonStageKeys,
@@ -1242,6 +1256,7 @@ export default function Leads({
     fCat,
     fType,
     fAssignee,
+    fBulanMasuk,
     fKpi,
   ]);
 
@@ -1396,6 +1411,7 @@ export default function Leads({
     setFCat("");
     setFType("");
     setFKpi("");
+    setFBulanMasuk("semua");
   };
 
   // Toggle: klik KPI yang lagi aktif lagi -> balik ke "Total Leads" (gak
@@ -2113,6 +2129,26 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             </select>
 
           )}
+
+
+          <div className={`flex items-center gap-1 rounded-inner border bg-white px-2.5 py-2 text-[13px] ${fBulanMasuk !== "semua" ? "border-slate-900 text-slate-900" : "border-slate-200 text-slate-700"}`}>
+            <CalendarDays size={14} className="shrink-0" />
+            <input
+              type="month"
+              value={fBulanMasuk === "semua" ? "" : fBulanMasuk}
+              onChange={(e) => setFBulanMasuk(e.target.value || "semua")}
+              aria-label="Filter bulan lead masuk"
+              title="Tampilkan lead yang masuk di bulan ini"
+              className="bg-transparent text-[13px] tabular-nums focus:outline-none"
+            />
+            {fBulanMasuk !== "semua" ? (
+              <button type="button" onClick={() => setFBulanMasuk("semua")} aria-label="Hapus filter bulan lead masuk" className="grid h-5 w-5 place-items-center rounded hover:bg-slate-100">
+                <X size={12} />
+              </button>
+            ) : (
+              <span className="text-[12px] text-slate-500">Semua bulan</span>
+            )}
+          </div>
 
 
           <button
