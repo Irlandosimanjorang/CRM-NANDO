@@ -615,6 +615,8 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   // No. SO disimpan di memo.so_number (tanpa kolom baru di tabel lead).
   const [so, setSo] = useState(lead.memo?.so_number || "");
   const [jenis, setJenis] = useState(lead.memo?.jenis_penjualan || "proyek");
+  // Jenis penjualan terkunci setelah DP tersimpan di Journey (memo.jenis_terkunci, diisi Journey lewat journey_tandai_dp).
+  const jenisTerkunci = lead.memo?.jenis_terkunci === true;
   // No. SO terkunci sampai finance mengaktifkan payment (memo.payment_aktif, diisi dari segmen Payment).
   const soTerkunci = lead.memo?.payment_aktif !== true;
   const [discount, setDiscount] = useState(lead.discount_total ? String(lead.discount_total) : "");
@@ -659,8 +661,9 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
                 <input value={sph} onChange={(e) => setSph(e.target.value)} placeholder="Mis. I/10/2026/UPVC/101 (tentatif)" className={field} />
               </label>
               <label className="block">
-                <span className="text-[11px] font-medium text-slate-500">Jenis penjualan</span>
-                <select value={jenis} onChange={(e) => setJenis(e.target.value)} className={field}>
+                <span className="text-[11px] font-medium text-slate-500">Jenis penjualan{jenisTerkunci ? " · terkunci setelah DP" : ""}</span>
+                {/* Setelah DP tersimpan di Journey, jenis hanya bisa dibaca. */}
+                <select value={jenis} onChange={(e) => setJenis(e.target.value)} disabled={jenisTerkunci} className={field + (jenisTerkunci ? " cursor-not-allowed bg-slate-50 text-slate-500" : "")}>
                   <option value="proyek">Proyek</option>
                   <option value="product_only">Product only</option>
                 </select>
