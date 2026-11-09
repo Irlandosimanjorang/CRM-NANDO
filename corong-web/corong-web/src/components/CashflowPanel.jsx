@@ -432,23 +432,17 @@ export default function CashflowPanel() {
         </div>
       </Section>
 
-      <Section title="Ringkasan bulan ini" hint="dalam bahasa sederhana">
-        {lifeErr && <div className="text-[11px] font-mono text-rose-300">{lifeErr}</div>}
-        <Tile label="Total pendapatan" value={life ? idr(life.total.total) : "-"} sub={life ? `sejak awal · invoice ${idr(life.total.invoice)} · Mayar ${idr(life.total.mayar)}` : "memuat..."} accent="#34d399" />
+      <Section title="Ringkasan bulan ini" hint="uang masuk dan keluar dihitung dari tanggal bayar">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Tile label="Uang masuk" value={idr(cf.receipts.total)} sub="dari klien (invoice + Mayar)" accent="#34d399" />
           <Tile label="Uang keluar" value={idr(cf.payments.total)} sub="token, server, dan biaya lain" accent="#f9a8d4" />
           <Tile label="Sisa kas" value={cf.closing_cash === null ? "-" : acc(cf.closing_cash)} sub={cf.closing_cash === null ? "isi saldo kas awal di Pengaturan" : "uang bisnis di rekening"} />
-          <Tile label="Untung bulan ini" value={acc(inc.net_profit)} sub={`margin ${mp(inc.net_margin_pct)}`} accent={profitAccent} />
+          <Tile label="Untung bulan ini" value={acc(inc.net_profit)} sub={`margin ${mp(inc.net_margin_pct)} · layanan yang berjalan`} accent={profitAccent} />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-          <Tile label="Uang klien yang layanannya belum berjalan" value={idr(s.unearned)} sub="kewajiban melayani, bukan untung" accent="#fbbf24" />
-          <Tile label="HPP rata-rata per akun berbayar" value={hppPerAccount === null ? "-" : idr(hppPerAccount)} sub={paidAccounts > 0 ? `total HPP ${idr(inc.cogs.total)} dibagi ${paidAccounts} akun` : "belum ada akun berbayar aktif"} accent="#fcd34d" />
+        {lifeErr && <div className="text-[11px] font-mono text-rose-300">{lifeErr}</div>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Tile label="Total pendapatan sejak awal" value={life ? idr(life.total.total) : "-"} sub={life ? `uang klien yang sudah masuk · invoice ${idr(life.total.invoice)} · Mayar ${idr(life.total.mayar)}${life.total.mayar_estimate ? ` (termasuk perkiraan ${idr(life.total.mayar_estimate)})` : ""}` : "memuat..."} accent="#34d399" />
           <Tile label="Piutang" value={idr(s.receivables)} sub={s.overdue_count ? `${s.overdue_count} lewat jatuh tempo` : "tidak ada yang lewat tempo"} accent={s.overdue_count ? "#fbbf24" : undefined} />
-          <Tile label="Pendapatan berulang / bulan (MRR)" value={idr(s.mrr)} sub={`nilai kontrak aktif ${idr(s.active_contract_value)}`} />
-        </div>
-        <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
-          Untung dihitung dari layanan yang sudah berjalan bulan ini. Uang klien yang dibayar di muka untuk bulan-bulan berikutnya belum dianggap untung, jadi jangan dibelanjakan dulu.
         </div>
       </Section>
 
@@ -458,6 +452,13 @@ export default function CashflowPanel() {
       </button>
       {showAcc && (
         <>
+      <Section title="Indikator tambahan" hint="untuk akuntan">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Tile label="Uang klien yang layanannya belum berjalan" value={idr(s.unearned)} sub="kewajiban melayani, bukan untung" accent="#fbbf24" />
+          <Tile label="HPP rata-rata per akun berbayar" value={hppPerAccount === null ? "-" : idr(hppPerAccount)} sub={paidAccounts > 0 ? `total HPP ${idr(inc.cogs.total)} dibagi ${paidAccounts} akun` : "belum ada akun berbayar aktif"} accent="#fcd34d" />
+          <Tile label="Pendapatan berulang / bulan (MRR)" value={idr(s.mrr)} sub={`nilai kontrak aktif ${idr(s.active_contract_value)}`} />
+        </div>
+      </Section>
       <div className="grid gap-5 lg:grid-cols-2">
         <Section title="Laporan laba rugi" hint={ym2label(per.ym)}>
           <Statement rows={incomeRows} foot="Pendapatan diakui bertahap per hari selama periode layanan (PSAK 72), bukan saat uang masuk. HPP token = pemakaian dinilai dengan biaya rata-rata tertimbang saldo prabayar. Pajak, gaji, dan penyusutan tidak dihitung kecuali ditambahkan sebagai Beban." />
