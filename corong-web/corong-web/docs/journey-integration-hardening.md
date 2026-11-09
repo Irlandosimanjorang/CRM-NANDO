@@ -67,3 +67,10 @@ Saat menambahkan `nexto_service_key`, nilai service key sempat terpaste ke secre
 - Grant `anon` pada `journey_set_spk_diterima` dan `journey_terima_so` **dikembalikan**. Frontend Journey kemungkinan memanggil keduanya langsung dengan publishable key setelah mengambil secret dari `so_secret_untuk_nexto`. Repo ini tidak memanggilnya, dan frontend Journey belum bisa diperiksa dari sesi ini.
 - Yang tetap dicabut: `anon` pada `journey_tandai_dp`, karena hanya dipakai trigger `kirim_dp_ke_nexto` yang sudah memakai service key.
 - Untuk mencabut `anon` dari dua function itu, periksa dulu frontend Journey. Kalau sudah tidak memanggil dengan anon, cabut dengan `revoke execute ... from anon`.
+
+## Status akhir 2026-11-09 (nomor 2 selesai)
+
+- Trigger Nexto (`sync_proyek_deal_to_journey`, `sync_drawing_ke_journey`, `resync_proyek_deal_to_journey`) memakai `journey_service_key` di Vault Nexto. Publishable key Journey sudah tidak dipakai.
+- Di Journey, `anon` sudah dicabut dari `nexto_set_drawing` dan `nexto_upsert_order_journey`. Tes dengan publishable key → `permission denied`. Tes dengan service key → sampai ke pengecekan secret.
+- Di Nexto, `anon` sudah dicabut dari `journey_tandai_dp`. `journey_set_spk_diterima` dan `journey_terima_so` tetap memakai `anon` karena kemungkinan dipakai frontend Journey.
+- Yang belum selesai: `so_secret_untuk_nexto()` masih bisa dipanggil staf yang login, dan belum bisa dicabut sebelum frontend Journey diperiksa.
