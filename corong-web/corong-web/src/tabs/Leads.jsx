@@ -810,6 +810,13 @@ export default function Leads({
       // No. SO disimpan di memo.so_number. Isi memo lain (mis. customer) dipertahankan.
       leadPatch = { stage_key: nextKey, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_pct: p.discount_pct, discount_total: p.discount_total, detail_proyek: p.detail_proyek, proyek_checklist: proyekChecklist, memo: { ...(lead.memo || {}), jenis_penjualan: p.jenis_penjualan || "proyek" } };
       await db.upsertLead({ ...lead, ...leadPatch });
+      // Proyek Deal tetap kategori menang (BSB): alasan menang dicatat sebagai outcome dan progres, seperti tahap menang lain.
+      if (extra.result) {
+        const outcome = { result: extra.result, reason_category: extra.reason_category, reason: extra.note || "", ai_generated: false, recorded_at: new Date().toISOString() };
+        await db.saveOutcome(lead.id, { result: extra.result, reason_category: extra.reason_category, reason: extra.note, ai_generated: false });
+        leadPatch = { ...leadPatch, outcome };
+        await db.addProgress(lead.id, `[Menang] ${extra.reason_category}${extra.note ? " - " + extra.note : ""}`);
+      }
       if (onLocalDeal) onLocalDeal(lead.id, leadPatch, null);
       onChanged({ silent: true });
       return;
