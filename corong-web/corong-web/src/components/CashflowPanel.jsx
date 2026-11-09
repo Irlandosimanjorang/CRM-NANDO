@@ -421,11 +421,6 @@ export default function CashflowPanel() {
         </div>
       </div>
 
-      <Section title="Total pendapatan" hint="invoice lunas + pembayaran Mayar, sejak awal">
-        {lifeErr && <div className="text-[11px] font-mono text-rose-300">{lifeErr}</div>}
-        <Tile label="Total pendapatan" value={life ? idr(life.total.total) : "-"} sub={life ? `invoice ${idr(life.total.invoice)} · Mayar ${idr(life.total.mayar)}` : "memuat..."} accent="#34d399" />
-      </Section>
-
       <Section title="Generate Leads bulan ini" hint="pemakaian token dan pendapatan add-on">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <Tile label="Biaya token Generate Leads" value={idr(gen.cost_idr)} sub={`${gen.calls} panggilan AI · ${usd(gen.cost_usd)}`} accent="#f9a8d4" />
@@ -438,6 +433,8 @@ export default function CashflowPanel() {
       </Section>
 
       <Section title="Ringkasan bulan ini" hint="dalam bahasa sederhana">
+        {lifeErr && <div className="text-[11px] font-mono text-rose-300">{lifeErr}</div>}
+        <Tile label="Total pendapatan" value={life ? idr(life.total.total) : "-"} sub={life ? `sejak awal · invoice ${idr(life.total.invoice)} · Mayar ${idr(life.total.mayar)}` : "memuat..."} accent="#34d399" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Tile label="Uang masuk" value={idr(cf.receipts.total)} sub="dari klien (invoice + Mayar)" accent="#34d399" />
           <Tile label="Uang keluar" value={idr(cf.payments.total)} sub="token, server, dan biaya lain" accent="#f9a8d4" />
