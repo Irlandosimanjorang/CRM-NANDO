@@ -145,6 +145,13 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const moveTo = (lead, key, fromRect = null) => {
     if (!lead || key === UNKNOWN_KEY || stageOf(lead) === key) return;
     const target = cols.find((s) => s.key === key);
+    // Pop-up data proyek muncul di pipeline yang punya tahap Proyek Berjalan (pipeline BSB), tidak hanya di org project_deal.
+    // Dicek sebelum cabang Menang/Kalah: di BSB tahap Proyek Deal bertipe "won", tapi pop-up data proyek yang harus muncul.
+    if (key === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan")) {
+      setPending((p) => ({ ...p, [lead.id]: key }));
+      setProyek({ lead, key });
+      return;
+    }
     if (target?.type === "won" || target?.type === "lost") {
       setPending((p) => ({ ...p, [lead.id]: key }));
       setClosing({ lead, key, result: target.type });
@@ -154,12 +161,6 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     if (key === "proses_so" && invoicePipeline) {
       setPending((p) => ({ ...p, [lead.id]: key }));
       setDealStage({ lead, key });
-      return;
-    }
-    // Pop-up data proyek muncul di pipeline yang punya tahap Proyek Berjalan (pipeline BSB), tidak hanya di org project_deal.
-    if (key === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan")) {
-      setPending((p) => ({ ...p, [lead.id]: key }));
-      setProyek({ lead, key });
       return;
     }
     // Pop-up tanggal selesai dan catatan saat kartu digeser ke Proyek Selesai (pipeline BSB).
