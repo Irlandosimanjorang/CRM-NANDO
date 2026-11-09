@@ -145,11 +145,11 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const moveTo = (lead, key, fromRect = null) => {
     if (!lead || key === UNKNOWN_KEY || stageOf(lead) === key) return;
     const target = cols.find((s) => s.key === key);
-    // Pop-up data proyek muncul di pipeline yang punya tahap Proyek Berjalan (pipeline BSB), tidak hanya di org project_deal.
-    // Dicek sebelum cabang Menang/Kalah: di BSB tahap Proyek Deal bertipe "won", tapi pop-up data proyek yang harus muncul.
+    // Pipeline BSB/trial: tahap Proyek Deal itu kategori menang. Urutannya: alasan menang dulu, lalu data proyek.
     if (key === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan")) {
       setPending((p) => ({ ...p, [lead.id]: key }));
-      setProyek({ lead, key });
+      if (target?.type === "won") setClosing({ lead, key, result: "won", lanjutProyek: true });
+      else setProyek({ lead, key });
       return;
     }
     if (target?.type === "won" || target?.type === "lost") {
@@ -222,9 +222,11 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   };
 
   const saveProyek = (values) => {
-    const { lead, key } = proyek;
+    const { lead, key, menang } = proyek;
     setProyek(null);
-    Promise.resolve(onMove(lead, key, { projectDeal: values }))
+    // Dari tahap menang: alasan menang ikut disimpan bersama data proyek, supaya tetap tercatat sebagai menang.
+    const extra = menang ? { result: "won", reason_category: menang.reason_category, note: menang.note } : {};
+    Promise.resolve(onMove(lead, key, { projectDeal: values, ...extra }))
       // Link progres untuk klien (31 Okt 2026): tampil setelah Simpan, bukan di Lead Modal.
       // Gagal ambil link tidak dianggap gagal simpan, jadi tidak ada alert.
       .then(() => db.getLeadTrackingLink(lead.id).then((link) => { if (link) setTrackingLink({ name: lead.name, link }); }).catch(() => {}))
@@ -236,6 +238,12 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   const saveClose = (category, note, deal, wonDate) => {
     const { lead, key, result } = closing;
+    // Alasan menang untuk Proyek Deal: lanjut ke pop-up data proyek, pindah tahap baru disimpan setelah itu.
+    if (closing.lanjutProyek) {
+      setClosing(null);
+      setProyek({ lead, key, menang: { reason_category: category, note } });
+      return;
+    }
     setClosing(null);
     Promise.resolve(onMove(lead, key, { result, reason_category: category, note, deal, wonDate })).catch((e) => {
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
@@ -880,14 +888,16 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
   const [category, setCategory] = useState("");
   const [note, setNote] = useState("");
   const won = closing.result === "won";
+  // Proyek Deal: hanya alasan dan catatan, nilai dan tanggal diisi di pop-up data proyek berikutnya.
+  const lanjut = !!closing.lanjutProyek;
   const [value, setValue] = useState(closing.lead.deal_value ? String(closing.lead.deal_value) : "");
   const [date, setDate] = useState(todayISO());
   const [invoice, setInvoice] = useState(closing.lead.invoice_number || "");
   const [product, setProduct] = useState(closing.lead.product || "");
   const [paymentType, setPaymentType] = useState(closing.lead.payment_type || "");
   const dealValue = Number(value.replace(/\D/g, "")) || 0;
-  const lockedProject = won && projectDeal;
-  const ready = !!category && (!won || dealValue > 0);
+  const lockedProject = won && projectDeal && !lanjut;
+  const ready = !!category && (!won || lanjut || dealValue > 0);
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onCancel(); };
     window.addEventListener("keydown", onKey);
@@ -934,7 +944,7 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
             </label>
           </>
         )}
-        {won && !projectDeal && (
+        {won && !projectDeal && !lanjut && (
           <div className="mt-4 grid grid-cols-2 gap-2">
             {invoicePipeline && (
               <>
@@ -989,10 +999,10 @@ function CloseDialog({ closing, onCancel, onSave, projectDeal = false, invoicePi
           <button
             type="button"
             disabled={!ready}
-            onClick={() => onSave(category, note.trim(), won && !projectDeal ? { value: dealValue, date, ...(invoicePipeline ? { invoice_number: invoice.trim(), product: product.trim(), payment_type: paymentType } : {}) } : null, lockedProject ? date : null)}
+            onClick={() => onSave(category, note.trim(), won && !projectDeal && !lanjut ? { value: dealValue, date, ...(invoicePipeline ? { invoice_number: invoice.trim(), product: product.trim(), payment_type: paymentType } : {}) } : null, lockedProject ? date : null)}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
-            Simpan
+            {lanjut ? "Lanjut" : "Simpan"}
           </button>
         </div>
       </div>
