@@ -148,8 +148,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     // Pipeline BSB/trial: tahap Proyek Deal itu kategori menang. Urutannya: alasan menang dulu, lalu data proyek.
     if (key === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan")) {
       setPending((p) => ({ ...p, [lead.id]: key }));
-      if (target?.type === "won") setClosing({ lead, key, result: "won", lanjutProyek: true });
-      else setProyek({ lead, key });
+      setClosing({ lead, key, result: "won", lanjutProyek: true });
       return;
     }
     if (target?.type === "won" || target?.type === "lost") {
