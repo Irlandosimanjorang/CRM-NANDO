@@ -421,42 +421,9 @@ export default function CashflowPanel() {
         </div>
       </div>
 
-      <Section title="Lifetime revenue" hint="invoice lunas + pembayaran Mayar, sejak awal">
+      <Section title="Total pendapatan" hint="invoice lunas + pembayaran Mayar, sejak awal">
         {lifeErr && <div className="text-[11px] font-mono text-rose-300">{lifeErr}</div>}
-        <Tile label="Total sejak awal" value={life ? idr(life.total.total) : "-"} sub={life ? `invoice ${idr(life.total.invoice)} · Mayar ${idr(life.total.mayar)}` : "memuat..."} accent="#34d399" />
-        <div className={`${BLOCK} p-3 overflow-x-auto`}>
-          <table className="w-full text-[12px] font-mono tabular-nums">
-            <thead>
-              <tr className="text-left text-slate-300 border-b border-white/[0.14]">
-                <th className="py-2 pr-2 font-medium">Bulan</th>
-                <th className="py-2 pr-2 font-medium text-right">Invoice</th>
-                <th className="py-2 pr-2 font-medium text-right">Mayar</th>
-                <th className="py-2 font-medium text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(life?.rows || []).map((r) => (
-                <tr key={r.ym} className="border-b border-white/[0.08] text-slate-200">
-                  <td className="py-2 pr-2">{ym2label(r.ym)}</td>
-                  <td className="py-2 pr-2 text-right">{idr(r.invoice)}</td>
-                  <td className="py-2 pr-2 text-right">{idr(r.mayar)}</td>
-                  <td className="py-2 text-right font-bold text-white">{idr(r.total)}</td>
-                </tr>
-              ))}
-              {life && life.rows.length === 0 && (
-                <tr><td colSpan={4} className="py-3 text-slate-400">Belum ada pembayaran tercatat.</td></tr>
-              )}
-              {life && life.rows.length > 0 && (
-                <tr className="text-white font-bold">
-                  <td className="py-2 pr-2">Total</td>
-                  <td className="py-2 pr-2 text-right">{idr(life.total.invoice)}</td>
-                  <td className="py-2 pr-2 text-right">{idr(life.total.mayar)}</td>
-                  <td className="py-2 text-right text-emerald-300">{idr(life.total.total)}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Tile label="Total pendapatan" value={life ? idr(life.total.total) : "-"} sub={life ? `invoice ${idr(life.total.invoice)} · Mayar ${idr(life.total.mayar)}` : "memuat..."} accent="#34d399" />
       </Section>
 
       <Section title="Generate Leads bulan ini" hint="pemakaian token dan pendapatan add-on">
