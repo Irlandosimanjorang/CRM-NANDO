@@ -259,6 +259,25 @@ Deno.serve(async (req) => {
       return json(await anthropicBalance(admin, await loadSettings(admin)));
     }
 
+    // Lifetime revenue: uang masuk dari invoice lunas dan pembayaran Mayar, dikelompokkan per bulan pembayaran (WIB).
+    if (body.action === "lifetime") {
+      const { data: invRows, error: invErr2 } = await admin.from("admin_invoices")
+        .select("total, invoice_date, paid_at").eq("status", "paid").limit(5000);
+      if (invErr2) throw invErr2;
+      const { data: mRows, error: mErr2 } = await admin.from("subscription_payments")
+        .select("amount, paid_at").limit(10000);
+      if (mErr2) throw mErr2;
+      const byMonth: Record<string, { invoice: number; mayar: number }> = {};
+      const bucket = (iso: string) => (byMonth[monthOf(wibDateOf(iso))] ||= { invoice: 0, mayar: 0 });
+      for (const r of invRows || []) bucket(r.paid_at || r.invoice_date).invoice += num(r.total);
+      for (const r of mRows || []) { if (r.paid_at) bucket(r.paid_at).mayar += num(r.amount); }
+      const rows = Object.keys(byMonth).sort().reverse().map((ym) => ({
+        ym, invoice: R(byMonth[ym].invoice), mayar: R(byMonth[ym].mayar), total: R(byMonth[ym].invoice + byMonth[ym].mayar),
+      }));
+      const sum = (k: "invoice" | "mayar" | "total") => rows.reduce((s, r) => s + r[k], 0);
+      return json({ rows, total: { invoice: sum("invoice"), mayar: sum("mayar"), total: sum("total") } });
+    }
+
     if (body.action !== "get") return json({ error: "Aksi tidak dikenal." }, 400);
 
     const settings = await loadSettings(admin);
@@ -608,8 +627,8 @@ Deno.serve(async (req) => {
       summary: {
         mrr: R(mrr), active_contract_value: R(activeValue), sub_mrr: R(subMrr), sub_count: subCount, manual_grants: manualGrants,
         receivables: R(receivables), overdue_count: overdueCount, unearned: R(unearned), fixed_costs_idr: hppFixed + opexFixed,
+        gen_leads: genLeads,
       },
-      gen_leads: genLeads,
       balance, planner, contracts,
     });
   } catch (e) {
