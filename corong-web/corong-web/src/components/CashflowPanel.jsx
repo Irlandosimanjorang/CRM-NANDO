@@ -259,6 +259,12 @@ export default function CashflowPanel() {
   const settingsRef = useRef(null);
   const [newTop, setNewTop] = useState({ date: isoDay(new Date()), amount_usd: "", amount_idr: "", note: "" });
   const [newCost, setNewCost] = useState({ name: "", amount: "", currency: "USD", kind: "hpp" });
+  // Total pendapatan beberapa bulan: rentang berakhir di periode yang dipilih. Bulan yang sudah lewat di-cache.
+  const [range, setRange] = useState(1);
+  const [rangeRev, setRangeRev] = useState(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const [rangeErr, setRangeErr] = useState("");
+  const revCache = useRef(new Map());
 
   const load = useCallback(async (silent, per) => {
     if (!silent) setLoading(true);
@@ -307,6 +313,27 @@ export default function CashflowPanel() {
   };
 
   const goSettings = () => settingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  const perYm = data?.period?.ym;
+  const curYm = data?.period?.current_ym;
+  useEffect(() => {
+    if (!perYm || !curYm) return;
+    let alive = true;
+    setRangeLoading(true); setRangeErr("");
+    Promise.all(monthsBack(perYm, range).map(async (ym) => {
+      if (revCache.current.has(ym)) return revCache.current.get(ym);
+      const r = await db.adminCashflow("get", { period: ym });
+      const rev = r.income.revenue;
+      if (ym < curYm) revCache.current.set(ym, rev);
+      return rev;
+    })).then((list) => {
+      if (!alive) return;
+      const sum = (k) => list.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+      setRangeRev({ total: sum("total"), invoice: sum("invoice"), mayar: sum("mayar"), estimate: sum("estimate"), addon: sum("addon") });
+    }).catch((e) => { if (alive) setRangeErr(e.message || "Gagal memuat total pendapatan"); })
+      .finally(() => { if (alive) setRangeLoading(false); });
+    return () => { alive = false; };
+  }, [perYm, curYm, range, data]);
 
   if (err && !data) return <div className="text-[12px] text-rose-300 font-mono">{err}</div>;
   if (!data || !form) return <div className="flex items-center gap-2 text-[12px] text-slate-300 font-mono"><Loader2 className="w-3.5 h-3.5 animate-spin" /> memuat cash flow...</div>;
@@ -407,6 +434,23 @@ export default function CashflowPanel() {
           </button>
         </div>
       </div>
+
+      <Section title="Total pendapatan" hint={range === 1 ? ym2label(per.ym) : `${ym2label(monthsBack(per.ym, range)[range - 1])} s.d. ${ym2label(per.ym)}`}>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[1, 3, 6, 12].map((n) => (
+            <button key={n} onClick={() => setRange(n)} aria-pressed={range === n} className={`text-[11px] font-mono px-2.5 py-1.5 rounded-lg border ${range === n ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100" : "border-white/[0.2] bg-[#111826] text-slate-300 hover:bg-[#182033]"}`}>
+              {n === 1 ? "1 bulan" : `${n} bulan`}
+            </button>
+          ))}
+        </div>
+        {rangeErr && <div className="text-[11px] font-mono text-rose-300">{rangeErr}</div>}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Tile label="Total pendapatan" value={rangeRev ? idr(rangeRev.total) : "-"} sub={rangeLoading ? "menghitung..." : `${range} bulan terakhir, sampai periode ini`} accent="#34d399" />
+          <Tile label="Invoice" value={rangeRev ? idr(rangeRev.invoice) : "-"} sub="dari invoice yang dibayar" />
+          <Tile label="Langganan Mayar" value={rangeRev ? idr(rangeRev.mayar) : "-"} sub={rangeRev?.estimate ? `ditambah perkiraan ${idr(rangeRev.estimate)}` : "dari pembayaran Mayar"} />
+          <Tile label="Token add-on" value={rangeRev ? idr(rangeRev.addon) : "-"} sub="dari token Generate Leads" />
+        </div>
+      </Section>
 
       <Section title="Generate Leads bulan ini" hint="pemakaian token dan pendapatan add-on">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
