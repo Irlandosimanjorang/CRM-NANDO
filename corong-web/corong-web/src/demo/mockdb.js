@@ -77,6 +77,7 @@ export async function saveOutcome(){ return null; }
 export async function clearOutcome(){ return null; }
 export async function guessOutcomeReason(){ return null; }
 export async function suggestVisitPoints(){ return null; }
+export async function getLeadTrackingLink(){ return null; }
 export async function getStages(){ return window.__D.stages; }
 export async function saveStages(){ return null; }
 export async function initDefaultStages(){ return null; }
@@ -137,6 +138,9 @@ export async function setAdBudget(){ return null; }
 export async function getDealTransactions(){ return window.__D.deals; }
 export async function getOutcomeEvents(){ return ((L, S) => ({ won: L.filter((l) => S.some((s) => s.key === l.stage_key && s.type === 'won')).length, lost: L.filter((l) => S.some((s) => s.key === l.stage_key && s.type === 'lost')).length, by_user: [] }))(window.__D.leads, window.__D.stages); }
 export async function updateFaktur(){ return null; }
+export async function getLeadDealTransactions(){ return []; }
+export async function updateDealTxPayment(){ return null; }
+export async function updateDealTxInvoice(){ return null; }
 export async function addDealTransaction(){ return null; }
 export async function deleteDealTransaction(){ return null; }
 export async function smartImportMap(){ return null; }
