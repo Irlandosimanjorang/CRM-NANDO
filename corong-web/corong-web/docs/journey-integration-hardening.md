@@ -23,6 +23,16 @@ Secret dirotasi pada 2026-11-09 dan disimpan di Vault kedua project. Nilai secre
 - [ ] Cabut `anon` dari `journey_set_spk_diterima`, `journey_tandai_dp`, `journey_terima_so` di Nexto.
 - [ ] Cek frontend Journey: apakah memanggil function di atas. Jika ya, pastikan memakai JWT user (authenticated), bukan anon.
 
+## Perubahan yang sudah diterapkan di Journey (2026-11-09)
+
+Semua perubahan ini tidak memutus integrasi. Trigger tetap terpasang dan jalur panggilan tidak berubah.
+
+- Cabut EXECUTE dari `anon`, `authenticated`, dan `public` untuk function trigger: `kirim_dp_ke_nexto`, `selesaikan_tahap_payment_saat_tutup`, `tutup_jika_lunas`, `guard_completed_stage`, `guard_stage_order`, `kunci_tipe_dan_no_so`, `log_order_journey_change`, `log_order_journey_stage`. Trigger tidak butuh EXECUTE untuk dipicu.
+- Set `search_path = public` pada `guard_stage_order` dan `kunci_tipe_dan_no_so`.
+- `kirim_dp_ke_nexto()` memakai `nexto_service_key` jika tersedia, dengan fallback ke `nexto_publishable_key`.
+
+Yang sengaja **belum** diubah: grant `anon` pada `nexto_set_drawing` dan `nexto_upsert_order_journey` (dipanggil trigger Nexto dengan publishable key), serta `so_secret_untuk_nexto` untuk `authenticated` (belum bisa dipastikan tidak dipakai frontend).
+
 ## Langkah pencabutan anon (setelah checklist di atas)
 
 1. Di dashboard **journey-order**, buka Vault dan tambahkan secret `nexto_service_key` berisi service_role key project CRM Nexto. Jangan menempelkan nilai ini ke chat atau repo.
