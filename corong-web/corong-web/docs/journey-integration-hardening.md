@@ -18,9 +18,9 @@ Secret dirotasi pada 2026-11-09 dan disimpan di Vault kedua project. Nilai secre
 - [x] Secret `journey_so_secret` dan `journey_sync_secret` / `nexto_sync_secret` dirotasi dan diverifikasi.
 - [x] `so_secret_untuk_nexto()` di Journey: grant `authenticated` tetap (dipakai frontend, belum bisa dipastikan).
 - [x] `kirim_dp_ke_nexto()` di Journey: mendukung kunci `nexto_service_key`, dengan fallback ke publishable key.
-- [ ] Simpan **service_role key Nexto** ke Vault Journey dengan nama `nexto_service_key`.
-- [ ] Verifikasi sinkronisasi DP berjalan (cek `net._http_response` di Journey, status 2xx).
-- [ ] Cabut `anon` dari `journey_set_spk_diterima`, `journey_tandai_dp`, `journey_terima_so` di Nexto.
+- [x] Simpan **service_role key Nexto** ke Vault Journey dengan nama `nexto_service_key` (2026-11-09).
+- [x] Verifikasi: panggilan `journey_tandai_dp` dengan service key → 204; dengan publishable key → `permission denied`.
+- [x] Cabut `anon` dari `journey_set_spk_diterima`, `journey_tandai_dp`, `journey_terima_so` di Nexto (2026-11-09).
 - [ ] Cek frontend Journey: apakah memanggil function di atas. Jika ya, pastikan memakai JWT user (authenticated), bukan anon.
 
 ## Perubahan yang sudah diterapkan di Journey (2026-11-09)
@@ -51,9 +51,13 @@ Yang sengaja **belum** diubah: grant `anon` pada `nexto_set_drawing` dan `nexto_
    revoke execute on function public.journey_terima_so(text, uuid, text, text) from anon;
    ```
 4. Uji ulang alur staff di Journey: DP, buka SPK, dan terima SO. Jika salah satu gagal, kembalikan grant dengan `grant execute ... to anon;`.
-5. Setelah stabil, hapus fallback ke publishable key di `kirim_dp_ke_nexto`.
+5. Fallback ke publishable key di `kirim_dp_ke_nexto` sudah dihapus (2026-11-09).
 
 ## Langkah lanjutan (opsional)
 
 - `nexto_upsert_order_journey` dan `nexto_set_drawing` di Journey juga bisa diberi `anon` dicabut, dengan memindahkan trigger Nexto (`sync_proyek_deal_to_journey`, `sync_drawing_ke_journey`) ke service key Journey. Ini butuh service_role key Journey di Vault Nexto.
 - Pertimbangkan memindahkan integrasi ke Edge Function dengan verifikasi HMAC, supaya secret tidak perlu berada di body request.
+
+## Catatan insiden 2026-11-09
+
+Saat menambahkan `nexto_service_key`, nilai service key sempat terpaste ke secret `nexto_sync_secret`, dan sebelumnya nilai teks kalimat ikut tersimpan. Akibatnya sinkronisasi DP sempat gagal. Nilai `nexto_sync_secret` sudah dikembalikan ke nilai rotasi, dan service key dipindah ke `nexto_service_key`. Verifikasi dilakukan setelah itu.
