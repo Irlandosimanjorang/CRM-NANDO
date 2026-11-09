@@ -27,6 +27,13 @@ const DARK = { colorScheme: "dark" }; // kalender dan dropdown bawaan browser ik
 const uid = () => (globalThis.crypto?.randomUUID?.() || String(Date.now() + Math.random()));
 const barColor = (p) => (p >= 85 ? "#fb7185" : p >= 60 ? "#fbbf24" : "#34d399");
 const ym2label = (ym) => new Date(`${ym}-15T12:00:00+07:00`).toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
+// Pendapatan pertama tercatat 24 Sep 2026 (pembayaran Mayar). Bulan sebelumnya pasti nol.
+const LIFETIME_START = "2026-09";
+const monthCount = (fromYm, toYm) => {
+  const [y1, m1] = fromYm.split("-").map(Number);
+  const [y2, m2] = toYm.split("-").map(Number);
+  return (y2 - y1) * 12 + (m2 - m1) + 1;
+};
 const monthsBack = (fromYm, n) => {
   const [y, m] = fromYm.split("-").map(Number);
   return Array.from({ length: n }, (_, i) => { const d = new Date(Date.UTC(y, m - 1 - i, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`; });
@@ -320,7 +327,8 @@ export default function CashflowPanel() {
     if (!perYm || !curYm) return;
     let alive = true;
     setRangeLoading(true); setRangeErr("");
-    Promise.all(monthsBack(perYm, range).map(async (ym) => {
+    const span = range === "all" ? Math.max(1, monthCount(LIFETIME_START, perYm)) : range;
+    Promise.all(monthsBack(perYm, span).map(async (ym) => {
       if (revCache.current.has(ym)) return revCache.current.get(ym);
       const r = await db.adminCashflow("get", { period: ym });
       const rev = r.income.revenue;
@@ -435,17 +443,17 @@ export default function CashflowPanel() {
         </div>
       </div>
 
-      <Section title="Total pendapatan" hint={range === 1 ? ym2label(per.ym) : `${ym2label(monthsBack(per.ym, range)[range - 1])} s.d. ${ym2label(per.ym)}`}>
+      <Section title="Total pendapatan" hint={(() => { const span = range === "all" ? Math.max(1, monthCount(LIFETIME_START, per.ym)) : range; return span === 1 ? ym2label(per.ym) : `${ym2label(monthsBack(per.ym, span)[span - 1])} s.d. ${ym2label(per.ym)}`; })()}>
         <div className="flex flex-wrap items-center gap-1.5">
-          {[1, 3, 6, 12].map((n) => (
+          {[1, 3, 6, 12, "all"].map((n) => (
             <button key={n} onClick={() => setRange(n)} aria-pressed={range === n} className={`text-[11px] font-mono px-2.5 py-1.5 rounded-lg border ${range === n ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100" : "border-white/[0.2] bg-[#111826] text-slate-300 hover:bg-[#182033]"}`}>
-              {n === 1 ? "1 bulan" : `${n} bulan`}
+              {n === 1 ? "1 bulan" : n === "all" ? "Sejak awal" : `${n} bulan`}
             </button>
           ))}
         </div>
         {rangeErr && <div className="text-[11px] font-mono text-rose-300">{rangeErr}</div>}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <Tile label="Total pendapatan" value={rangeRev ? idr(rangeRev.total) : "-"} sub={rangeLoading ? "menghitung..." : `${range} bulan terakhir, sampai periode ini`} accent="#34d399" />
+          <Tile label="Total pendapatan" value={rangeRev ? idr(rangeRev.total) : "-"} sub={rangeLoading ? "menghitung..." : range === "all" ? "sejak pendapatan pertama, sampai periode ini" : `${range} bulan terakhir, sampai periode ini`} accent="#34d399" />
           <Tile label="Invoice" value={rangeRev ? idr(rangeRev.invoice) : "-"} sub="dari invoice yang dibayar" />
           <Tile label="Langganan Mayar" value={rangeRev ? idr(rangeRev.mayar) : "-"} sub={rangeRev?.estimate ? `ditambah perkiraan ${idr(rangeRev.estimate)}` : "dari pembayaran Mayar"} />
           <Tile label="Token add-on" value={rangeRev ? idr(rangeRev.addon) : "-"} sub="dari token Generate Leads" />
