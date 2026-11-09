@@ -61,3 +61,9 @@ Yang sengaja **belum** diubah: grant `anon` pada `nexto_set_drawing` dan `nexto_
 ## Catatan insiden 2026-11-09
 
 Saat menambahkan `nexto_service_key`, nilai service key sempat terpaste ke secret `nexto_sync_secret`, dan sebelumnya nilai teks kalimat ikut tersimpan. Akibatnya sinkronisasi DP sempat gagal. Nilai `nexto_sync_secret` sudah dikembalikan ke nilai rotasi, dan service key dipindah ke `nexto_service_key`. Verifikasi dilakukan setelah itu.
+
+## Koreksi 2026-11-09 (setelah pencabutan)
+
+- Grant `anon` pada `journey_set_spk_diterima` dan `journey_terima_so` **dikembalikan**. Frontend Journey kemungkinan memanggil keduanya langsung dengan publishable key setelah mengambil secret dari `so_secret_untuk_nexto`. Repo ini tidak memanggilnya, dan frontend Journey belum bisa diperiksa dari sesi ini.
+- Yang tetap dicabut: `anon` pada `journey_tandai_dp`, karena hanya dipakai trigger `kirim_dp_ke_nexto` yang sudah memakai service key.
+- Untuk mencabut `anon` dari dua function itu, periksa dulu frontend Journey. Kalau sudah tidak memanggil dengan anon, cabut dengan `revoke execute ... from anon`.
