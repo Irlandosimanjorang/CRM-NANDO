@@ -262,20 +262,24 @@ Deno.serve(async (req) => {
     // Lifetime revenue: uang masuk dari invoice lunas dan pembayaran Mayar, dikelompokkan per bulan pembayaran (WIB).
     if (body.action === "lifetime") {
       const { data: invRows, error: invErr2 } = await admin.from("admin_invoices")
-        .select("total, invoice_date, paid_at").eq("status", "paid").limit(5000);
+        .select("total, paid_at").eq("status", "paid").limit(5000);
       if (invErr2) throw invErr2;
       const { data: mRows, error: mErr2 } = await admin.from("subscription_payments")
-        .select("amount, paid_at").limit(10000);
+        .select("amount, paid_at, source").limit(10000);
       if (mErr2) throw mErr2;
-      const byMonth: Record<string, { invoice: number; mayar: number }> = {};
-      const bucket = (iso: string) => (byMonth[monthOf(wibDateOf(iso))] ||= { invoice: 0, mayar: 0 });
-      for (const r of invRows || []) bucket(r.paid_at || r.invoice_date).invoice += num(r.total);
-      for (const r of mRows || []) { if (r.paid_at) bucket(r.paid_at).mayar += num(r.amount); }
-      const rows = Object.keys(byMonth).sort().reverse().map((ym) => ({
-        ym, invoice: R(byMonth[ym].invoice), mayar: R(byMonth[ym].mayar), total: R(byMonth[ym].invoice + byMonth[ym].mayar),
-      }));
-      const sum = (k: "invoice" | "mayar" | "total") => rows.reduce((s, r) => s + r[k], 0);
-      return json({ rows, total: { invoice: sum("invoice"), mayar: sum("mayar"), total: sum("total") } });
+      // Basis kas: hanya yang punya tanggal bayar. Mayar hasil backfill (source "backfill") nominalnya perkiraan.
+      let invoice = 0, mayar = 0, mayarEstimate = 0, invoiceNoDate = 0;
+      for (const r of invRows || []) { if (r.paid_at) invoice += num(r.total); else invoiceNoDate++; }
+      for (const r of mRows || []) {
+        const amt = num(r.amount);
+        mayar += amt;
+        if (r.source === "backfill") mayarEstimate += amt;
+      }
+      const inv = R(invoice), may = R(mayar);
+      return json({
+        total: { invoice: inv, mayar: may, mayar_estimate: R(mayarEstimate), total: R(invoice + mayar) },
+        invoice_without_paid_date: invoiceNoDate,
+      });
     }
 
     if (body.action !== "get") return json({ error: "Aksi tidak dikenal." }, 400);
