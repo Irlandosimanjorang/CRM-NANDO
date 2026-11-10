@@ -635,7 +635,12 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
       }
       if (!reserved) {
         const nextAt = await quotaResetAt(admin, userId, "generate-leads");
-        return new Response(JSON.stringify({ error: `Kuota Generate Leads Anda (${QUOTA_MAX_RUNS}x per bulan) sudah terpakai. Kuota terisi kembali pada ${nextAt ? fmtTanggal(nextAt) : "1 bulan setelah pemakaian pertama"}.`, next_available_at: nextAt ? nextAt.toISOString() : null }), { status: 429, headers: { ...corsFor(req), "Content-Type": "application/json" } });
+        // Batas yang berlaku bisa lebih kecil dari QUOTA_MAX_RUNS karena override per org
+        // (reserve_lead_gen_slot memakai nilai yang sama). Pesan harus menyebut angka itu, bukan konstanta.
+        const { data: ovr } = await admin.from("organizations").select("generate_leads_quota_override, generate_leads_quota_override_until").eq("id", orgId).maybeSingle();
+        const ovrActive = ovr?.generate_leads_quota_override != null && Date.now() < (ovr.generate_leads_quota_override_until ? new Date(ovr.generate_leads_quota_override_until).getTime() : Infinity);
+        const effectiveMax = ovrActive ? Math.min(QUOTA_MAX_RUNS, ovr.generate_leads_quota_override) : QUOTA_MAX_RUNS;
+        return new Response(JSON.stringify({ error: `Kuota Generate Leads Anda (${effectiveMax}x per bulan) sudah terpakai. Kuota terisi kembali pada ${nextAt ? fmtTanggal(nextAt) : "1 bulan setelah pemakaian pertama"}.`, next_available_at: nextAt ? nextAt.toISOString() : null }), { status: 429, headers: { ...corsFor(req), "Content-Type": "application/json" } });
       }
       reservedRunId = reserved;
     }
