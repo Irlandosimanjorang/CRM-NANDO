@@ -136,6 +136,9 @@ const SheetsIcon = ({ size = 22, className = "" }) => (
   </svg>
 );
 
+// Org ELEVASIA (Dian): punya card Nilai proyek di tab Report.
+const PROYEK_ORG_ID = "1c5963cb-51a6-4b4b-bf4b-5ee7e77f68b2";
+
 export default function MonthlyReport({ leads: allLeads = [], stages = [], dealTransactions: allTxRaw = [], members = [], org, canImport = false, canManage = false, onChanged, onOpenLead, projectDeal = false }) {
   // Omzet org project_deal (16 Okt 2026, keputusan Nando): nilai proyek lead di tahap menang, bukan transaksi deal.
   // Transaksi dikosongkan supaya perhitungan memakai fallback lead menang (deal_value & deal_date) yang sudah ada.
@@ -248,6 +251,26 @@ export default function MonthlyReport({ leads: allLeads = [], stages = [], dealT
     }
     return [...map.values()].sort((a, b) => b.omzet - a.omzet);
   }, [dealsSrv]);
+
+  // Nilai proyek (khusus ELEVASIA): nilai kontrak dari lead di tahap Project Deal dan Project Finish.
+  // Dihitung dari nilai lead, bukan transaksi deal, supaya tidak ada angka yang terhitung dua kali.
+  const proyekRows = useMemo(() => {
+    if (org?.id !== PROYEK_ORG_ID) return null;
+    const keyOf = (label) => stages.find((s) => s.label === label)?.key;
+    const kDeal = keyOf("Project Deal");
+    const kFinish = keyOf("Project Finish");
+    const inPeriod = (l) => {
+      const d = String(l.deal_date || "");
+      if (!d) return false;
+      return fullMonth ? d.slice(0, 7) === ym : d >= range.from && d <= range.to;
+    };
+    const items = allLeads.filter((l) => !l.deleted_at && (l.stage_key === kDeal || l.stage_key === kFinish) && inPeriod(l));
+    const pick = (k) => items.filter((l) => l.stage_key === k);
+    const total = (arr) => arr.reduce((n, l) => n + (Number(l.deal_value) || 0), 0);
+    const deal = pick(kDeal);
+    const finish = pick(kFinish);
+    return { dealCount: deal.length, dealTotal: total(deal), finishCount: finish.length, finishTotal: total(finish), total: total(items) };
+  }, [org?.id, stages, allLeads, fullMonth, ym, range.from, range.to]);
   // Deal dari server, disaring lingkup marketing dan filter sumber/tahap seperti tabel lead.
   const dealLeads = useMemo(() => dealsSrv.filter((l) => !l.deleted_at && (scopeId === "all" || (l.assigned_to || l.user_id) === scopeId) && passF(l)), [dealsSrv, scopeId, srcF, stF, srcSlot]);
 
@@ -891,6 +914,26 @@ ${!personal && scopeId === "all" && team.length ? `<h2>Hasil per marketing</h2><
                     <span className="shrink-0 tabular-nums text-slate-500">{p.deals} deal · <b className="font-semibold text-slate-800">{fmtRp(Number(p.omzet) || 0)}</b></span>
                   </li>
                 ))}
+              </ul>
+            </Panel>
+          )}
+
+          {proyekRows && (
+            <Panel className="p-5">
+              <PanelHeader title="Nilai proyek" meta={`Nilai kontrak proyek ${periodLabel}, dari tahap Project Deal dan Project Finish. Dihitung dari nilai lead, terpisah dari omzet transaksi.`} />
+              <ul className="mt-2 divide-y divide-slate-100">
+                <li className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
+                  <span className="min-w-0 truncate text-slate-800">Project Deal (menang)</span>
+                  <span className="shrink-0 tabular-nums text-slate-500">{proyekRows.dealCount} proyek · <b className="font-semibold text-slate-800">{fmtRp(proyekRows.dealTotal)}</b></span>
+                </li>
+                <li className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
+                  <span className="min-w-0 truncate text-slate-800">Project Finish (selesai)</span>
+                  <span className="shrink-0 tabular-nums text-slate-500">{proyekRows.finishCount} proyek · <b className="font-semibold text-slate-800">{fmtRp(proyekRows.finishTotal)}</b></span>
+                </li>
+                <li className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
+                  <span className="min-w-0 truncate font-semibold text-slate-900">Total nilai kontrak</span>
+                  <span className="shrink-0 tabular-nums font-semibold text-slate-900">{fmtRp(proyekRows.total)}</span>
+                </li>
               </ul>
             </Panel>
           )}
