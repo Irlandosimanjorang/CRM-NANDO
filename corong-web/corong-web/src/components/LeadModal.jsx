@@ -324,7 +324,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
 
   // Label field & slot custom field ngikutin template industri org (Settings > pilihan
   // industri pas onboarding). Org PVC lama gak kerasa bedanya - labelnya persis sama.
-  const lbl = (field, fallback) => getFieldLabel(industry, field, fallback);
+  const lbl = (field, fallback) => customFieldLabels?.[field] || getFieldLabel(industry, field, fallback);
   const hidden = (field) => isFieldHidden(industry, field);
   const customSlots = getCustomFieldSlots(industry, customFieldLabels);
   const categories = getCategories(industry);
