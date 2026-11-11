@@ -1081,6 +1081,64 @@ function AgentGridMap({ employees, selectedKey, onSelectEmployee }) {
   );
 }
 
+// SECURITY (11 Nov 2026, permintaan Nando) - ringkasan status keamanan Nexto dari hasil audit.
+// Status ini dicatat manual dari hasil pengecekan, BUKAN data live. Perbarui daftar ini setiap ada perubahan.
+// status: "ok" = sudah aman, "pending" = belum dikerjakan / belum dicek, "review" = perlu keputusan owner.
+const SECURITY_UPDATED = "11 Nov 2026";
+const SECURITY_ITEMS = [
+  { scope: "Eksternal", label: "HTTPS dan HSTS (2 tahun, termasuk subdomain)", status: "ok" },
+  { scope: "Eksternal", label: "Header keamanan: CSP, X-Frame-Options DENY, nosniff", status: "ok" },
+  { scope: "Eksternal", label: "Vercel Firewall: rate limit 300 request per menit per IP", status: "ok" },
+  { scope: "Eksternal", label: "Rate limit login Supabase: 4 per menit", status: "ok" },
+  { scope: "Eksternal", label: "Konfirmasi email wajib dan blokir domain email sekali pakai", status: "ok" },
+  { scope: "Eksternal", label: "RLS aktif di semua tabel public", status: "ok" },
+  { scope: "Eksternal", label: "Tiga fungsi journey_* tidak bisa dipanggil tanpa login", status: "ok" },
+  { scope: "Eksternal", label: "Tidak ada kunci rahasia di kode frontend", status: "ok" },
+  { scope: "Eksternal", label: "Bot protection Vercel", status: "pending" },
+  { scope: "Eksternal", label: "Turnstile di form login dan daftar", status: "pending" },
+  { scope: "Eksternal", label: "Tabel page_visits bisa diisi dari anon key tanpa login", status: "review" },
+  { scope: "Internal", label: "Fungsi merge_leads dibatasi peran dan kolom p_fill", status: "ok" },
+  { scope: "Internal", label: "Fungsi redeem_invite_code tidak lagi menghapus org yang masih punya anggota", status: "ok" },
+  { scope: "Internal", label: "Audit 41 fungsi SECURITY DEFINER untuk user login", status: "ok" },
+  { scope: "Internal", label: "Sinkron Journey (SO, SPK, dan jenis terkunci DP) memakai service role", status: "ok" },
+  { scope: "Internal", label: "Tabel competitors: UPDATE dibatasi owner dan manager", status: "pending" },
+  { scope: "Internal", label: "Tabel warranty_cards, customer_forms, org_memory terbuka untuk semua anggota Enterprise", status: "review" },
+  { scope: "Internal", label: "MFA wajib untuk akun admin", status: "pending" },
+  { scope: "Internal", label: "Backup harian dan Point-in-Time Recovery Supabase", status: "pending" },
+  { scope: "Internal", label: "npm audit untuk corong-web dan journey-order", status: "pending" },
+];
+const SECURITY_STATUS = {
+  ok: { label: "Aman", dot: "#34d399", text: "text-emerald-300" },
+  pending: { label: "Belum dicek", dot: "#f59e0b", text: "text-amber-300" },
+  review: { label: "Perlu keputusan", dot: "#f87171", text: "text-rose-300" },
+};
+
+function SecurityPanel() {
+  const groups = ["Eksternal", "Internal"];
+  return (
+    <div className="grid gap-3 min-w-0">
+      {groups.map((scope) => (
+        <div key={scope} className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+          <div className="text-[11px] text-slate-300 font-medium mb-2">{scope === "Eksternal" ? "Dari luar (internet)" : "Dari dalam (akun login)"}</div>
+          <div className="grid gap-1.5">
+            {SECURITY_ITEMS.filter((it) => it.scope === scope).map((it) => {
+              const st = SECURITY_STATUS[it.status];
+              return (
+                <div key={it.label} className="flex items-start gap-2.5 text-[11.5px] text-slate-200">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: st.dot }} />
+                  <span className="flex-1 min-w-0">{it.label}</span>
+                  <span className={`shrink-0 text-[10.5px] ${st.text}`}>{st.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div className="text-[10.5px] text-slate-500">Status terakhir diperbarui {SECURITY_UPDATED}. Dicatat manual dari hasil audit.</div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [status, setStatus] = useState(null);
   // Jumlah permintaan token add-on yang menunggu (kartu TOKEN ADD-ON); gagal = tidak menampilkan angka.
@@ -1353,6 +1411,24 @@ export default function AdminDashboard() {
       statLabel: "TOTAL USER",
       statValue: status?.users_overview?.total ?? 0,
       content: <UsersOverviewPanel data={status?.users_overview} features={status?.ai_limits?.features} />,
+    },
+    {
+      // SECURITY (11 Nov 2026, permintaan Nando) - ringkasan keamanan eksternal & internal (lihat SECURITY_ITEMS di atas).
+      key: "security",
+      title: "SECURITY",
+      subtitle: "Keamanan Eksternal & Internal",
+      icon: ShieldCheck,
+      accentColor: "#34d399",
+      glowClass: "",
+      ok: SECURITY_ITEMS.every((it) => it.status === "ok"),
+      gaugeValue: Math.round((SECURITY_ITEMS.filter((it) => it.status === "ok").length / SECURITY_ITEMS.length) * 100),
+      noTrigger: true,
+      noTriggerNote: `dicatat manual, terakhir ${SECURITY_UPDATED}`,
+      wide: true,
+      blurb: `${SECURITY_ITEMS.filter((it) => it.status === "ok").length} dari ${SECURITY_ITEMS.length} item sudah aman, ${SECURITY_ITEMS.filter((it) => it.status === "pending").length} belum dicek, ${SECURITY_ITEMS.filter((it) => it.status === "review").length} perlu keputusan.`,
+      statLabel: "SUDAH AMAN",
+      statValue: `${SECURITY_ITEMS.filter((it) => it.status === "ok").length}/${SECURITY_ITEMS.length}`,
+      content: <SecurityPanel />,
     },
     {
       // TRAFFIC (17 Sep 2026, permintaan Nando) - analitik pengunjung
