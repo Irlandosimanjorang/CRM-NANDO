@@ -470,7 +470,7 @@ function LeadCard({ c, stages, productLabel, onEdit, onDelete, onDraft, onProgre
               <div className={`font-display font-bold text-ink ${compact ? "text-[13px]" : "text-[15px]"} leading-snug tracking-[-0.02em] truncate`}>{uppercaseNames ? String(c.name || "").toUpperCase() : c.name}</div>
               {isHotLead(c, hotStageKeys(stages)) && <Flame size={14} className="text-orange-500 shrink-0" fill="currentColor" aria-label="Hot" />}
             </div>
-            <div className={`${compact ? "text-[11px]" : "text-[12.5px]"} text-slate-500 mt-0.5 truncate`}>{[c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
+            <div className={`${compact ? "text-[11px]" : "text-[12.5px]"} text-slate-500 mt-0.5 truncate`}>{c.nama_proyek || [c.category, c.city || c.province].filter(Boolean).join(", ") || "Belum ada kategori"}</div>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             {c.verified ? <ShieldCheck size={18} className="text-emerald-500" /> : <ShieldAlert size={18} className="text-slate-300" />}
@@ -808,7 +808,7 @@ export default function Leads({
       const uid = await db.getCurrentUserId().catch(() => null);
       const proyekChecklist = Object.fromEntries(Object.entries(p.checklist || {}).map(([k, v]) => [k, { at: v.at, by: v.by || uid || null }]));
       // No. SO disimpan di memo.so_number. Isi memo lain (mis. customer) dipertahankan.
-      leadPatch = { stage_key: nextKey, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_pct: p.discount_pct, discount_total: p.discount_total, detail_proyek: p.detail_proyek, proyek_checklist: proyekChecklist, memo: { ...(lead.memo || {}), jenis_penjualan: p.jenis_penjualan || "proyek" } };
+      leadPatch = { stage_key: nextKey, deal_date: p.date, deal_value: p.value, sph_number: p.sph_number, discount_pct: p.discount_pct, discount_total: p.discount_total, detail_proyek: p.detail_proyek, nama_proyek: p.nama_proyek, proyek_checklist: proyekChecklist, memo: { ...(lead.memo || {}), jenis_penjualan: p.jenis_penjualan || "proyek" } };
       await db.upsertLead({ ...lead, ...leadPatch });
       // Proyek Deal tetap kategori menang (BSB): alasan menang dicatat sebagai outcome dan progres, seperti tahap menang lain.
       if (extra.result) {
