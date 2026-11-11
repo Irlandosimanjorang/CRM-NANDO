@@ -1094,7 +1094,7 @@ const SECURITY_ITEMS = [
   { scope: "Eksternal", label: "RLS aktif di semua tabel public", status: "ok" },
   { scope: "Eksternal", label: "Tiga fungsi journey_* tidak bisa dipanggil tanpa login", status: "ok" },
   { scope: "Eksternal", label: "Tidak ada kunci rahasia di kode frontend", status: "ok" },
-  { scope: "Eksternal", label: "Bot protection Vercel", status: "pending" },
+  { scope: "Eksternal", label: "Bot protection Vercel", status: "ok" },
   { scope: "Eksternal", label: "Turnstile di form login dan daftar", status: "pending" },
   { scope: "Eksternal", label: "Tabel page_visits tidak bisa ditulis dari anon key", status: "ok" },
   { scope: "Internal", label: "Fungsi merge_leads dibatasi peran dan kolom p_fill", status: "ok" },
