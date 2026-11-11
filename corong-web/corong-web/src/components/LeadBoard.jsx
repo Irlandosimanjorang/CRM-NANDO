@@ -687,6 +687,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   const [berjalan, setBerjalan] = useState(lead.stage_key === "proyek_berjalan");
   // Detil proyek (31 Okt 2026, BSB). Memo dihapus (Nov 2026): detil boleh kosong, proyek boleh disimpan dulu.
   const [detail, setDetail] = useState(lead.detail_proyek || "");
+  const [namaProyek, setNamaProyek] = useState(lead.nama_proyek || "");
   const [checklist, setChecklist] = useState(() => ({ ...(lead.proyek_checklist || {}) }));
   // Wajib saat masuk Proyek Deal: tanggal, nilai proyek, QR code, dan performa invoice. No. SPH, No. SO, dan detail tentatif.
   const dataReady = !!date && dealValue > 0 && !!checklist.qr_berkas && !!checklist.invoice_performa;
@@ -706,7 +707,11 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
         <h3 className="mt-2 text-[15px] font-semibold text-slate-900">Data proyek</h3>
         <p className="mt-0.5 truncate text-[12px] text-slate-500">{lead.name}</p>
         <>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <label className="mt-4 block">
+              <span className="text-[11px] font-medium text-slate-500">Nama proyek</span>
+              <input value={namaProyek} onChange={(e) => setNamaProyek(e.target.value)} placeholder="Mis. Pembangunan Gudang PT Maju" className={field} />
+            </label>
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <label className="block">
                 <span className="text-[11px] font-medium text-slate-500">Tanggal deal *</span>
                 {/* Tanggal deal otomatis (7 Nov 2026): hari ini saat lead masuk Proyek Deal, tidak bisa diubah. */}
@@ -783,7 +788,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
           <button
             type="button"
             disabled={!dataReady}
-            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), so_number: so.trim(), discount_pct: null, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), checklist, jenis_penjualan: jenis })}
+            onClick={() => onSave({ date, value: dealValue, sph_number: sph.trim(), so_number: so.trim(), discount_pct: null, discount_total: discountValue, berjalan, detail_proyek: detail.trim(), nama_proyek: namaProyek.trim(), checklist, jenis_penjualan: jenis })}
             className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
           >
             Simpan
