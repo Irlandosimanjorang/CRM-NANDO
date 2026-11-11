@@ -2402,6 +2402,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
           <LeadBoard
             leads={filtered}
             stages={stages}
+            productIsProject={productLabel === "Nama proyek"}
             onOpenEdit={setEdit}
             onMove={moveLeadStage}
             onNewOpportunity={reopenLead}

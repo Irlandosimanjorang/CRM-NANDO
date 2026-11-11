@@ -55,7 +55,7 @@ const NX_RANGE_CSS = `
 .nx-kanban-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
 `;
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, dealBulan = null, proyekChecklist = false, sembunyikanPeluangBaru = false }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, dealBulan = null, proyekChecklist = false, sembunyikanPeluangBaru = false, productIsProject = false }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [hiddenStages, setHiddenStages] = useState(readHiddenStages);
@@ -559,7 +559,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                           className="min-w-0 flex-1 text-left"
                         >
                           <div className="truncate text-[13px] font-semibold leading-tight text-slate-900">{l.name}</div>
-                          <div className="mt-0.5 truncate text-[11.5px] text-slate-500">{l.nama_proyek || [l.city, l.product].filter(Boolean).join(" · ") || "Belum ada detail"}</div>
+                          <div className="mt-0.5 truncate text-[11.5px] text-slate-500">{l.nama_proyek || (productIsProject && l.product) || [l.city, l.product].filter(Boolean).join(" · ") || "Belum ada detail"}</div>
                         </button>
                       </div>
 
