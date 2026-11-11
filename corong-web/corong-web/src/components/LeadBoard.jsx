@@ -1,5 +1,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
+
+// Tahap Kanban yang disembunyikan user (per perangkat, disimpan di localStorage). Hanya tampilan, data tidak berubah.
+const HIDDEN_STAGES_KEY = "nexto.kanban.hiddenStages";
+function readHiddenStages() {
+  try {
+    const v = JSON.parse(localStorage.getItem(HIDDEN_STAGES_KEY) || "[]");
+    return Array.isArray(v) ? v.filter((k) => typeof k === "string") : [];
+  } catch {
+    return [];
+  }
+}
 import { createPortal } from "react-dom";
 import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { paymentTypesFor } from "../lib/paymentTypes";
@@ -47,6 +58,11 @@ const NX_RANGE_CSS = `
 export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, dealBulan = null, proyekChecklist = false, sembunyikanPeluangBaru = false }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
+  const [hiddenStages, setHiddenStages] = useState(readHiddenStages);
+  useEffect(() => {
+    try { localStorage.setItem(HIDDEN_STAGES_KEY, JSON.stringify(hiddenStages)); } catch { /* penyimpanan diblokir: tampilan tetap jalan */ }
+  }, [hiddenStages]);
+  const toggleHidden = (key) => setHiddenStages((h) => (h.includes(key) ? h.filter((k) => k !== key) : [...h, key]));
   const [drag, setDrag] = useState(null); // { lead, x, y, offX, offY, w } selama kartu diseret
   const [overKey, setOverKey] = useState(null);
   // Perubahan yang sudah tampil tapi belum tercermin dari data: id -> tahap baru.
@@ -348,7 +364,9 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const knownKeys = new Set(cols.map((s) => s.key));
   const orphans = shownLeads.filter((l) => !knownKeys.has(stageOf(l)));
   const boardCols = orphans.length ? [...cols, { key: UNKNOWN_KEY, label: "Tahap tidak dikenal", hex: "#94a3b8", type: "normal", unknown: true }] : cols;
-  const board = boardCols.map((s) => ({ stage: s, items: s.unknown ? orphans : shownLeads.filter((l) => stageOf(l) === s.key) }));
+  const visibleCols = boardCols.filter((s) => s.unknown || !hiddenStages.includes(s.key));
+  const hiddenCols = boardCols.filter((s) => !s.unknown && hiddenStages.includes(s.key));
+  const board = visibleCols.map((s) => ({ stage: s, items: s.unknown ? orphans : shownLeads.filter((l) => stageOf(l) === s.key) }));
   const accent = (s) => s.hex || "#94a3b8";
 
   return (
@@ -404,7 +422,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       </div>
       {overflowPx > 0 && (() => {
         // Rentang tahap yang sedang terlihat (perkiraan dari lebar tiap kolom).
-        const total = (stages || []).length || 1;
+        const total = board.length || 1;
         const viewW = boardRef.current?.clientWidth || 0;
         const colW = (overflowPx + viewW) / total;
         const first = Math.min(total, Math.floor(scrollPos / colW) + 1);
@@ -431,6 +449,27 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
           </>
         );
       })()}
+    {hiddenCols.length > 0 && (
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-[11px] font-medium text-slate-500">Disembunyikan</span>
+        {hiddenCols.map((s) => {
+          const n = shownLeads.filter((l) => stageOf(l) === s.key).length;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => toggleHidden(s.key)}
+              className="flex items-center gap-1.5 rounded-inner border border-slate-200 bg-white px-2.5 py-1 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+            >
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: accent(s) }} />
+              {s.label}
+              <span className="tabular-nums text-slate-400">({n})</span>
+              <Eye size={13} className="text-slate-400" />
+            </button>
+          );
+        })}
+      </div>
+    )}
     <div ref={boardRef} onScroll={(e) => setScrollPos(e.currentTarget.scrollLeft)} className="overflow-x-auto pb-4">
       {/* Pop-up dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke kartu/wrapper yang punya transform (bikin tidak bisa di-scroll). */}
       {closing && createPortal(<CloseDialog closing={closing} onCancel={cancelClose} onSave={saveClose} projectDeal={projectDeal} invoicePipeline={invoicePipeline} marketplacePayment={marketplacePayment} productOptions={productOptions} />, document.body)}
@@ -482,7 +521,20 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                     <span className="truncate text-[13px] font-semibold text-slate-800">{s.label}</span>
                     <span className="rounded-full bg-slate-100 px-1.5 text-[11px] font-semibold tabular-nums text-slate-500">{items.length}</span>
                   </div>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-slate-600">{fmtRp(total)}</span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-slate-600">{fmtRp(total)}</span>
+                    {!s.unknown && (
+                      <button
+                        type="button"
+                        onClick={() => toggleHidden(s.key)}
+                        title="Sembunyikan tahap ini"
+                        aria-label={`Sembunyikan tahap ${s.label}`}
+                        className="grid h-6 w-6 place-items-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <EyeOff size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </header>
 
