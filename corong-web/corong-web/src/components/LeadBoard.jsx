@@ -559,7 +559,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                           className="min-w-0 flex-1 text-left"
                         >
                           <div className="truncate text-[13px] font-semibold leading-tight text-slate-900">{l.name}</div>
-                          <div className="mt-0.5 truncate text-[11.5px] text-slate-500">{[l.city, l.product].filter(Boolean).join(" · ") || "Belum ada detail"}</div>
+                          <div className="mt-0.5 truncate text-[11.5px] text-slate-500">{l.nama_proyek || [l.city, l.product].filter(Boolean).join(" · ") || "Belum ada detail"}</div>
                         </button>
                       </div>
 
