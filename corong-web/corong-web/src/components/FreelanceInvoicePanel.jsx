@@ -39,7 +39,7 @@ function buildFreelanceHtml(d, p) {
     .filter((it) => String(it.desc || "").trim())
     .map((it, i) => {
       const amount = (Number(it.qty) || 0) * (Number(it.rate) || 0);
-      return `<tr><td class="no">${i + 1}</td><td>${esc(it.desc)}</td><td class="r">${esc(it.qty)}</td><td class="r">${rp(it.rate)}</td><td class="r">${rp(amount)}</td></tr>`;
+      return `<tr><td class="no">${i + 1}</td><td>${esc(it.desc)}</td><td class="r c-qty">${esc(it.qty)}</td><td class="r c-rate">${rp(it.rate)}</td><td class="r c-amt">${rp(amount)}</td></tr>`;
     })
     .join("");
   const from = [p.address, p.email, p.phone].filter(Boolean).map((l) => `<div>${esc(l)}</div>`).join("");
@@ -48,21 +48,26 @@ function buildFreelanceHtml(d, p) {
 <style>
   @page { margin: 18mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.5; }
+  html, body { margin: 0; background: #fff; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.5; padding: 32px 36px; max-width: 800px; margin: 0 auto; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
   h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
   .num { color: #666; margin-top: 4px; }
   .meta { text-align: right; color: #444; }
   .meta div + div { margin-top: 2px; }
-  .parties { display: flex; justify-content: space-between; gap: 24px; margin-top: 36px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
+  .parties > div { min-width: 0; text-align: left; }
   .label { color: #888; font-size: 11px; margin-bottom: 4px; }
   .name { font-weight: 600; font-size: 14px; }
   .proj { margin-top: 28px; padding-top: 14px; border-top: 1px solid #e5e5e5; }
-  table { width: 100%; border-collapse: collapse; margin-top: 18px; }
-  th, td { padding: 10px 8px; border-bottom: 1px solid #e5e5e5; text-align: left; vertical-align: top; }
+  table { width: 100%; border-collapse: collapse; margin-top: 18px; table-layout: fixed; }
+  th, td { padding: 10px 8px; border-bottom: 1px solid #e5e5e5; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
   th { font-weight: 600; font-size: 12px; color: #555; border-bottom: 1px solid #1a1a1a; }
-  .r { text-align: right; white-space: nowrap; }
-  .no { width: 32px; color: #888; }
+  th.r, td.r { text-align: right; white-space: nowrap; }
+  .no { width: 40px; color: #888; }
+  .c-qty { width: 64px; }
+  .c-rate { width: 130px; }
+  .c-amt { width: 140px; }
   .sum { margin-left: auto; width: 280px; margin-top: 16px; }
   .sum div { display: flex; justify-content: space-between; padding: 4px 0; color: #444; }
   .sum .grand { border-top: 1px solid #1a1a1a; margin-top: 6px; padding-top: 10px; color: #1a1a1a; font-size: 18px; font-weight: 700; }
@@ -94,7 +99,7 @@ function buildFreelanceHtml(d, p) {
   </div>
   ${d.project ? `<div class="proj"><div class="label">Proyek</div><div>${esc(d.project)}</div></div>` : ""}
   <table>
-    <thead><tr><th class="no">No</th><th>Deskripsi</th><th class="r">Qty</th><th class="r">Harga</th><th class="r">Jumlah</th></tr></thead>
+    <thead><tr><th class="no">No</th><th>Deskripsi</th><th class="r c-qty">Qty</th><th class="r c-rate">Harga</th><th class="r c-amt">Jumlah</th></tr></thead>
     <tbody>${rows || `<tr><td colspan="5" style="color:#888">Belum ada item</td></tr>`}</tbody>
   </table>
   <div class="sum">
