@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { printHtml, terbilang, processSignatureFile } from "../lib/docKit";
+import signDefault from "../assets/tanda-tangan-nando.png";
 
 // Invoice freelance PRIBADI (12 Nov 2026, permintaan Nando): terpisah dari invoice langganan Nexto.
 // Tanpa logo Nexto. Identitas pengirim diisi sendiri dan disimpan di perangkat ini (localStorage).
@@ -148,7 +149,9 @@ export default function FreelanceInvoicePanel() {
 
   const number = invoiceNumber(date, counter);
   const data = useMemo(() => ({ number, client, clientAddress, project, date, dueDate, items, taxPct, paymentTerms, notes }), [number, client, clientAddress, project, date, dueDate, items, taxPct, paymentTerms, notes]);
-  const html = useMemo(() => buildFreelanceHtml(data, profile), [data, profile]);
+  // Tanda tangan default sudah tertanam di template. Bisa diganti lewat unggah di profil.
+  const signSrc = profile.signImage || signDefault;
+  const html = useMemo(() => buildFreelanceHtml(data, { ...profile, signImage: signSrc }), [data, profile, signSrc]);
   const totals = totalsOf(data);
 
   const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -176,9 +179,9 @@ export default function FreelanceInvoicePanel() {
           <label className="block"><span className={lbl}>Nomor rekening</span><input className={field} value={profile.account} onChange={(e) => setProfile({ ...profile, account: e.target.value })} /></label>
           <label className="block sm:col-span-2"><span className={lbl}>Atas nama</span><input className={field} value={profile.holder} onChange={(e) => setProfile({ ...profile, holder: e.target.value })} /></label>
           <div className="block sm:col-span-2">
-            <span className={lbl}>Tanda tangan (JPG atau PNG)</span>
+            <span className={lbl}>Tanda tangan (sudah ada, bisa diganti dengan JPG atau PNG)</span>
             <div className="mt-1 flex items-center gap-3">
-              {profile.signImage ? <img src={profile.signImage} alt="Tanda tangan" className="h-12 max-w-[160px] rounded border border-white/[0.14] bg-white object-contain p-1" /> : <span className="text-[11px] text-slate-500">Belum ada</span>}
+              <img src={signSrc} alt="Tanda tangan" className="h-12 max-w-[160px] rounded border border-white/[0.14] bg-white object-contain p-1" />
               <input type="file" accept="image/png,image/jpeg" className="text-[12px] text-slate-300" onChange={async (e) => {
                 const f = e.target.files?.[0];
                 e.target.value = "";
