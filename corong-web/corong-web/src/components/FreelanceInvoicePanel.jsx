@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { printHtml, terbilang, processSignatureFile } from "../lib/docKit";
+import { printHtml, terbilang } from "../lib/docKit";
 import signDefault from "../assets/tanda-tangan-nando.png";
 
 // Invoice freelance PRIBADI (12 Nov 2026, permintaan Nando): terpisah dari invoice langganan Nexto.
@@ -149,9 +149,8 @@ export default function FreelanceInvoicePanel() {
 
   const number = invoiceNumber(date, counter);
   const data = useMemo(() => ({ number, client, clientAddress, project, date, dueDate, items, taxPct, paymentTerms, notes }), [number, client, clientAddress, project, date, dueDate, items, taxPct, paymentTerms, notes]);
-  // Tanda tangan default sudah tertanam di template. Bisa diganti lewat unggah di profil.
-  const signSrc = profile.signImage || signDefault;
-  const html = useMemo(() => buildFreelanceHtml(data, { ...profile, signImage: signSrc }), [data, profile, signSrc]);
+  // Tanda tangan default tertanam di template.
+  const html = useMemo(() => buildFreelanceHtml(data, { ...profile, signImage: signDefault }), [data, profile]);
   const totals = totalsOf(data);
 
   const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -178,19 +177,6 @@ export default function FreelanceInvoicePanel() {
           <label className="block"><span className={lbl}>Nama bank</span><input className={field} value={profile.bank} onChange={(e) => setProfile({ ...profile, bank: e.target.value })} placeholder="Mis. BCA" /></label>
           <label className="block"><span className={lbl}>Nomor rekening</span><input className={field} value={profile.account} onChange={(e) => setProfile({ ...profile, account: e.target.value })} /></label>
           <label className="block sm:col-span-2"><span className={lbl}>Atas nama</span><input className={field} value={profile.holder} onChange={(e) => setProfile({ ...profile, holder: e.target.value })} /></label>
-          <div className="block sm:col-span-2">
-            <span className={lbl}>Tanda tangan (sudah ada, bisa diganti dengan JPG atau PNG)</span>
-            <div className="mt-1 flex items-center gap-3">
-              <img src={signSrc} alt="Tanda tangan" className="h-12 max-w-[160px] rounded border border-white/[0.14] bg-white object-contain p-1" />
-              <input type="file" accept="image/png,image/jpeg" className="text-[12px] text-slate-300" onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = "";
-                if (!f) return;
-                try { const img = await processSignatureFile(f); setProfile((p) => ({ ...p, signImage: img })); } catch (err) { alert(err.message || "Gagal memproses tanda tangan."); }
-              }} />
-              {profile.signImage && <button type="button" onClick={() => setProfile((p) => ({ ...p, signImage: "" }))} className="text-[12px] text-slate-400 underline hover:text-slate-200">Hapus</button>}
-            </div>
-          </div>
         </div>
       </div>
 
