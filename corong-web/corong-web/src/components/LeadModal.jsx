@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { X, Save, Trash2, Plus, ClipboardList, Pencil, Check, MapPin, Mail, Send, Loader2, Sparkles, Lock } from "lucide-react";
 import FeedbackThumbs from "./FeedbackThumbs";
 import * as db from "../lib/db";
+import { pesanPindahDilarang } from "../lib/stageRules";
 import LeadConversation from "./LeadConversation";
 import PaymentTermsCard from "./PaymentTermsCard";
 import { fmtDate, stageMeta, chipStyle, parsePeople, joinPeople, MAX_KEY_PEOPLE, reasonCategoriesFor } from "../lib/helpers";
@@ -291,6 +292,8 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
   const enteringProyekDeal = isProyekDeal && lead.stage_key !== "proyek_deal";
 
   const onStageChange = (newKey) => {
+    const larangan = pesanPindahDilarang(lead.stage_key, newKey);
+    if (larangan) { alert(larangan); return; }
     set("stage_key", newKey);
     const newStage = stages.find((s) => s.key === newKey);
     const oldStage = stages.find((s) => s.key === lead.stage_key);

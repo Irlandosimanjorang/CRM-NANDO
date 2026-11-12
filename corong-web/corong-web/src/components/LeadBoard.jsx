@@ -16,6 +16,7 @@ import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { paymentTypesFor } from "../lib/paymentTypes";
 import { PROYEK_CHECKLIST, sudahCentang, terkunci } from "../lib/proyekChecklist";
 import * as db from "../lib/db";
+import { pesanPindahDilarang } from "../lib/stageRules";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
 // dan kolom yang panjang atau papan yang lebar digulir otomatis saat kursor dekat tepinya. Kartu langsung pindah di layar,
@@ -160,6 +161,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   const moveTo = (lead, key, fromRect = null) => {
     if (!lead || key === UNKNOWN_KEY || stageOf(lead) === key) return;
+    const larangan = pesanPindahDilarang(stageOf(lead), key);
+    if (larangan) { alert(larangan); return; }
     const target = cols.find((s) => s.key === key);
     // Pipeline BSB/trial: tahap Proyek Deal itu kategori menang. Urutannya: alasan menang dulu, lalu data proyek.
     if (key === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan")) {
