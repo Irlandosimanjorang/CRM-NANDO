@@ -125,6 +125,8 @@ function buildFreelanceHtml(d, p) {
 
 const field = "mt-1 w-full rounded-lg border border-white/[0.14] bg-[#0b1220] px-3 py-2 text-[12.5px] text-slate-100 placeholder:text-slate-500 focus:border-slate-400 focus:outline-none";
 const lbl = "block text-[11px] font-medium text-slate-400";
+// Klik di mana saja pada field tanggal langsung membuka kalender (bukan hanya ikon di kanan).
+const openPicker = (e) => { try { e.currentTarget.showPicker?.(); } catch { /* browser lama: pakai perilaku bawaan */ } };
 
 export default function FreelanceInvoicePanel() {
   const [profile, setProfile] = useState(loadProfile);
@@ -181,8 +183,8 @@ export default function FreelanceInvoicePanel() {
           <label className="block"><span className={lbl}>Kepada (nama klien)</span><input className={field} value={client} onChange={(e) => setClient(e.target.value)} /></label>
           <label className="block"><span className={lbl}>Proyek / pekerjaan</span><input className={field} value={project} onChange={(e) => setProject(e.target.value)} /></label>
           <label className="block sm:col-span-2"><span className={lbl}>Alamat klien</span><textarea rows={2} className={field} value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} /></label>
-          <label className="block"><span className={lbl}>Tanggal</span><input type="date" className={field} value={date} onChange={(e) => setDate(e.target.value)} /></label>
-          <label className="block"><span className={lbl}>Jatuh tempo</span><input type="date" className={field} value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></label>
+          <label className="block"><span className={lbl}>Tanggal</span><input type="date" className={field} value={date} onClick={openPicker} onChange={(e) => setDate(e.target.value)} /></label>
+          <label className="block"><span className={lbl}>Jatuh tempo</span><input type="date" className={field} value={dueDate} onClick={openPicker} onChange={(e) => setDueDate(e.target.value)} /></label>
         </div>
 
         <div className="mt-4 text-[12px] font-medium text-slate-200">Item</div>
