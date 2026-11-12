@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { printHtml, terbilang } from "../lib/docKit";
+import { printHtml, terbilang, processSignatureFile } from "../lib/docKit";
 
 // Invoice freelance PRIBADI (12 Nov 2026, permintaan Nando): terpisah dari invoice langganan Nexto.
 // Tanpa logo Nexto. Identitas pengirim diisi sendiri dan disimpan di perangkat ini (localStorage).
 // Invoice tidak disimpan ke database; cetak lewat dialog cetak browser -> Simpan sebagai PDF.
 const PROFILE_KEY = "nexto-freelance-profile";
 const COUNTER_KEY = "nexto-freelance-counter";
-const EMPTY_PROFILE = { name: "", address: "", email: "", phone: "", bank: "", account: "", holder: "" };
+const EMPTY_PROFILE = { name: "", address: "", email: "", phone: "", bank: "", account: "", holder: "", signImage: "" };
 
 function loadProfile() {
   try {
@@ -77,6 +77,7 @@ function buildFreelanceHtml(d, p) {
   .notes { color: #444; white-space: pre-line; }
   .sign { margin-top: 48px; text-align: right; }
   .sign .line { display: inline-block; border-top: 1px solid #1a1a1a; padding-top: 6px; min-width: 200px; text-align: center; }
+  .sign .ttd { display: block; height: 64px; width: auto; margin: 0 auto -6px auto; }
 </style></head><body>
   <div class="top">
     <div><h1>Invoice</h1><div class="num">${esc(d.number)}</div></div>
@@ -119,7 +120,7 @@ function buildFreelanceHtml(d, p) {
     </div>
   </div>
   ${d.notes ? `<div class="pay"><div class="box"><div class="label">Catatan</div><div class="notes">${esc(d.notes)}</div></div></div>` : ""}
-  <div class="sign"><div class="line">${esc(p.name || "")}</div></div>
+  <div class="sign">${p.signImage ? `<img class="ttd" src="${p.signImage}" alt="Tanda tangan">` : ""}<div class="line">${esc(p.name || "")}</div></div>
 </body></html>`;
 }
 
@@ -174,6 +175,19 @@ export default function FreelanceInvoicePanel() {
           <label className="block"><span className={lbl}>Nama bank</span><input className={field} value={profile.bank} onChange={(e) => setProfile({ ...profile, bank: e.target.value })} placeholder="Mis. BCA" /></label>
           <label className="block"><span className={lbl}>Nomor rekening</span><input className={field} value={profile.account} onChange={(e) => setProfile({ ...profile, account: e.target.value })} /></label>
           <label className="block sm:col-span-2"><span className={lbl}>Atas nama</span><input className={field} value={profile.holder} onChange={(e) => setProfile({ ...profile, holder: e.target.value })} /></label>
+          <div className="block sm:col-span-2">
+            <span className={lbl}>Tanda tangan (JPG atau PNG)</span>
+            <div className="mt-1 flex items-center gap-3">
+              {profile.signImage ? <img src={profile.signImage} alt="Tanda tangan" className="h-12 max-w-[160px] rounded border border-white/[0.14] bg-white object-contain p-1" /> : <span className="text-[11px] text-slate-500">Belum ada</span>}
+              <input type="file" accept="image/png,image/jpeg" className="text-[12px] text-slate-300" onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                try { const img = await processSignatureFile(f); setProfile((p) => ({ ...p, signImage: img })); } catch (err) { alert(err.message || "Gagal memproses tanda tangan."); }
+              }} />
+              {profile.signImage && <button type="button" onClick={() => setProfile((p) => ({ ...p, signImage: "" }))} className="text-[12px] text-slate-400 underline hover:text-slate-200">Hapus</button>}
+            </div>
+          </div>
         </div>
       </div>
 
