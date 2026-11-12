@@ -4,6 +4,7 @@ import { ShieldCheck, ShieldAlert, Sparkles, Loader2, Zap, ChevronDown, CheckCir
 import { RadialBarChart, RadialBar, PolarAngleAxis, AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import * as db from "../lib/db";
 import EnterpriseInvoicePanel from "../components/EnterpriseInvoicePanel";
+import FreelanceInvoicePanel from "../components/FreelanceInvoicePanel";
 import QuotationPanel from "../components/QuotationPanel";
 import OrgFeaturesPanel from "../components/OrgFeaturesPanel";
 import AddonTokensPanel from "../components/AddonTokensPanel";
@@ -1509,6 +1510,24 @@ export default function AdminDashboard() {
       statLabel: cashBalance?.has_checkpoint ? "SALDO ANTHROPIC" : "BIAYA AI BULAN INI",
       statValue: cashBalance?.has_checkpoint ? fmtUsd(cashBalance.remaining_usd) : fmtUsd(sumMonthUsd(status?.ai_usage)),
       content: <CashflowPanel />,
+    },
+    {
+      // INVOICE FREELANCE (12 Nov 2026, permintaan Nando) - invoice pribadi untuk pekerjaan freelance, tanpa logo Nexto.
+      key: "invoice_freelance",
+      title: "INVOICE FREELANCE",
+      subtitle: "Invoice pribadi, tanpa logo Nexto",
+      icon: FileText,
+      accentColor: "#94a3b8",
+      glowClass: "",
+      ok: true,
+      gaugeValue: 100,
+      noTrigger: true,
+      noTriggerNote: "dibuat langsung di perangkat ini",
+      wide: true,
+      blurb: "Buat invoice pekerjaan freelance dengan identitas Anda sendiri, lalu cetak atau simpan sebagai PDF.",
+      statLabel: "FORMAT",
+      statValue: "Pribadi",
+      content: <FreelanceInvoicePanel />,
     },
     {
       // INVOICE (2 Okt 2026, permintaan Nando) - buat invoice langganan
