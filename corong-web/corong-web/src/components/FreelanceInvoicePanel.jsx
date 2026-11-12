@@ -76,9 +76,9 @@ function buildFreelanceHtml(d, p) {
   .pay { margin-top: 36px; display: flex; justify-content: space-between; gap: 24px; }
   .pay .box { flex: 1; }
   .notes { color: #444; white-space: pre-line; }
-  .sign { margin-top: 48px; text-align: right; }
-  .sign .line { display: inline-block; border-top: 1px solid #1a1a1a; padding-top: 6px; min-width: 200px; text-align: center; }
-  .sign .ttd { display: block; height: 64px; width: auto; margin: 0 auto -6px auto; }
+  .sign { margin: 48px 0 0 auto; width: 240px; text-align: center; }
+  .sign .ttd { display: block; height: 64px; width: auto; margin: 0 auto -4px auto; }
+  .sign .line { display: block; width: 100%; border-top: 1px solid #1a1a1a; padding-top: 6px; text-align: center; }
 </style></head><body>
   <div class="top">
     <div><h1>Invoice</h1><div class="num">${esc(d.number)}</div></div>
