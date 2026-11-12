@@ -133,7 +133,6 @@ export default function FreelanceInvoicePanel() {
   const [taxPct, setTaxPct] = useState(0);
   const [paymentTerms, setPaymentTerms] = useState("Pembayaran dalam 14 hari setelah invoice diterima.");
   const [notes, setNotes] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* penyimpanan diblokir: tetap bisa dipakai */ }
@@ -156,7 +155,8 @@ export default function FreelanceInvoicePanel() {
   };
 
   return (
-    <div className="grid gap-4 min-w-0">
+    <div className="grid gap-4 min-w-0 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-4 min-w-0">
       <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
         <div className="mb-2 text-[12px] font-medium text-slate-200">Identitas Anda (pengirim)</div>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -204,15 +204,16 @@ export default function FreelanceInvoicePanel() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={() => setShowPreview((v) => !v)} className="rounded-lg border border-white/[0.14] px-3 py-1.5 text-[12px] font-medium text-slate-200 hover:bg-white/[0.06]">{showPreview ? "Sembunyikan pratinjau" : "Lihat pratinjau"}</button>
           <button type="button" onClick={print} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-900 hover:bg-white">Cetak / Simpan PDF</button>
         </div>
         <div className="mt-2 text-[11px] text-slate-500">Nomor invoice naik otomatis setelah dicetak. Invoice ini tidak disimpan ke database.</div>
       </div>
 
-      {showPreview && (
-        <iframe title="Pratinjau invoice" srcDoc={html} className="h-[640px] w-full rounded-xl border border-white/[0.14] bg-white" />
-      )}
+      </div>
+      <aside className="min-w-0 lg:sticky lg:top-4">
+        <div className="mb-2 text-[11px] font-medium text-slate-400">Pratinjau (langsung berubah saat diedit)</div>
+        <iframe title="Pratinjau invoice" srcDoc={html} className="h-[760px] w-full rounded-xl border border-white/[0.14] bg-white" />
+      </aside>
     </div>
   );
 }
