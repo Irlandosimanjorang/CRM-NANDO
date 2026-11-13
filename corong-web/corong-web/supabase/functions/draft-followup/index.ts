@@ -405,6 +405,6 @@ Tulis dalam Bahasa Indonesia baku yang profesional dan luwes.`;
     return new Response(JSON.stringify(obj), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     await releaseQuota();
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
+    console.error("[draft-followup]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: cors });
   }
 }));

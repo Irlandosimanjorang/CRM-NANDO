@@ -406,6 +406,6 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
   } catch (e) {
     if (admin && reservationId) await releaseSlot(admin, reservationId);
     if (admin && storagePath) await removeAudio(admin, storagePath);
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
+    console.error("[quick-progress-note]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: cors });
   }
 }));

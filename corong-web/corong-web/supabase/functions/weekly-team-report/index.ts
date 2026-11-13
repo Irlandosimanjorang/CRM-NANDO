@@ -119,6 +119,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, range: { from: range.from, to: range.to }, results }), { headers: { "Content-Type": "application/json" } });
   } catch (e) {
     console.log("[weekly-team-report] FATAL", String(e));
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    console.error("[weekly-team-report]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500 });
   }
 });

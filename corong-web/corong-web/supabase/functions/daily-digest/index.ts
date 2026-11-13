@@ -702,6 +702,6 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     return new Response(JSON.stringify({ ok: true, results }), { headers: { "Content-Type": "application/json" } });
   } catch (e) {
     console.log("[digest] FATAL", String(e));
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    console.error("[daily-digest]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500 });
   }
 }));

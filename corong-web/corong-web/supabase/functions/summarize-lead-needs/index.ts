@@ -298,6 +298,6 @@ Tulis dalam Bahasa Indonesia baku yang profesional (sapa pembaca dengan "Anda" k
     return new Response(JSON.stringify({ ...obj, has_catalog: hasCatalog, based_on_notes_count: notes.length }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     await releaseQuota();
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
+    console.error("[summarize-lead-needs]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: cors });
   }
 }));

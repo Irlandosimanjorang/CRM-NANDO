@@ -261,6 +261,6 @@ Balas HANYA JSON, tanpa markdown: {"points":["...","...","..."]}`;
     return new Response(JSON.stringify({ ok: true, points }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     await releaseQuota();
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
+    console.error("[suggest-visit-points]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: cors });
   }
 }));

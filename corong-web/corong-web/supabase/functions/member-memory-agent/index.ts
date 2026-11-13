@@ -148,6 +148,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, ...result }), { headers: { "content-type": "application/json" } });
   } catch (e) {
     console.log("[member-memory-agent] FATAL", String(e));
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { "content-type": "application/json" } });
+    console.error("[member-memory-agent]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: { "content-type": "application/json" } });
   }
 });

@@ -127,6 +127,6 @@ Deno.serve(async (req) => {
       first_error: firstError.msg,
     }), { headers: { ...CORS, "Content-Type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: CORS });
+    console.error("[backfill-embeddings]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: CORS });
   }
 });

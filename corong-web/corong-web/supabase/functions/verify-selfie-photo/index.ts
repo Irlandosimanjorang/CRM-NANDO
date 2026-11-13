@@ -272,6 +272,6 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
   } catch (e) {
     console.log("[verify-selfie-photo] EXCEPTION:", String(e));
     await releaseQuota();
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
+    console.error("[verify-selfie-photo]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: cors });
   }
 }));

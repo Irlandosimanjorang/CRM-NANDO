@@ -242,6 +242,6 @@ Balas HANYA JSON, tanpa markdown, tanpa penjelasan tambahan, persis format ini:
 
     return new Response(JSON.stringify(result), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
+    console.error("[smart-import-map-ts]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: cors });
   }
 }));
