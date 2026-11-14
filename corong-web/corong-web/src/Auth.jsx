@@ -478,7 +478,8 @@ export const ENTERPRISE_FEATURES = [
 // key yang cuma disimpen di sisi Supabase). Dipake buat render widget
 // captcha di form signup/login, dipasangin karena Supabase Auth "Enable
 // Captcha protection" ditolak jalan tanpa token dari widget ini.
-const TURNSTILE_SITE_KEY = "0x4AAAAAAEu6vGXceQD1CTOl";
+// Di lokal, isi VITE_TURNSTILE_SITE_KEY di .env.local dengan site key uji Cloudflare (1x00000000000000000000AA).
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "0x4AAAAAAEu6vGXceQD1CTOl";
 
 // === EARLY BIRD PROMO (10 Sep 2026) ===
 // Diskon 15% berlaku buat DUA-DUANYA siklus billing (Bulanan maupun 3
@@ -2465,6 +2466,7 @@ export default function Auth({ recovering = false, onRecovered } = {}) {
   useEffect(() => { if (recovering) setMode("reset"); }, [recovering]);
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [tampilPw, setTampilPw] = useState(false);
   const [fullName, setFullName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -3557,16 +3559,40 @@ export default function Auth({ recovering = false, onRecovered } = {}) {
                       <label className="mb-1.5 block text-[9px] font-semibold text-slate-400">
                         {mode === "reset" ? "PASSWORD BARU" : "PASSWORD"} {mode === "signup" && <span className="text-orange-400">*</span>}
                       </label>
-                      <input
-                        type="password"
-                        className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] px-3.5 py-3 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
-                        placeholder="••••••••"
-                        value={pw}
-                        onChange={(e) => setPw(e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && submit()
-                        }
-                      />
+                      <div className="relative">
+                        <input
+                          type={tampilPw ? "text" : "password"}
+                          className="w-full rounded-xl border border-white/[0.09] bg-white/[0.05] py-3 pl-3.5 pr-11 text-[11px] text-white outline-none transition placeholder:text-slate-600 focus:border-orange-500/60 focus:ring-4 focus:ring-orange-500/10"
+                          placeholder="••••••••"
+                          value={pw}
+                          onChange={(e) => setPw(e.target.value)}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && submit()
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setTampilPw((v) => !v)}
+                          aria-label={tampilPw ? "Sembunyikan password" : "Tampilkan password"}
+                          aria-pressed={tampilPw}
+                          title={tampilPw ? "Sembunyikan password" : "Tampilkan password"}
+                          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-slate-400 transition hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60"
+                        >
+                          {tampilPw ? (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M3 3l18 18" />
+                              <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                              <path d="M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 8.5 4.5 9.5 7a13 13 0 0 1-2.2 3.4" />
+                              <path d="M6.6 6.6A13 13 0 0 0 2.5 12c1 2.5 4.5 7 9.5 7a9.7 9.7 0 0 0 4.4-1.1" />
+                            </svg>
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7S2.5 12 2.5 12z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                       {(mode === "signup" || mode === "reset") && (() => {
                         const checks = pwChecks(pw);
                         const items = [
