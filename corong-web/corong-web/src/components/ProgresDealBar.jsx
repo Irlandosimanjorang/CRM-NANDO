@@ -264,13 +264,7 @@ export default function ProgresDealBar() {
               className="flex w-full items-center gap-2 text-[11px] text-slate-500 hover:text-slate-800 disabled:cursor-default disabled:hover:text-slate-500"
             >
               <span className="h-px flex-1 bg-slate-300" aria-hidden="true" />
-              <span>
-                {selesaiRows.length === 0
-                  ? "Belum ada deal selesai"
-                  : showSelesai
-                    ? "Sembunyikan deal selesai"
-                    : `Tampilkan ${selesaiRows.length} deal selesai`}
-              </span>
+              <span>Selesai</span>
               <span className="h-px flex-1 bg-slate-300" aria-hidden="true" />
             </button>
           </div>
