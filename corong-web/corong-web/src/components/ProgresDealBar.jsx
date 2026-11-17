@@ -5,6 +5,8 @@ import * as db from "../lib/db";
 
 // Hanya untuk organisasi BSB (PT. Bangun Selaras Bersama). Pengecekan juga ada di RLS database.
 const ORG_BSB = "43a0f3e6-e4fd-4db1-ba75-26a6a8e8dbc0";
+// Akun pratinjau pemilik: bisa melihat tombol dan semua deal BSB untuk melihat tampilan terbaru.
+const UID_PRATINJAU = "45dadf81-c11a-465b-ac9d-47e1a1aae83c";
 
 // Tombol mengambang di tab Leads: daftar progres deal milik pengguna yang sedang login (17 Nov 2026).
 // Data dikirim dari journey setiap ada perubahan (tabel marketing_progres). Akses dibatasi RLS:
@@ -116,11 +118,13 @@ export default function ProgresDealBar() {
   const [rows, setRows] = useState([]);
   const [galat, setGalat] = useState("");
   const [boleh, setBoleh] = useState(false);
+  const [showSelesai, setShowSelesai] = useState(false);
 
   useEffect(() => {
     db.getCurrentUserId()
       .then(async (uid) => {
         if (!uid) { setBoleh(false); return; }
+        if (uid === UID_PRATINJAU) { setBoleh(true); return; }
         const { data } = await supabase
           .from("organization_members")
           .select("org_id")
@@ -156,6 +160,9 @@ export default function ProgresDealBar() {
     return () => window.removeEventListener("keydown", tekan);
   }, [open]);
 
+  const berjalanRows = rows.filter((r) => !r.payload?.selesai);
+  const selesaiRows = rows.filter((r) => !!r.payload?.selesai);
+
   if (!boleh) return null;
 
   return (
@@ -178,7 +185,7 @@ export default function ProgresDealBar() {
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <div>
               <h2 className="text-[15px] font-medium text-slate-900">Progres deal</h2>
-              <p className="text-[12px] text-slate-500">{rows.length} deal</p>
+              <p className="text-[12px] text-slate-500">{berjalanRows.length} berjalan, {selesaiRows.length} selesai</p>
             </div>
             <button
               type="button"
@@ -196,7 +203,7 @@ export default function ProgresDealBar() {
               <p className="px-1 py-6 text-center text-[13px] text-slate-500">Belum ada deal yang tercatat di proyek.</p>
             )}
             <div className="flex flex-col gap-3">
-              {rows.map((r) => {
+              {[...berjalanRows, ...(showSelesai ? selesaiRows : [])].map((r) => {
                 const p = r.payload || {};
                 const nilai = Number(p.nilai) || 0;
                 const terbayar = Number(p.terbayar) || 0;
@@ -242,6 +249,16 @@ export default function ProgresDealBar() {
                 );
               })}
             </div>
+            {selesaiRows.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowSelesai((v) => !v)}
+                aria-expanded={showSelesai}
+                className="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+              >
+                {showSelesai ? "Sembunyikan deal selesai" : `Tampilkan ${selesaiRows.length} deal selesai`}
+              </button>
+            )}
           </div>
       </section>
 
