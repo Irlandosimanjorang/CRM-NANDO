@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
@@ -51,6 +51,41 @@ export default function ProgresDealBar() {
   const [rows, setRows] = useState([]);
   const [galat, setGalat] = useState("");
   const [uid, setUid] = useState(null);
+  // Posisi tombol tepi kanan: hanya bergerak naik turun. Null berarti di tengah layar.
+  const [tabTop, setTabTop] = useState(() => {
+    try {
+      const v = Number(localStorage.getItem("progresTabTop"));
+      return Number.isFinite(v) && v >= 0 ? v : null;
+    } catch { return null; }
+  });
+  const geserRef = useRef(null);
+  const sudahGeser = useRef(false);
+
+  function mulaiGeser(e) {
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    geserRef.current = { y: e.clientY, top: rect.top, tinggi: el.offsetHeight, terakhir: rect.top };
+    sudahGeser.current = false;
+    try { el.setPointerCapture(e.pointerId); } catch { /* perangkat tanpa dukungan */ }
+  }
+
+  function geser(e) {
+    const g = geserRef.current;
+    if (!g) return;
+    const dy = e.clientY - g.y;
+    if (Math.abs(dy) > 4) sudahGeser.current = true;
+    const batasBawah = window.innerHeight - g.tinggi - 8;
+    const t = Math.min(Math.max(8, g.top + dy), Math.max(8, batasBawah));
+    g.terakhir = t;
+    setTabTop(t);
+  }
+
+  function selesaiGeser() {
+    const g = geserRef.current;
+    geserRef.current = null;
+    if (!g || !sudahGeser.current) return;
+    try { localStorage.setItem("progresTabTop", String(Math.round(g.terakhir))); } catch { /* penyimpanan diblokir */ }
+  }
 
   useEffect(() => { db.getCurrentUserId().then(setUid).catch(() => setUid(null)); }, []);
 
@@ -169,10 +204,18 @@ export default function ProgresDealBar() {
 
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (sudahGeser.current) { sudahGeser.current = false; return; }
+          setOpen((v) => !v);
+        }}
+        onPointerDown={mulaiGeser}
+        onPointerMove={geser}
+        onPointerUp={selesaiGeser}
+        onPointerCancel={selesaiGeser}
         aria-expanded={open}
-        aria-label="Buka progres deal"
-        className={`fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-l-lg bg-slate-900 px-1.5 py-2.5 text-white shadow-md transition-opacity duration-200 hover:bg-slate-800 ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
+        aria-label="Buka progres deal. Tarik ke atas atau bawah untuk memindahkan."
+        style={{ touchAction: "none", ...(tabTop != null ? { top: tabTop } : {}) }}
+        className={`fixed right-0 z-40 flex cursor-ns-resize select-none flex-col items-center gap-1.5 rounded-l-lg bg-slate-900 px-1.5 py-2.5 text-white shadow-md transition-opacity duration-200 hover:bg-slate-800 ${tabTop == null ? "top-1/2 -translate-y-1/2" : ""} ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
         <span className="text-[11px] font-medium [writing-mode:vertical-rl] rotate-180">Progres deal</span>
         <span className="rounded-full bg-white px-1 py-px text-[10px] font-medium tabular-nums leading-tight text-slate-900">{rows.length}</span>
