@@ -254,13 +254,17 @@ export default function ProgresDealBar() {
               onClick={() => setShowSelesai((v) => !v)}
               disabled={selesaiRows.length === 0}
               aria-expanded={showSelesai}
-              className="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-default disabled:text-slate-400 disabled:hover:bg-transparent"
+              className="mt-4 flex w-full items-center gap-3 text-[12px] text-slate-500 hover:text-slate-800 disabled:cursor-default disabled:hover:text-slate-500"
             >
-              {selesaiRows.length === 0
-                ? "Belum ada deal selesai"
-                : showSelesai
-                  ? "Sembunyikan deal selesai"
-                  : `Tampilkan ${selesaiRows.length} deal selesai`}
+              <span className="h-px flex-1 bg-slate-300" aria-hidden="true" />
+              <span>
+                {selesaiRows.length === 0
+                  ? "Belum ada deal selesai"
+                  : showSelesai
+                    ? "Sembunyikan deal selesai"
+                    : `Tampilkan ${selesaiRows.length} deal selesai`}
+              </span>
+              <span className="h-px flex-1 bg-slate-300" aria-hidden="true" />
             </button>
           </div>
       </section>
