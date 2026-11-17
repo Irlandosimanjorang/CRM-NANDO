@@ -30,7 +30,7 @@ const SINGKAT = {
   spkp: "SPKP",
   produksi: "Prod",
   produksi_qc: "QC",
-  delivery: "DEF",
+  delivery: "DEV",
   instalasi: "INS",
   instalasi_qc: "BAP",
   full_payment: "BAST",
