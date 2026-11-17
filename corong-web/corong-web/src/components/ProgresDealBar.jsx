@@ -25,13 +25,13 @@ const TAHAP = [
 
 const SINGKAT = {
   deal: "Deal",
-  dana_masuk: "Bayar",
+  dana_masuk: "Payment",
   spk: "SPK",
   spkp: "SPKP",
   produksi: "Prod",
   produksi_qc: "QC",
-  delivery: "Kirim",
-  instalasi: "Pasang",
+  delivery: "DEF",
+  instalasi: "INS",
   instalasi_qc: "BAP",
   full_payment: "BAST",
 };
@@ -81,9 +81,9 @@ function Progres({ tahap }) {
           );
         })}
       </div>
-      <div className="mt-1 grid grid-cols-10 gap-[3px] text-center text-[10px] text-slate-500" aria-hidden="true">
+      <div className="mt-1 flex justify-between text-[9px] leading-tight text-slate-500" aria-hidden="true">
         {TAHAP.map((t) => (
-          <span key={t.key} className="truncate">{SINGKAT[t.key]}</span>
+          <span key={t.key} className="whitespace-nowrap text-center">{SINGKAT[t.key]}</span>
         ))}
       </div>
       <p className="mt-1.5 min-h-[16px] text-[12px] text-slate-600">{keterangan}</p>
