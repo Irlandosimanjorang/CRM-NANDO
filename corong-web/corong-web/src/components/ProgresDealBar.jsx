@@ -91,12 +91,12 @@ export default function ProgresDealBar() {
         />
       )}
 
-      {open && (
-        <section
-          role="dialog"
-          aria-label="Progres deal"
-          className="fixed bottom-20 left-1/2 z-50 flex max-h-[70vh] w-[min(92vw,440px)] -translate-x-1/2 flex-col rounded-2xl border border-slate-200 bg-white shadow-xl"
-        >
+      <section
+        role="dialog"
+        aria-label="Progres deal"
+        aria-hidden={!open}
+        className={`fixed inset-y-0 right-0 z-50 flex w-[min(92vw,400px)] flex-col border-l border-slate-200 bg-white shadow-xl transition-transform duration-200 ease-out ${open ? "translate-x-0" : "pointer-events-none translate-x-full"}`}
+      >
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <div>
               <h2 className="text-[15px] font-medium text-slate-900">Progres deal</h2>
@@ -165,17 +165,17 @@ export default function ProgresDealBar() {
               })}
             </div>
           </div>
-        </section>
-      )}
+      </section>
 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-800 shadow-md hover:bg-slate-50"
+        aria-label="Buka progres deal"
+        className={`fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-2 rounded-l-xl bg-slate-900 px-2 py-4 text-white shadow-md transition-opacity duration-200 hover:bg-slate-800 ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
-        Progres deal
-        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] tabular-nums text-white">{rows.length}</span>
+        <span className="text-[13px] font-medium [writing-mode:vertical-rl] rotate-180">Progres deal</span>
+        <span className="rounded-full bg-white px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-slate-900">{rows.length}</span>
       </button>
     </>
   );
