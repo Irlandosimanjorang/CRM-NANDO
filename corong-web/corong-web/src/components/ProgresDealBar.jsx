@@ -172,10 +172,10 @@ export default function ProgresDealBar() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="Buka progres deal"
-        className={`fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-2 rounded-l-xl bg-slate-900 px-2 py-4 text-white shadow-md transition-opacity duration-200 hover:bg-slate-800 ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
+        className={`fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-l-lg bg-slate-900 px-1.5 py-2.5 text-white shadow-md transition-opacity duration-200 hover:bg-slate-800 ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
-        <span className="text-[13px] font-medium [writing-mode:vertical-rl] rotate-180">Progres deal</span>
-        <span className="rounded-full bg-white px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-slate-900">{rows.length}</span>
+        <span className="text-[11px] font-medium [writing-mode:vertical-rl] rotate-180">Progres deal</span>
+        <span className="rounded-full bg-white px-1 py-px text-[10px] font-medium tabular-nums leading-tight text-slate-900">{rows.length}</span>
       </button>
     </>
   );
