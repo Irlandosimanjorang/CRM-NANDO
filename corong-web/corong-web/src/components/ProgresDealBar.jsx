@@ -249,16 +249,19 @@ export default function ProgresDealBar() {
                 );
               })}
             </div>
-            {selesaiRows.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowSelesai((v) => !v)}
-                aria-expanded={showSelesai}
-                className="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
-              >
-                {showSelesai ? "Sembunyikan deal selesai" : `Tampilkan ${selesaiRows.length} deal selesai`}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowSelesai((v) => !v)}
+              disabled={selesaiRows.length === 0}
+              aria-expanded={showSelesai}
+              className="mt-3 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-default disabled:text-slate-400 disabled:hover:bg-transparent"
+            >
+              {selesaiRows.length === 0
+                ? "Belum ada deal selesai"
+                : showSelesai
+                  ? "Sembunyikan deal selesai"
+                  : `Tampilkan ${selesaiRows.length} deal selesai`}
+            </button>
           </div>
       </section>
 
