@@ -5,8 +5,6 @@ import * as db from "../lib/db";
 
 // Hanya untuk organisasi BSB (PT. Bangun Selaras Bersama). Pengecekan juga ada di RLS database.
 const ORG_BSB = "43a0f3e6-e4fd-4db1-ba75-26a6a8e8dbc0";
-// Akun pratinjau pemilik: bisa melihat tombol dan semua deal BSB untuk melihat tampilan terbaru.
-const UID_PRATINJAU = "45dadf81-c11a-465b-ac9d-47e1a1aae83c";
 
 // Tombol mengambang di tab Leads: daftar progres deal milik pengguna yang sedang login (17 Nov 2026).
 // Data dikirim dari journey setiap ada perubahan (tabel marketing_progres). Akses dibatasi RLS:
@@ -170,7 +168,6 @@ export default function ProgresDealBar() {
     db.getCurrentUserId()
       .then(async (uid) => {
         if (!uid) { setBoleh(false); return; }
-        if (uid === UID_PRATINJAU) { setBoleh(true); return; }
         const { data } = await supabase
           .from("organization_members")
           .select("org_id")
