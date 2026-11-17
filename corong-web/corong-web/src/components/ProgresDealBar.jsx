@@ -47,12 +47,12 @@ function Progres({ tahap }) {
   const detail = aktif ? (tahap || []).find((x) => x.key === aktif) : null;
   const infoAktif = TAHAP.find((t) => t.key === aktif);
 
-  let keterangan = "";
-  if (detail && infoAktif) {
-    if (detail.selesai) keterangan = `${infoAktif.label}: selesai ${tgl(detail.selesai)}`;
-    else if (detail.mulai) keterangan = `${infoAktif.label}: berjalan sejak ${tgl(detail.mulai)}`;
-    else keterangan = `${infoAktif.label}: belum dimulai`;
-  }
+  const statusAktif = (() => {
+    if (!detail) return null;
+    if (detail.selesai) return { teks: "Selesai", warna: "bg-emerald-500" };
+    if (detail.mulai) return { teks: "Sedang berjalan", warna: "bg-amber-400" };
+    return { teks: "Belum dimulai", warna: "bg-slate-300" };
+  })();
 
   return (
     <div>
@@ -61,23 +61,44 @@ function Progres({ tahap }) {
         <span className="font-medium tabular-nums text-slate-700">{persen}%</span>
       </div>
       <div className="grid grid-cols-10 gap-[3px]" role="group" aria-label="Progres tahap">
-        {TAHAP.map((t) => {
+        {TAHAP.map((t, i) => {
           const s = (tahap || []).find((x) => x.key === t.key);
           const selesai = !!s?.selesai;
           const berjalan = !selesai && !!s?.mulai;
+          const tampil = aktif === t.key;
+          const posisi = i === 0 ? "left-0" : i === TAHAP.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2";
           return (
-            <button
-              key={t.key}
-              type="button"
-              aria-label={t.label}
-              title={t.label}
-              onMouseEnter={() => setAktif(t.key)}
-              onMouseLeave={() => setAktif(null)}
-              onFocus={() => setAktif(t.key)}
-              onBlur={() => setAktif(null)}
-              onClick={() => setAktif((v) => (v === t.key ? null : t.key))}
-              className={`h-2.5 rounded-[4px] ${selesai ? "bg-emerald-500" : berjalan ? "bg-amber-400" : "bg-slate-200"} ${aktif === t.key ? "ring-2 ring-slate-400 ring-offset-1" : ""}`}
-            />
+            <div key={t.key} className="relative">
+              <button
+                type="button"
+                aria-label={`${t.label}, ${selesai ? "selesai" : berjalan ? "sedang berjalan" : "belum dimulai"}`}
+                onMouseEnter={() => setAktif(t.key)}
+                onMouseLeave={() => setAktif(null)}
+                onFocus={() => setAktif(t.key)}
+                onBlur={() => setAktif(null)}
+                onClick={() => setAktif((v) => (v === t.key ? null : t.key))}
+                className={`block h-2.5 w-full rounded-[4px] ${selesai ? "bg-emerald-500" : berjalan ? "bg-amber-400" : "bg-slate-200"} ${tampil ? "ring-2 ring-slate-400 ring-offset-1" : ""}`}
+              />
+              {tampil && infoAktif && statusAktif && (
+                <div
+                  role="tooltip"
+                  className={`pointer-events-none absolute top-full z-30 mt-2 w-[184px] rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left text-[12px] shadow-md ${posisi}`}
+                >
+                  <p className="font-medium text-slate-900">{infoAktif.label}</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-slate-700">
+                    <span className={`inline-block h-2 w-2 rounded-full ${statusAktif.warna}`} aria-hidden="true" />
+                    {statusAktif.teks}
+                  </p>
+                  <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 tabular-nums text-slate-600">
+                    <dt className="text-slate-500">Mulai</dt>
+                    <dd>{detail?.mulai ? tgl(detail.mulai) : "-"}</dd>
+                    <dt className="text-slate-500">Selesai</dt>
+                    <dd>{detail?.selesai ? tgl(detail.selesai) : "-"}</dd>
+                  </dl>
+                  <p className="mt-2 border-t border-slate-100 pt-1.5 text-[11px] text-slate-500">Menyumbang 10% dari progres</p>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -86,7 +107,6 @@ function Progres({ tahap }) {
           <span key={t.key} className="whitespace-nowrap">{SINGKAT[t.key]}</span>
         ))}
       </div>
-      <p className="mt-1.5 min-h-[16px] text-[12px] text-slate-600">{keterangan}</p>
     </div>
   );
 }
@@ -162,13 +182,13 @@ export default function ProgresDealBar() {
             {!galat && rows.length === 0 && (
               <p className="px-1 py-6 text-center text-[13px] text-slate-500">Belum ada deal yang tercatat di proyek.</p>
             )}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {rows.map((r) => {
                 const p = r.payload || {};
                 const nilai = Number(p.nilai) || 0;
                 const terbayar = Number(p.terbayar) || 0;
                 return (
-                  <article key={r.lead_id} className="rounded-xl border border-slate-200 p-3">
+                  <article key={r.lead_id} className="rounded-xl border-2 border-slate-300 bg-white p-3.5">
                     <div className="flex items-baseline justify-between gap-2">
                       <h3 className="truncate text-[14px] font-medium text-slate-900">{p.judul || p.customer || "Proyek"}</h3>
                       <span className="shrink-0 text-[12px] text-slate-500">{p.selesai ? "Selesai" : labelTahap(p.tahap_sekarang)}</span>
