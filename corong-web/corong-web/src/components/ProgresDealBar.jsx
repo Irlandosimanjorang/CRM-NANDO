@@ -28,20 +28,47 @@ const tgl = (v) => (v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleD
 const labelTahap = (key) => TAHAP.find((t) => t.key === key)?.label || key || "-";
 
 function Progres({ tahap }) {
+  const [aktif, setAktif] = useState(null);
+  const jumlahSelesai = TAHAP.filter((t) => !!(tahap || []).find((x) => x.key === t.key)?.selesai).length;
+  const persen = Math.round((jumlahSelesai / TAHAP.length) * 100);
+  const detail = aktif ? (tahap || []).find((x) => x.key === aktif) : null;
+  const infoAktif = TAHAP.find((t) => t.key === aktif);
+
+  let keterangan = "";
+  if (detail && infoAktif) {
+    if (detail.selesai) keterangan = `${infoAktif.label}: selesai ${tgl(detail.selesai)}`;
+    else if (detail.mulai) keterangan = `${infoAktif.label}: berjalan sejak ${tgl(detail.mulai)}`;
+    else keterangan = `${infoAktif.label}: belum dimulai`;
+  }
+
   return (
-    <div className="grid grid-cols-10 gap-0.5" role="img" aria-label="Progres tahap">
-      {TAHAP.map((t) => {
-        const s = (tahap || []).find((x) => x.key === t.key);
-        const selesai = !!s?.selesai;
-        const berjalan = !selesai && !!s?.mulai;
-        return (
-          <span
-            key={t.key}
-            title={t.label}
-            className={`h-1.5 rounded-full ${selesai ? "bg-emerald-500" : berjalan ? "bg-amber-400" : "bg-slate-200"}`}
-          />
-        );
-      })}
+    <div>
+      <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
+        <span>{jumlahSelesai} dari {TAHAP.length} tahap</span>
+        <span className="font-medium tabular-nums text-slate-700">{persen}%</span>
+      </div>
+      <div className="grid grid-cols-10 gap-0.5" role="group" aria-label="Progres tahap">
+        {TAHAP.map((t) => {
+          const s = (tahap || []).find((x) => x.key === t.key);
+          const selesai = !!s?.selesai;
+          const berjalan = !selesai && !!s?.mulai;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              aria-label={t.label}
+              title={t.label}
+              onMouseEnter={() => setAktif(t.key)}
+              onMouseLeave={() => setAktif(null)}
+              onFocus={() => setAktif(t.key)}
+              onBlur={() => setAktif(null)}
+              onClick={() => setAktif((v) => (v === t.key ? null : t.key))}
+              className={`h-1.5 rounded-full ${selesai ? "bg-emerald-500" : berjalan ? "bg-amber-400" : "bg-slate-200"} ${aktif === t.key ? "ring-2 ring-slate-400 ring-offset-1" : ""}`}
+            />
+          );
+        })}
+      </div>
+      <p className="mt-1.5 min-h-[16px] text-[12px] text-slate-600">{keterangan}</p>
     </div>
   );
 }
