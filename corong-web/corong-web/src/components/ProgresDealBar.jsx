@@ -113,6 +113,52 @@ function Progres({ tahap }) {
   );
 }
 
+function KartuDeal({ r }) {
+  const p = r.payload || {};
+  const nilai = Number(p.nilai) || 0;
+  const terbayar = Number(p.terbayar) || 0;
+  return (
+    <article className="rounded-xl border-2 border-slate-300 bg-white p-3.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="truncate text-[14px] font-medium text-slate-900">{p.judul || p.customer || "Proyek"}</h3>
+        <span className="shrink-0 text-[12px] text-slate-500">{p.selesai ? "Selesai" : labelTahap(p.tahap_sekarang)}</span>
+      </div>
+      <div className="mt-2">
+        <Progres tahap={p.tahap} />
+      </div>
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
+        <div>
+          <dt className="text-slate-500">Nilai</dt>
+          <dd className="font-medium text-slate-900">{rp(nilai)}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">Sudah masuk</dt>
+          <dd className="font-medium text-emerald-700">{rp(terbayar)}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">Belum masuk</dt>
+          <dd className="font-medium text-slate-900">{rp(Math.max(nilai - terbayar, 0))}</dd>
+        </div>
+      </dl>
+      {Array.isArray(p.termin) && p.termin.length > 0 && (
+        <ul className="mt-3 divide-y divide-slate-100 border-t border-slate-100 text-[12px]">
+          {p.termin.map((t, i) => (
+            <li key={i} className="flex items-center justify-between gap-2 py-1.5">
+              <span className="text-slate-700">{t.label || t.jenis}</span>
+              <span className="text-right text-slate-900">
+                {rp(t.nominal)}
+                <span className={`ml-2 ${t.tanggal_bayar ? "text-emerald-700" : "text-slate-500"}`}>
+                  {t.tanggal_bayar ? `dibayar ${tgl(t.tanggal_bayar)}` : t.jatuh_tempo ? `jatuh tempo ${tgl(t.jatuh_tempo)}` : "belum dibayar"}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </article>
+  );
+}
+
 export default function ProgresDealBar() {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState([]);
@@ -203,51 +249,9 @@ export default function ProgresDealBar() {
               <p className="px-1 py-6 text-center text-[13px] text-slate-500">Belum ada deal yang tercatat di proyek.</p>
             )}
             <div className="flex flex-col gap-3">
-              {[...berjalanRows, ...(showSelesai ? selesaiRows : [])].map((r) => {
-                const p = r.payload || {};
-                const nilai = Number(p.nilai) || 0;
-                const terbayar = Number(p.terbayar) || 0;
-                return (
-                  <article key={r.lead_id} className="rounded-xl border-2 border-slate-300 bg-white p-3.5">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="truncate text-[14px] font-medium text-slate-900">{p.judul || p.customer || "Proyek"}</h3>
-                      <span className="shrink-0 text-[12px] text-slate-500">{p.selesai ? "Selesai" : labelTahap(p.tahap_sekarang)}</span>
-                    </div>
-                    <div className="mt-2">
-                      <Progres tahap={p.tahap} />
-                    </div>
-                    <dl className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
-                      <div>
-                        <dt className="text-slate-500">Nilai</dt>
-                        <dd className="font-medium text-slate-900">{rp(nilai)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-slate-500">Sudah masuk</dt>
-                        <dd className="font-medium text-emerald-700">{rp(terbayar)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-slate-500">Belum masuk</dt>
-                        <dd className="font-medium text-slate-900">{rp(Math.max(nilai - terbayar, 0))}</dd>
-                      </div>
-                    </dl>
-                    {Array.isArray(p.termin) && p.termin.length > 0 && (
-                      <ul className="mt-3 divide-y divide-slate-100 border-t border-slate-100 text-[12px]">
-                        {p.termin.map((t, i) => (
-                          <li key={i} className="flex items-center justify-between gap-2 py-1.5">
-                            <span className="text-slate-700">{t.label || t.jenis}</span>
-                            <span className="text-right text-slate-900">
-                              {rp(t.nominal)}
-                              <span className={`ml-2 ${t.tanggal_bayar ? "text-emerald-700" : "text-slate-500"}`}>
-                                {t.tanggal_bayar ? `dibayar ${tgl(t.tanggal_bayar)}` : t.jatuh_tempo ? `jatuh tempo ${tgl(t.jatuh_tempo)}` : "belum dibayar"}
-                              </span>
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </article>
-                );
-              })}
+              {berjalanRows.map((r) => (
+                <KartuDeal key={r.lead_id} r={r} />
+              ))}
             </div>
             <button
               type="button"
@@ -266,6 +270,13 @@ export default function ProgresDealBar() {
               </span>
               <span className="h-px flex-1 bg-slate-300" aria-hidden="true" />
             </button>
+            {showSelesai && selesaiRows.length > 0 && (
+              <div className="mt-3 flex flex-col gap-3">
+                {selesaiRows.map((r) => (
+                  <KartuDeal key={r.lead_id} r={r} />
+                ))}
+              </div>
+            )}
           </div>
       </section>
 
