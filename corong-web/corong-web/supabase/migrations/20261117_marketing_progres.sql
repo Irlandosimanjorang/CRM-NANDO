@@ -16,10 +16,14 @@ alter table public.marketing_progres enable row level security;
 revoke all on public.marketing_progres from anon, authenticated;
 grant select on public.marketing_progres to authenticated;
 
--- Tahap uji: hanya akun pemilik yang boleh membaca. Perluasan ke marketing (assigned_to) dilakukan setelah disetujui.
+-- Dibuka untuk organisasi BSB saja (PT. Bangun Selaras Bersama). Marketing melihat deal miliknya, owner dan manager melihat semua.
 drop policy if exists marketing_progres_select on public.marketing_progres;
 create policy marketing_progres_select on public.marketing_progres for select to authenticated
-  using (auth.uid() = '45dadf81-c11a-465b-ac9d-47e1a1aae83c'::uuid);
+  using (
+    org_id = '43a0f3e6-e4fd-4db1-ba75-26a6a8e8dbc0'::uuid
+    and org_id in (select my_org_ids())
+    and (assigned_to = auth.uid() or my_role() in ('owner', 'manager'))
+  );
 
 create or replace function public.journey_progres_upsert(p_secret text, p_lead_id uuid, p_payload jsonb, p_waktu timestamptz)
 returns void

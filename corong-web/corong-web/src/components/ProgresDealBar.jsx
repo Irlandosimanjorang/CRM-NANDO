@@ -3,8 +3,8 @@ import { X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import * as db from "../lib/db";
 
-// Tahap uji: hanya untuk akun ini sampai fitur disetujui. Pengecekan juga ada di RLS database.
-const UID_UJI = "45dadf81-c11a-465b-ac9d-47e1a1aae83c";
+// Hanya untuk organisasi BSB (PT. Bangun Selaras Bersama). Pengecekan juga ada di RLS database.
+const ORG_BSB = "43a0f3e6-e4fd-4db1-ba75-26a6a8e8dbc0";
 
 // Tombol mengambang di tab Leads: daftar progres deal milik pengguna yang sedang login (17 Nov 2026).
 // Data dikirim dari journey setiap ada perubahan (tabel marketing_progres). Akses dibatasi RLS:
@@ -115,9 +115,22 @@ export default function ProgresDealBar() {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState([]);
   const [galat, setGalat] = useState("");
-  const [uid, setUid] = useState(null);
+  const [boleh, setBoleh] = useState(false);
 
-  useEffect(() => { db.getCurrentUserId().then(setUid).catch(() => setUid(null)); }, []);
+  useEffect(() => {
+    db.getCurrentUserId()
+      .then(async (uid) => {
+        if (!uid) { setBoleh(false); return; }
+        const { data } = await supabase
+          .from("organization_members")
+          .select("org_id")
+          .eq("user_id", uid)
+          .eq("org_id", ORG_BSB)
+          .maybeSingle();
+        setBoleh(!!data);
+      })
+      .catch(() => setBoleh(false));
+  }, []);
 
   const muat = async () => {
     const { data, error } = await supabase
@@ -130,11 +143,11 @@ export default function ProgresDealBar() {
   };
 
   useEffect(() => {
-    if (uid !== UID_UJI) return undefined;
+    if (!boleh) return undefined;
     muat();
     const t = setInterval(muat, 60000);
     return () => clearInterval(t);
-  }, [uid]);
+  }, [boleh]);
 
   useEffect(() => {
     if (!open) return;
@@ -143,7 +156,7 @@ export default function ProgresDealBar() {
     return () => window.removeEventListener("keydown", tekan);
   }, [open]);
 
-  if (uid !== UID_UJI) return null;
+  if (!boleh) return null;
 
   return (
     <>
