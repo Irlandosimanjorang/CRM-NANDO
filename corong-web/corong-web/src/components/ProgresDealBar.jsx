@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import * as db from "../lib/db";
+
+// Tahap uji: hanya untuk akun ini sampai fitur disetujui. Pengecekan juga ada di RLS database.
+const UID_UJI = "45dadf81-c11a-465b-ac9d-47e1a1aae83c";
 
 // Tombol mengambang di tab Leads: daftar progres deal milik pengguna yang sedang login (17 Nov 2026).
 // Data dikirim dari journey setiap ada perubahan (tabel marketing_progres). Akses dibatasi RLS:
@@ -46,6 +50,9 @@ export default function ProgresDealBar() {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState([]);
   const [galat, setGalat] = useState("");
+  const [uid, setUid] = useState(null);
+
+  useEffect(() => { db.getCurrentUserId().then(setUid).catch(() => setUid(null)); }, []);
 
   const muat = async () => {
     const { data, error } = await supabase
@@ -58,10 +65,11 @@ export default function ProgresDealBar() {
   };
 
   useEffect(() => {
+    if (uid !== UID_UJI) return undefined;
     muat();
     const t = setInterval(muat, 60000);
     return () => clearInterval(t);
-  }, []);
+  }, [uid]);
 
   useEffect(() => {
     if (!open) return;
@@ -69,6 +77,8 @@ export default function ProgresDealBar() {
     window.addEventListener("keydown", tekan);
     return () => window.removeEventListener("keydown", tekan);
   }, [open]);
+
+  if (uid !== UID_UJI) return null;
 
   return (
     <>
