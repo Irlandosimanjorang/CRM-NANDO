@@ -23,7 +23,20 @@ const TAHAP = [
   { key: "full_payment", label: "BAST" },
 ];
 
-const rp = (n) => `Rp${Math.round(Number(n) || 0).toLocaleString("id-ID")}`;
+const SINGKAT = {
+  deal: "Deal",
+  dana_masuk: "Bayar",
+  spk: "SPK",
+  spkp: "SPKP",
+  produksi: "Prod",
+  produksi_qc: "QC",
+  delivery: "Kirim",
+  instalasi: "Pasang",
+  instalasi_qc: "BAP",
+  full_payment: "BAST",
+};
+
+const rp = (n) =>`Rp${Math.round(Number(n) || 0).toLocaleString("id-ID")}`;
 const tgl = (v) => (v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "");
 const labelTahap = (key) => TAHAP.find((t) => t.key === key)?.label || key || "-";
 
@@ -47,7 +60,7 @@ function Progres({ tahap }) {
         <span>{jumlahSelesai} dari {TAHAP.length} tahap</span>
         <span className="font-medium tabular-nums text-slate-700">{persen}%</span>
       </div>
-      <div className="grid grid-cols-10 gap-0.5" role="group" aria-label="Progres tahap">
+      <div className="grid grid-cols-10 gap-[3px]" role="group" aria-label="Progres tahap">
         {TAHAP.map((t) => {
           const s = (tahap || []).find((x) => x.key === t.key);
           const selesai = !!s?.selesai;
@@ -63,10 +76,15 @@ function Progres({ tahap }) {
               onFocus={() => setAktif(t.key)}
               onBlur={() => setAktif(null)}
               onClick={() => setAktif((v) => (v === t.key ? null : t.key))}
-              className={`h-1.5 rounded-full ${selesai ? "bg-emerald-500" : berjalan ? "bg-amber-400" : "bg-slate-200"} ${aktif === t.key ? "ring-2 ring-slate-400 ring-offset-1" : ""}`}
+              className={`h-2.5 rounded-[4px] ${selesai ? "bg-emerald-500" : berjalan ? "bg-amber-400" : "bg-slate-200"} ${aktif === t.key ? "ring-2 ring-slate-400 ring-offset-1" : ""}`}
             />
           );
         })}
+      </div>
+      <div className="mt-1 grid grid-cols-10 gap-[3px] text-center text-[10px] text-slate-500" aria-hidden="true">
+        {TAHAP.map((t) => (
+          <span key={t.key} className="truncate">{SINGKAT[t.key]}</span>
+        ))}
       </div>
       <p className="mt-1.5 min-h-[16px] text-[12px] text-slate-600">{keterangan}</p>
     </div>
