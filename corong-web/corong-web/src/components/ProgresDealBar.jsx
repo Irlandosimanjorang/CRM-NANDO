@@ -243,7 +243,8 @@ export default function ProgresDealBar() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             {galat && <p className="px-1 text-[13px] text-red-600">{galat}</p>}
             {!galat && rows.length === 0 && (
               <p className="px-1 py-6 text-center text-[13px] text-slate-500">Belum ada deal yang tercatat di proyek.</p>
@@ -253,12 +254,14 @@ export default function ProgresDealBar() {
                 <KartuDeal key={r.lead_id} r={r} />
               ))}
             </div>
+          </div>
+          <div className="shrink-0 border-t border-slate-100 px-3 py-1.5">
             <button
               type="button"
               onClick={() => setShowSelesai((v) => !v)}
               disabled={selesaiRows.length === 0}
               aria-expanded={showSelesai}
-              className="mt-4 flex w-full items-center gap-3 text-[12px] text-slate-500 hover:text-slate-800 disabled:cursor-default disabled:hover:text-slate-500"
+              className="flex w-full items-center gap-2 text-[11px] text-slate-500 hover:text-slate-800 disabled:cursor-default disabled:hover:text-slate-500"
             >
               <span className="h-px flex-1 bg-slate-300" aria-hidden="true" />
               <span>
@@ -270,13 +273,16 @@ export default function ProgresDealBar() {
               </span>
               <span className="h-px flex-1 bg-slate-300" aria-hidden="true" />
             </button>
-            {showSelesai && selesaiRows.length > 0 && (
-              <div className="mt-3 flex flex-col gap-3">
+          </div>
+          {showSelesai && selesaiRows.length > 0 && (
+            <div className="max-h-[50vh] shrink-0 overflow-y-auto border-t border-slate-100 p-3">
+              <div className="flex flex-col gap-3">
                 {selesaiRows.map((r) => (
                   <KartuDeal key={r.lead_id} r={r} />
                 ))}
               </div>
-            )}
+            </div>
+          )}
           </div>
       </section>
 
