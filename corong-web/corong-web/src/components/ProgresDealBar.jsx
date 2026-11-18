@@ -36,64 +36,92 @@ const SINGKAT = {
   full_payment: "BAST",
 };
 
+// Warna sama dengan strip di journey (StageStrip.jsx): di bawah 50% merah muda, 50 sampai 70% kuning, di atas 70% teal.
+// Tahap yang sudah 100% memakai teal tua. Tahap yang belum mulai memakai warna netral dari journey.
+const tahapColor = (pct) => (pct < 50 ? "#E8917F" : pct <= 70 ? "#E9C77F" : "#7FD9D1");
+const WARNA_SELESAI = "#2E9B94";
+const WARNA_BELUM = "#3E6469";
+const WARNA_TEKS_BELUM = "#5F7F84";
+
 const rp = (n) =>`Rp${Math.round(Number(n) || 0).toLocaleString("id-ID")}`;
 const tgl = (v) => (v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "");
 const labelTahap = (key) => TAHAP.find((t) => t.key === key)?.label || key || "-";
 
-function Progres({ tahap }) {
+// pcts: persen tiap tahap dari journey, urutannya sama dengan TAHAP. Kalau belum ada (data lama), selesai = 100, lainnya 0.
+function Progres({ tahap, tahapSekarang, pcts }) {
   const [aktif, setAktif] = useState(null);
-  const jumlahSelesai = TAHAP.filter((t) => !!(tahap || []).find((x) => x.key === t.key)?.selesai).length;
-  const persen = Math.round((jumlahSelesai / TAHAP.length) * 100);
-  const detail = aktif ? (tahap || []).find((x) => x.key === aktif) : null;
-  const infoAktif = TAHAP.find((t) => t.key === aktif);
-
-  const statusAktif = (() => {
-    if (!detail) return null;
-    if (detail.selesai) return { teks: "Selesai", warna: "bg-emerald-500" };
-    if (detail.mulai) return { teks: "Sedang berjalan", warna: "bg-amber-400" };
-    return { teks: "Belum dimulai", warna: "bg-slate-300" };
-  })();
+  const daftar = TAHAP.map((t, i) => {
+    const s = (tahap || []).find((x) => x.key === t.key);
+    const selesai = !!s?.selesai;
+    const pct = Array.isArray(pcts) && typeof pcts[i] === "number"
+      ? Math.max(0, Math.min(100, Math.round(pcts[i])))
+      : selesai ? 100 : 0;
+    const sekarang = !selesai && t.key === tahapSekarang;
+    const aktifTahap = pct > 0 || sekarang;
+    const warna = pct >= 100 ? WARNA_SELESAI : aktifTahap ? tahapColor(pct) : WARNA_BELUM;
+    const warnaTeks = pct >= 100 ? WARNA_SELESAI : aktifTahap ? tahapColor(pct) : WARNA_TEKS_BELUM;
+    return { ...t, s, selesai, pct, sekarang, warna, warnaTeks };
+  });
+  const jumlahSelesai = daftar.filter((d) => d.selesai).length;
+  const persen = Math.round(daftar.reduce((a, d) => a + d.pct, 0) / TAHAP.length);
+  const detail = daftar.find((d) => d.key === aktif) || null;
+  const statusTeks = (d) => (d.selesai ? "Selesai" : d.sekarang || d.pct > 0 ? `Sedang berjalan · ${d.pct}%` : "Belum dimulai");
 
   return (
     <div>
+      <style>{`@keyframes stage-run { from { background-position: -80px 0, 0 0; } to { background-position: calc(100% + 80px) 0, 0 0; } }`}</style>
       <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
-        <span>{jumlahSelesai} dari {TAHAP.length} tahap</span>
+        <span>{jumlahSelesai} dari {TAHAP.length} tahap selesai</span>
         <span className="font-medium tabular-nums text-slate-700">{persen}%</span>
       </div>
-      <div className="grid grid-cols-10 gap-[3px]" role="group" aria-label="Progres tahap">
-        {TAHAP.map((t, i) => {
-          const s = (tahap || []).find((x) => x.key === t.key);
-          const selesai = !!s?.selesai;
-          const berjalan = !selesai && !!s?.mulai;
-          const tampil = aktif === t.key;
+      <div className="grid grid-cols-10 gap-[3px] text-center font-mono text-[10px] tabular-nums" aria-hidden="true">
+        {daftar.map((d) => (
+          <span key={d.key} style={{ color: d.warnaTeks }} className={d.sekarang ? "font-semibold" : ""}>{d.pct}%</span>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-10 gap-[3px]" role="group" aria-label="Progres tahap">
+        {daftar.map((d, i) => {
+          const tampil = aktif === d.key;
           const posisi = i === 0 ? "left-0" : i === TAHAP.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2";
           return (
-            <div key={t.key} className="relative">
+            <div key={d.key} className="relative">
               <button
                 type="button"
-                aria-label={`${t.label}, ${selesai ? "selesai" : berjalan ? "sedang berjalan" : "belum dimulai"}`}
-                onMouseEnter={() => setAktif(t.key)}
+                aria-label={`${d.label}, ${d.pct}%`}
+                onMouseEnter={() => setAktif(d.key)}
                 onMouseLeave={() => setAktif(null)}
-                onFocus={() => setAktif(t.key)}
+                onFocus={() => setAktif(d.key)}
                 onBlur={() => setAktif(null)}
-                onClick={() => setAktif((v) => (v === t.key ? null : t.key))}
-                className={`block h-2.5 w-full rounded-[4px] ${selesai ? "bg-emerald-500" : berjalan ? "bg-amber-400" : "bg-slate-200"} ${tampil ? "ring-2 ring-slate-400 ring-offset-1" : ""}`}
-              />
-              {tampil && infoAktif && statusAktif && (
+                onClick={() => setAktif((v) => (v === d.key ? null : d.key))}
+                className={`block h-3 w-full ${tampil ? "ring-2 ring-slate-400 ring-offset-1" : ""}`}
+              >
+                <span
+                  className="block h-full rounded-[2px]"
+                  style={{
+                    background: d.sekarang
+                      ? `linear-gradient(100deg, transparent 0%, rgba(207,250,246,0.7) 50%, transparent 100%) no-repeat, ${d.warna}`
+                      : d.warna,
+                    backgroundSize: d.sekarang ? "60px 100%, auto" : undefined,
+                    animation: d.sekarang ? "stage-run 2.4s ease-in-out infinite" : undefined,
+                    transform: "skewX(-20deg)",
+                  }}
+                />
+              </button>
+              {tampil && detail && (
                 <div
                   role="tooltip"
                   className={`pointer-events-none absolute top-full z-30 mt-2 w-[184px] rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left text-[12px] shadow-md ${posisi}`}
                 >
-                  <p className="font-medium text-slate-900">{infoAktif.label}</p>
+                  <p className="font-medium text-slate-900">{detail.label}</p>
                   <p className="mt-1 flex items-center gap-1.5 text-slate-700">
-                    <span className={`inline-block h-2 w-2 rounded-full ${statusAktif.warna}`} aria-hidden="true" />
-                    {statusAktif.teks}
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: detail.warna }} aria-hidden="true" />
+                    {statusTeks(detail)}
                   </p>
                   <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 tabular-nums text-slate-600">
                     <dt className="text-slate-500">Mulai</dt>
-                    <dd>{detail?.mulai ? tgl(detail.mulai) : "-"}</dd>
+                    <dd>{detail.s?.mulai ? tgl(detail.s.mulai) : "-"}</dd>
                     <dt className="text-slate-500">Selesai</dt>
-                    <dd>{detail?.selesai ? tgl(detail.selesai) : "-"}</dd>
+                    <dd>{detail.s?.selesai ? tgl(detail.s.selesai) : "-"}</dd>
                   </dl>
                   <p className="mt-2 border-t border-slate-100 pt-1.5 text-[11px] text-slate-500">Menyumbang 10% dari progres</p>
                 </div>
@@ -122,7 +150,7 @@ function KartuDeal({ r }) {
         <span className="shrink-0 text-[12px] text-slate-500">{p.selesai ? "Selesai" : labelTahap(p.tahap_sekarang)}</span>
       </div>
       <div className="mt-2">
-        <Progres tahap={p.tahap} />
+        <Progres tahap={p.tahap} tahapSekarang={p.tahap_sekarang} pcts={p.pcts} />
       </div>
       <dl className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
         <div>
