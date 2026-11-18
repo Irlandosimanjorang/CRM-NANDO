@@ -145,6 +145,15 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   const [cooldown, setCooldown] = useState({ canGenerate: true, usedThisMonth: 0, quotaMax: 4, nextAvailableAt: null, addonTokens: 0, addonExpiry: null });
   const [showTokenReq, setShowTokenReq] = useState(false);
   const [importingId, setImportingId] = useState(null);
+  // Anggota tim untuk memilih siapa yang memegang lead baru (Saya, Fitri, Adisya, dst).
+  // Kalau tim hanya berisi satu orang, pilihan ini dilewati dan lead langsung jadi milik sendiri.
+  const [members, setMembers] = useState([]);
+  const [myUid, setMyUid] = useState(null);
+  const [pickFor, setPickFor] = useState(null);
+  useEffect(() => {
+    db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
+    db.getCurrentUserId().then(setMyUid).catch(() => setMyUid(null));
+  }, []);
   const pollRef = useRef(null);
   const enrichPollRef = useRef(null);
   const enrichRunRef = useRef(null);
@@ -331,11 +340,12 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
 
   // Sekali klik kartu langsung import ke Leads. Kartunya TETAP tampil abis
   // itu (bukan ilang) - cuma statusnya berubah jadi "Sudah di Leads".
-  const importLead = async (gl) => {
+  const importLead = async (gl, assignee = null) => {
     if (gl.status === "imported" || importingId) return;
     setImportingId(gl.id);
+    setPickFor(null);
     try {
-      await db.importGeneratedLead(gl, defaultStageKey);
+      await db.importGeneratedLead(gl, defaultStageKey, assignee);
       setResults((prev) => prev.map((r) => (r.id === gl.id ? { ...r, status: "imported" } : r)));
       onChanged();
     } catch (e) {
@@ -343,6 +353,15 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
     } finally {
       setImportingId(null);
     }
+  };
+  // Pilihan pemegang lead: "Saya" di urutan pertama, lalu anggota lain sesuai nama.
+  const assigneeOptions = [...members]
+    .sort((a, b) => (a.user_id === myUid ? -1 : b.user_id === myUid ? 1 : 0))
+    .map((m) => ({ uid: m.user_id, label: m.user_id === myUid ? "Saya" : (m.display_name || `Anggota ${m.user_id.slice(0, 8)}`) }));
+  const handleCardClick = (r) => {
+    if (r.status === "imported" || importingId === r.id) return;
+    if (assigneeOptions.length <= 1) { importLead(r); return; }
+    setPickFor((cur) => (cur === r.id ? null : r.id));
   };
 
   const nextDate = cooldown.nextAvailableAt ? new Date(cooldown.nextAvailableAt) : null;
@@ -513,7 +532,7 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                           return (
                             <div key={r.id}>
                               <button
-                                onClick={() => importLead(r)}
+                                onClick={() => handleCardClick(r)}
                                 disabled={imported || importingId === r.id}
                                 className="relative w-full text-left rounded-panel p-4 transition-all duration-200"
                                 style={{
@@ -574,6 +593,23 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
                                   </div>
                                 </div>
                               </button>
+                              {pickFor === r.id && !imported && (
+                                <div className="mt-2 rounded-panel border border-white/10 bg-white/[0.03] p-3">
+                                  <div className="text-xs text-slate-400 mb-2">Tambahkan lead ini ke siapa?</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {assigneeOptions.map((o) => (
+                                      <button
+                                        key={o.uid}
+                                        type="button"
+                                        onClick={() => importLead(r, o.uid)}
+                                        className="text-xs font-medium text-slate-200 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 hover:bg-orange-500/15 hover:border-orange-500/40 hover:text-orange-300"
+                                      >
+                                        {o.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                               {!imported && (
                                 <div className="h-3 mx-8 -mt-1 rounded-full blur-md opacity-30" style={{ background: t.ring }} />
                               )}
