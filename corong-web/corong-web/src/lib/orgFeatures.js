@@ -16,6 +16,7 @@ export const ORG_FEATURES = [
   { key: "marketing_report", label: "Laporan Marketing", hint: "Lead per platform, budget iklan, biaya per lead dan per deal", ready: false },
   { key: "lead_webhook", label: "Chat masuk (Cekat.ai)", hint: "Chat dari WhatsApp, Instagram, Messenger, TikTok lewat Cekat.ai otomatis jadi lead lengkap dengan percakapan dan kampanye iklan; owner memasang alamat webhook di Pengaturan", ready: true },
   { key: "monthly_report", label: "Report bulanan sales", hint: "Tab Report: ringkasan SPH, hot progress, deal, target omzet, dan kalender deal per tanggal", ready: true },
+  { key: "ppn_proyek", label: "PPN pada nilai proyek", hint: "Nilai proyek diisi sebagai belum atau sudah termasuk PPN 11%; yang tampil dan tersimpan selalu nilai setelah PPN", ready: true },
   { key: "owner_monitor", label: "Owner sebagai pemantau", hint: "Owner hanya melihat Dashboard, Leads, Team, dan Pengaturan; rekomendasi NEX AI dan daily digest dimatikan untuk owner. Anggota tim tidak berubah", ready: true },
 ];
 
