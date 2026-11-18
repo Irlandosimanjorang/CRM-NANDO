@@ -123,7 +123,7 @@ function TokenRequestDialog({ pending, onClose, onSent }) {
 // server mencatatnya sebagai status failed, jadi di sini dibedakan supaya tidak tampil merah.
 const isInfoOutcome = (m) => /sudah ada di daftar|Tidak ditemukan lead yang sesuai/.test(m || "");
 
-export default function GenerateLeads({ stages, industry, onChanged, onNotify }) {
+export default function GenerateLeads({ stages, industry, onChanged, onNotify, canManage = false }) {
   const example = getGenerateLeadsExample(industry);
   const [keyword, setKeyword] = useState("");
   const [province, setProvince] = useState("");
@@ -151,9 +151,10 @@ export default function GenerateLeads({ stages, industry, onChanged, onNotify })
   const [myUid, setMyUid] = useState(null);
   const [pickFor, setPickFor] = useState(null);
   useEffect(() => {
+    if (!canManage) return;
     db.getOrgMembers().then(setMembers).catch(() => setMembers([]));
     db.getCurrentUserId().then(setMyUid).catch(() => setMyUid(null));
-  }, []);
+  }, [canManage]);
   const pollRef = useRef(null);
   const enrichPollRef = useRef(null);
   const enrichRunRef = useRef(null);
