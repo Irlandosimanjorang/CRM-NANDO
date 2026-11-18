@@ -680,7 +680,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
             <div className="border border-slate-200 bg-slate-50 rounded-2xl p-3 space-y-2.5">
               <div className="text-xs font-semibold text-slate-700">Data proyek {enteringProyekDeal ? "(wajib diisi)" : ""}</div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Tanggal deal"><input type="date" className={`${inp} cursor-not-allowed bg-slate-50 text-slate-500`} readOnly disabled value={f.deal_date || new Date().toLocaleDateString("sv-SE")} /></Field>
+                <Field label="Tanggal deal"><input type="date" className={inp} value={f.deal_date || ""} onChange={(e) => set("deal_date", e.target.value || null)} /></Field>
                 <Field label="Nilai proyek (Rp) *">
                   <input
                     className={inp}
