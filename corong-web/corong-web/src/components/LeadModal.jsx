@@ -207,7 +207,40 @@ function fillTemplate(str, lead) {
 // Data klien yang ikut terisi saat memilih klien existing (lead baru untuk klien yang sudah ada).
 const IDENTITAS_KLIEN = ["name", "category", "company_type", "parent_company", "group_holding", "city", "province", "phone", "email", "website", "key_person", "key_person_title", "sales_owner"];
 
-export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true, projectDeal = false, klienOptions = [], proyekChecklist = false }) {
+// Nilai proyek dengan PPN 11% (org dengan saklar ppn_proyek). Yang disimpan ke deal_value selalu
+// TOTAL setelah PPN, supaya semua tampilan nilai proyek ikut benar. Input AE bisa "belum PPN"
+// (pokok + PPN 11%) atau "sudah termasuk PPN" (dipecah jadi pokok + PPN). Input asli disimpan di memo.ppn_*.
+const PPN_RATE = 0.11;
+const idr = (n) => Number(n || 0).toLocaleString("id-ID");
+function NilaiPpnField({ memo, dealValue, inp, onChange }) {
+  const legacy = !memo || !memo.ppn_mode;
+  const mode = memo?.ppn_mode === "sudah" ? "sudah" : "belum";
+  const input = legacy ? Number(dealValue) || 0 : Number(memo.ppn_input) || 0;
+  const commit = (nextMode, nextInput) => {
+    const total = nextInput > 0 ? (nextMode === "sudah" ? nextInput : Math.round(nextInput * (1 + PPN_RATE))) : 0;
+    onChange(total, { ppn_mode: nextMode, ppn_input: nextInput });
+  };
+  const dpp = mode === "sudah" ? Math.round(input / (1 + PPN_RATE)) : input;
+  const ppn = Number(dealValue) - dpp;
+  const seg = (on) => `flex-1 rounded-lg border px-3 py-2 text-[12.5px] font-medium ${on ? "border-slate-800 bg-slate-800 text-white" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`;
+  return (
+    <div className="col-span-2 space-y-2">
+      <div className="text-xs font-medium text-slate-500">Nilai proyek (Rp) * · PPN 11%</div>
+      <div className="flex gap-2">
+        <button type="button" className={seg(mode === "belum")} onClick={() => commit("belum", input)}>Belum termasuk PPN</button>
+        <button type="button" className={seg(mode === "sudah")} onClick={() => commit("sudah", input)}>Sudah termasuk PPN</button>
+      </div>
+      <input className={inp} inputMode="numeric" placeholder="0" value={input ? idr(input) : ""} onChange={(e) => commit(mode, Number(e.target.value.replace(/[^\d]/g, "")) || 0)} />
+      {legacy ? (
+        <p className="text-[12px] text-amber-700">Nilai ini tersimpan sebelum ada pilihan PPN. Pilih belum atau sudah termasuk PPN, lalu isi ulang nominalnya.</p>
+      ) : (
+        <p className="text-[12px] text-slate-500 tabular-nums">Pokok Rp {idr(dpp)} · PPN 11% Rp {idr(ppn)} · <b className="text-slate-800">Total setelah PPN Rp {idr(dealValue)}</b></p>
+      )}
+    </div>
+  );
+}
+
+export default function LeadModal({ lead, stages, settings, industry, customFieldLabels, myLevel = 0, onClose, onSaved, members, myUid, canManage, isEnterprise, parentOptions = [], holdingOptions = [], uppercaseNames = true, projectDeal = false, klienOptions = [], proyekChecklist = false, ppnProyek = false }) {
   const aiOff = useAiOff();
   const leadDraftId = lead.id || "new";
   const [draft] = useState(() => loadLeadDraft(leadDraftId));
@@ -678,6 +711,14 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
               <div className="text-xs font-semibold text-slate-700">Data proyek {enteringProyekDeal ? "(wajib diisi)" : ""}</div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Tanggal deal"><input type="date" className={inp} value={f.deal_date || ""} onChange={(e) => set("deal_date", e.target.value || null)} /></Field>
+                {ppnProyek ? (
+                  <NilaiPpnField
+                    memo={f.memo}
+                    dealValue={f.deal_value}
+                    inp={inp}
+                    onChange={(total, memoPatch) => setF((p) => ({ ...p, deal_value: total, memo: { ...(p.memo || {}), ...memoPatch } }))}
+                  />
+                ) : (
                 <Field label="Nilai proyek (Rp) *">
                   <input
                     className={inp}
@@ -687,6 +728,7 @@ export default function LeadModal({ lead, stages, settings, industry, customFiel
                     onChange={(e) => set("deal_value", Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
                   />
                 </Field>
+                )}
                 <Field label="No. SPH"><input className={inp} value={f.sph_number || ""} onChange={(e) => set("sph_number", e.target.value)} placeholder="Mis. I/10/2026/UPVC/101 (tentatif)" /></Field>
                 <Field label="No. SO"><input className={`${inp} cursor-not-allowed bg-slate-50 text-slate-500`} readOnly disabled value={f.memo?.so_number || ""} placeholder={f.memo?.payment_aktif === true ? "Belum dibuat finance" : "Terkunci sampai payment aktif dari finance"} /></Field>
                 <Field label={`Diskon (Rp)${Number(f.discount_total) > 0 ? ` · ${Number(f.discount_total).toLocaleString("id-ID")}` : ""}`}>
