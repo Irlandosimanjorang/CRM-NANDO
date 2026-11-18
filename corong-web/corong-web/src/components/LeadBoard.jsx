@@ -55,7 +55,7 @@ const NX_RANGE_CSS = `
 .nx-kanban-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#ea580c;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(15,23,42,.25)}
 `;
 
-export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, dealBulan = null, proyekChecklist = false, sembunyikanPeluangBaru = false, productIsProject = false }) {
+export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOpportunity, projectDeal = false, invoicePipeline = false, marketplacePayment = false, onEditFaktur, stageDates = null, dealBulan = null, proyekChecklist = false, sembunyikanPeluangBaru = false, productIsProject = false, ppnProyek = false }) {
   const cols = useMemo(() => [...stages].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)), [stages]);
   const firstNormal = cols.find((s) => s.type === "normal");
   const [hiddenStages, setHiddenStages] = useState(readHiddenStages);
@@ -566,6 +566,7 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                       <div className="mt-2.5 flex items-center justify-between gap-2">
                         <span className={`text-[15px] font-semibold tabular-nums leading-none ${l.deal_value ? "text-slate-900" : "text-slate-400"}`}>
                           {l.deal_value ? fmtRp(l.deal_value) : "Nilai belum diisi"}
+                          {ppnProyek && l.deal_value ? <span className="ml-1 text-[10.5px] font-normal text-slate-500">termasuk PPN</span> : null}
                         </span>
                         <span className={`shrink-0 text-[10.5px] font-medium ${cold ? "text-rose-600" : "text-slate-500"}`}>
                           {days === null ? "belum dihubungi" : days === 0 ? "hari ini" : `${days} hari lalu`}
