@@ -596,7 +596,9 @@ export async function adminAddonTokens(action, payload = {}) {
   return data;
 }
 
-export async function importGeneratedLead(genLead, defaultStageKey) {
+// assignedTo (opsional): anggota yang memegang lead ini (dipilih di tab Generate Leads).
+// Kosong = otomatis jadi milik pengguna yang menambahkan.
+export async function importGeneratedLead(genLead, defaultStageKey, assignedTo = null) {
   // BUG FIX (11 Sep 2026, ketauan pas audit): category & email yang udah
   // ditemuin AI (keliatan di kartu hasil generate) dulu KEBUANG pas import -
   // category di-hardcode "Lainnya" dan email gak diteruskan sama sekali.
@@ -604,7 +606,7 @@ export async function importGeneratedLead(genLead, defaultStageKey) {
     name: genLead.name, category: genLead.category || "Lainnya", stage_key: defaultStageKey || "",
     key_person: genLead.key_person || "", key_person_title: genLead.key_person_title || "",
     website: genLead.website || "", phone: genLead.phone || "", email: genLead.email || "", city: genLead.city || "",
-    product: genLead.product || "", source: "ai_generated",
+    product: genLead.product || "", source: "ai_generated", assigned_to: assignedTo || undefined,
   });
   const { error } = await supabase.from("generated_leads").update({ status: "imported" }).eq("id", genLead.id);
   if (error) throw error;
