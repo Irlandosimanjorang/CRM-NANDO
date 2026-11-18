@@ -658,6 +658,7 @@ export default function Leads({
   canManage,
   isEnterprise,
   projectDeal = false, // saklar org "project_deal" (khusus BSB): tahap Proyek Deal minta data proyek
+  ppnProyek = false, // saklar org "ppn_proyek": nilai proyek diisi belum/sudah PPN 11%
   proyekChecklist = false, // saklar org "proyek_checklist" (hanya BSB): checklist proyek di form dan pop-up Proyek Deal
   sembunyikanPeluangBaru = false, // saklar org "sembunyikan_peluang_baru" (ELEVASIA): tombol repeat order di kartu menang disembunyikan
   invoicePipeline = false, // saklar org "invoice_pipeline" (MAP): tahap Deal minta tanggal dan barang, Faktur minta no. faktur
@@ -2406,6 +2407,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
             leads={filtered}
             stages={stages}
             productIsProject={productLabel === "Nama proyek"}
+            ppnProyek={ppnProyek}
             onOpenEdit={setEdit}
             onMove={moveLeadStage}
             onNewOpportunity={reopenLead}
@@ -2721,6 +2723,7 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
         <LeadModal
           projectDeal={projectDeal}
           proyekChecklist={proyekChecklist}
+          ppnProyek={ppnProyek}
           uppercaseNames={uppercaseNames}
           klienOptions={klienOptions}
           parentOptions={parentOptions}
