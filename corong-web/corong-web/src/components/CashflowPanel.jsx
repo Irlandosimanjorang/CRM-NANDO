@@ -246,6 +246,47 @@ function TopupPlanner({ pl, kurs, onNeedSetup }) {
   );
 }
 
+// Analisis keuangan (20 Nov 2026): rasio dihitung dari angka periode yang sudah ada, tanpa data tambahan dari server.
+// Ambang acuan mengikuti praktik umum metrik SaaS (margin kotor sekitar 75 sampai 85 persen, runway 18 sampai 24 bulan).
+// Ambang ini titik awal, bukan standar pasti.
+const pctTxt = (v) => (v === null ? "-" : `${Math.round(v * 10) / 10}%`);
+const warnaNilai = (v, baik, cukup) => (v === null ? undefined : v >= baik ? "#34d399" : v >= cukup ? "#fbbf24" : "#fb7185");
+function AnalisisKeuangan({ data, paidAccounts }) {
+  const { income: inc, cashflow: cf, summary: s, contracts } = data;
+  const rev = inc.revenue.total;
+  const burn = cf.net_operating < 0 ? -cf.net_operating : 0;
+  const runway = cf.closing_cash !== null && burn > 0 ? cf.closing_cash / burn : null;
+  const collect = rev > 0 ? (cf.receipts.total / rev) * 100 : null;
+  const dso = rev > 0 ? s.receivables / (rev / 30) : null;
+  const arpa = paidAccounts > 0 ? s.mrr / paidAccounts : null;
+  const totalKontrak = contracts.reduce((a, c) => a + (c.total || 0), 0);
+  const top = contracts.reduce((m, c) => ((c.total || 0) > (m?.total || 0) ? c : m), null);
+  const topShare = top && totalKontrak > 0 ? (top.total / totalKontrak) * 100 : null;
+  const gm = inc.gross_margin_pct ?? null;
+  const dsoAccent = dso === null ? undefined : s.receivables === 0 ? "#34d399" : dso <= 30 ? "#34d399" : dso <= 60 ? "#fbbf24" : "#fb7185";
+  const topAccent = topShare === null ? undefined : topShare > 50 ? "#fb7185" : topShare > 30 ? "#fbbf24" : "#34d399";
+  const cards = [
+    { label: "Margin kotor", value: pctTxt(gm), sub: "acuan 75 sampai 85 persen", accent: warnaNilai(gm, 75, 50) },
+    { label: "Rasio penagihan", value: pctTxt(collect), sub: "uang masuk dibagi pendapatan, acuan 90 persen", accent: warnaNilai(collect, 90, 70) },
+    { label: "Lama penagihan (DSO)", value: dso === null ? "-" : `${Math.round(dso)} hari`, sub: `piutang ${idr(s.receivables)}, acuan 30 hari`, accent: dsoAccent },
+    { label: "Runway kas", value: runway === null ? "-" : `${runway.toFixed(1)} bulan`, sub: runway === null ? (burn > 0 ? "isi saldo kas awal di Pengaturan" : "tidak ada arus kas operasi negatif") : "saldo kas dibagi arus kas operasi negatif, acuan 18 bulan", accent: warnaNilai(runway, 18, 6) },
+    { label: "ARPA bulanan", value: arpa === null ? "-" : idr(arpa), sub: "MRR dibagi akun berbayar aktif" },
+    { label: "Konsentrasi pelanggan terbesar", value: pctTxt(topShare), sub: top ? `${top.company} · waspada di atas 30 persen` : "belum ada kontrak", accent: topAccent },
+    { label: "Piutang lewat tempo", value: `${s.overdue_count} invoice`, sub: s.overdue_count ? "perlu ditagih" : "tidak ada yang lewat tempo", accent: s.overdue_count ? "#fbbf24" : "#34d399" },
+    { label: "Biaya token AI", value: pctTxt(inc.ai_pct_of_revenue ?? null), sub: "bagian dari pendapatan bulan ini" },
+  ];
+  return (
+    <Section title="Analisis keuangan" hint="rasio dan tanda bahaya untuk periode ini">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        {cards.map((c) => <Tile key={c.label} label={c.label} value={c.value} sub={c.sub} accent={c.accent} />)}
+      </div>
+      <div className="text-[11px] text-slate-400 font-mono leading-relaxed">
+        Angka acuan adalah titik awal dari praktik umum SaaS, bukan standar pasti. Tanda warna hijau, kuning, dan merah mengikuti acuan tersebut. Konsentrasi dan DSO dihitung dari kontrak dan piutang yang tercatat saat ini.
+      </div>
+    </Section>
+  );
+}
+
 export default function CashflowPanel() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
@@ -445,6 +486,8 @@ export default function CashflowPanel() {
           <Tile label="Piutang" value={idr(s.receivables)} sub={s.overdue_count ? `${s.overdue_count} lewat jatuh tempo` : "tidak ada yang lewat tempo"} accent={s.overdue_count ? "#fbbf24" : undefined} />
         </div>
       </Section>
+
+      <AnalisisKeuangan data={data} paidAccounts={paidAccounts} />
 
       <button onClick={() => setShowAcc((v) => !v)} className="justify-self-start inline-flex items-center gap-1.5 text-[11.5px] font-mono font-bold px-3 py-2 rounded-lg border border-white/[0.25] bg-[#111826] text-slate-100 hover:bg-[#182033]">
         <ChevronDown className={`w-4 h-4 transition-transform ${showAcc ? "rotate-180" : ""}`} />
