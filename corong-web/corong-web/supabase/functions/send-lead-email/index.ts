@@ -144,6 +144,6 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   } catch (e) {
     await releaseQuota();
-    return json({ error: String(e) }, 500);
+    console.error("[send-lead-email]", e); return json({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }, 500);
   }
 });

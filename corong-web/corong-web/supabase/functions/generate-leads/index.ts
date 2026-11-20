@@ -686,6 +686,6 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
     return new Response(JSON.stringify({ ok: true, count: finalJob?.result_count ?? 0, job_id: jobId, run_id: finalJob?.run_id || null }), { headers: { ...corsFor(req), "Content-Type": "application/json" } });
   } catch (e) {
     console.log(`[generate-leads] FATAL (sinkron):`, String(e));
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsFor(req), "Content-Type": "application/json" } });
+    console.error("[generate-leads]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: { ...corsFor(req), "Content-Type": "application/json" } });
   }
 }));

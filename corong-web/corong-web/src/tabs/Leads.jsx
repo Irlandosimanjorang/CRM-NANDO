@@ -45,6 +45,7 @@ import {
 
 import LeadModal from "../components/LeadModal";
 import LeadBoard from "../components/LeadBoard";
+import ProgresDealBar from "../components/ProgresDealBar";
 import { playPipelineMove } from "../lib/navSound";
 import DuplicateModal from "../components/DuplicateModal";
 import DeleteAllLeadsModal from "../components/DeleteAllLeadsModal";
@@ -1959,6 +1960,8 @@ Kelompokkan sebagai grup perusahaan? (OK = kelompokkan, Batal = impor tanpa grup
 
   return (
     <div>
+
+      <ProgresDealBar />
 
       {/* =====================================================
           COMPACT KPI ROW

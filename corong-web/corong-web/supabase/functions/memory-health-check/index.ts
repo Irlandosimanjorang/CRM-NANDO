@@ -155,6 +155,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, results }), { headers: { "Content-Type": "application/json" } });
   } catch (e) {
     console.log("[memory-health] FATAL", String(e));
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    console.error("[memory-health-check]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500 });
   }
 });

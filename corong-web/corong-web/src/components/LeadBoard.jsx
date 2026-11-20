@@ -16,6 +16,7 @@ import { fmtRp, reasonCategoriesFor, todayISO } from "../lib/helpers";
 import { paymentTypesFor } from "../lib/paymentTypes";
 import { PROYEK_CHECKLIST, sudahCentang, terkunci } from "../lib/proyekChecklist";
 import * as db from "../lib/db";
+import { pesanPindahDilarang } from "../lib/stageRules";
 
 // Papan kanban tahap lead. Kartu diseret dengan pointer (mouse atau sentuh): kartu ikut kursor, kolom tujuan menyala,
 // dan kolom yang panjang atau papan yang lebar digulir otomatis saat kursor dekat tepinya. Kartu langsung pindah di layar,
@@ -160,6 +161,8 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
 
   const moveTo = (lead, key, fromRect = null) => {
     if (!lead || key === UNKNOWN_KEY || stageOf(lead) === key) return;
+    const larangan = pesanPindahDilarang(stageOf(lead), key);
+    if (larangan) { alert(larangan); return; }
     const target = cols.find((s) => s.key === key);
     // Pipeline BSB/trial: tahap Proyek Deal itu kategori menang. Urutannya: alasan menang dulu, lalu data proyek.
     if (key === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan")) {
@@ -667,6 +670,9 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   );
 }
 
+// Akun EPDM (Vivi): satu-satunya yang bisa memilih jenis Profil.
+const AKUN_PROFIL = "2d4433c7-a62d-44ef-a6e9-fb43d609ea48";
+
 // Pop-up data proyek untuk tahap Proyek Deal (15 Okt 2026): tanggal, nilai proyek, No. SPH wajib; total diskon opsional.
 // Nilai proyek bruto; diskon dicatat terpisah.
 function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
@@ -676,6 +682,13 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
   // No. SO disimpan di memo.so_number (tanpa kolom baru di tabel lead).
   const [so, setSo] = useState(lead.memo?.so_number || "");
   const [jenis, setJenis] = useState(lead.memo?.jenis_penjualan || "proyek");
+  // Jenis Profil (23 Nov 2026) hanya untuk akun EPDM (Vivi). Akun lain tidak melihat opsinya.
+  const [bolehProfil, setBolehProfil] = useState(lead.memo?.jenis_penjualan === "profil");
+  useEffect(() => {
+    let batal = false;
+    db.getCurrentUserId().then((id) => { if (!batal && id === AKUN_PROFIL) setBolehProfil(true); }).catch(() => {});
+    return () => { batal = true; };
+  }, []);
   // Jenis penjualan terkunci setelah DP tersimpan di Journey (memo.jenis_terkunci, diisi Journey lewat journey_tandai_dp).
   const jenisTerkunci = lead.memo?.jenis_terkunci === true;
   // No. SO terkunci sampai finance mengaktifkan payment (memo.payment_aktif, diisi dari segmen Payment).
@@ -732,6 +745,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
                 <select value={jenis} onChange={(e) => setJenis(e.target.value)} disabled={jenisTerkunci} className={field + (jenisTerkunci ? " cursor-not-allowed bg-slate-50 text-slate-500" : "")}>
                   <option value="proyek">Proyek</option>
                   <option value="product_only">Product only</option>
+                  {(bolehProfil || jenis === "profil") && <option value="profil">Profil</option>}
                 </select>
               </label>
               <label className="block">

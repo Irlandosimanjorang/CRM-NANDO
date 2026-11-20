@@ -363,6 +363,6 @@ Deno.serve(async (req) => {
         console.error("[mayar-webhook] exception pas rollback mayar_processed_events:", rbEx);
       }
     }
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+    console.error("[mayar-webhook]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });

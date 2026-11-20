@@ -305,6 +305,6 @@ Deno.serve(async (req) => {
     return json({ error: "Aksi tidak dikenal." }, 400);
   } catch (e) {
     console.log("[send-outreach] error", String(e));
-    return json({ error: String(e) }, 500);
+    console.error("[send-outreach]", e); return json({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }, 500);
   }
 });

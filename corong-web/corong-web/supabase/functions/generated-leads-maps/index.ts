@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     if (ids.length === 0) return json({ error: "Tidak ada lead yang dipilih." }, 400);
 
     const { data: rows, error } = await user.from("generated_leads").select("id, name, city, maps_url").in("id", ids);
-    if (error) return json({ error: error.message }, 500);
+    if (error) { console.error("[generated-leads-maps]", error); return json({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }, 500); }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const results = [];
@@ -48,6 +48,6 @@ Deno.serve(async (req) => {
     }
     return json({ results });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    console.error("[generated-leads-maps]", e); return json({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }, 500);
   }
 });

@@ -721,6 +721,6 @@ Deno.serve(async (req) => {
       const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
       await admin.from("health_check_runs").insert({ status: "error", issue_count: 0, summary: String(e).slice(0, 500) });
     } catch (_) {}
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    console.error("[health-check]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500 });
   }
 });

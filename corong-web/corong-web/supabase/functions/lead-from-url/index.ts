@@ -267,6 +267,6 @@ Deno.serve((req) => AI_CTX.run({ req }, async () => {
   } catch (e) {
     if (admin && reservationId) await releaseSlot(admin, reservationId);
     console.log("[lead-from-url] FATAL:", String(e));
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
+    console.error("[lead-from-url]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: cors });
   }
 }));

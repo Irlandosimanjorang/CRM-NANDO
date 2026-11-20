@@ -293,6 +293,6 @@ Balas HANYA JSON, tanpa markdown: {"reason_category":"...","reason":"..."}`;
     return new Response(JSON.stringify(finalResult), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     if (admin) await releaseMonthly(admin, usageId);
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
+    console.error("[guess-outcome-reason]", e); return new Response(JSON.stringify({ error: "Terjadi kesalahan di server. Coba lagi beberapa saat lagi." }), { status: 500, headers: cors });
   }
 }));
