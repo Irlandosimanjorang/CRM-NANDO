@@ -45,10 +45,11 @@ const SIG_W = 63;
 const BATAS_BAWAH = 265;
 
 // Kolom tabel: deskripsi mengambil sisa ruang, lalu Qty, Harga, Jumlah rata kanan.
+// Lebar kolom mengikuti versi HTML: Qty ±17 mm, Harga ±34 mm, Jumlah ±37 mm.
 const COL_DESK = 30;
-const DESK_W = 76;
-const QTY_R = 125;
-const HARGA_R = 158;
+const DESK_W = 70;
+const QTY_R = 117;
+const HARGA_R = 150;
 const JUMLAH_R = KANAN;
 
 export async function buildFreelancePdf(d, p) {
