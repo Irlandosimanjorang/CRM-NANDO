@@ -29,6 +29,17 @@ function loadHistory() {
     return [];
   }
 }
+// Unduh isi sebagai file ke komputer (tanpa dialog cetak).
+function unduhFile(isi, nama) {
+  const url = URL.createObjectURL(new Blob([isi], { type: "text/html;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nama;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const rp = (n) => "Rp " + Math.round(Number(n) || 0).toLocaleString("id-ID");
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -56,7 +67,8 @@ function buildFreelanceHtml(d, p) {
   const bank = [p.bank && `${esc(p.bank)}`, p.account && `${esc(p.account)}`, p.holder && `a.n. ${esc(p.holder)}`].filter(Boolean);
   return `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${esc(d.number)}</title>
 <style>
-  @page { margin: 18mm; }
+  @page { margin: 0; }
+  @media print { body { padding: 18mm 20mm; max-width: none; } }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: #fff; }
   body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.5; padding: 32px 36px; max-width: 800px; margin: 0 auto; }
@@ -170,8 +182,9 @@ export default function FreelanceInvoicePanel() {
   const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const removeItem = (i) => setItems((arr) => (arr.length > 1 ? arr.filter((_, idx) => idx !== i) : arr));
 
-  // Simpan langsung ke riwayat (tanpa dialog cetak). Nomor naik setelah disimpan.
+  // Simpan: unduh file invoice ke komputer, lalu catat di riwayat. Nomor naik setelah disimpan.
   const save = () => {
+    unduhFile(html, `${number}.html`);
     const entry = { id: `${number}-${Date.now()}`, savedAt: new Date().toISOString(), data, profile: { ...profile }, total: totals.total };
     setHistory((list) => [entry, ...list]);
     const next = counter + 1;
@@ -233,7 +246,7 @@ export default function FreelanceInvoicePanel() {
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" onClick={save} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-900 hover:bg-white">Simpan invoice</button>
         </div>
-        <div className="mt-2 text-[11px] text-slate-500">Nomor invoice naik otomatis setelah disimpan. Riwayat disimpan di perangkat ini, tidak ke database.</div>
+        <div className="mt-2 text-[11px] text-slate-500">Simpan mengunduh file invoice (.html) ke komputer dan mencatatnya di riwayat. Nomor naik otomatis. Riwayat disimpan di perangkat ini, tidak ke database.</div>
       </div>
 
       <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
