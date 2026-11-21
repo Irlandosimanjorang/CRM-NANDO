@@ -187,6 +187,19 @@ export default function FreelanceInvoicePanel() {
     setCounter(next);
     try { localStorage.setItem(COUNTER_KEY, String(next)); } catch { /* abaikan */ }
   };
+  // Salin: muat isi invoice lama ke form untuk diedit. Nomor invoice tetap memakai nomor baru.
+  const salinRiwayat = (entry) => {
+    const s = entry.data;
+    setClient(s.client || "");
+    setClientAddress(s.clientAddress || "");
+    setProject(s.project || "");
+    setDate(s.date || todayIso());
+    setDueDate(s.dueDate || addDays(todayIso(), 14));
+    setItems(s.items.map((it) => ({ ...it })));
+    setTaxPct(s.taxPct ?? 0);
+    setPaymentTerms(s.paymentTerms || "");
+    setNotes(s.notes || "");
+  };
   const unduhRiwayat = async (entry) => {
     const pdf = await buildFreelancePdf(entry.data, { ...entry.profile, signImage: signDefault });
     pdf.save(`${entry.data.number}.pdf`);
@@ -261,6 +274,7 @@ export default function FreelanceInvoicePanel() {
                   <div className="text-[11px] text-slate-500">{fmtDate(e.data.date)} · <span className="tabular-nums">{rp(e.total)}</span></div>
                 </div>
                 <div className="flex gap-1">
+                  <button type="button" onClick={() => salinRiwayat(e)} className="h-8 rounded-lg px-2 text-[12px] text-slate-300 hover:bg-white/[0.06] hover:text-slate-100">Salin</button>
                   <button type="button" onClick={() => unduhRiwayat(e)} className="h-8 rounded-lg px-2 text-[12px] text-slate-300 hover:bg-white/[0.06] hover:text-slate-100">Unduh PDF</button>
                   <button type="button" onClick={() => hapusRiwayat(e.id)} className="h-8 rounded-lg px-2 text-[12px] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200">Hapus</button>
                 </div>
