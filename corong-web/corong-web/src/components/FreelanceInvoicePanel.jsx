@@ -7,6 +7,7 @@ import signDefault from "../assets/tanda-tangan-nando.png";
 // Invoice tidak disimpan ke database; cetak lewat dialog cetak browser -> Simpan sebagai PDF.
 const PROFILE_KEY = "nexto-freelance-profile";
 const COUNTER_KEY = "nexto-freelance-counter";
+const HISTORY_KEY = "nexto-freelance-invoices";
 const EMPTY_PROFILE = { name: "", address: "", email: "", phone: "", bank: "", account: "", holder: "", signImage: "" };
 
 function loadProfile() {
@@ -19,6 +20,14 @@ function loadProfile() {
 function loadCounter() {
   const n = Number(localStorage.getItem(COUNTER_KEY));
   return Number.isFinite(n) && n > 0 ? n : 1;
+}
+function loadHistory() {
+  try {
+    const list = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
 }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const rp = (n) => "Rp " + Math.round(Number(n) || 0).toLocaleString("id-ID");
@@ -142,10 +151,15 @@ export default function FreelanceInvoicePanel() {
   const [taxPct, setTaxPct] = useState(0);
   const [paymentTerms, setPaymentTerms] = useState("Pembayaran dalam 14 hari setelah invoice diterima.");
   const [notes, setNotes] = useState("");
+  const [history, setHistory] = useState(loadHistory);
 
   useEffect(() => {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* penyimpanan diblokir: tetap bisa dipakai */ }
   }, [profile]);
+
+  useEffect(() => {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch { /* penyimpanan diblokir: riwayat hanya di sesi ini */ }
+  }, [history]);
 
   const number = invoiceNumber(date, counter);
   const data = useMemo(() => ({ number, client, clientAddress, project, date, dueDate, items, taxPct, paymentTerms, notes }), [number, client, clientAddress, project, date, dueDate, items, taxPct, paymentTerms, notes]);
@@ -156,13 +170,16 @@ export default function FreelanceInvoicePanel() {
   const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const removeItem = (i) => setItems((arr) => (arr.length > 1 ? arr.filter((_, idx) => idx !== i) : arr));
 
-  const print = () => {
-    printHtml(html);
-    // Nomor naik setelah dicetak, supaya invoice berikutnya tidak memakai nomor yang sama.
+  // Simpan langsung ke riwayat (tanpa dialog cetak). Nomor naik setelah disimpan.
+  const save = () => {
+    const entry = { id: `${number}-${Date.now()}`, savedAt: new Date().toISOString(), data, profile: { ...profile }, total: totals.total };
+    setHistory((list) => [entry, ...list]);
     const next = counter + 1;
     setCounter(next);
     try { localStorage.setItem(COUNTER_KEY, String(next)); } catch { /* abaikan */ }
   };
+  const cetakRiwayat = (entry) => printHtml(buildFreelanceHtml(entry.data, { ...entry.profile, signImage: signDefault }));
+  const hapusRiwayat = (id) => setHistory((list) => list.filter((e) => e.id !== id));
 
   return (
     <div className="grid gap-4 min-w-0 lg:grid-cols-2 lg:items-start">
@@ -214,9 +231,31 @@ export default function FreelanceInvoicePanel() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={print} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-900 hover:bg-white">Cetak / Simpan PDF</button>
+          <button type="button" onClick={save} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-900 hover:bg-white">Simpan invoice</button>
         </div>
-        <div className="mt-2 text-[11px] text-slate-500">Nomor invoice naik otomatis setelah dicetak. Invoice ini tidak disimpan ke database.</div>
+        <div className="mt-2 text-[11px] text-slate-500">Nomor invoice naik otomatis setelah disimpan. Riwayat disimpan di perangkat ini, tidak ke database.</div>
+      </div>
+
+      <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
+        <div className="mb-2 text-[12px] font-medium text-slate-200">Riwayat invoice</div>
+        {history.length === 0 ? (
+          <div className="text-[12px] text-slate-500">Belum ada invoice tersimpan.</div>
+        ) : (
+          <ul className="grid gap-1">
+            {history.map((e) => (
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-2 hover:bg-white/[0.04]">
+                <div className="min-w-0">
+                  <div className="text-[12.5px] text-slate-100">{e.data.number} · {e.data.client || "-"}</div>
+                  <div className="text-[11px] text-slate-500">{fmtDate(e.data.date)} · <span className="tabular-nums">{rp(e.total)}</span></div>
+                </div>
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => cetakRiwayat(e)} className="h-8 rounded-lg px-2 text-[12px] text-slate-300 hover:bg-white/[0.06] hover:text-slate-100">Cetak ulang</button>
+                  <button type="button" onClick={() => hapusRiwayat(e.id)} className="h-8 rounded-lg px-2 text-[12px] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200">Hapus</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       </div>
