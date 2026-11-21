@@ -45,12 +45,13 @@ const SIG_W = 63;
 const BATAS_BAWAH = 265;
 
 // Kolom tabel: deskripsi mengambil sisa ruang, lalu Qty, Harga, Jumlah rata kanan.
-// Lebar kolom mengikuti versi HTML: Qty ±17 mm, Harga ±34 mm, Jumlah ±37 mm.
-const COL_DESK = 30;
-const DESK_W = 70;
-const QTY_R = 117;
-const HARGA_R = 150;
-const JUMLAH_R = KANAN;
+// Posisi kolom mengikuti tabel referensi dari Nando (diukur lalu dikonversi ke mm):
+// No di kiri, Deskripsi mulai 31 mm, Qty rata kanan 111 mm, Harga 148 mm, Jumlah 188 mm.
+const COL_DESK = 31;
+const DESK_W = 66;
+const QTY_R = 111;
+const HARGA_R = 148;
+const JUMLAH_R = 188;
 
 export async function buildFreelancePdf(d, p) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
