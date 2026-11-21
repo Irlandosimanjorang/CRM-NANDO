@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { printHtml, terbilang } from "../lib/docKit";
+import { terbilang } from "../lib/docKit";
+import { buildFreelancePdf } from "../lib/freelanceInvoicePdf";
 import signDefault from "../assets/tanda-tangan-nando.png";
 
 // Invoice freelance PRIBADI (12 Nov 2026, permintaan Nando): terpisah dari invoice langganan Nexto.
@@ -28,17 +29,6 @@ function loadHistory() {
   } catch {
     return [];
   }
-}
-// Unduh isi sebagai file ke komputer (tanpa dialog cetak).
-function unduhFile(isi, nama) {
-  const url = URL.createObjectURL(new Blob([isi], { type: "text/html;charset=utf-8" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nama;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const rp = (n) => "Rp " + Math.round(Number(n) || 0).toLocaleString("id-ID");
@@ -130,7 +120,7 @@ function buildFreelanceHtml(d, p) {
     ${d.taxPct ? `<div><span>Pajak (${esc(d.taxPct)}%)</span><span>${rp(tax)}</span></div>` : ""}
     <div class="grand"><span>Total</span><span>${rp(total)}</span></div>
   </div>
-  <div class="words">${total > 0 ? esc(terbilang(total)) + " rupiah" : ""}</div>
+  <div class="words">${total > 0 ? esc(terbilang(total)) : ""}</div>
   <div class="pay">
     <div class="box">
       <div class="label">Pembayaran ke</div>
@@ -182,16 +172,25 @@ export default function FreelanceInvoicePanel() {
   const setItem = (i, patch) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const removeItem = (i) => setItems((arr) => (arr.length > 1 ? arr.filter((_, idx) => idx !== i) : arr));
 
-  // Simpan: unduh file invoice ke komputer, lalu catat di riwayat. Nomor naik setelah disimpan.
-  const save = () => {
-    unduhFile(html, `${number}.html`);
+  // Simpan: unduh PDF ke komputer, lalu catat di riwayat. Nomor naik setelah disimpan.
+  const save = async () => {
+    try {
+      const pdf = await buildFreelancePdf(data, { ...profile, signImage: signDefault });
+      pdf.save(`${number}.pdf`);
+    } catch {
+      alert("Invoice gagal dibuat sebagai PDF. Coba lagi.");
+      return;
+    }
     const entry = { id: `${number}-${Date.now()}`, savedAt: new Date().toISOString(), data, profile: { ...profile }, total: totals.total };
     setHistory((list) => [entry, ...list]);
     const next = counter + 1;
     setCounter(next);
     try { localStorage.setItem(COUNTER_KEY, String(next)); } catch { /* abaikan */ }
   };
-  const cetakRiwayat = (entry) => printHtml(buildFreelanceHtml(entry.data, { ...entry.profile, signImage: signDefault }));
+  const unduhRiwayat = async (entry) => {
+    const pdf = await buildFreelancePdf(entry.data, { ...entry.profile, signImage: signDefault });
+    pdf.save(`${entry.data.number}.pdf`);
+  };
   const hapusRiwayat = (id) => setHistory((list) => list.filter((e) => e.id !== id));
 
   return (
@@ -246,7 +245,7 @@ export default function FreelanceInvoicePanel() {
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" onClick={save} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-900 hover:bg-white">Simpan invoice</button>
         </div>
-        <div className="mt-2 text-[11px] text-slate-500">Simpan mengunduh file invoice (.html) ke komputer dan mencatatnya di riwayat. Nomor naik otomatis. Riwayat disimpan di perangkat ini, tidak ke database.</div>
+        <div className="mt-2 text-[11px] text-slate-500">Simpan mengunduh invoice (.pdf) ke komputer dan mencatatnya di riwayat. Nomor naik otomatis. Riwayat disimpan di perangkat ini, tidak ke database.</div>
       </div>
 
       <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
@@ -262,7 +261,7 @@ export default function FreelanceInvoicePanel() {
                   <div className="text-[11px] text-slate-500">{fmtDate(e.data.date)} · <span className="tabular-nums">{rp(e.total)}</span></div>
                 </div>
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => cetakRiwayat(e)} className="h-8 rounded-lg px-2 text-[12px] text-slate-300 hover:bg-white/[0.06] hover:text-slate-100">Cetak ulang</button>
+                  <button type="button" onClick={() => unduhRiwayat(e)} className="h-8 rounded-lg px-2 text-[12px] text-slate-300 hover:bg-white/[0.06] hover:text-slate-100">Unduh PDF</button>
                   <button type="button" onClick={() => hapusRiwayat(e.id)} className="h-8 rounded-lg px-2 text-[12px] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200">Hapus</button>
                 </div>
               </li>
