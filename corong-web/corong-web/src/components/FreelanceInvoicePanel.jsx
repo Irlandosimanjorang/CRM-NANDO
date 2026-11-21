@@ -56,7 +56,8 @@ function buildFreelanceHtml(d, p) {
   const bank = [p.bank && `${esc(p.bank)}`, p.account && `${esc(p.account)}`, p.holder && `a.n. ${esc(p.holder)}`].filter(Boolean);
   return `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${esc(d.number)}</title>
 <style>
-  @page { margin: 18mm; }
+  @page { margin: 0; }
+  @media print { body { padding: 18mm 20mm; max-width: none; } }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: #fff; }
   body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.5; padding: 32px 36px; max-width: 800px; margin: 0 auto; }
