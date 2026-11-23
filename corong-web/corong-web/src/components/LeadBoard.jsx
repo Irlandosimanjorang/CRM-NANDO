@@ -237,9 +237,6 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
     // Dari tahap menang: alasan menang ikut disimpan bersama data proyek, supaya tetap tercatat sebagai menang.
     const extra = menang ? { result: "won", reason_category: menang.reason_category, note: menang.note } : {};
     Promise.resolve(onMove(lead, key, { projectDeal: values, ...extra }))
-      // Link progres untuk klien (31 Okt 2026): tampil setelah Simpan, bukan di Lead Modal.
-      // Gagal ambil link tidak dianggap gagal simpan, jadi tidak ada alert.
-      .then(() => db.getLeadTrackingLink(lead.id).then((link) => { if (link) setTrackingLink({ name: lead.name, link }); }).catch(() => {}))
       .catch((e) => {
         setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
         alert("Gagal menyimpan: " + (e?.message || e));
