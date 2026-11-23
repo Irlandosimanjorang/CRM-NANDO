@@ -742,6 +742,7 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
                 <select value={jenis} onChange={(e) => setJenis(e.target.value)} disabled={jenisTerkunci} className={field + (jenisTerkunci ? " cursor-not-allowed bg-slate-50 text-slate-500" : "")}>
                   <option value="proyek">Proyek</option>
                   <option value="product_only">Product only</option>
+                  <option value="jasa">Jasa</option>
                   {(bolehProfil || jenis === "profil") && <option value="profil">Profil</option>}
                 </select>
               </label>
