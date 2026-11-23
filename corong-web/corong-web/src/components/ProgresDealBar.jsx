@@ -69,7 +69,10 @@ function Progres({ tahap, tahapSekarang, pcts, jenis }) {
     return { ...t, s, selesai, pct, sekarang, warna, warnaTeks };
   });
   const jumlahSelesai = daftar.filter((d) => d.selesai).length;
-  const persen = Math.round(daftar.reduce((a, d) => a + d.pct, 0) / daftar.length);
+  // Jasa (24 Nov 2026): total tidak boleh melampaui Payment, sama seperti di Journey.
+  const persenRata = Math.round(daftar.reduce((a, d) => a + d.pct, 0) / daftar.length);
+  const persenBayar = daftar.find((d) => d.key === "dana_masuk")?.pct ?? 100;
+  const persen = jenis === "jasa" ? Math.min(persenRata, persenBayar) : persenRata;
   const detail = daftar.find((d) => d.key === aktif) || null;
   const statusTeks = (d) => (d.selesai ? "Selesai" : d.sekarang || d.pct > 0 ? `Sedang berjalan · ${d.pct}%` : "Belum dimulai");
 
