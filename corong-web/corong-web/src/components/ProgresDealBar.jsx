@@ -48,9 +48,15 @@ const tgl = (v) => (v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleD
 const labelTahap = (key) => TAHAP.find((t) => t.key === key)?.label || key || "-";
 
 // pcts: persen tiap tahap dari journey, urutannya sama dengan TAHAP. Kalau belum ada (data lama), selesai = 100, lainnya 0.
-function Progres({ tahap, tahapSekarang, pcts }) {
+// Jasa (24 Nov 2026): tanpa SPK sampai Delivery dan BAST. Persen tiap tahap tetap dibaca dari posisi TAHAP asli.
+const TAHAP_JASA_DILEWATI = ["spk", "spkp", "produksi", "produksi_qc", "delivery", "full_payment"];
+function Progres({ tahap, tahapSekarang, pcts, jenis }) {
   const [aktif, setAktif] = useState(null);
-  const daftar = TAHAP.map((t, i) => {
+  const lewati = jenis === "jasa" ? TAHAP_JASA_DILEWATI : [];
+  const tahapAktif = TAHAP.map((t, i) => ({ ...t, i })).filter((t) => !lewati.includes(t.key));
+  const kolom = `repeat(${tahapAktif.length}, minmax(0, 1fr))`;
+  const daftar = tahapAktif.map((t) => {
+    const i = t.i;
     const s = (tahap || []).find((x) => x.key === t.key);
     const selesai = !!s?.selesai;
     const pct = Array.isArray(pcts) && typeof pcts[i] === "number"
@@ -63,7 +69,7 @@ function Progres({ tahap, tahapSekarang, pcts }) {
     return { ...t, s, selesai, pct, sekarang, warna, warnaTeks };
   });
   const jumlahSelesai = daftar.filter((d) => d.selesai).length;
-  const persen = Math.round(daftar.reduce((a, d) => a + d.pct, 0) / TAHAP.length);
+  const persen = Math.round(daftar.reduce((a, d) => a + d.pct, 0) / daftar.length);
   const detail = daftar.find((d) => d.key === aktif) || null;
   const statusTeks = (d) => (d.selesai ? "Selesai" : d.sekarang || d.pct > 0 ? `Sedang berjalan · ${d.pct}%` : "Belum dimulai");
 
@@ -71,18 +77,18 @@ function Progres({ tahap, tahapSekarang, pcts }) {
     <div>
       <style>{`@keyframes stage-run { from { background-position: -80px 0, 0 0; } to { background-position: calc(100% + 80px) 0, 0 0; } }`}</style>
       <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
-        <span>{jumlahSelesai} dari {TAHAP.length} tahap selesai</span>
+        <span>{jumlahSelesai} dari {daftar.length} tahap selesai</span>
         <span className="font-medium tabular-nums text-slate-700">{persen}%</span>
       </div>
-      <div className="grid grid-cols-10 gap-[3px] text-center font-mono text-[10px] tabular-nums" aria-hidden="true">
+      <div className="grid gap-[3px] text-center font-mono text-[10px] tabular-nums" style={{ gridTemplateColumns: kolom }} aria-hidden="true">
         {daftar.map((d) => (
           <span key={d.key} style={{ color: d.warnaTeks }} className={d.sekarang ? "font-semibold" : ""}>{d.pct}%</span>
         ))}
       </div>
-      <div className="mt-1 grid grid-cols-10 gap-[3px]" role="group" aria-label="Progres tahap">
+      <div className="mt-1 grid gap-[3px]" style={{ gridTemplateColumns: kolom }} role="group" aria-label="Progres tahap">
         {daftar.map((d, i) => {
           const tampil = aktif === d.key;
-          const posisi = i === 0 ? "left-0" : i === TAHAP.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2";
+          const posisi = i === 0 ? "left-0" : i === daftar.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2";
           return (
             <div key={d.key} className="relative">
               <button
@@ -130,8 +136,8 @@ function Progres({ tahap, tahapSekarang, pcts }) {
           );
         })}
       </div>
-      <div className="mt-1 grid grid-cols-10 gap-[3px] text-center text-[9px] leading-tight tracking-tight text-slate-500" aria-hidden="true">
-        {TAHAP.map((t) => (
+      <div className="mt-1 grid gap-[3px] text-center text-[9px] leading-tight tracking-tight text-slate-500" style={{ gridTemplateColumns: kolom }} aria-hidden="true">
+        {daftar.map((t) => (
           <span key={t.key} className="whitespace-nowrap">{SINGKAT[t.key]}</span>
         ))}
       </div>
@@ -150,7 +156,7 @@ function KartuDeal({ r }) {
         <span className="shrink-0 text-[12px] text-slate-500">{p.selesai ? "Selesai" : labelTahap(p.tahap_sekarang)}</span>
       </div>
       <div className="mt-2">
-        <Progres tahap={p.tahap} tahapSekarang={p.tahap_sekarang} pcts={p.pcts} />
+        <Progres tahap={p.tahap} tahapSekarang={p.tahap_sekarang} pcts={p.pcts} jenis={p.jenis} />
       </div>
       <dl className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
         <div>
