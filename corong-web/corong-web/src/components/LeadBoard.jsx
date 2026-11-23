@@ -74,7 +74,6 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
   const [closing, setClosing] = useState(null);
   // Pop-up data proyek saat kartu digeser ke Proyek Deal (tanggal, nilai, No. SPH, total diskon wajib).
   const [proyek, setProyek] = useState(null);
-  const [trackingLink, setTrackingLink] = useState(null); // { name, link } setelah proyek masuk Proyek Deal
   const [dealStage, setDealStage] = useState(null); // pipeline faktur (MAP): pop-up tahap Deal
   // Pop-up tanggal selesai dan catatan saat kartu digeser ke Proyek Selesai (pipeline BSB).
   const [selesai, setSelesai] = useState(null);
@@ -230,13 +229,6 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
       setPending((p) => { const n = { ...p }; delete n[lead.id]; return n; });
       alert("Gagal menyimpan: " + (e?.message || e));
     });
-  };
-
-  // Link progres untuk klien dari kartu proyek (kapan saja, tidak harus baru pindah tahap).
-  const openTrackingLink = (lead) => {
-    db.getLeadTrackingLink(lead.id)
-      .then((link) => { if (link) setTrackingLink({ name: lead.name, link }); else alert("Link progres belum tersedia untuk lead ini."); })
-      .catch((e) => alert("Gagal mengambil link: " + (e?.message || e)));
   };
 
   const saveProyek = (values) => {
@@ -486,7 +478,6 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
         document.body
       )}
       {proyek && createPortal(<ProyekDealDialog lead={proyek.lead} onCancel={cancelProyek} onSave={saveProyek} proyekChecklist={proyekChecklist} />, document.body)}
-      {trackingLink && createPortal(<TrackingLinkDialog name={trackingLink.name} link={trackingLink.link} onClose={() => setTrackingLink(null)} />, document.body)}
       {selesai && createPortal(<SelesaiDialog lead={selesai.lead} onCancel={cancelSelesai} onSave={saveSelesai} />, document.body)}
 
       {/* Kartu yang diseret dirender di body: posisi "fixed" harus mengacu ke layar, bukan ke wrapper yang punya transform. */}
@@ -623,17 +614,6 @@ export default function LeadBoard({ leads, stages, onOpenEdit, onMove, onNewOppo
                       >
                         {cols.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
                       </select>
-
-                      {(stageOf(l) === "proyek_deal" || stageOf(l) === "proyek_berjalan") && (
-                        <button
-                          type="button"
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={() => { if (!suppressClick.current) openTrackingLink(l); }}
-                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11.5px] font-semibold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          Link progres
-                        </button>
-                      )}
 
                       {/* Status proyek di kartu (17 Okt 2026, BSB): pilih Berjalan langsung memindahkan lead ke Proyek Berjalan. */}
                       {stageOf(l) === "proyek_deal" && cols.some((c) => c.key === "proyek_berjalan") && (
@@ -809,38 +789,6 @@ function ProyekDealDialog({ lead, onCancel, onSave, proyekChecklist = false }) {
           >
             Simpan
           </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Link progres untuk klien (31 Okt 2026): muncul setelah proyek masuk Proyek Deal. Klien membukanya tanpa login.
-function TrackingLinkDialog({ name, link, onClose }) {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-    } catch (_) {
-      window.prompt("Salin link ini:", link);
-    }
-  };
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
-        <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">Proyek Deal</span>
-        <h3 className="mt-2 text-[15px] font-semibold text-slate-900">Link progres untuk klien</h3>
-        <p className="mt-0.5 truncate text-[12px] text-slate-500">{name}</p>
-        <p className="mt-3 break-all rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-slate-700">{link}</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-slate-600 hover:bg-slate-100">Tutup</button>
-          <button type="button" onClick={copy} className="rounded-lg bg-slate-900 px-4 py-2 text-[12.5px] font-semibold text-white">{copied ? "Tersalin" : "Salin link"}</button>
         </div>
       </div>
     </div>
