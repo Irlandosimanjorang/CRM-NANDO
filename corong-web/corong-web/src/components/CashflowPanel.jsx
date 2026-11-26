@@ -3,6 +3,7 @@ import { Loader2, RefreshCw, Plus, Trash2, ChevronLeft, ChevronRight, ChevronDow
 import * as db from "../lib/db";
 import { isoDay, fmtShort } from "./EnterpriseInvoicePanel";
 import { perUserMonthly } from "../lib/aiFeatureCatalog";
+import { loadFreelanceHistory } from "./FreelanceInvoicePanel";
 
 // Kartu CASH FLOW di Command Center (9 Okt 2026, permintaan Nando): laporan keuangan bulanan
 // (laba rugi, arus kas metode langsung, posisi keuangan ringkas, rekonsiliasi saldo prabayar Anthropic)
@@ -256,7 +257,8 @@ function AnalisisKeuangan({ data, paidAccounts }) {
   const rev = inc.revenue.total;
   const burn = cf.net_operating < 0 ? -cf.net_operating : 0;
   const runway = cf.closing_cash !== null && burn > 0 ? cf.closing_cash / burn : null;
-  const collect = rev > 0 ? (cf.receipts.total / rev) * 100 : null;
+  // Rasio penagihan hanya dari klien Nexto; uang freelance tidak dihitung di sini.
+  const collect = rev > 0 ? ((cf.receipts.total - (cf.receipts.freelance || 0)) / rev) * 100 : null;
   const dso = rev > 0 ? s.receivables / (rev / 30) : null;
   const arpa = paidAccounts > 0 ? s.mrr / paidAccounts : null;
   const totalKontrak = contracts.reduce((a, c) => a + (c.total || 0), 0);
@@ -303,12 +305,13 @@ export default function CashflowPanel() {
   // Lifetime revenue: uang masuk dari invoice lunas dan Mayar, per bulan pembayaran.
   const [life, setLife] = useState(null);
   const [lifeErr, setLifeErr] = useState("");
+  const [fl, setFl] = useState([]); // riwayat invoice freelance dari perangkat ini
 
   const load = useCallback(async (silent, per) => {
     if (!silent) setLoading(true);
     try {
       const r = await db.adminCashflow("get", per ? { period: per } : {});
-      setData(r); setErr("");
+      setData(r); setErr(""); setFl(loadFreelanceHistory());
       setForm((cur) => cur || r.settings);
     } catch (e) { setErr(e.message); }
     finally { setLoading(false); }
@@ -365,7 +368,21 @@ export default function CashflowPanel() {
   if (err && !data) return <div className="text-[12px] text-rose-300 font-mono">{err}</div>;
   if (!data || !form) return <div className="flex items-center gap-2 text-[12px] text-slate-300 font-mono"><Loader2 className="w-3.5 h-3.5 animate-spin" /> memuat cash flow...</div>;
 
-  const { summary: s, income: inc, cashflow: cf, position: pos, prepaid: pre, contracts, period: per } = data;
+  const { summary: s, income: inc, cashflow: cfServer, position: pos, prepaid: pre, contracts, period: per } = data;
+  // Invoice freelance yang sudah lunas masuk arus kas di bulan pembayarannya dan ikut saldo kas.
+  // Laba rugi tidak berubah: ini uang pribadi di luar langganan Nexto.
+  const flIn = (dari, sampai) => fl.filter((e) => e.paidAt && e.paidAt.slice(0, 7) >= dari && e.paidAt.slice(0, 7) <= sampai).reduce((a, e) => a + (Number(e.total) || 0), 0);
+  const flBulan = flIn(per.ym, per.ym);
+  const openYm = data.settings?.cash_opening?.month || null;
+  const flSebelum = openYm ? flIn(openYm, monthsBack(per.ym, 2)[1]) : 0;
+  const cf = {
+    ...cfServer,
+    receipts: { ...cfServer.receipts, freelance: flBulan, total: cfServer.receipts.total + flBulan },
+    net_operating: cfServer.net_operating + flBulan,
+    net_change: cfServer.net_change + flBulan,
+    opening_cash: cfServer.opening_cash === null ? null : cfServer.opening_cash + flSebelum,
+    closing_cash: cfServer.closing_cash === null ? null : cfServer.closing_cash + flSebelum + flBulan,
+  };
   // Generate Leads (memo dari server): biaya token pencarian dan pendapatan token add-on bulan ini.
   const gen = s.gen_leads || { calls: 0, cost_usd: 0, cost_idr: 0, addon_tokens: 0, addon_idr: 0 };
   const genShare = inc.cogs.ai > 0 ? Math.round((gen.cost_idr / inc.cogs.ai) * 1000) / 10 : null;
@@ -404,6 +421,7 @@ export default function CashflowPanel() {
     { l: "Penerimaan dari pelanggan: invoice", v: cf.receipts.invoice, indent: 1 },
     { l: "Penerimaan dari pelanggan: Mayar", v: cf.receipts.mayar, indent: 1 },
     { l: "Penerimaan dari token add-on Generate Leads", v: cf.receipts.addon, indent: 1 },
+    { l: "Penerimaan dari invoice freelance", v: cf.receipts.freelance, indent: 1 },
     { l: "Total penerimaan", v: cf.receipts.total, top: true },
     { l: "Pembelian token Anthropic (top-up)", v: -cf.payments.anthropic, indent: 1 },
     { l: "Pembayaran infrastruktur", v: -cf.payments.infra, indent: 1 },
@@ -475,7 +493,7 @@ export default function CashflowPanel() {
 
       <Section title="Ringkasan bulan ini" hint="uang masuk dan keluar dihitung dari tanggal bayar">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <Tile label="Uang masuk" value={idr(cf.receipts.total)} sub="dari klien (invoice + Mayar)" accent="#34d399" />
+          <Tile label="Uang masuk" value={idr(cf.receipts.total)} sub={`dari klien (invoice + Mayar)${flBulan > 0 ? ` + freelance ${idr(flBulan)}` : ""}`} accent="#34d399" />
           <Tile label="Uang keluar" value={idr(cf.payments.total)} sub="token, server, dan biaya lain" accent="#f9a8d4" />
           <Tile label="Sisa kas" value={cf.closing_cash === null ? "-" : acc(cf.closing_cash)} sub={cf.closing_cash === null ? "isi saldo kas awal di Pengaturan" : "uang bisnis di rekening"} />
           <Tile label="Untung bulan ini" value={acc(inc.net_profit)} sub={`margin ${mp(inc.net_margin_pct)} · layanan yang berjalan`} accent={profitAccent} />
@@ -487,7 +505,7 @@ export default function CashflowPanel() {
         </div>
       </Section>
 
-      <AnalisisKeuangan data={data} paidAccounts={paidAccounts} />
+      <AnalisisKeuangan data={{ ...data, cashflow: cf }} paidAccounts={paidAccounts} />
 
       <button onClick={() => setShowAcc((v) => !v)} className="justify-self-start inline-flex items-center gap-1.5 text-[11.5px] font-mono font-bold px-3 py-2 rounded-lg border border-white/[0.25] bg-[#111826] text-slate-100 hover:bg-[#182033]">
         <ChevronDown className={`w-4 h-4 transition-transform ${showAcc ? "rotate-180" : ""}`} />
