@@ -30,6 +30,10 @@ function loadHistory() {
     return [];
   }
 }
+// Dipakai kartu CASH FLOW: riwayat yang sama dibaca dari perangkat ini.
+export function loadFreelanceHistory() {
+  return loadHistory();
+}
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const rp = (n) => "Rp " + Math.round(Number(n) || 0).toLocaleString("id-ID");
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -181,7 +185,7 @@ export default function FreelanceInvoicePanel() {
       alert("Invoice gagal dibuat sebagai PDF. Coba lagi.");
       return;
     }
-    const entry = { id: `${number}-${Date.now()}`, savedAt: new Date().toISOString(), data, profile: { ...profile }, total: totals.total };
+    const entry = { id: `${number}-${Date.now()}`, savedAt: new Date().toISOString(), data, profile: { ...profile }, total: totals.total, paidAt: null };
     setHistory((list) => [entry, ...list]);
     const next = counter + 1;
     setCounter(next);
@@ -205,6 +209,8 @@ export default function FreelanceInvoicePanel() {
     pdf.save(`${entry.data.number}.pdf`);
   };
   const hapusRiwayat = (id) => setHistory((list) => list.filter((e) => e.id !== id));
+  // Tandai lunas (tanggal bayar) atau batalkan. Tanggal bayar menentukan bulan masuknya di arus kas.
+  const setPaid = (id, paidAt) => setHistory((list) => list.map((e) => (e.id === id ? { ...e, paidAt } : e)));
 
   return (
     <div className="grid gap-4 min-w-0 lg:grid-cols-2 lg:items-start">
@@ -262,7 +268,7 @@ export default function FreelanceInvoicePanel() {
       </div>
 
       <div className="rounded-xl border border-white/[0.14] bg-[#0e1522] p-3">
-        <div className="mb-2 text-[12px] font-medium text-slate-200">Riwayat invoice</div>
+        <div className="mb-2 flex flex-wrap items-baseline gap-x-2 text-[12px] font-medium text-slate-200">Riwayat invoice <span className="text-[11px] font-normal text-slate-500">tandai lunas agar pembayaran masuk ke arus kas</span></div>
         {history.length === 0 ? (
           <div className="text-[12px] text-slate-500">Belum ada invoice tersimpan.</div>
         ) : (
@@ -272,6 +278,20 @@ export default function FreelanceInvoicePanel() {
                 <div className="min-w-0">
                   <div className="text-[12.5px] text-slate-100">{e.data.number} · {e.data.client || "-"}</div>
                   <div className="text-[11px] text-slate-500">{fmtDate(e.data.date)} · <span className="tabular-nums">{rp(e.total)}</span></div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {e.paidAt ? (
+                      <>
+                        <span className="text-[11.5px] font-medium text-emerald-300">Lunas</span>
+                        <input type="date" value={e.paidAt} onClick={openPicker} onChange={(ev) => ev.target.value && setPaid(e.id, ev.target.value)} aria-label="Tanggal lunas" className="h-7 rounded-md border border-white/[0.14] bg-[#0b1220] px-2 text-[11.5px] text-slate-100" />
+                        <button type="button" onClick={() => setPaid(e.id, null)} className="h-7 rounded-md px-2 text-[11.5px] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200">Batalkan lunas</button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[11.5px] text-amber-300">Belum dibayar</span>
+                        <button type="button" onClick={() => setPaid(e.id, todayIso())} className="h-7 rounded-md border border-white/[0.14] px-2.5 text-[11.5px] text-slate-200 hover:bg-white/[0.06]">Tandai lunas</button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <button type="button" onClick={() => salinRiwayat(e)} className="h-8 rounded-lg px-2 text-[12px] text-slate-300 hover:bg-white/[0.06] hover:text-slate-100">Salin</button>
